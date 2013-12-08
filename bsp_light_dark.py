@@ -1,13 +1,13 @@
 import numpy as np
 from numpy import matlib as ml
 
-from model import Model, SqpParams
-from belief import belief_dynamics, compose_belief, decompose_belief
-from belief_opt import belief_opt_penalty_sqp
+import model
+import belief
+import belief_opt
 
 import IPython
 
-class LightDarkModel(Model):
+class LightDarkModel(model.Model):
     def __init__(self):
         # model dimensions
         self.xDim = 2 # state space dimension
@@ -52,7 +52,7 @@ class LightDarkModel(Model):
         pass
 
 
-class LightDarkSqpParams(SqpParams):
+class LightDarkSqpParams(model.SqpParams):
     def __init__(self):
         self.improve_ratio_threshold = .1
         self.min_trust_box_size = 1e-3
@@ -89,19 +89,23 @@ def test_bsp_light_dark():
         U = ml.tile(((model.goal - model.start)/(model.T-1)), (1,model.T-1))
     
         B = ml.zeros([model.bDim,model.T])
-        B[:,0] = compose_belief(x1, SqrtSigma1, model)
+        B[:,0] = belief.compose_belief(x1, SqrtSigma1, model)
         for t in xrange(0,model.T-1):
-            B[:,t+1] = belief_dynamics(B[:,t], U[:,t], None, model)
+            B[:,t+1] = belief.belief_dynamics(B[:,t], U[:,t], None, model)
+
+        b = B[:,10]
+        belief.cvxpy_sqrtsigma_vector(b,model)
 
         # TODO: implement plotting
         # plot_belief_trajectory(B, U, model); # display initialization 
     
-        [Bopt, Uopt] = belief_opt_penalty_sqp(B, U, model)
+        [Bopt, Uopt] = belief_opt.belief_opt_penalty_sqp(B, U, model)
         # TODO: implement plotting
         # plot_belief_trajectory(Bopt, Uopt, model);
     
-        cost = compute_forward_simulated_cost(compose_belief(x1, SqrtSigma1, model), Uopt, model)
-        print('Total cost of optimized trajectory: %f' % cost)
+        # TODO: implement
+        #cost = compute_forward_simulated_cost(compose_belief(x1, SqrtSigma1, model), Uopt, model)
+        #print('Total cost of optimized trajectory: %f' % cost)
     
         # save trajectory to png file 
         # saveas(gcf, sprintf('bsp-light-dark-plan-%i.png',i_problem));

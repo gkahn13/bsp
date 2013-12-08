@@ -4,8 +4,8 @@ import scipy as sci
 import cvxopt
 import cvxpy
 
-from belief import compose_belief, decompose_belief, cvxpy_decompose_belief, cvxpy_vectorize
-from math_util import numerical_jac
+import belief
+import math_util
 
 import IPython
 
@@ -53,13 +53,13 @@ def compute_merit(B, U, model, penalty_coeff):
     merit = 0
     
     for t in xrange(0,T-1):
-        x, s = decompose_belief(B[:,t], model)
+        x, s = belief.decompose_belief(B[:,t], model)
         merit += model.alpha_belief*ml.trace(s*s)
         merit += model.alpha_control*ml.sum(U[:,t].T*U[:,t])
 
         merit += penalty_coeff*ml.sum(np.abs(B[:,t+1]-g(B[:,t],U[:,t],model)))
     
-    x, s = decompose_belief(B[:,T-1], model)
+    x, s = belief.decompose_belief(B[:,T-1], model)
     merit += model.alpha_final_belief*ml.trace(s*s)
 
     return merit
@@ -74,24 +74,26 @@ def linearized_compute_merit(B, Bcvx, U, Ucvx, gval, G, H, model, penalty_coeff)
     control_merits = list()
     belief_penalty_merits = list()
     
-    for t in xrange(0,T-1):
-        x, s = cvxpy_decompose_belief(Bcvx[:,t], model)
-        trace_merits.append(model.alpha_belief*cvxpy.quad_over_lin(cvxpy_vectorize(s),1))
-        #merit += model.alpha_belief*ml.trace(s*s)
-        
-        #control_merits.append(model.alpha_control*cvxpy.sum(cvxpy.quad_form(Ucvx[:,t],ml.eye(uDim))))
-        control_merits.append(model.alpha_control*cvxpy.sum(cvxpy.quad_over_lin(Ucvx[:,t],1)))
-        #merit += model.alpha_control*cvxpy.sum(U[:,t].T*U[:,t])
+    decompose_constraints = list()
 
+    for t in xrange(0,T-1):
+        x, s, decompose_constraint = belief.cvxpy_decompose_belief(Bcvx[:,t], model)
+        decompose_constraints += decompose_constraint
+        trace_merits.append(model.alpha_belief*cvxpy.quad_over_lin(belief.cvxpy_vectorize(s),1))
+        
+        control_merits.append(model.alpha_control*cvxpy.sum(cvxpy.quad_over_lin(Ucvx[:,t],1)))
+        
         belief_penalty_merits.append(penalty_coeff*cvxpy.sum(cvxpy.abs(B[:,t+1]- (gval[t] + G[t]*(Bcvx[:,t]-B[:,t]) + H[t]*(Ucvx[:,t]-U[:,t])))))
-    x, s = cvxpy_decompose_belief(Bcvx[:,T-1], model)
-    trace_merits.append(model.alpha_belief*cvxpy.quad_over_lin(cvxpy_vectorize(s),1))
+    
+    x, s, decompose_constraint = belief.cvxpy_decompose_belief(Bcvx[:,T-1], model)
+    decompose_constraints += decompose_constraint
+    trace_merits.append(model.alpha_belief*cvxpy.quad_over_lin(belief.cvxpy_vectorize(s),1))
 
     #IPython.embed()
 
     merit = sum(trace_merits) + sum(control_merits) + sum(belief_penalty_merits)
 
-    return merit
+    return merit, decompose_constraints
 
 def minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size):
     success = True
@@ -121,8 +123,8 @@ def minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size):
         gval, G, H = list(), list(), list()
         for t in xrange(0, T-1):
             gval.append(g(B[:,t], U[:,t], model))
-            G.append(numerical_jac(g, 0, [B[:,t], U[:,t], model]))
-            H.append(numerical_jac(g, 1, [B[:,t], U[:,t], model]))
+            G.append(math_util.numerical_jac(g, 0, [B[:,t], U[:,t], model]))
+            H.append(math_util.numerical_jac(g, 1, [B[:,t], U[:,t], model]))
 
         while True:
             # This is the trust region loop
@@ -138,10 +140,14 @@ def minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size):
 
             Bcvx = cvxpy.Variable(bDim, T, name='Bcvx')
             Ucvx = cvxpy.Variable(uDim, T-1, name='Ucvx')
+            constraints = list()
 
-            objective = cvxpy.Minimize(linearized_compute_merit(B,Bcvx,U,Ucvx,gval,G,H,model,penalty_coeff))
-            #objective = cvxpy.Minimize(compute_merit(Bcvx,Ucvx,model,penalty_coeff))
+            objective_func, decompose_constraints = linearized_compute_merit(B,Bcvx,U,Ucvx,gval,G,H,model,penalty_coeff)
+            objective = cvxpy.Minimize(objective_func)
+            
 
+            constraints += decompose_constraints
+            
             constraints = [Bcvx[:,0] == B[:,0], # Constraint to ensure that initial belief remains unchanged
                            Bcvx[0:xDim,T-1] == B[0:xDim,T-1], # reach goal at time T
                            Bcvx[0:xDim,:] <= np.tile(model.xMax, (1,T)), # upper x bound
@@ -229,7 +235,7 @@ def g(b, u, model):
     dynamics_func = model.dynamics_func
     obs_func = model.obs_func
     
-    x, s = decompose_belief(b, model)
+    x, s = belief.decompose_belief(b, model)
     
     x_tp1 = dynamics_func(x, u, ml.zeros([qDim,1]))
 
@@ -237,13 +243,13 @@ def g(b, u, model):
     obs_varargin = [dynamics_func(x, u, ml.zeros([qDim,1])), ml.zeros([rDim,1])]
 
     # dynamics state jacobian
-    A = numerical_jac(dynamics_func, 0, dyn_varargin)
+    A = math_util.numerical_jac(dynamics_func, 0, dyn_varargin)
     # dynamics noise jacobian
-    M = numerical_jac(dynamics_func, 2, dyn_varargin)
+    M = math_util.numerical_jac(dynamics_func, 2, dyn_varargin)
     # observation state jacobian
-    H = numerical_jac(obs_func, 0, obs_varargin)
+    H = math_util.numerical_jac(obs_func, 0, obs_varargin)
     # observation noise jacobian
-    N = numerical_jac(obs_func, 1, obs_varargin)
+    N = math_util.numerical_jac(obs_func, 1, obs_varargin)
     
     s_tp1_neg = A*s*((A*s).T) + M*Q*M.T
     K = s_tp1_neg*H.T*ml.linalg.inv(H*s_tp1_neg*H.T + N*R*N.T)
@@ -251,7 +257,7 @@ def g(b, u, model):
     s_tp1 = np.asmatrix(sci.linalg.sqrtm((ml.eye(xDim) - K*H)*s_tp1_neg))
     s_tp1 = ml.real(s_tp1) # needed b/c s_tp1 will have unnecessary complex entries
 
-    b_tp1 = compose_belief(x_tp1, s_tp1, model)
+    b_tp1 = belief.compose_belief(x_tp1, s_tp1, model)
 
     return b_tp1
 

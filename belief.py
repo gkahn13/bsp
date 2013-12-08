@@ -117,15 +117,40 @@ def cvxpy_decompose_belief(b, model):
     idx = xDim
     
     SqrtSigma = cvxpy.Variable(xDim, xDim, name='SqrtSigma')
-    
+    constraints = list()
+
     for j in xrange(0,xDim):
         for i in xrange(j,xDim):
-            SqrtSigma[i,j] == b[idx,0]
-            SqrtSigma[j,i] == SqrtSigma[i,j]
+            constraints.append(SqrtSigma[i,j] == b[idx,0])
+            constraints.append(SqrtSigma[j,i] == SqrtSigma[i,j])
             idx = idx+1
 
-    return x, SqrtSigma
+    return x, SqrtSigma, constraints
 
+# INCORRECTLY IMPLEMENTED
+def cvxpy_sqrtsigma_vector(b, model):
+    xDim = model.xDim
+    
+    upperSqrtSigmaVec = b[xDim:] # ignore state part
+
+    SqrtSigmaVec = upperSqrtSigmaVec[:xDim,0] # init by adding first column
+
+    stop = 0
+    for col in xrange(1,xDim-1):
+        stop += xDim - (col-1)
+        vertSlice = upperSqrtSigmaVec[col:stop+(xDim-1):xDim-1,0]
+        IPython.embed()
+        horzSlice = upperSqrtSigmaVec[stop+1:(stop+1)+((xDim-1)-col),0]
+        SqrtSigmaVec = cvxpy.vstack(SqrtSigmaVec,vertSlice,horzSlice)
+
+    stop += 2
+    endCol = upperSqrtSigmaVec[xDim-1:(stop+1):xDim-1]
+    #SqrtSigmaVec = cvxpy.vstack(SqrtSigmaVec,endCol)
+
+    return SqrtSigmaVec
+            
+
+# converts cvxpy matrix to vector
 def cvxpy_vectorize(A):
     rows, cols = A.size
 
@@ -135,3 +160,17 @@ def cvxpy_vectorize(A):
         Avec = cvxpy.vstack(Avec,A[:,col])
 
     return Avec
+
+
+if __name__ == '__main__':
+    import model
+    model = model.Model()
+    model.xDim = 4
+    x = np.matrix(np.random.rand(4,1))
+    s = np.matrix([0,1,2,3,4,5,6,7,8,9]).T
+    b = np.vstack((x,s))
+    svec = cvxpy_sqrtsigma_vector(b,model)
+
+    x, s = decompose_belief(b,model)
+
+    IPython.embed()

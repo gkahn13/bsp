@@ -127,12 +127,11 @@ def cvxpy_decompose_belief(b, model):
     return x, SqrtSigma
 
 def cvxpy_vectorize(A):
-    rows, cols = A.shape.rows, A.shape.cols
-    
-    Anew = cvxpy.Variable(rows*cols, 1, name='Anew')
+    rows, cols = A.size
 
-    for j in xrange(0,cols):
-        for i in xrange(0,rows):
-            Anew[i+j*rows] == A[i,j]
+    Avec = A[:,0]
 
-    return Anew
+    for col in xrange(1,cols):
+        Avec = cvxpy.vstack(Avec,A[:,col])
+
+    return Avec

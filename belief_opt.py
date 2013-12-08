@@ -87,7 +87,7 @@ def linearized_compute_merit(B, Bcvx, U, Ucvx, gval, G, H, model, penalty_coeff)
     x, s = cvxpy_decompose_belief(Bcvx[:,T-1], model)
     trace_merits.append(model.alpha_belief*cvxpy.quad_over_lin(cvxpy_vectorize(s),1))
 
-    IPython.embed()
+    #IPython.embed()
 
     merit = sum(trace_merits) + sum(control_merits) + sum(belief_penalty_merits)
 

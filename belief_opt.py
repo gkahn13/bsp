@@ -167,6 +167,9 @@ def minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size):
                 
             constraints.append(cvxpy.norm(B[:,T-1]-Bcvx[:,T-1]) <= trust_box_size)
             
+            is_affine = cvxpy_util.vars_in_constraints_affine(constraints)
+            print 'is_affine = {0}'.format(is_affine)
+            #IPython.embed()
 
             problem = cvxpy.Problem(objective, constraints)
 

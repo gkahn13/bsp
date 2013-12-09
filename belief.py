@@ -109,14 +109,14 @@ def decompose_belief(b, model):
     return x, SqrtSigma
 
 # Decompose belief vector into mean and square root of covariance
-def cvxpy_decompose_belief(b, model):
+def cvxpy_decompose_belief1(b, model):
 
     xDim = model.xDim
 
     x = b[0:xDim,0]
     idx = xDim
     
-    SqrtSigma = cvxpy.Variable(xDim, xDim, name='SqrtSigma')
+    SqrtSigma = cvxpy.Variable(xDim, xDim)
     constraints = list()
 
     for j in xrange(0,xDim):
@@ -126,6 +126,30 @@ def cvxpy_decompose_belief(b, model):
             idx = idx+1
 
     return x, SqrtSigma, constraints
+
+# Decompose belief vector into mean and square root of covariance
+def cvxpy_decompose_belief(b, model):
+
+    xDim = model.xDim
+
+    xVec, bVec = b[:xDim,0], b[xDim:,0]
+
+    x = cvxpy.Variable(xDim, 1)
+    SqrtSigma = cvxpy.Variable(xDim, xDim)
+    constraints = list()
+
+    constraints.append(x == xVec)
+
+    bVec_offset = 0
+    for i in xrange(xDim):
+        constraints.append( SqrtSigma[i,i:xDim] == bVec[bVec_offset:bVec_offset+(xDim-i)].T )
+        bVec_offset += xDim-i
+
+    constraints.append(SqrtSigma == SqrtSigma.T)
+
+    return x, SqrtSigma, constraints
+
+
 
 # INCORRECTLY IMPLEMENTED
 def cvxpy_sqrtsigma_vector(b, model):
@@ -151,7 +175,7 @@ def cvxpy_sqrtsigma_vector(b, model):
             
 
 # converts cvxpy matrix to vector
-def cvxpy_vectorize(A):
+def cvxpy_vectorize1(A):
     rows, cols = A.size
 
     Avec = A[:,0]
@@ -161,16 +185,28 @@ def cvxpy_vectorize(A):
 
     return Avec
 
+# converts cvxpy matrix to vector
+def cvxpy_vectorize(A):
+    rows, cols = A.size
+    constraints = list()
+
+    Avec = cvxpy.Variable(rows*cols, 1)
+
+    for col in xrange(0,cols):
+         constraints.append( Avec[rows*col:rows*(col+1)] == A[:,col] )
+
+    return Avec, constraints
+
 
 if __name__ == '__main__':
     import model
     model = model.Model()
     model.xDim = 4
     x = np.matrix(np.random.rand(4,1))
-    s = np.matrix([0,1,2,3,4,5,6,7,8,9]).T
-    b = np.vstack((x,s))
-    svec = cvxpy_sqrtsigma_vector(b,model)
+    svec = np.matrix([0,1,2,3,4,5,6,7,8,9]).T
+    b = np.vstack((x,svec))
+    x, s, constraints = cvxpy_decompose_belief(b,model)
 
-    x, s = decompose_belief(b,model)
+    x_actual, s_actual = decompose_belief(b,model)
 
     IPython.embed()

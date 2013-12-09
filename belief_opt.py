@@ -6,6 +6,7 @@ import cvxpy
 
 import belief
 import math_util
+import cvxpy_util
 
 import IPython
 
@@ -49,7 +50,7 @@ def belief_opt_penalty_sqp(B, U, model):
 # Given a belief trajectory and a set of controls, compute merit function value -- Eq. 6 in the problem set
 def compute_merit(B, U, model, penalty_coeff):
     xDim = model.xDim
-    T = int(model.T)
+    T = model.T
     merit = 0
     
     for t in xrange(0,T-1):
@@ -74,26 +75,34 @@ def linearized_compute_merit(B, Bcvx, U, Ucvx, gval, G, H, model, penalty_coeff)
     control_merits = list()
     belief_penalty_merits = list()
     
-    decompose_constraints = list()
+    constraints = list()
 
     for t in xrange(0,T-1):
         x, s, decompose_constraint = belief.cvxpy_decompose_belief(Bcvx[:,t], model)
-        decompose_constraints += decompose_constraint
-        trace_merits.append(model.alpha_belief*cvxpy.quad_over_lin(belief.cvxpy_vectorize(s),1))
-        
+        constraints += decompose_constraint
+        #svec, vectorize_constraint = cvxpy_util.vectorize(s)
+        #constraints += vectorize_constraint
+        #trace_merits.append(model.alpha_belief*cvxpy.quad_over_lin(svec,1))
+        trace_merits.append(model.alpha_belief*cvxpy_util.sum_square(s))
+
         control_merits.append(model.alpha_control*cvxpy.sum(cvxpy.quad_over_lin(Ucvx[:,t],1)))
         
-        belief_penalty_merits.append(penalty_coeff*cvxpy.sum(cvxpy.abs(B[:,t+1]- (gval[t] + G[t]*(Bcvx[:,t]-B[:,t]) + H[t]*(Ucvx[:,t]-U[:,t])))))
+        belief_penalty_merits.append(penalty_coeff*cvxpy.sum(cvxpy.abs(B[:,t+1] - (gval[t] + G[t]*(Bcvx[:,t]-B[:,t]) + H[t]*(Ucvx[:,t]-U[:,t])))))
     
     x, s, decompose_constraint = belief.cvxpy_decompose_belief(Bcvx[:,T-1], model)
-    decompose_constraints += decompose_constraint
-    trace_merits.append(model.alpha_belief*cvxpy.quad_over_lin(belief.cvxpy_vectorize(s),1))
+    constraints += decompose_constraint
+    #svec, vectorize_constraint = cvxpy_util.vectorize(s)
+    #constraints += vectorize_constraint
+    #trace_merits.append(model.alpha_belief*cvxpy.quad_over_lin(svec,1))
+    trace_merits.append(model.alpha_belief*cvxpy_util.sum_square(s))
 
     #IPython.embed()
 
+    #merit = cvxpy.Variable()
+    #constraints.append(merit == sum(trace_merits) + sum(control_merits) + sum(belief_penalty_merits))
     merit = sum(trace_merits) + sum(control_merits) + sum(belief_penalty_merits)
 
-    return merit, decompose_constraints
+    return merit, constraints
 
 def minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size):
     success = True
@@ -126,6 +135,8 @@ def minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size):
             G.append(math_util.numerical_jac(g, 0, [B[:,t], U[:,t], model]))
             H.append(math_util.numerical_jac(g, 1, [B[:,t], U[:,t], model]))
 
+        #IPython.embed()
+
         while True:
             # This is the trust region loop
             # Using the approximations computed above, this loop shrinks
@@ -142,11 +153,11 @@ def minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size):
             Ucvx = cvxpy.Variable(uDim, T-1, name='Ucvx')
             constraints = list()
 
-            objective_func, decompose_constraints = linearized_compute_merit(B,Bcvx,U,Ucvx,gval,G,H,model,penalty_coeff)
-            objective = cvxpy.Minimize(objective_func)
+            objective_merit, linearized_constraints = linearized_compute_merit(B,Bcvx,U,Ucvx,gval,G,H,model,penalty_coeff)
+            objective = cvxpy.Minimize(objective_merit)
             
 
-            constraints += decompose_constraints
+            constraints += linearized_constraints
             
             constraints = [Bcvx[:,0] == B[:,0], # Constraint to ensure that initial belief remains unchanged
                            Bcvx[0:xDim,T-1] == B[0:xDim,T-1], # reach goal at time T
@@ -176,8 +187,6 @@ def minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size):
             Bcvx = np.matrix(Bcvx.value)
             Ucvx = np.matrix(Ucvx.value)
 
-            IPython.embed()
-
             model_merit = cvx_optval
 			
             # Compute merit value using the optimized trajectory and set of controls
@@ -188,8 +197,10 @@ def minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size):
             exact_merit_improve = merit - new_merit
             merit_improve_ratio = exact_merit_improve / float(approx_merit_improve)
                         
+            IPython.embed()
+
             #info = struct('trust_box_size',trust_box_size);
-            
+
             print('      approx improve: %.3g. exact improve: %.3g. ratio: %.3g' % (approx_merit_improve, exact_merit_improve, merit_improve_ratio))
             
             if approx_merit_improve < -1e-5:

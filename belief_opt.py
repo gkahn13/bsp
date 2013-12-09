@@ -182,8 +182,8 @@ def minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size):
             Ucvx = np.matrix(Ucvx.value)
 
             # TEMP!!!!
-            #B = Bcvx
-            #U = Ucvx
+            B = Bcvx
+            U = Ucvx
             plot.plot_belief_trajectory(B,U,model)
 
             model_merit = cvx_optval

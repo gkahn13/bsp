@@ -31,8 +31,5 @@ def vectorize(A):
 def sum_square(A):
     rows, cols = A.size
 
-    value = 0
-    for i in xrange(cols):
-        value += cvxpy.quad_over_lin(A[:,i],1)
-
-    return value
+    return sum([cvxpy.quad_over_lin(A[:,i],1) for i in xrange(cols)])
+    

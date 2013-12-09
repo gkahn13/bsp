@@ -81,23 +81,15 @@ def linearized_compute_merit(B, Bcvx, U, Ucvx, gval, G, H, model, penalty_coeff)
     for t in xrange(0,T-1):
         x, s, decompose_constraint = belief.cvxpy_decompose_belief(Bcvx[:,t], model)
         constraints += decompose_constraint
-        #svec, vectorize_constraint = cvxpy_util.vectorize(s)
-        #constraints += vectorize_constraint
-        #trace_merits.append(model.alpha_belief*cvxpy.quad_over_lin(svec,1))
         trace_merits.append(model.alpha_belief*cvxpy_util.sum_square(s))
 
-        control_merits.append(model.alpha_control*cvxpy.sum(cvxpy.quad_over_lin(Ucvx[:,t],1)))
+        control_merits.append(model.alpha_control*cvxpy.quad_over_lin(Ucvx[:,t],1))
         
         belief_penalty_merits.append(penalty_coeff*cvxpy.sum(cvxpy.abs(B[:,t+1] - (gval[t] + G[t]*(Bcvx[:,t]-B[:,t]) + H[t]*(Ucvx[:,t]-U[:,t])))))
     
     x, s, decompose_constraint = belief.cvxpy_decompose_belief(Bcvx[:,T-1], model)
     constraints += decompose_constraint
-    #svec, vectorize_constraint = cvxpy_util.vectorize(s)
-    #constraints += vectorize_constraint
-    #trace_merits.append(model.alpha_belief*cvxpy.quad_over_lin(svec,1))
     trace_merits.append(model.alpha_belief*cvxpy_util.sum_square(s))
-
-    #IPython.embed()
 
     #merit = cvxpy.Variable()
     #constraints.append(merit == sum(trace_merits) + sum(control_merits) + sum(belief_penalty_merits))
@@ -150,8 +142,8 @@ def minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size):
 
             print('    trust region size: %.3g' % trust_box_size)
 
-            Bcvx = cvxpy.Variable(bDim, T, name='Bcvx')
-            Ucvx = cvxpy.Variable(uDim, T-1, name='Ucvx')
+            Bcvx = cvxpy.Variable(bDim, T)
+            Ucvx = cvxpy.Variable(uDim, T-1)
             constraints = list()
 
             objective_merit, linearized_constraints = linearized_compute_merit(B,Bcvx,U,Ucvx,gval,G,H,model,penalty_coeff)
@@ -160,7 +152,7 @@ def minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size):
 
             constraints += linearized_constraints
             
-            constraints = [Bcvx[:,0] == B[:,0], # Constraint to ensure that initial belief remains unchanged
+            constraints += [Bcvx[:,0] == B[:,0], # Constraint to ensure that initial belief remains unchanged
                            Bcvx[0:xDim,T-1] == B[0:xDim,T-1], # reach goal at time T
                            Bcvx[0:xDim,:] <= np.tile(model.xMax, (1,T)), # upper x bound
                            Bcvx[0:xDim,:] >= np.tile(model.xMin, (1,T)), # lower x bound
@@ -183,14 +175,15 @@ def minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size):
             except Exception as e:
                 print('Failed to solve QP subproblem.')
                 print('Error %s' % e)
+                IPython.embed()
                 return B, U, False
 
             Bcvx = np.matrix(Bcvx.value)
             Ucvx = np.matrix(Ucvx.value)
 
             # TEMP!!!!
-            B = Bcvx
-            U = Ucvx
+            #B = Bcvx
+            #U = Ucvx
             plot.plot_belief_trajectory(B,U,model)
 
             model_merit = cvx_optval

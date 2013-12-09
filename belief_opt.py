@@ -7,6 +7,7 @@ import cvxpy
 import belief
 import math_util
 import cvxpy_util
+import plot
 
 import IPython
 
@@ -144,8 +145,8 @@ def minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size):
             # function is a sufficiently large fraction of the progress on
             # the exact merit function.
             
-            #print('Press enter to continue with SQP')
-            #raw_input()
+            print('Press enter to continue with SQP')
+            raw_input()
 
             print('    trust region size: %.3g' % trust_box_size)
 
@@ -187,6 +188,11 @@ def minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size):
             Bcvx = np.matrix(Bcvx.value)
             Ucvx = np.matrix(Ucvx.value)
 
+            # TEMP!!!!
+            B = Bcvx
+            U = Ucvx
+            plot.plot_belief_trajectory(B,U,model)
+
             model_merit = cvx_optval
 			
             # Compute merit value using the optimized trajectory and set of controls
@@ -197,7 +203,7 @@ def minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size):
             exact_merit_improve = merit - new_merit
             merit_improve_ratio = exact_merit_improve / float(approx_merit_improve)
                         
-            IPython.embed()
+            #IPython.embed()
 
             #info = struct('trust_box_size',trust_box_size);
 
@@ -211,7 +217,7 @@ def minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size):
                 print('Converged: y tolerance')
                 B = Bcvx
                 U = Ucvx
-                #plot_belief_trajectory(B, U, model);
+                plot.plot_belief_trajectory(B, U, model);
                 #pause(0.01);
                 return B, U, True
             elif (exact_merit_improve < 1e-2) or (merit_improve_ratio < cfg.improve_ratio_threshold):
@@ -223,7 +229,7 @@ def minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size):
                 trust_box_size = trust_box_size * cfg.trust_expand_ratio
                 B = Bcvx
                 U = Ucvx
-                #plot_belief_trajectory(B, U, model);
+                plot.plot_belief_trajectory(B, U, model);
                 #pause(0.01);
                 break # from trust region loop
             

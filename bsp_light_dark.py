@@ -1,9 +1,12 @@
 import numpy as np
 from numpy import matlib as ml
+import matplotlib
+import matplotlib.pyplot as plt
 
 import model
 import belief
 import belief_opt
+import plot
 
 import IPython
 
@@ -49,8 +52,20 @@ class LightDarkModel(model.Model):
         return x_t + np.sqrt(intensity)*r_t
 
     def plot_domain(self, B):
-        pass
+        xvec = np.linspace(-5,3,8/.025)
+        yvec = np.linspace(-3,3,6/.025)
+        imx, imy = np.meshgrid(xvec, yvec)
 
+        sx = np.size(imx,0)
+        sy = np.size(imy,1)
+        imz = np.ones([sx,sy])
+
+        for i in xrange(sx):
+            for j in xrange(sy):
+                imz[i,j] = (1.0/((imx[i,j]**2)+1))
+
+        plt.imshow(imz,cmap=matplotlib.cm.Greys_r,extent=[-5,5,-3,3],aspect='auto')
+        
 
 class LightDarkSqpParams(model.SqpParams):
     def __init__(self):
@@ -93,15 +108,12 @@ def test_bsp_light_dark():
         for t in xrange(0,model.T-1):
             B[:,t+1] = belief.belief_dynamics(B[:,t], U[:,t], None, model)
 
-        b = B[:,10]
-        belief.cvxpy_sqrtsigma_vector(b,model)
-
-        # TODO: implement plotting
-        # plot_belief_trajectory(B, U, model); # display initialization 
+        # display initialization
+        plot.plot_belief_trajectory(B, U, model)
     
+        
         [Bopt, Uopt] = belief_opt.belief_opt_penalty_sqp(B, U, model)
-        # TODO: implement plotting
-        # plot_belief_trajectory(Bopt, Uopt, model);
+        plot.plot_belief_trajectory(Bopt, Uopt, model);
     
         # TODO: implement
         #cost = compute_forward_simulated_cost(compose_belief(x1, SqrtSigma1, model), Uopt, model)

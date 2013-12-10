@@ -1,6 +1,7 @@
 import numpy as np
 from numpy import matlib as ml
 import math
+import time
 
 import matplotlib.pyplot as plt
 
@@ -37,7 +38,8 @@ def plot_belief_trajectory(B, U, model):
     plot_cov(Xt[0:2,T-1], Sigma_T[0:2,0:2])
 
     plt.show(block=False)
-
+    plt.pause(.05)
+    
 def plot_mean(X):
     X = np.asarray(X)
     plt.plot(X[0,:],X[1,:],color='red',marker='s',markerfacecolor='yellow')

@@ -11,7 +11,7 @@ import plot
 
 import IPython
 
-def belief_opt_penalty_sqp(B, U, model):
+def belief_opt_penalty_sqp(B, U, model, plotting=True):
     cfg = model.sqpParams
       
     trust_box_size = cfg.initial_trust_box_size # The trust region will be a box around the current iterate.
@@ -30,11 +30,10 @@ def belief_opt_penalty_sqp(B, U, model):
     success = False
     while iterCount <= cfg.max_penalty_coeff_increases and not success:    
     
-        [B, U, success] = minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size)
+        [B, U, success] = minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size, plotting)
 	
-	#IPython.embed()
-    	
-	plot.plot_belief_trajectory(B, U, model);
+        if plotting:
+            plot.plot_belief_trajectory(B, U, model);
     
         success = constraints_satisfied(B, U, model, cfg.cnt_tolerance)
 	
@@ -83,7 +82,7 @@ def linearized_compute_merit(B, Bcvx, U, Ucvx, gval, G, H, model, penalty_coeff)
     
     return merit
 
-def minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size):
+def minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size, plotting=True):
     success = True
     sqp_iter = 1
     
@@ -141,10 +140,6 @@ def minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size):
                 
             constraints.append(cvxpy.abs(Bcvx[:,T-1]-B[:,T-1]) <= trust_box_size)
 
-	    #is_affine = cvxpy_util.vars_in_constraints_affine(constraints)
-            #print 'is_affine = {0}'.format(is_affine)
-            #IPython.embed()
-
             problem = cvxpy.Problem(objective, constraints)
 
 	    try:
@@ -181,7 +176,8 @@ def minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size):
                 print('Converged: y tolerance')
                 B = Bcvx
                 U = Ucvx
-                plot.plot_belief_trajectory(B, U, model)
+                if plotting:
+                    plot.plot_belief_trajectory(B, U, model)
                 return B, U, True
             elif (exact_merit_improve < 1e-2) or (merit_improve_ratio < cfg.improve_ratio_threshold):
                 trust_box_size = trust_box_size * cfg.trust_shrink_ratio
@@ -189,7 +185,8 @@ def minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size):
                 trust_box_size = trust_box_size * cfg.trust_expand_ratio
                 B = Bcvx
                 U = Ucvx
-                plot.plot_belief_trajectory(B, U, model)
+                if plotting:
+                    plot.plot_belief_trajectory(B, U, model)
                 break # from trust region loop
             
             if trust_box_size < cfg.min_trust_box_size:

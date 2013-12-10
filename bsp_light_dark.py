@@ -82,6 +82,14 @@ class LightDarkSqpParams(model.SqpParams):
         self.initial_penalty_coeff = 50.
 
 def test_bsp_light_dark():
+    import argparse
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--no-plotting',action='store_true',default=False)
+    args = parser.parse_args()
+
+    plotting = not args.no_plotting
+
     model = LightDarkModel()
 
     X1 = ml.matrix([[-3.5,2],[-3.5,-2],[-4,0],[2,2],[-4,2]]).T
@@ -109,11 +117,13 @@ def test_bsp_light_dark():
             B[:,t+1] = belief.belief_dynamics(B[:,t], U[:,t], None, model)
 
         # display initialization
-        plot.plot_belief_trajectory(B, U, model)
+        if plotting:
+            plot.plot_belief_trajectory(B, U, model)
     
         
-        [Bopt, Uopt] = belief_opt.belief_opt_penalty_sqp(B, U, model)
-        plot.plot_belief_trajectory(Bopt, Uopt, model);
+        [Bopt, Uopt] = belief_opt.belief_opt_penalty_sqp(B, U, model, plotting)
+        if plotting:
+            plot.plot_belief_trajectory(Bopt, Uopt, model);
     
 	# Forward simulated cost
         cost = belief.compute_forward_simulated_cost(B[:,0], Uopt, model)
@@ -129,7 +139,7 @@ def test_bsp_light_dark():
         #simulate_bsp_trajectory(B(:,1), Uopt, model);
     
         print('press enter to continue to the next problem')
-        raw_input()
+        #raw_input()
     
 
 if __name__ == '__main__':

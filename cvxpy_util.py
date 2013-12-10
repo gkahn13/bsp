@@ -36,11 +36,19 @@ def sum_square(A):
 def vars_in_constraints_affine(constraints):
     variables = list()
     for c in constraints:
-        rh_affine = c.rh_exp.curvature.AFFINE.is_affine()
-        lh_affine = c.lh_exp.curvature.AFFINE.is_affine()
+        rh_affine = c.rh_exp.curvature.is_affine()
+        lh_affine = c.lh_exp.curvature.is_affine()
 
         if not rh_affine or not lh_affine:
-            IPython.embed()
             return False
         
     return True
+
+def expr_affine_convex(expressions):
+    is_affine = True
+    is_convex = False
+    for e in expressions:
+        is_affine = is_affine and e.curvature.is_affine()
+        is_convex = is_convex and e.curavture.is_convex()
+
+    return is_affine, is_convex

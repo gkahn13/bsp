@@ -79,22 +79,73 @@ def linearized_compute_merit(B, Bcvx, U, Ucvx, gval, G, H, model, penalty_coeff)
     constraints = list()
 
     for t in xrange(0,T-1):
-        x, s, decompose_constraint = belief.cvxpy_decompose_belief(Bcvx[:,t], model)
-        constraints += decompose_constraint
-        trace_merits.append(model.alpha_belief*cvxpy_util.sum_square(s))
+        #x, s, decompose_constraint = belief.cvxpy_decompose_belief(Bcvx[:,t], model)
+        #constraints += decompose_constraint
+        #trace_merits.append(model.alpha_belief*cvxpy_util.sum_square(s))
+        trace_merits.append(model.alpha_belief*belief.cvxpy_sigma_trace(Bcvx[:,t], model))
 
         control_merits.append(model.alpha_control*cvxpy.quad_over_lin(Ucvx[:,t],1))
         
         belief_penalty_merits.append(penalty_coeff*cvxpy.sum(cvxpy.abs(B[:,t+1] - (gval[t] + G[t]*(Bcvx[:,t]-B[:,t]) + H[t]*(Ucvx[:,t]-U[:,t])))))
     
-    x, s, decompose_constraint = belief.cvxpy_decompose_belief(Bcvx[:,T-1], model)
-    constraints += decompose_constraint
-    trace_merits.append(model.alpha_belief*cvxpy_util.sum_square(s))
+    #x, s, decompose_constraint = belief.cvxpy_decompose_belief(Bcvx[:,T-1], model)
+    #constraints += decompose_constraint
+    #trace_merits.append(model.alpha_belief*cvxpy_util.sum_square(s))
+    trace_merits.append(model.alpha_belief*belief.cvxpy_sigma_trace(Bcvx[:,T-1], model))
 
     #merit = cvxpy.Variable()
     #constraints.append(merit == sum(trace_merits) + sum(control_merits) + sum(belief_penalty_merits))
     merit = sum(trace_merits) + sum(control_merits) + sum(belief_penalty_merits)
 
+
+    print 'trace_merits'
+    trace_merit_convex, trace_merit_affine = 0, 0
+    for m in trace_merits:
+         if not m.curvature.is_convex():
+            print 'not convex'
+         else:
+             trace_merit_convex += 1
+         if not m.curvature.is_affine():
+             print 'not affine'
+         else:
+             trace_merit_affine += 1
+
+    print 'control_merits'
+    control_merit_convex, control_merit_affine = 0, 0
+    for m in control_merits:
+        if not m.curvature.is_convex():
+            print 'not convex'
+        else:
+            control_merit_convex += 1
+        if not m.curvature.is_affine():
+             print 'not affine'
+        else:
+            control_merit_affine += 1
+
+    print 'belief_penalty_merits'
+    belief_merit_convex, belief_merit_affine = 0, 0
+    for m in belief_penalty_merits:
+        if not m.curvature.is_convex():
+            print 'not convex'
+        else:
+            belief_merit_convex += 1
+        if not m.curvature.is_affine():
+             print 'not affine'
+        else:
+            belief_merit_affine += 1
+
+
+            
+    print 'trace_merit_convex', trace_merit_convex
+    print 'trace_merit_affine', trace_merit_affine
+    print 'control_merit_convex', control_merit_convex
+    print 'control_merit_affine', control_merit_affine
+    print 'belief_merit_convex', belief_merit_convex
+    print 'belief_merit_affine', belief_merit_affine
+    
+    #IPython.embed()
+
+    
     return merit, constraints
 
 def minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size):

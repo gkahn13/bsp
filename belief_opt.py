@@ -8,14 +8,18 @@ import belief
 import math_util
 import cvxpy_util
 import plot
+import util
 
 import IPython
 
-def belief_opt_penalty_sqp(B, U, model, plotting=True):
+def belief_opt_penalty_sqp(B, U, model, plotting=True, profile=False):
     cfg = model.sqpParams
       
     trust_box_size = cfg.initial_trust_box_size # The trust region will be a box around the current iterate.
     penalty_coeff = cfg.initial_penalty_coeff # Coefficient of l1 penalties 
+
+    # set profiler to None if you want no profiling
+    profiler = util.Profiler() if profile else None
 
     # The outer loop of the sqp algorithm, which repeatedly minimizes
     # the merit function --- Calls minimize_merit_function defined below
@@ -26,11 +30,14 @@ def belief_opt_penalty_sqp(B, U, model, plotting=True):
     # Reset the trust region size to be larger than cfg.min_trust_box_size, which is used in the termination condition for the inner loop.
     # - If all constraints are satisfied (which in code means if they are satisfied up to tolerance cfg.cnt_tolerance), we're done.
 
+    if profiler:
+        profiler.start('totalTime')
+
     iterCount = 1
     success = False
     while iterCount <= cfg.max_penalty_coeff_increases and not success:    
     
-        [B, U, success] = minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size, plotting)
+        [B, U, success] = minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size, plotting, profiler)
 	
         if plotting:
             plot.plot_belief_trajectory(B, U, model);
@@ -40,6 +47,11 @@ def belief_opt_penalty_sqp(B, U, model, plotting=True):
         trust_box_size = cfg.initial_trust_box_size
 
 	iterCount += 1
+
+    if profiler:
+        profiler.stop('totalTime')
+        for name, time in profiler.allTimes():
+            print('{0}: {1} seconds'.format(name, time))
 
     return B, U
 
@@ -82,7 +94,7 @@ def linearized_compute_merit(B, Bcvx, U, Ucvx, gval, G, H, model, penalty_coeff)
     
     return merit
 
-def minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size, plotting=True):
+def minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size, plotting=True, profiler=None):
     success = True
     sqp_iter = 1
     
@@ -101,13 +113,15 @@ def minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size, plo
         #print('merit: %f' % merit)
         #print('     current merit: %g' % merit);
         
+        if profiler: profiler.start('jacobians')
         # Linearize the belief dynamics constraint 
 	gval, G, H = list(), list(), list()
         for t in xrange(0, T-1):
             gval.append(belief.belief_dynamics(B[:,t], U[:,t], None, model))
 	    G.append(math_util.numerical_jac(belief.belief_dynamics, 0, [B[:,t], U[:,t], None, model]))
 	    H.append(math_util.numerical_jac(belief.belief_dynamics, 1, [B[:,t], U[:,t], None, model]))
-	    
+        if profiler: profiler.stop('jacobians')
+
         while True:
             # This is the trust region loop
             # Using the approximations computed above, this loop shrinks
@@ -120,13 +134,19 @@ def minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size, plo
 
             print('    trust region size: %.3g' % trust_box_size)
 
+            if profiler: profiler.start('cvxpy')
+
             Bcvx = cvxpy.Variable(bDim, T)
             Ucvx = cvxpy.Variable(uDim, T-1)
             constraints = list()
 
+            if profiler: profiler.start('linearized_compute_merit')
             objective_merit = linearized_compute_merit(B,Bcvx,U,Ucvx,gval,G,H,model,penalty_coeff)
+            if profiler: profiler.stop('linearized_compute_merit')
             objective = cvxpy.Minimize(objective_merit)
             
+            if profiler: profiler.start('cvxpy constraint creation')
+
             constraints += [Bcvx[:,0] == B[:,0], # Constraint to ensure that initial belief remains unchanged
                            Bcvx[0:xDim,T-1] == B[0:xDim,T-1], # reach goal at time T
                            Bcvx[0:xDim,:] <= np.tile(model.xMax, (1,T)), # upper x bound
@@ -140,8 +160,11 @@ def minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size, plo
                 
             constraints.append(cvxpy.abs(Bcvx[:,T-1]-B[:,T-1]) <= trust_box_size)
 
+            if profiler: profiler.stop('cvxpy constraint creation')
+
             problem = cvxpy.Problem(objective, constraints)
 
+            if profiler: profiler.start('cvxpy solve')
 	    try:
                 cvx_optval = problem.solve(verbose=False)
             except Exception as e:
@@ -149,6 +172,9 @@ def minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size, plo
                 print('Error %s' % e)
                 IPython.embed()
                 return B, U, False
+            if profiler: profiler.stop('cvxpy solve')
+
+            if profiler: profiler.stop('cvxpy')
 	    
 	    Bcvx = np.matrix(Bcvx.value)
             Ucvx = np.matrix(Ucvx.value)

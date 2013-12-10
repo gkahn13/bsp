@@ -86,9 +86,11 @@ def test_bsp_light_dark():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--no-plotting',action='store_true',default=False)
+    parser.add_argument('--profile',action='store_true',default=False)
     args = parser.parse_args()
 
     plotting = not args.no_plotting
+    profile = args.profile
 
     model = LightDarkModel()
 
@@ -121,7 +123,7 @@ def test_bsp_light_dark():
             plot.plot_belief_trajectory(B, U, model)
     
         
-        [Bopt, Uopt] = belief_opt.belief_opt_penalty_sqp(B, U, model, plotting)
+        [Bopt, Uopt] = belief_opt.belief_opt_penalty_sqp(B, U, model, plotting, profile)
         if plotting:
             plot.plot_belief_trajectory(Bopt, Uopt, model);
     
@@ -139,7 +141,7 @@ def test_bsp_light_dark():
         #simulate_bsp_trajectory(B(:,1), Uopt, model);
     
         print('press enter to continue to the next problem')
-        #raw_input()
+        raw_input()
     
 
 if __name__ == '__main__':

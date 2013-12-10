@@ -27,7 +27,6 @@ def vectorize(A):
 
     return Avec, constraints
 
-
 def sum_square(A):
     rows, cols = A.size
 

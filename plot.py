@@ -17,7 +17,7 @@ def plot_belief_trajectory(B, U, model):
     goal = model.goal
     T = model.T
 
-    plt.axis([-5,5,-3,3])
+    plt.axis([-5,3,-3,3])
 
     model.plot_domain(B)
 
@@ -50,11 +50,11 @@ def plot_cov(mu, sigma):
     mu = np.asarray(mu)
     sigma = np.asarray(sigma)
 
-    t = np.linspace(-math.pi, math.pi, 2*math.pi/.01)
+    t = np.linspace(-math.pi, math.pi, 2*math.pi/.1)
     x = np.sin(t)
     y = np.cos(t)
 
-    D_diag, V = ml.linalg.eig(sigma)
+    D_diag, V = ml.linalg.eigh(sigma)
     D = np.diag(D_diag)
     A = np.real((np.dot(V,ml.sqrt(D))).T)
 

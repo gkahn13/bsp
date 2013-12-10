@@ -64,7 +64,7 @@ class LightDarkModel(model.Model):
             for j in xrange(sy):
                 imz[i,j] = (1.0/((imx[i,j]**2)+1))
 
-        plt.imshow(imz,cmap=matplotlib.cm.Greys_r,extent=[-5,5,-3,3],aspect='auto')
+        plt.imshow(imz,cmap=matplotlib.cm.Greys_r,extent=[-5,3,-3,3],aspect='equal')
         
 
 class LightDarkSqpParams(model.SqpParams):
@@ -115,9 +115,9 @@ def test_bsp_light_dark():
         [Bopt, Uopt] = belief_opt.belief_opt_penalty_sqp(B, U, model)
         plot.plot_belief_trajectory(Bopt, Uopt, model);
     
-        # TODO: implement
-        #cost = compute_forward_simulated_cost(compose_belief(x1, SqrtSigma1, model), Uopt, model)
-        #print('Total cost of optimized trajectory: %f' % cost)
+	# Forward simulated cost
+        cost = belief.compute_forward_simulated_cost(B[:,0], Uopt, model)
+        print('Total cost of optimized trajectory: %f' % cost)
     
         # save trajectory to png file 
         # saveas(gcf, sprintf('bsp-light-dark-plan-%i.png',i_problem));

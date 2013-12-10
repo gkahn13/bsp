@@ -16,7 +16,6 @@ def ekf(x_t, Sigma_t, u_t, z_tp1, model):
     Q = model.Q
     R = model.R
 
-
     dyn_varargin = [x_t, u_t, ml.zeros([qDim,1])]
     obs_varargin = [dynamics_func(x_t, u_t, ml.zeros([qDim,1])), ml.zeros([rDim,1])]
 
@@ -60,9 +59,8 @@ def belief_dynamics(b_t, u_t, z_tp1, model):
     
     # Compute square root for storage
     # Several different choices available -- we use the principal square root
-    D_diag, V = ml.linalg.eig(Sigma_tp1)
-    D = ml.diag(D_diag)
-    SqrtSigma_tp1 = V*np.sqrt(D)*V.T
+    D_diag, V = ml.linalg.eigh(Sigma_tp1)
+    SqrtSigma_tp1 = V*np.sqrt(ml.diag(D_diag))*V.T
 
     b_tp1 = compose_belief(x_tp1, SqrtSigma_tp1, model)
 
@@ -93,11 +91,6 @@ def decompose_belief(b, model):
     x = b[0:xDim]
     idx = xDim
     
-    # Matlab code
-    # if (isa(b, 'double'))
-    # SqrtSigma = zeros(xDim, xDim);
-    # end
-    # unsure what behavior is wanted
     SqrtSigma = ml.zeros([xDim, xDim])
 
     for j in xrange(0,xDim):
@@ -107,49 +100,6 @@ def decompose_belief(b, model):
             idx = idx+1
 
     return x, SqrtSigma
-
-# Decompose belief vector into mean and square root of covariance
-def cvxpy_decompose_belief1(b, model):
-
-    xDim = model.xDim
-
-    x = b[0:xDim,0]
-    idx = xDim
-    
-    # can create as an Expression??
-    SqrtSigma = cvxpy.Variable(xDim, xDim)
-    constraints = list()
-
-    for j in xrange(0,xDim):
-        for i in xrange(j,xDim):
-            constraints.append(SqrtSigma[i,j] == b[idx,0])
-            constraints.append(SqrtSigma[j,i] == SqrtSigma[i,j])
-            idx = idx+1
-
-    return x, SqrtSigma, constraints
-
-# Decompose belief vector into mean and square root of covariance
-def cvxpy_decompose_belief(b, model):
-
-    xDim = model.xDim
-
-    xVec, bVec = b[:xDim,0], b[xDim:,0]
-
-    x = cvxpy.Variable(xDim, 1)
-    SqrtSigma = cvxpy.Variable(xDim, xDim)
-    constraints = list()
-
-    constraints.append(x == xVec)
-
-    bVec_offset = 0
-    for i in xrange(xDim):
-        constraints.append( SqrtSigma[i,i:xDim] == bVec[bVec_offset:bVec_offset+(xDim-i)].T )
-        bVec_offset += xDim-i
-
-    constraints.append(SqrtSigma == SqrtSigma.T)
-
-    return x, SqrtSigma, constraints
-
 
 def cvxpy_sigma_trace(b, model):
     xDim = model.xDim
@@ -162,38 +112,31 @@ def cvxpy_sigma_trace(b, model):
             SqrtSigma[i][j] = b[idx]
             SqrtSigma[j][i] = SqrtSigma[i][j]
             idx = idx+1
-
+    
     trace = 0
     for i in xrange(0,xDim):
         trace += sum(cvxpy.square(SqrtSigma[i][j]) for j in xrange(0,xDim))
 
     return trace
+
+# Compute foward simulated cost of belief trajectory given initial belief and set of control inputs (integrated forward)
+def compute_forward_simulated_cost(b, U, model):
+ 
+    T = model.T
+    cost = 0
     
-            
+    b_t = b
 
-# converts cvxpy matrix to vector
-def cvxpy_vectorize1(A):
-    rows, cols = A.size
+    for t in xrange(0,T-1):
+        x_t, s_t = decompose_belief(b_t, model)
+        cost += model.alpha_belief*ml.trace(s_t*s_t)
+        cost += model.alpha_control*ml.sum(U[:,t].T*U[:,t])
+        b_t = belief_dynamics(b_t, U[:,t], None, model)
+    
+    x_T, s_T = decompose_belief(b_t, model)
+    cost += model.alpha_final_belief*ml.trace(s_T*s_T)
 
-    Avec = A[:,0]
-
-    for col in xrange(1,cols):
-        Avec = cvxpy.vstack(Avec,A[:,col])
-
-    return Avec
-
-# converts cvxpy matrix to vector
-def cvxpy_vectorize(A):
-    rows, cols = A.size
-    constraints = list()
-
-    Avec = cvxpy.Variable(rows*cols, 1)
-
-    for col in xrange(0,cols):
-         constraints.append( Avec[rows*col:rows*(col+1)] == A[:,col] )
-
-    return Avec, constraints
-
+    return cost
 
 if __name__ == '__main__':
     import model

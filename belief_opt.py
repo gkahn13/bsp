@@ -122,6 +122,15 @@ def minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size, plo
 	    H.append(math_util.numerical_jac(belief.belief_dynamics, 1, [B[:,t], U[:,t], None, model]))
         if profiler: profiler.stop('jacobians')
 
+        if profiler: profiler.start('jacobians2')
+        gval2, G2, H2 = list(), list(), list()
+        for t in xrange(0, T-1):
+            gval2.append(belief.belief_dynamics(B[:,t], U[:,t], None, model))
+	    G2.append(math_util.numerical_jac2(belief.belief_dynamics, 0, [B[:,t], U[:,t], None, model]))
+	    H2.append(math_util.numerical_jac2(belief.belief_dynamics, 1, [B[:,t], U[:,t], None, model]))
+        if profiler: profiler.stop('jacobians2')
+
+
         while True:
             # This is the trust region loop
             # Using the approximations computed above, this loop shrinks
@@ -165,7 +174,7 @@ def minimize_merit_function(B, U, model, cfg, penalty_coeff, trust_box_size, plo
             problem = cvxpy.Problem(objective, constraints)
 
             if profiler: profiler.start('cvxpy solve')
-	    try:
+            try:
                 cvx_optval = problem.solve(verbose=False)
             except Exception as e:
                 print('Failed to solve QP subproblem.')

@@ -1,6 +1,8 @@
 import numpy as np
 from numpy import matlib as ml
 import cvxpy
+import theano
+from theano import tensor
 
 from math_util import numerical_jac
 
@@ -8,6 +10,8 @@ import IPython
 
 def ekf(x_t, Sigma_t, u_t, z_tp1, model):
 # Extract function handles and useful definitions from model
+    isTensor = type(x_t) == tensor.TensorVariable
+
     dynamics_func = model.dynamics_func
     obs_func = model.obs_func
     xDim = model.xDim
@@ -16,8 +20,12 @@ def ekf(x_t, Sigma_t, u_t, z_tp1, model):
     Q = model.Q
     R = model.R
 
-    dyn_varargin = [x_t, u_t, ml.zeros([qDim,1])]
-    obs_varargin = [dynamics_func(x_t, u_t, ml.zeros([qDim,1])), ml.zeros([rDim,1])]
+    if isTensor:
+        dyn_varargin = [x_t, u_t, theano.shared(ml.zeros([qDim,1]))]
+        obs_varargin = [dynamics_func(x_t, u_t, theano.shared(ml.zeros([qDim,1]))), theano.shared(ml.zeros([rDim,1]))]
+    else:
+        dyn_varargin = [x_t, u_t, ml.zeros([qDim,1])]
+        obs_varargin = [dynamics_func(x_t, u_t, ml.zeros([qDim,1])), ml.zeros([rDim,1])]
 
     # dynamics state jacobian
     A = numerical_jac(dynamics_func, 0, dyn_varargin)
@@ -43,6 +51,8 @@ def ekf(x_t, Sigma_t, u_t, z_tp1, model):
 # Belief dynamics: Given belief and control at time t, compute the belief
 # at time (t+1) using EKF
 def belief_dynamics(b_t, u_t, z_tp1, model):
+    isTensor = type(b_t) == tensor.TensorVariable
+
     dynamics_func = model.dynamics_func
     obs_func = model.obs_func
     qDim = model.qDim
@@ -53,7 +63,11 @@ def belief_dynamics(b_t, u_t, z_tp1, model):
 
     if z_tp1 is None:
         # Maximum likelihood observation assumption
-        z_tp1 = obs_func(dynamics_func(x_t, u_t, ml.zeros([qDim,1])), ml.zeros([rDim,1]))
+        if isTensor:
+            #z_tp1 = obs_func(dynamics_func(x_t, u_t, tensor.dmatrix()), tensor.dmatrix())
+            z_tp1 = obs_func(dynamics_func(x_t, u_t, theano.shared(ml.zeros([qDim,1]))), theano.shared(ml.zeros([rDim,1])))
+        else:
+            z_tp1 = obs_func(dynamics_func(x_t, u_t, ml.zeros([qDim,1])), ml.zeros([rDim,1]))
         
     x_tp1, Sigma_tp1 = ekf(x_t, Sigma_t, u_t, z_tp1, model)
     
@@ -88,15 +102,23 @@ def decompose_belief(b, model):
 
     xDim = model.xDim
 
+    isTensor = type(b) == tensor.TensorVariable
+
     x = b[0:xDim]
     idx = xDim
     
-    SqrtSigma = ml.zeros([xDim, xDim])
+    SqrtSigma = ml.zeros([xDim,xDim])
+    if isTensor:
+        SqrtSigma = tensor.shared(SqrtSigma)
 
     for j in xrange(0,xDim):
         for i in xrange(j,xDim):
-            SqrtSigma[i,j] = b[idx]
-            SqrtSigma[j,i] = SqrtSigma[i,j]
+            if isTensor:
+                SqrtSigma = tensor.set_subtensor(SqrtSigma[i,j], b[idx,0])
+                SqrtSigma = tensor.set_subtensor(SqrtSigma[j,i], b[idx,0])
+            else:
+                SqrtSigma[i,j] = b[idx,0]
+                SqrtSigma[j,i] = SqrtSigma[i,j]
             idx = idx+1
 
     return x, SqrtSigma
@@ -139,14 +161,11 @@ def compute_forward_simulated_cost(b, U, model):
     return cost
 
 if __name__ == '__main__':
-    import model
-    model = model.Model()
-    model.xDim = 4
-    x = np.matrix(np.random.rand(4,1))
-    svec = np.matrix([0,1,2,3,4,5,6,7,8,9]).T
-    b = np.vstack((x,svec))
-    x, s, constraints = cvxpy_decompose_belief(b,model)
+    import bsp_light_dark
+    model = bsp_light_dark.LightDarkModel()
 
-    x_actual, s_actual = decompose_belief(b,model)
-
+    b = tensor.dmatrix()
+    u = tensor.dmatrix()
+    z = None
+    
     IPython.embed()

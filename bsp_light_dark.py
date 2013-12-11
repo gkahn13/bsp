@@ -2,6 +2,8 @@ import numpy as np
 from numpy import matlib as ml
 import matplotlib
 import matplotlib.pyplot as plt
+import theano
+from theano import tensor
 
 import model
 import belief
@@ -48,8 +50,14 @@ class LightDarkModel(model.Model):
         return x_t + self.dT*u_t + .01*q_t
 
     def obs_func(self, x_t, r_t):
-        intensity = 0.5*0.5*x_t.item(0,0)*x_t.item(0,0) + 1e-6
-        return x_t + np.sqrt(intensity)*r_t
+        isTensor = type(x_t) == tensor.TensorVariable
+        
+        if isTensor:
+            intensity = 0.5*0.5*x_t[0,0]*x_t[0,0] + 1e-6
+            return x_t + tensor.sqrt(intensity)*r_t
+        else:
+            intensity = 0.5*0.5*x_t.item(0,0)*x_t.item(0,0) + 1e-6
+            return x_t + np.sqrt(intensity)*r_t
 
     def plot_domain(self, B):
         xvec = np.linspace(-5,3,8/.025)

@@ -1,6 +1,10 @@
 import numpy as np
 from numpy import matlib as ml
 
+import numdifftools as ndt
+import theano
+from theano import tensor
+
 import IPython
 
 # Numerical Jacobian of func 
@@ -15,10 +19,14 @@ def numerical_jac(func, idx, varargin):
     step = 1e-6
 
     x = varargin[idx].copy() # make copy so not altered
+    isTensor = type(x) == tensor.TensorVariable
     y = func(*varargin)
     lenx = x.shape[0]
     leny = y.shape[0]
+    IPython.embed()
     J = ml.zeros([leny, lenx])
+    if isTensor:
+        J = tensor.shared(J)
 
     for i in xrange(0,lenx):
         xhi = x.item(i,0) + step
@@ -33,6 +41,30 @@ def numerical_jac(func, idx, varargin):
         J[:,i] = (yhi - ylo)/(xhi - xlo)
         
     return J
+
+# numerical jacobian using numdifftools
+def numerical_jac1(func, idx, varargin):
+    x_orig = varargin[idx]
+    def input_func(x):
+        varargin[idx] = x
+        val = func(*varargin)
+        varargin[idx] = x_orig
+        return val
+    Jfunc = ndt.Jacobian(input_func)
+    IPython.embed()
+    return np.asmatrix(Jfunc(np.array(x_orig)))
+
+# numerical jacobian using Theano
+def numerical_jac2(func, idx, varargin):
+    x_orig = varargin[idx]
+    def input_func(x):
+        varargin[idx] = x
+        val = func(*varargin)
+        varargin[idx] = x_orig
+        return val
+    IPython.embed()
+    return theano.gradient.jacobian(input_func, x_orig)
+
 
 # for list of ndarrays [a1, ..., aN]
 # returns a1*...*aN

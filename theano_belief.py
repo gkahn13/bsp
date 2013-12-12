@@ -1,8 +1,13 @@
 import numpy as np
 from numpy import matlib as ml
 import cvxpy
+import theano
+import theano.tensor as T
+import theano.sandbox.linalg as L
 
 from math_util import numerical_jac
+import theano_util
+from theano_util import ndot
 
 import IPython
 
@@ -13,30 +18,37 @@ def ekf(x_t, Sigma_t, u_t, z_tp1, model):
     xDim = model.xDim
     qDim = model.qDim
     rDim = model.rDim
-    Q = model.Q
-    R = model.R
+    Q = theano.shared(model.Q)
+    R = theano.shared(model.R)
 
-    dyn_varargin = [x_t, u_t, ml.zeros([qDim,1])]
-    obs_varargin = [dynamics_func(x_t, u_t, ml.zeros([qDim,1])), ml.zeros([rDim,1])]
-
+    dyn_varargin = [x_t, u_t, theano.shared(ml.zeros([qDim,1]))]
+    obs_varargin = [dynamics_func(x_t, u_t, theano.shared(ml.zeros([qDim,1]))), theano.shared(ml.zeros([rDim,1]))]
+    
     # dynamics state jacobian
-    A = numerical_jac(dynamics_func, 0, dyn_varargin)
+    #A = numerical_jac(dynamics_func, 0, dyn_varargin)
+    A = theano_util.jacobian(dynamics_func, 0, dyn_varargin)
 
     # dynamics noise jacobian
-    M = numerical_jac(dynamics_func, 2, dyn_varargin)
+    #M = numerical_jac(dynamics_func, 2, dyn_varargin)
+    M = theano_util.jacobian(dynamics_func, 2, dyn_varargin)
 
     # observation state jacobian
-    H = numerical_jac(obs_func, 0, obs_varargin)
+    #H = numerical_jac(obs_func, 0, obs_varargin)
+    H = theano_util.jacobian(obs_func, 0, obs_varargin)
     
     # observation noise jacobian
-    N = numerical_jac(obs_func, 1, obs_varargin)
+    #N = numerical_jac(obs_func, 1, obs_varargin)
+    N = theano_util.jacobian(obs_func, 1, obs_varargin)
 
-    Sigma_tp1_neg = A*Sigma_t*A.T + M*Q*M.T
-    K = Sigma_tp1_neg*H.T*ml.linalg.inv(H*Sigma_tp1_neg*H.T + N*R*N.T)
+    #Sigma_tp1_neg = A*Sigma_t*A.T + M*Q*M.T
+    Sigma_tp1_neg = ndot([A,Sigma_t,A.T]) + ndot([M,Q,M.T])
+    
 
-    x = dynamics_func(x_t, u_t, ml.zeros([qDim,1]))
-    x_tp1 = x + K*(z_tp1 - obs_func(x, ml.zeros([rDim,1])))
-    Sigma_tp1 = (ml.eye(xDim) - K*H)*Sigma_tp1_neg
+    K = ndot([Sigma_tp1_neg,H.T,L.matrix_inverse(ndot([H,Sigma_tp1_neg,H.T]) + ndot([N,R,N.T]))])
+
+    x = dynamics_func(x_t, u_t, theano.shared(ml.zeros([qDim,1])))
+    x_tp1 = x + ndot([K, z_tp1 - obs_func(x, theano.shared(ml.zeros([rDim,1])))])
+    Sigma_tp1 = ndot([(theano.shared(ml.eye(xDim)) - ndot([K,H])),Sigma_tp1_neg])
 
     return x_tp1, Sigma_tp1
 
@@ -53,14 +65,14 @@ def belief_dynamics(b_t, u_t, z_tp1, model):
 
     if z_tp1 is None:
         # Maximum likelihood observation assumption
-        z_tp1 = obs_func(dynamics_func(x_t, u_t, ml.zeros([qDim,1])), ml.zeros([rDim,1]))
+        z_tp1 = obs_func(dynamics_func(x_t, u_t, theano.shared(ml.zeros([qDim,1]))), theano.shared(ml.zeros([rDim,1])))
         
     x_tp1, Sigma_tp1 = ekf(x_t, Sigma_t, u_t, z_tp1, model)
     
     # Compute square root for storage
     # Several different choices available -- we use the principal square root
-    D_diag, V = ml.linalg.eigh(Sigma_tp1)
-    SqrtSigma_tp1 = V*np.sqrt(ml.diag(D_diag))*V.T
+    D, V = L.eigh(Sigma_tp1)
+    SqrtSigma_tp1 = ndot([V,T.sqrt(D),V.T])
 
     b_tp1 = compose_belief(x_tp1, SqrtSigma_tp1, model)
 
@@ -73,12 +85,15 @@ def compose_belief(x, SqrtSigma, model):
     xDim = model.xDim
     bDim = model.bDim
 
-    b = ml.zeros([bDim,1])
-    b[0:xDim] = x
+    SqrtSigma = SqrtSigma.reshape((xDim,xDim))
+
+    b = T.dmatrix()
+    b = T.set_subtensor(b[0:xDim,0], x[0:xDim,0])
+    
     idx = xDim
     for j in xrange(0,xDim):
         for i in xrange(j,xDim):
-            b[idx] = 0.5 * (SqrtSigma.item(i,j) + SqrtSigma.item(j,i))
+            b = T.set_subtensor(b[idx,0], .5*SqrtSigma[i,j]*SqrtSigma[j,i])
             idx = idx+1
 
     return b
@@ -91,16 +106,18 @@ def decompose_belief(b, model):
     x = b[0:xDim]
     idx = xDim
     
-    SqrtSigma = ml.zeros([xDim, xDim])
+    SqrtSigma = ml.zeros([xDim,xDim])
+    SqrtSigma = theano.shared(SqrtSigma)
 
     for j in xrange(0,xDim):
         for i in xrange(j,xDim):
-            SqrtSigma[i,j] = b[idx]
-            SqrtSigma[j,i] = SqrtSigma[i,j]
+            SqrtSigma = T.set_subtensor(SqrtSigma[i,j], b[idx,0])
+            SqrtSigma = T.set_subtensor(SqrtSigma[j,i], b[idx,0])
             idx = idx+1
 
     return x, SqrtSigma
 
+# NOT converted
 def cvxpy_sigma_trace(b, model):
     xDim = model.xDim
 
@@ -119,6 +136,7 @@ def cvxpy_sigma_trace(b, model):
 
     return trace
 
+# NOT converted
 # Compute foward simulated cost of belief trajectory given initial belief and set of control inputs (integrated forward)
 def compute_forward_simulated_cost(b, U, model):
  
@@ -139,14 +157,13 @@ def compute_forward_simulated_cost(b, U, model):
     return cost
 
 if __name__ == '__main__':
-    import model
-    model = model.Model()
-    model.xDim = 4
-    x = np.matrix(np.random.rand(4,1))
-    svec = np.matrix([0,1,2,3,4,5,6,7,8,9]).T
-    b = np.vstack((x,svec))
-    x, s, constraints = cvxpy_decompose_belief(b,model)
+    import bsp_light_dark
+    model = bsp_light_dark.LightDarkModel()
 
-    x_actual, s_actual = decompose_belief(b,model)
+    b = T.dmatrix()
+    u = T.dmatrix()
+    z = None
+    
+    val = belief_dynamics(b,u,z,model)
 
     IPython.embed()

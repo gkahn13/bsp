@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import model
 import belief
 import belief_opt
+import belief_grad_free
 import plot
 
 import IPython
@@ -87,11 +88,12 @@ def test_bsp_light_dark():
     parser = argparse.ArgumentParser()
     parser.add_argument('--no-plotting',action='store_true',default=False)
     parser.add_argument('--profile',action='store_true',default=False)
+    parser.add_argument('--gradient_free',action='store_true',default=False)
     args = parser.parse_args()
 
     plotting = not args.no_plotting
     profile = args.profile
-
+    gradient_free = args.gradient_free
     model = LightDarkModel()
 
     X1 = ml.matrix([[-3.5,2],[-3.5,-2],[-4,0],[2,2],[-4,2]]).T
@@ -122,8 +124,10 @@ def test_bsp_light_dark():
         if plotting:
             plot.plot_belief_trajectory(B, U, model)
     
-        
-        [Bopt, Uopt] = belief_opt.belief_opt_penalty_sqp(B, U, model, plotting, profile)
+        if gradient_free :
+            [Bopt, Uopt] = belief_grad_free.STOMP_BSP(B,model,plotting,profile)
+        else:
+            [Bopt, Uopt] = belief_opt.belief_opt_penalty_sqp(B, U, model, plotting, profile)
         if plotting:
             plot.plot_belief_trajectory(Bopt, Uopt, model);
     

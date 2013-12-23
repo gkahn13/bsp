@@ -13,6 +13,8 @@ import util
 import IPython
 
 
+import matplotlib.pyplot as plt
+
 
 
 def STOMP_BSP(B,model,plotter,profile):
@@ -33,7 +35,7 @@ def STOMP_BSP(B,model,plotter,profile):
     R = compute_R(T); 
     Rin = R.I; 
     M = compute_M(Rin.copy(),T); 
-    noise_decay = 5/8; 
+    noise_decay = 7/8; 
     nd = 0; 
     dt = traj.copy();
     T = model.T; 
@@ -46,6 +48,7 @@ def STOMP_BSP(B,model,plotter,profile):
     if profile:
         profiler.start('totalTime')
     while abs(cost - precost) > lmbda and cost != 0:
+
        
         traj = B[0:model.xDim,:].copy();  
         precost = cost; 
@@ -59,12 +62,13 @@ def STOMP_BSP(B,model,plotter,profile):
                 for i in range(model.xDim):
 
 
-                    e =  np.random.multivariate_normal(np.zeros(15),Rin*noise_decay**iteration)
+                    e =  np.random.multivariate_normal(np.zeros(15),Rin)#*noise_decay**(iteration))
                     e[0] = 0
                     e[T-1] = 0
                     eps[i][k,:] = e.T
                     dt[i,:] = e.T    
-                   
+                
+                print dt
             
             else: 
                 for i in range(model.xDim):
@@ -81,7 +85,9 @@ def STOMP_BSP(B,model,plotter,profile):
             eps,best_costs = top_trajs(sum(cost_obs),dt,best_costs,eps,model)
 
             S[:,k] = cost_obs;
-            
+
+           
+            #plot.plot_belief_trajectory(B, U, model)
      
 
         P = compute_probability(S,K+5,model);
@@ -121,6 +127,9 @@ def STOMP_BSP(B,model,plotter,profile):
         cost = sum(cost_obs); 
         print "COST LIST",cost_obs
         print "TOTAL COST",cost
+ #       IPython.embed()
+  #      plt.cla()
+   #     plt.clf()
         if plotter:
             plot.plot_belief_trajectory(B, U, model)
 
@@ -248,5 +257,5 @@ def compute_R(T):
 
 
     R = A.T*A; 
-    R = R*10
+    R = R*100
     return R

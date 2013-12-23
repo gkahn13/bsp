@@ -24,7 +24,7 @@ def STOMP_BSP(B,model,plotter,profile):
     T = model.T;
     # set profiler to None if you want no profiling
     profiler = util.Profiler() if profile else None
-    total_cost,B,U = cost_func(B,model)
+    total_cost,B,U = cost_func(B,model,profile,profiler)
     total_cost = sum(total_cost)
     #Intialize variables
     K=9; 
@@ -55,18 +55,20 @@ def STOMP_BSP(B,model,plotter,profile):
         
         print 'NEW ITERATION'
         
+        if profile: profiler.start('generate_trajectories')
         for k in range(K+5):
             ntraj = traj.copy(); 
             #print "Base Trajecroty",ntraj
             if k > 5:
                 for i in range(model.xDim):
 
-
+                    if profile: profiler.start('generate_trajectory')
                     e =  np.random.multivariate_normal(np.zeros(15),Rin)#*noise_decay**(iteration))
                     e[0] = 0
                     e[T-1] = 0
                     eps[i][k,:] = e.T
                     dt[i,:] = e.T    
+                    if profile: profiler.stop('generate_trajectory')
                 
               
             
@@ -79,14 +81,15 @@ def STOMP_BSP(B,model,plotter,profile):
             B[0:model.xDim,:] = ntraj+dt; 
             
             
-            cost_obs,B,U = cost_func(B,model);
-            
+            if profile: profiler.start('cost_func')
+            cost_obs,B,U = cost_func(B,model,profile,profiler);
+            if profile: profiler.stop('cost_func')
 
             eps,best_costs = top_trajs(sum(cost_obs),dt,best_costs,eps,model)
 
             S[:,k] = cost_obs;
 
-           
+        if profile: profiler.stop('generate_trajectories')   
             #plot.plot_belief_trajectory(B, U, model)
      
 
@@ -123,7 +126,7 @@ def STOMP_BSP(B,model,plotter,profile):
        
         iteration+=1
     #Compute Cost and see if convergence by a factor lambda
-        cost_obs,B,U = cost_func(B,model);
+        cost_obs,B,U = cost_func(B,model,profile,profiler);
         cost = sum(cost_obs); 
      
  #       IPython.embed()
@@ -185,7 +188,7 @@ def top_trajs(cost,traj,best_costs,eps,model):
     return eps,best_costs
 
 
-def cost_func(B,model):
+def cost_func(B,model,profile,profiler):
 
     cost = ml.zeros([model.T,1])
     U = ml.zeros([model.uDim,model.T])
@@ -193,8 +196,9 @@ def cost_func(B,model):
 
     for t in range(T-1):
         U[:,t] = B[0:model.xDim,t+1]-B[0:model.xDim,t];
-        B[:,t+1] = belief.belief_dynamics(B[:,t],U[:,t],None,model);
-
+        if profile: profiler.start('belief_dynamics')
+        B[:,t+1] = belief.belief_dynamics(B[:,t],U[:,t],None,model,profiler,profile);
+        if profile: profiler.stop('belief_dynamics')
         if max(U[:,t])> 1:
             cost[t] = 1000
 

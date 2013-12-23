@@ -21,6 +21,7 @@ def numerical_jac(func, idx, varargin):
     J = ml.zeros([leny, lenx])
 
     for i in xrange(0,lenx):
+    
         xhi = x.item(i,0) + step
         xlo = x.item(i,0) - step
 

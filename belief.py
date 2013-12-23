@@ -20,17 +20,20 @@ def ekf(x_t, Sigma_t, u_t, z_tp1, model):
     obs_varargin = [dynamics_func(x_t, u_t, ml.zeros([qDim,1])), ml.zeros([rDim,1])]
 
     # dynamics state jacobian
-    A = numerical_jac(dynamics_func, 0, dyn_varargin)
-
+    #A = numerical_jac(dynamics_func, 0, dyn_varargin)
+    A = ml.identity(xDim);
+   #print "A",A
     # dynamics noise jacobian
-    M = numerical_jac(dynamics_func, 2, dyn_varargin)
-
+    #M = numerical_jac(dynamics_func, 2, dyn_varargin)
+    M = ml.identity(xDim)*0.01;
+    #print "M",M
     # observation state jacobian
-    H = numerical_jac(obs_func, 0, obs_varargin)
-    
+    #H = numerical_jac(obs_func, 0, obs_varargin)
+    H = ml.identity(xDim);
+    #print "H",H
     # observation noise jacobian
     N = numerical_jac(obs_func, 1, obs_varargin)
-
+    #print "N",N
     Sigma_tp1_neg = A*Sigma_t*A.T + M*Q*M.T
     K = Sigma_tp1_neg*H.T*ml.linalg.inv(H*Sigma_tp1_neg*H.T + N*R*N.T)
 
@@ -42,7 +45,7 @@ def ekf(x_t, Sigma_t, u_t, z_tp1, model):
 
 # Belief dynamics: Given belief and control at time t, compute the belief
 # at time (t+1) using EKF
-def belief_dynamics(b_t, u_t, z_tp1, model):
+def belief_dynamics(b_t, u_t, z_tp1, model,profiler=None,profile=False):
     dynamics_func = model.dynamics_func
     obs_func = model.obs_func
     qDim = model.qDim
@@ -54,12 +57,14 @@ def belief_dynamics(b_t, u_t, z_tp1, model):
     if z_tp1 is None:
         # Maximum likelihood observation assumption
         z_tp1 = obs_func(dynamics_func(x_t, u_t, ml.zeros([qDim,1])), ml.zeros([rDim,1]))
-        
+    if profile: profiler.start('ekf')
     x_tp1, Sigma_tp1 = ekf(x_t, Sigma_t, u_t, z_tp1, model)
-    
+    if profile: profiler.stop('ekf')
     # Compute square root for storage
     # Several different choices available -- we use the principal square root
+    if profile: profiler.start('eigh')
     D_diag, V = ml.linalg.eigh(Sigma_tp1)
+    if profile: profiler.stop('eigh')
     SqrtSigma_tp1 = V*np.sqrt(ml.diag(D_diag))*V.T
 
     b_tp1 = compose_belief(x_tp1, SqrtSigma_tp1, model)

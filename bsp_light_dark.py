@@ -118,7 +118,7 @@ def test_bsp_light_dark():
         B = ml.zeros([model.bDim,model.T])
         B[:,0] = belief.compose_belief(x1, SqrtSigma1, model)
         for t in xrange(0,model.T-1):
-            B[:,t+1] = belief.belief_dynamics(B[:,t], U[:,t], None, model)
+            B[:,t+1] = belief.belief_dynamics(B[:,t], U[:,t], None, model,None,None)
 
         # display initialization
         if plotting:

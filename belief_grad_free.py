@@ -47,7 +47,7 @@ def STOMP_BSP(B,model,plotter,profile):
          eps.append(ml.zeros([5+K,model.T])); 
     if profile:
         profiler.start('totalTime')
-    while abs(cost - precost) > lmbda and cost != 0:
+    while abs(cost - precost) > lmbda and cost < 1000:
 
        
         traj = B[0:model.xDim,:].copy();  
@@ -68,7 +68,7 @@ def STOMP_BSP(B,model,plotter,profile):
                     eps[i][k,:] = e.T
                     dt[i,:] = e.T    
                 
-                print dt
+              
             
             else: 
                 for i in range(model.xDim):
@@ -125,13 +125,15 @@ def STOMP_BSP(B,model,plotter,profile):
     #Compute Cost and see if convergence by a factor lambda
         cost_obs,B,U = cost_func(B,model);
         cost = sum(cost_obs); 
-        print "COST LIST",cost_obs
-        print "TOTAL COST",cost
+     
  #       IPython.embed()
   #      plt.cla()
    #     plt.clf()
         if plotter:
             plot.plot_belief_trajectory(B, U, model)
+        if(cost < 1000):
+            Bopt = B.copy(); 
+            Uopt = U.copy();
 
         eps,best_costs = top_trajs(cost,dt,best_costs,eps,model);
 
@@ -141,7 +143,7 @@ def STOMP_BSP(B,model,plotter,profile):
         for name, time in profiler.allTimes():
             print('{0}: {1} seconds'.format(name, time))
 
-    return B,U
+    return Bopt,Uopt
 
 
 
@@ -257,5 +259,5 @@ def compute_R(T):
 
 
     R = A.T*A; 
-    R = R*100
+    R = R*200
     return R

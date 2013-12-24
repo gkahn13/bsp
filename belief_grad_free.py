@@ -21,32 +21,38 @@ def STOMP_BSP(B,model,plotter,profile):
 
 
     #Trajectory will be 3xT
-    T = model.T;
+
     # set profiler to None if you want no profiling
     profiler = util.Profiler() if profile else None
-    total_cost,B,U = cost_func(B,model,profile,profiler)
-    total_cost = sum(total_cost)
+    cost_obs,B,U = cost_func(B,model,profile,profiler)
+
     #Intialize variables
     K=9; 
     lmbda = 5e-2
     precost = -100 
-    cost = total_cost; 
-    traj = B[0:model.xDim,:]
+    cost = 100
+    iteration = 0 
+    T = model.T; 
+
+    traj = B[0:model.xDim,:]   
+    dt = traj.copy();
+
     R = compute_R(T); 
     Rin = R.I; 
     M = compute_M(Rin.copy(),T); 
-    noise_decay = 7/8; 
-    nd = 0; 
-    dt = traj.copy();
-    T = model.T; 
+
     best_costs = ml.zeros([5,1])+5e6;
     S = ml.zeros([T,5+K]) 
     eps = list()
-    iteration = 0 
+
+
     for i in range(model.xDim):
-         eps.append(ml.zeros([5+K,model.T])); 
+         eps.append([ml.zeros([5+K,model.T]),cost_obs]); 
+
     if profile:
         profiler.start('totalTime')
+
+    #While it hasn't converged or has become invalid 
     while abs(cost - precost) > lmbda and cost < 1000:
 
        
@@ -55,72 +61,57 @@ def STOMP_BSP(B,model,plotter,profile):
         
         print 'NEW ITERATION'
         
-        if profile: profiler.start('generate_trajectories')
+       
         for k in range(K+5):
             ntraj = traj.copy(); 
             #print "Base Trajecroty",ntraj
             if k > 5:
+                #Generate New Trajectories
                 for i in range(model.xDim):
 
-                    if profile: profiler.start('generate_trajectory')
+                   
                     e =  np.random.multivariate_normal(np.zeros(15),Rin)#*noise_decay**(iteration))
                     e[0] = 0
                     e[T-1] = 0
-                    eps[i][k,:] = e.T
+                    eps[i][0][k,:] = e.T
                     dt[i,:] = e.T    
-                    if profile: profiler.stop('generate_trajectory')
+                  
                 
+                B[0:model.xDim,:] = ntraj+dt; 
+
+                cost_obs,B,U = cost_func(B,model,profile,profiler)
               
             
             else: 
+                #Bring out the five previous best ones
                 for i in range(model.xDim):
  
-                    dt[i,:] = eps[i][k,:];  
-               
+                    dt[i,:] = eps[i][0][k,:]
+                cost_obs = eps[0][1]
             
-            B[0:model.xDim,:] = ntraj+dt; 
-            
-            
-            if profile: profiler.start('cost_func')
-            cost_obs,B,U = cost_func(B,model,profile,profiler);
-            if profile: profiler.stop('cost_func')
+            #Update five best ones
+            eps,best_costs = top_trajs(sum(cost_obs),dt,best_costs,eps,model,cost_obs)
 
-            eps,best_costs = top_trajs(sum(cost_obs),dt,best_costs,eps,model)
+            S[:,k] = cost_obs
 
-            S[:,k] = cost_obs;
-
-        if profile: profiler.stop('generate_trajectories')   
             #plot.plot_belief_trajectory(B, U, model)
      
 
         P = compute_probability(S,K+5,model);
          
+        #Compute the expected gradient using probablities P
         for x in range(model.xDim):
             for i in range(T):
-                dt[x,i] = P[i,:]*eps[x][:,i]
+                dt[x,i] = P[i,:]*eps[x][0][:,i]
 
             dt[x,:] = (M*dt[x,:].T).T; 
             
       
         traj = traj+dt
        
-   
-        #Should smooth here 
-        # gcost = cost
-        # gprecost = cost+10
-        # # Update Trajectory
-        # while gprecost - gcost > 1e-2:
-        #     traj = traj+3*dt
-        #     gprecost = gcost 
-        B[0:model.xDim,:] = traj
-        #     cost_obs,B,U = cost_func(B,model)
-    
-        #     gcost = sum(cost_obs)
-        #     print gprecost - gcost
-            #IPython.embed()
 
-        # if gcost > 1000:
-        #     B[0:model.xDim,:] = B[0:model.xDim,:]-6*dt;
+        B[0:model.xDim,:] = traj
+
 
       
        
@@ -129,16 +120,16 @@ def STOMP_BSP(B,model,plotter,profile):
         cost_obs,B,U = cost_func(B,model,profile,profiler);
         cost = sum(cost_obs); 
      
- #       IPython.embed()
-  #      plt.cla()
-   #     plt.clf()
+
         if plotter:
             plot.plot_belief_trajectory(B, U, model)
+        #Check if valid   
         if(cost < 1000):
             Bopt = B.copy(); 
             Uopt = U.copy();
 
-        eps,best_costs = top_trajs(cost,dt,best_costs,eps,model);
+        #Update five best ones
+        eps,best_costs = top_trajs(cost,dt,best_costs,eps,model,cost_obs);
 
 
     if profile:
@@ -149,13 +140,7 @@ def STOMP_BSP(B,model,plotter,profile):
     return Bopt,Uopt
 
 
-
-
-
-
-
-
-
+#Compute Smoothing Matrix
 def compute_M(Rinv,T):
     Tfl = float(T)
     M = Rinv
@@ -172,8 +157,8 @@ def compute_M(Rinv,T):
     return M; 
 
 
-
-def top_trajs(cost,traj,best_costs,eps,model):
+#Store five best trajectories
+def top_trajs(cost,traj,best_costs,eps,model,cost_obs):
    
 
     if np.max(best_costs) > cost:
@@ -181,13 +166,14 @@ def top_trajs(cost,traj,best_costs,eps,model):
         index = np.argmax(best_costs); 
 
         for i in range(model.xDim):
-            eps[i][index,:] = traj[i,:]; 
-        
+            eps[i][0][index,:] = traj[i,:]; 
+            eps[i][1] = cost_obs;
         best_costs[index] = cost;
         
     return eps,best_costs
 
 
+#Compute cost by updating belief with ekf along the trajectory
 def cost_func(B,model,profile,profiler):
 
     cost = ml.zeros([model.T,1])
@@ -196,9 +182,9 @@ def cost_func(B,model,profile,profiler):
 
     for t in range(T-1):
         U[:,t] = B[0:model.xDim,t+1]-B[0:model.xDim,t];
-        if profile: profiler.start('belief_dynamics')
-        B[:,t+1] = belief.belief_dynamics(B[:,t],U[:,t],None,model,profiler,profile);
-        if profile: profiler.stop('belief_dynamics')
+
+        B[:,t+1] = belief.belief_dynamics(B[:,t],U[:,t],None,model);
+ 
         if max(U[:,t])> 1:
             cost[t] = 1000
 
@@ -221,7 +207,7 @@ def cost_func(B,model,profile,profiler):
 
 
 
-
+#Compute probability of each random trajectory
 def compute_probability(S,K,model):
     
     T = model.T; 
@@ -250,7 +236,7 @@ def compute_probability(S,K,model):
      
     return P
 
-
+#Compute inverse of covariance matrix for random trajectories 
 def compute_R(T):
 
     A =  ml.identity(T)* -2; 

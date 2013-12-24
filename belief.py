@@ -20,16 +20,16 @@ def ekf(x_t, Sigma_t, u_t, z_tp1, model):
     obs_varargin = [dynamics_func(x_t, u_t, ml.zeros([qDim,1])), ml.zeros([rDim,1])]
 
     # dynamics state jacobian
-    #A = numerical_jac(dynamics_func, 0, dyn_varargin)
-    A = ml.identity(xDim);
+    A = numerical_jac(dynamics_func, 0, dyn_varargin)
+
    #print "A",A
     # dynamics noise jacobian
-    #M = numerical_jac(dynamics_func, 2, dyn_varargin)
-    M = ml.identity(xDim)*0.01;
+    M = numerical_jac(dynamics_func, 2, dyn_varargin)
+
     #print "M",M
     # observation state jacobian
-    #H = numerical_jac(obs_func, 0, obs_varargin)
-    H = ml.identity(xDim);
+    H = numerical_jac(obs_func, 0, obs_varargin)
+
     #print "H",H
     # observation noise jacobian
     N = numerical_jac(obs_func, 1, obs_varargin)

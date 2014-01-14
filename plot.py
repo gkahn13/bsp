@@ -14,9 +14,21 @@ def plot_belief_trajectory(B, U, model):
     plt.cla()
 
     xDim = model.xDim
+    bDim = model.bDim
+    uDim = model.uDim
     start = model.start
     goal = model.goal
     T = model.T
+
+    if type(B) == list:
+	B = np.matrix(B)
+    if type(U) == list:
+	U = np.matrix(U)
+
+    if B.shape == (bDim*T, 1) or B.shape == (1, bDim*T):
+    	B = np.matrix(B.reshape(bDim, T))
+    if U.shape == (uDim*(T-1), 1) or B.shape == (1, uDim*(T-1)):
+        U = np.matrix(U.reshape(uDim, T-1))
 
     plt.axis([-5,3,-3,3])
 

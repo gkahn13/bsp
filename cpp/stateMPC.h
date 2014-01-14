@@ -28,7 +28,7 @@ typedef double stateMPC_FLOAT;
 /* SOLVER SETTINGS ------------------------------------------------------*/
 /* print level */
 #ifndef stateMPC_SET_PRINTLEVEL
-#define stateMPC_SET_PRINTLEVEL    (1)
+#define stateMPC_SET_PRINTLEVEL    (3)
 #endif
 
 /* timing */

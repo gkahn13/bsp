@@ -20,7 +20,6 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #ifndef __beliefMPC_H__
 #define __beliefMPC_H__
 
-
 /* DATA TYPE ------------------------------------------------------------*/
 typedef double beliefMPC_FLOAT;
 

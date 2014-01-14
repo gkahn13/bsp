@@ -9,11 +9,11 @@
 inline double sqr(double x) {
 	return x*x;
 }
-
-//inline double random() {
-//	return ((double) rand()) / RAND_MAX;
-//}
-
+/*
+inline double random() {
+	return ((double) rand()) / RAND_MAX;
+}
+*/
 /*************************************************************************
 Cephes Math Library Release 2.8:  June, 2000
 Copyright by Stephen L. Moshier
@@ -450,6 +450,7 @@ inline void drawUnitSphere(void *userdef, float time)
 }
 #include <cmath>
 #include <windows.h>
+
 
 class Timer
 {

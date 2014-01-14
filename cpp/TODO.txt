@@ -1,0 +1,16 @@
+- Setup light dark example in C++ 
+  -- setup belief dynamics with covariance matrix inside the state -- DONE
+  -- verify belief trajectory and cost -- DONE
+  -- visualization in callisto -- DONE
+
+- Integrate FORCES solver generated code in C++ implementation
+  -- covariance matrix inside the state and linearized constraint for belief dynamics, verify implementation against Matlab -- DONE
+
+- Factor out covariance matrix from the state 
+  -- FORCES code gen
+  -- Integrate D* code to compute cost, Jacobians, Diagonal Hessian term for separable objective
+  -- Diagonal Hessian or block diagonal Hessian?
+  -- verify correctness of implementation
+
+- Scaling experiments to verify if speed up is obtained
+  -- increase number of timesteps, dimension of state

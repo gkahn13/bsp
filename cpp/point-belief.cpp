@@ -271,16 +271,16 @@ void beliefCollocation(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DI
 			lb[t][2] = bt[2] - Beps;
 			lb[t][3] = bt[3] - Beps;
 			lb[t][4] = bt[4] - Beps;
-			lb[t][5] = MAX(uMin[0], ut[0] - Beps);
-			lb[t][6] = MAX(uMin[1], ut[1] - Beps);
+			lb[t][5] = MAX(uMin[0], ut[0] - Ueps);
+			lb[t][6] = MAX(uMin[1], ut[1] - Ueps);
 
 			ub[t][0] = MIN(xMax[0], bt[0] + Beps);
 			ub[t][1] = MIN(xMax[1], bt[1] + Beps);
 			ub[t][2] = bt[2] + Beps;
 			ub[t][3] = bt[3] + Beps;
 			ub[t][4] = bt[4] + Beps;
-			ub[t][5] = MIN(uMax[0], ut[0] + Beps);
-			ub[t][6] = MIN(uMax[1], ut[1] + Beps);
+			ub[t][5] = MIN(uMax[0], ut[0] + Ueps);
+			ub[t][6] = MIN(uMax[1], ut[1] + Ueps);
 
 			if (t > 0) {
 				Matrix<B_DIM,B_DIM+U_DIM> CMat;

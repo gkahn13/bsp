@@ -1,10 +1,14 @@
 #include <vector>
 #include <iostream>
 #include <fstream>
+#include <cstdlib>
+#include <iomanip>
 
 //#include "callisto.h"
 #include "matrix.h"
 #include "utils.h"
+
+#include <timer/Timer.h>
 
 extern "C" {
 #include "symeval.h"
@@ -104,7 +108,7 @@ void setupDstarInterface()
 
 	inputVars = new double[nvars];
 	
-	std::ifstream fptr("FastBSP\\masks.txt");
+	std::ifstream fptr("masks.txt");
 	int val;
 	for(int i = 0; i < nvars; ++i) {
 		fptr >> val;
@@ -129,7 +133,7 @@ void cleanup()
 	delete[] z;
 }
 
-double computeCost(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matrix<U_DIM> >& U)
+void computeCostGradDiagHess(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matrix<U_DIM> >& U, double* result)
 {
 	int idx = 0;	
 	for (int t = 0; t < T; ++t) {
@@ -158,12 +162,151 @@ double computeCost(const std::vector< Matrix<X_DIM> >& X, const std::vector< Mat
 	for (int i = 0; i < nvars; ++i) {
 		vars[idx++] = inputVars[maskIndices[i]];
 	}
-
-	double* result = new double[2*(T*X_DIM + (T-1)*U_DIM) + 1];
-
 	evalCostGradDiagHess(result, vars);
-	
-	return result[0];
+}
+
+void stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >& U, stateMPC_params& problem, stateMPC_output& output, stateMPC_info& info)
+{
+	int maxIter = 10;
+	double Xeps = 1;
+	double Ueps = 1;
+
+	// box constraint around goal
+	double delta = 0.01;
+
+	Matrix<X_DIM,1> x0 = X[0];
+
+	double prevcost, optcost;
+
+	int dim = T*X_DIM + (T-1)*U_DIM;
+	double* result = new double[2*dim + 1];
+
+	double Hzbar[4];
+
+	//std::cout << "Initialization trajectory cost: " << std::setprecision(10) << prevcost << std::endl;
+
+	for(int it = 0; it < maxIter; ++it)
+	{
+		//std::cout << "Iter: " << it << std::endl;
+		computeCostGradDiagHess(X, U, result);
+
+		// linearize belief dynamics constraint here
+		for (int t = 0; t < T-1; ++t)
+		{
+			Matrix<X_DIM>& xt = X[t];
+			Matrix<U_DIM>& ut = U[t];
+
+			Matrix<X_DIM+U_DIM> zbar;
+			zbar.insert(0,0,xt);
+			zbar.insert(X_DIM,0,ut);
+
+			H[t][0] = result[1+dim+t*X_DIM];
+			H[t][1] = result[1+dim+t*X_DIM+1];
+			H[t][2] = result[1+dim+T*X_DIM+t*U_DIM];
+			H[t][3] = result[1+dim+T*X_DIM+t*U_DIM+1];
+
+			for(int i = 0; i < (X_DIM+U_DIM); ++i) {
+				Hzbar[i] = H[t][i]*zbar[i];
+			}
+
+			f[t][0] = result[1+t*X_DIM] - Hzbar[0];
+			f[t][1] = result[1+t*X_DIM+1] - Hzbar[1];
+			f[t][2] = result[1+T*X_DIM+t*U_DIM] - Hzbar[2];
+			f[t][3] = result[1+T*X_DIM+t*U_DIM+1] - Hzbar[3];
+
+
+
+			// Fill in lb, ub, C, e
+			lb[t][0] = MAX(xMin[0], xt[0] - Xeps);
+			lb[t][1] = MAX(xMin[1], xt[1] - Xeps);
+			lb[t][2] = MAX(uMin[0], ut[0] - Ueps);
+			lb[t][3] = MAX(uMin[1], ut[1] - Ueps);
+
+			ub[t][0] = MIN(xMax[0], xt[0] + Xeps);
+			ub[t][1] = MIN(xMax[1], xt[1] + Xeps);
+			ub[t][2] = MIN(uMax[0], ut[0] + Ueps);
+			ub[t][3] = MIN(uMax[1], ut[1] + Ueps);
+
+			Matrix<X_DIM,X_DIM+U_DIM> CMat;
+			Matrix<X_DIM> eVec;
+
+			CMat.insert<X_DIM,X_DIM>(0,0,identity<X_DIM>());
+			CMat.insert<X_DIM,U_DIM>(0,X_DIM,DT*identity<U_DIM>());
+			int idx = 0;
+			for(int c = 0; c < (X_DIM+U_DIM); ++c) {
+				for(int r = 0; r < X_DIM; ++r) {
+					C[t][idx++] = CMat[c + r*(X_DIM+U_DIM)];
+				}
+			}
+
+			if (t == 0) {
+				e[t][0] = x0[0]; e[t][1] = x0[1];
+			} else {
+				e[t][0] = 0; e[t][1] = 0;
+			}
+		} //setting up problem
+
+		Matrix<X_DIM>& xT = X[T-1];
+
+		H[T-1][0] = result[1+dim+(T-1)*X_DIM];
+		H[T-1][1] = result[1+dim+(T-1)*X_DIM+1];
+
+		for(int i = 0; i < X_DIM; ++i) {
+			Hzbar[i] = H[T-1][i]*xT[i];
+		}
+
+		f[T-1][0] = result[1+(T-1)*X_DIM] - Hzbar[0];
+		f[T-1][1] = result[1+(T-1)*X_DIM+1] - Hzbar[1];
+
+		// Fill in lb, ub, C, e
+		lb[T-1][0] = MAX(xGoal[0] - delta, xT[0] - Xeps);
+		lb[T-1][1] = MAX(xGoal[1] - delta, xT[1] - Xeps);
+
+		ub[T-1][0] = MIN(xGoal[0] + delta, xT[0] + Xeps);
+		ub[T-1][1] = MIN(xGoal[1] + delta, xT[1] + Xeps);
+
+		e[T-1][0] = 0; e[T-1][1] = 0;
+
+		// Verify problem inputs
+
+		//int num;
+		//std::cin >> num;
+
+		int exitflag = stateMPC_solve(&problem, &output, &info);
+		if (exitflag == 1) {
+			for(int t = 0; t < T-1; ++t) {
+				Matrix<X_DIM>& xt = X[t];
+				Matrix<U_DIM>& ut = U[t];
+
+				for(int i = 0; i < X_DIM; ++i) {
+					xt[i] = z[t][i];
+				}
+				for(int i = 0; i < U_DIM; ++i) {
+					ut[i] = z[t][X_DIM+i];
+				}
+				optcost = info.pobj;
+			}
+			Matrix<X_DIM>& xt = X[T-1];
+			xt[0] = z[T-1][0]; xt[1] = z[T-1][1];
+		}
+		else {
+			std::cerr << "Some problem in solver" << std::endl;
+			std::exit(-1);
+		}
+		//std::cout << "Optimized cost: " << optcost << std::endl;
+
+		if ((optcost > prevcost) | (abs(optcost - prevcost)/prevcost < 0.01))
+			break;
+		else {
+			prevcost = optcost;
+			// TODO: integrate trajectory?
+			// TODO: plot trajectory
+		}
+
+		//int num;
+		//std::cin >> num;
+	}
+	delete[] result;
 }
 
 int main(int argc, char* argv[])
@@ -192,15 +335,21 @@ int main(int argc, char* argv[])
 
 	setupDstarInterface();
 	
+	stateMPC_params problem;
+	stateMPC_output output;
+	stateMPC_info info;
+
+	setupStateMPCVars(problem, output);
+
 	Timer t;
 	t.start();
 
 	// compute cost for the trajectory
-	double cost = computeCost(X, U);
+	stateCollocation(X, U, problem, output, info);
 
 	t.stop();
-	std::cout << "Cost: " << std::setprecision(10) << cost << std::endl;
-	std::cout << "Compute time: " << t.interval_mS() << " mS" << std::endl;
+	//std::cout << "Cost: " << std::setprecision(10) << cost << std::endl;
+	std::cout << "Compute time: " << t.getElapsedTimeInMilliSec() << " mS" << std::endl;
 
 	cleanup();
 

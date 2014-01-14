@@ -33,7 +33,7 @@ typedef double stateMPC_FLOAT;
 
 /* timing */
 #ifndef stateMPC_SET_TIMING
-#define stateMPC_SET_TIMING    (1)
+#define stateMPC_SET_TIMING    (0)
 #endif
 
 /* Numeric Warnings */

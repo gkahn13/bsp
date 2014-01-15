@@ -1,4 +1,4 @@
-function statebspgen()
+function lpbspgen()
 
 % FORCES - Fast interior point code generation for multistage problems.
 % Copyright (C) 2011-12 Alexander Domahidi [domahidi@control.ee.ethz.ch],
@@ -26,8 +26,8 @@ stages(i).dims.p = 0;               % number of affine constraints
 stages(i).dims.q = 0;               % number of quadratic constraints
 
 % cost
-params(1) = newParam(['H',istr], i, 'cost.H', 'diag'); % diagonal hessian
-params(end+1) = newParam(['f',istr], i, 'cost.f'); % gradient
+stages(i).cost.H = zeros(nx+nu,nx+nu);
+params(1) = newParam(['f',istr], i, 'cost.f'); % gradient
 
 % lower bounds
 stages(i).ineq.b.lbidx = 1:stages(i).dims.n; % lower bound acts on these indices
@@ -53,7 +53,7 @@ for i = 2:N
     stages(i).dims.q = 0;        % number of quadratic constraints
     
     % cost
-    params(end+1) = newParam(['H',istr], i, 'cost.H', 'diag'); % diagonal Hessian
+    stages(i).cost.H = zeros(nx+nu,nx+nu);
     params(end+1) = newParam(['f',istr], i, 'cost.f'); % gradient
     
     % lower bounds
@@ -83,7 +83,7 @@ stages(i).dims.p = 0;     % number of polytopic constraints
 stages(i).dims.q = 0;     % number of quadratic constraints
 
 % cost
-params(end+1) = newParam(['H',istr], i, 'cost.H', 'diag'); % diagonal Hessian
+stages(i).cost.H = zeros(nx+nu,nx+nu);
 params(end+1) = newParam(['f',istr], i, 'cost.f'); % gradient
 
 % lower bounds
@@ -109,7 +109,7 @@ var = sprintf('z%d',i);
 outputs(i) = newOutput(var,i,1:nx);
 
 % solver settings
-codeoptions = getOptions('stateMPC');
+codeoptions = getOptions('lpMPC');
 codeoptions.printlevel = 0;
 codeoptions.timing = 0;
 

@@ -25,22 +25,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /* SAFE DIVISION ------------------------------------------------------- */
 #define MAX(X,Y)  ((X) < (Y) ? (Y) : (X))
 #define MIN(X,Y)  ((X) < (Y) ? (X) : (Y))
-#define SAFEDIV_POS(X,Y)  ( (Y) < EPS ? ((X)/EPS) : (X)/(Y) ) 
-#define EPS (1.0000E-013)
-#define BIGM (1E20)
-#define BIGMM (1E30)
+/*#define SAFEDIV_POS(X,Y)  ( (Y) < EPS ? ((X)/EPS) : (X)/(Y) ) 
+#define EPS (1.0000E-013) */
+#define BIGM (1E30)
+#define BIGMM (1E60)
 
 /* includes for parallel computation if necessary */
 
 
 /* SYSTEM INCLUDES FOR PRINTING ---------------------------------------- */
-#ifndef USEMEXPRINTS
-#include <stdio.h>
-#define PRINTTEXT printf
-#else
-#include "mex.h"
-#define PRINTTEXT mexPrintf
-#endif
+
 
 
 
@@ -120,20 +114,6 @@ void stateMPC_LA_DIAG_QUADFCN_4(stateMPC_FLOAT* H, stateMPC_FLOAT* f, stateMPC_F
 
 
 /*
- * Prints vector of length 4 as row vector.
- */
-void stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_FLOAT* vec, char *name)
-{
-	int i;	
-	PRINTTEXT("%s = [",name);
-	for( i=0; i<3; i++){
-		PRINTTEXT("%6.4e,  ",vec[i]);
-	}
-	PRINTTEXT("%6.4e]\n",vec[3]);
-}
-
-
-/*
  * Calculates the gradient and the value for a quadratic function 0.5*z'*H*z + f'*z
  *
  * INPUTS:     H  - Symmetric Hessian, diag matrix of size [2 x 2]
@@ -152,20 +132,6 @@ void stateMPC_LA_DIAG_QUADFCN_2(stateMPC_FLOAT* H, stateMPC_FLOAT* f, stateMPC_F
 		grad[i] = hz + f[i];
 		*value += 0.5*hz*z[i] + f[i]*z[i];
 	}
-}
-
-
-/*
- * Prints vector of length 2 as row vector.
- */
-void stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_FLOAT* vec, char *name)
-{
-	int i;	
-	PRINTTEXT("%s = [",name);
-	for( i=0; i<1; i++){
-		PRINTTEXT("%6.4e,  ",vec[i]);
-	}
-	PRINTTEXT("%6.4e]\n",vec[1]);
 }
 
 
@@ -541,21 +507,6 @@ void stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(stateMPC_FLOAT *H, stateMPC_FLOAT 
 
 
 /**
- * Prints a matrix in triangular storage format.
- * The output can be pasted into MATLAB.
- */
-void stateMPC_PRINT_DIAGONAL_MATRIX_4(stateMPC_FLOAT *M, char *name)
-{
-    int i;
-    PRINTTEXT("%s = \n\t",name);
-    for( i=0; i<4; i++ ){
-		PRINTTEXT("% 6.4e,  ",M[i]);
-    }
-    PRINTTEXT("\n");
-}
-
-
-/**
  * Forward substitution for the matrix equation A*L' = B
  * where A is to be computed and is of size [2 x 4],
  * B is given and of size [2 x 4], L is a diagonal
@@ -580,29 +531,6 @@ void stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_FLOAT *L, stateMPC_FLOAT *B,
 }
 
 
-/*
- * Prints a dense matrix of size [2 x 4].
- * The matrix is assumed to be stored in column major format.
- */
-void stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_4(stateMPC_FLOAT* mat, char *name)
-{
-	int i;	
-	int j;
-	int k=0;
-	PRINTTEXT("%s = [\n",name);
-	for( i=0; i<2; i++){
-		PRINTTEXT("    ");
-		for( j=0; j<4; j++ ){
-			PRINTTEXT("% 6.4e  ",mat[j*2+i]);
-		}
-		if( i<2-1 )
-			PRINTTEXT(";\n");
-		else
-			PRINTTEXT("];\n");
-	}
-}
-
-
 /**
  * Forward substitution for the matrix equation A*L' = B
  * where A is to be computed and is of size [2 x 4],
@@ -619,25 +547,6 @@ void stateMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_4(stateMPC_FLOAT *L, stateMPC
     for( j=0; j<4; j++ ){   
 		A[j] = B[j]/L[j];
      }
-}
-
-
-/*
- * Prints the diagonal of a diagzero matrix of size [2 x 4].
- * The matrix is assumed to be stored in diagzero format.
- */
-void stateMPC_LA_DIAGZERO_PRINT_MATRIX_2_4(stateMPC_FLOAT* mat, char *name)
-
-
-{
-	int i;	
-	PRINTTEXT("%s = [",name);
-
-	for( i=0; i<4; i++){
-		PRINTTEXT("% 6.4e,  ",mat[i]);
-	}
-	PRINTTEXT("% 6.4e]\n",mat[4]);
-
 }
 
 
@@ -664,33 +573,10 @@ void stateMPC_LA_DENSE_DIAGZERO_MMTM_2_4_2(stateMPC_FLOAT *A, stateMPC_FLOAT *B,
 }
 
 
-/*
- * Prints a dense matrix of size [2 x 2].
- * The matrix is assumed to be stored in column major format.
- */
-void stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_2(stateMPC_FLOAT* mat, char *name)
-{
-	int i;	
-	int j;
-	int k=0;
-	PRINTTEXT("%s = [\n",name);
-	for( i=0; i<2; i++){
-		PRINTTEXT("    ");
-		for( j=0; j<2; j++ ){
-			PRINTTEXT("% 6.4e  ",mat[j*2+i]);
-		}
-		if( i<2-1 )
-			PRINTTEXT(";\n");
-		else
-			PRINTTEXT("];\n");
-	}
-}
-
-
 /**
  * Forward substitution to solve L*y = b where L is a
  * diagonal matrix in vector storage format.
- * 
+ *
  * The dimensions involved are 4.
  */
 void stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_FLOAT *L, stateMPC_FLOAT *b, stateMPC_FLOAT *y)
@@ -743,21 +629,6 @@ void stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_2_2_2(stateMPC_FLOAT *H, stateMPC_FLOAT 
 
 
 /**
- * Prints a matrix in triangular storage format.
- * The output can be pasted into MATLAB.
- */
-void stateMPC_PRINT_DIAGONAL_MATRIX_2(stateMPC_FLOAT *M, char *name)
-{
-    int i;
-    PRINTTEXT("%s = \n\t",name);
-    for( i=0; i<2; i++ ){
-		PRINTTEXT("% 6.4e,  ",M[i]);
-    }
-    PRINTTEXT("\n");
-}
-
-
-/**
  * Forward substitution for the matrix equation A*L' = B
  * where A is to be computed and is of size [2 x 2],
  * B is given and of size [2 x 2], L is a diagonal
@@ -776,29 +647,10 @@ void stateMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_2(stateMPC_FLOAT *L, stateMPC
 }
 
 
-/*
- * Prints the diagonal of a diagzero matrix of size [2 x 2].
- * The matrix is assumed to be stored in diagzero format.
- */
-void stateMPC_LA_DIAGZERO_PRINT_MATRIX_2_2(stateMPC_FLOAT* mat, char *name)
-
-
-{
-	int i;	
-	PRINTTEXT("%s = [",name);
-
-	for( i=0; i<2; i++){
-		PRINTTEXT("% 6.4e,  ",mat[i]);
-	}
-	PRINTTEXT("% 6.4e]\n",mat[2]);
-
-}
-
-
 /**
  * Forward substitution to solve L*y = b where L is a
  * diagonal matrix in vector storage format.
- * 
+ *
  * The dimensions involved are 2.
  */
 void stateMPC_LA_DIAG_FORWARDSUB_2(stateMPC_FLOAT *L, stateMPC_FLOAT *b, stateMPC_FLOAT *y)
@@ -829,39 +681,7 @@ void stateMPC_LA_DIAGZERO_MMT_2(stateMPC_FLOAT *B, stateMPC_FLOAT *L)
 }
 
 
-/**
- * Prints a matrix in triangular storage format.
- * The output can be pasted into MATLAB.
- */
-void stateMPC_PRINT_TRIANGULAR_MATRIX_2(stateMPC_FLOAT *M, char *name)
-{
-    int i;
-	int j;
-	int ii;
-    PRINTTEXT("%s = [\n\t",name);
-    for( i=0; i<2; i++ ){
-        ii = (i*(i+1))/2;
-        for( j=0; j<=i; j++ ){
-            if( j<2-1 )
-                PRINTTEXT("% 6.4e,  ",M[ii+j]);
-            else
-                PRINTTEXT("% 6.4e;  ",M[ii+j]);
-        }
-        for( j=i+1; j<2; j++ ){
-            if( j<2-1 )
-                PRINTTEXT("% 6.4e,  ",0.0);
-            else
-                PRINTTEXT("% 6.4e;  ",0.0);
-        }
-        if( i<2-1){
-            PRINTTEXT("\n\t");
-        }
-    }
-	PRINTTEXT("];\n");
-}
-
-
-/* 
+/*
  * Computes r = b - B*u
  * B is stored in diagzero format
  */
@@ -871,8 +691,8 @@ void stateMPC_LA_DIAGZERO_MVMSUB7_2(stateMPC_FLOAT *B, stateMPC_FLOAT *u, stateM
 
 	for( i=0; i<2; i++ ){
 		r[i] = b[i] - B[i]*u[i];
-	}	
-	
+	}
+
 }
 
 
@@ -881,16 +701,16 @@ void stateMPC_LA_DIAGZERO_MVMSUB7_2(stateMPC_FLOAT *B, stateMPC_FLOAT *u, stateM
  * and A is a dense matrix of size [2 x 4] in column
  * storage format, and B is of size [2 x 4] diagonalzero
  * storage format.
- * 
- * THIS ONE HAS THE WORST ACCES PATTERN POSSIBLE. 
+ *
+ * THIS ONE HAS THE WORST ACCES PATTERN POSSIBLE.
  * POSSIBKE FIX: PUT A AND B INTO ROW MAJOR FORMAT FIRST.
- * 
+ *
  */
 void stateMPC_LA_DENSE_DIAGZERO_MMT2_2_4_4(stateMPC_FLOAT *A, stateMPC_FLOAT *B, stateMPC_FLOAT *L)
 {
     int i, j, k, ii, di;
     stateMPC_FLOAT ltemp;
-    
+
     ii = 0; di = 0;
     for( i=0; i<2; i++ ){        
         for( j=0; j<=i; j++ ){
@@ -1023,7 +843,7 @@ void stateMPC_LA_DENSE_CHOL_2(stateMPC_FLOAT *A, stateMPC_FLOAT *L)
         
 #if stateMPC_SET_PRINTLEVEL > 0 && defined PRINTNUMERICALWARNINGS
         if( Mii < 1.0000000000000000E-013 ){
-             PRINTTEXT("WARNING: small pivot in Cholesky fact. (=%3.1e < eps=%3.1e), regularizing to %3.1e\n",Mii,1.0000000000000000E-013,4.0000000000000002E-004);
+             PRINTTEXT("WARNING (CHOL): small %d-th pivot in Cholesky fact. (=%3.1e < eps=%3.1e), regularizing to %3.1e\n",i,Mii,1.0000000000000000E-013,4.0000000000000002E-004);
 			 L[ii+i] = 2.0000000000000000E-002;
 		} else
 		{
@@ -1040,8 +860,10 @@ void stateMPC_LA_DENSE_CHOL_2(stateMPC_FLOAT *A, stateMPC_FLOAT *L)
                 l += L[jj+k]*L[ii+k];
             }
 
-			if( l >  BIGM ){ l = BIGMM; }
-			if( l < -BIGM ){ l = -BIGMM; }
+			/* saturate values for numerical stability */
+			l = MIN(l,  BIGMM);
+			l = MAX(l, -BIGMM);
+
             L[jj+i] = (L[jj+i] - l)/L[ii+i];            
 			jj += ++dj;
         }
@@ -1068,7 +890,7 @@ void stateMPC_LA_DENSE_FORWARDSUB_2(stateMPC_FLOAT *L, stateMPC_FLOAT *b, stateM
             yel -= y[j]*L[ii+j];
         }
 
-		/* saturate for numerical stability */
+		/* saturate for numerical stability  */
 		yel = MIN(yel, BIGM);
 		yel = MAX(yel, -BIGM);
 
@@ -1103,7 +925,7 @@ void stateMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(stateMPC_FLOAT *L, stateMPC_FLOAT *
 
 			/* saturate for numerical stability */
 			a = MIN(a, BIGM);
-			a = MAX(a, -BIGM);
+			a = MAX(a, -BIGM); 
 
 			A[j*2+i] = a/L[ii+j];			
         }
@@ -1185,7 +1007,7 @@ void stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_FLOAT *L, stateMPC_FLOAT *y, state
 
 		/* saturate for numerical stability */
 		xel = MIN(xel, BIGM);
-		xel = MAX(xel, -BIGM);
+		xel = MAX(xel, -BIGM); 
 
         x[i] = xel / L[ii+i];
         ii -= di--;
@@ -1392,20 +1214,6 @@ int stateMPC_LINESEARCH_BACKTRACKING_AFFINE(stateMPC_FLOAT *l, stateMPC_FLOAT *s
 
 
 /*
- * Prints vector of length 116 as row vector.
- */
-void stateMPC_LA_DENSE_PRINT_VECTOR_116(stateMPC_FLOAT* vec, char *name)
-{
-	int i;	
-	PRINTTEXT("%s = [",name);
-	for( i=0; i<115; i++){
-		PRINTTEXT("%6.4e,  ",vec[i]);
-	}
-	PRINTTEXT("%6.4e]\n",vec[115]);
-}
-
-
-/*
  * Vector subtraction x = u.*v - a where a is a scalar
 *  and x,u,v are vectors of length 116.
  */
@@ -1592,34 +1400,6 @@ void stateMPC_LA_VSUB7_116(stateMPC_FLOAT *l, stateMPC_FLOAT *r, stateMPC_FLOAT 
 	for( i=0; i<116; i++){
 		ds[i] = -(r[i] + s[i]*dl[i])/l[i];
 	}
-}
-
-
-/*
- * Prints vector of length 58 as row vector.
- */
-void stateMPC_LA_DENSE_PRINT_VECTOR_58(stateMPC_FLOAT* vec, char *name)
-{
-	int i;	
-	PRINTTEXT("%s = [",name);
-	for( i=0; i<57; i++){
-		PRINTTEXT("%6.4e,  ",vec[i]);
-	}
-	PRINTTEXT("%6.4e]\n",vec[57]);
-}
-
-
-/*
- * Prints vector of length 30 as row vector.
- */
-void stateMPC_LA_DENSE_PRINT_VECTOR_30(stateMPC_FLOAT* vec, char *name)
-{
-	int i;	
-	PRINTTEXT("%s = [",name);
-	for( i=0; i<29; i++){
-		PRINTTEXT("%6.4e,  ",vec[i]);
-	}
-	PRINTTEXT("%6.4e]\n",vec[29]);
 }
 
 
@@ -2423,6 +2203,7 @@ stateMPC_FLOAT stateMPC_L_0[6];
 int stateMPC_solve(stateMPC_params* params, stateMPC_output* output, stateMPC_info* info)
 {	
 int exitcode;
+
 #if stateMPC_SET_TIMING == 1
 	stateMPC_timer solvertimer;
 	stateMPC_tic(&solvertimer);
@@ -2436,1175 +2217,588 @@ stateMPC_LA_INITIALIZEVECTOR_116(stateMPC_s, 1);
 info->mu = 0;
 stateMPC_LA_DOTACC_116(stateMPC_l, stateMPC_s, &info->mu);
 info->mu /= 116;
-PRINTTEXT("This is stateMPC, a solver generated by FORCES (forces.ethz.ch).\n");
-PRINTTEXT("(c) Alexander Domahidi, Automatic Control Laboratory, ETH Zurich, 2011-2014.\n");
-PRINTTEXT("\n  #it  res_eq   res_ineq     pobj         dobj       dgap     rdgap     mu\n");
-PRINTTEXT("  ---------------------------------------------------------------------------\n");
 while( 1 ){
 info->pobj = 0;
 stateMPC_LA_DIAG_QUADFCN_4(params->H01, params->f01, stateMPC_z00, stateMPC_grad_cost00, &info->pobj);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_cost00, "stateMPC_grad_cost00");
 stateMPC_LA_DIAG_QUADFCN_4(params->H02, params->f02, stateMPC_z01, stateMPC_grad_cost01, &info->pobj);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_cost01, "stateMPC_grad_cost01");
 stateMPC_LA_DIAG_QUADFCN_4(params->H03, params->f03, stateMPC_z02, stateMPC_grad_cost02, &info->pobj);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_cost02, "stateMPC_grad_cost02");
 stateMPC_LA_DIAG_QUADFCN_4(params->H04, params->f04, stateMPC_z03, stateMPC_grad_cost03, &info->pobj);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_cost03, "stateMPC_grad_cost03");
 stateMPC_LA_DIAG_QUADFCN_4(params->H05, params->f05, stateMPC_z04, stateMPC_grad_cost04, &info->pobj);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_cost04, "stateMPC_grad_cost04");
 stateMPC_LA_DIAG_QUADFCN_4(params->H06, params->f06, stateMPC_z05, stateMPC_grad_cost05, &info->pobj);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_cost05, "stateMPC_grad_cost05");
 stateMPC_LA_DIAG_QUADFCN_4(params->H07, params->f07, stateMPC_z06, stateMPC_grad_cost06, &info->pobj);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_cost06, "stateMPC_grad_cost06");
 stateMPC_LA_DIAG_QUADFCN_4(params->H08, params->f08, stateMPC_z07, stateMPC_grad_cost07, &info->pobj);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_cost07, "stateMPC_grad_cost07");
 stateMPC_LA_DIAG_QUADFCN_4(params->H09, params->f09, stateMPC_z08, stateMPC_grad_cost08, &info->pobj);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_cost08, "stateMPC_grad_cost08");
 stateMPC_LA_DIAG_QUADFCN_4(params->H10, params->f10, stateMPC_z09, stateMPC_grad_cost09, &info->pobj);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_cost09, "stateMPC_grad_cost09");
 stateMPC_LA_DIAG_QUADFCN_4(params->H11, params->f11, stateMPC_z10, stateMPC_grad_cost10, &info->pobj);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_cost10, "stateMPC_grad_cost10");
 stateMPC_LA_DIAG_QUADFCN_4(params->H12, params->f12, stateMPC_z11, stateMPC_grad_cost11, &info->pobj);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_cost11, "stateMPC_grad_cost11");
 stateMPC_LA_DIAG_QUADFCN_4(params->H13, params->f13, stateMPC_z12, stateMPC_grad_cost12, &info->pobj);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_cost12, "stateMPC_grad_cost12");
 stateMPC_LA_DIAG_QUADFCN_4(params->H14, params->f14, stateMPC_z13, stateMPC_grad_cost13, &info->pobj);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_cost13, "stateMPC_grad_cost13");
 stateMPC_LA_DIAG_QUADFCN_2(params->H15, params->f15, stateMPC_z14, stateMPC_grad_cost14, &info->pobj);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_grad_cost14, "stateMPC_grad_cost14");
-PRINTTEXT("pobj = %6.4f\n", info->pobj);
 info->res_eq = 0;
 info->dgap = 0;
 stateMPC_LA_DIAGZERO_MVMSUB6_2(stateMPC_D00, stateMPC_z00, params->e01, stateMPC_v00, stateMPC_re00, &info->dgap, &info->res_eq);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_v00, "stateMPC_v00");
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_re00, "stateMPC_re00");
 stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C01, stateMPC_z00, stateMPC_D01, stateMPC_z01, params->e02, stateMPC_v01, stateMPC_re01, &info->dgap, &info->res_eq);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_v01, "stateMPC_v01");
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_re01, "stateMPC_re01");
 stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C02, stateMPC_z01, stateMPC_D01, stateMPC_z02, params->e03, stateMPC_v02, stateMPC_re02, &info->dgap, &info->res_eq);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_v02, "stateMPC_v02");
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_re02, "stateMPC_re02");
 stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C03, stateMPC_z02, stateMPC_D01, stateMPC_z03, params->e04, stateMPC_v03, stateMPC_re03, &info->dgap, &info->res_eq);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_v03, "stateMPC_v03");
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_re03, "stateMPC_re03");
 stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C04, stateMPC_z03, stateMPC_D01, stateMPC_z04, params->e05, stateMPC_v04, stateMPC_re04, &info->dgap, &info->res_eq);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_v04, "stateMPC_v04");
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_re04, "stateMPC_re04");
 stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C05, stateMPC_z04, stateMPC_D01, stateMPC_z05, params->e06, stateMPC_v05, stateMPC_re05, &info->dgap, &info->res_eq);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_v05, "stateMPC_v05");
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_re05, "stateMPC_re05");
 stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C06, stateMPC_z05, stateMPC_D01, stateMPC_z06, params->e07, stateMPC_v06, stateMPC_re06, &info->dgap, &info->res_eq);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_v06, "stateMPC_v06");
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_re06, "stateMPC_re06");
 stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C07, stateMPC_z06, stateMPC_D01, stateMPC_z07, params->e08, stateMPC_v07, stateMPC_re07, &info->dgap, &info->res_eq);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_v07, "stateMPC_v07");
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_re07, "stateMPC_re07");
 stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C08, stateMPC_z07, stateMPC_D01, stateMPC_z08, params->e09, stateMPC_v08, stateMPC_re08, &info->dgap, &info->res_eq);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_v08, "stateMPC_v08");
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_re08, "stateMPC_re08");
 stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C09, stateMPC_z08, stateMPC_D01, stateMPC_z09, params->e10, stateMPC_v09, stateMPC_re09, &info->dgap, &info->res_eq);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_v09, "stateMPC_v09");
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_re09, "stateMPC_re09");
 stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C10, stateMPC_z09, stateMPC_D01, stateMPC_z10, params->e11, stateMPC_v10, stateMPC_re10, &info->dgap, &info->res_eq);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_v10, "stateMPC_v10");
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_re10, "stateMPC_re10");
 stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C11, stateMPC_z10, stateMPC_D01, stateMPC_z11, params->e12, stateMPC_v11, stateMPC_re11, &info->dgap, &info->res_eq);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_v11, "stateMPC_v11");
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_re11, "stateMPC_re11");
 stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C12, stateMPC_z11, stateMPC_D01, stateMPC_z12, params->e13, stateMPC_v12, stateMPC_re12, &info->dgap, &info->res_eq);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_v12, "stateMPC_v12");
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_re12, "stateMPC_re12");
 stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C13, stateMPC_z12, stateMPC_D01, stateMPC_z13, params->e14, stateMPC_v13, stateMPC_re13, &info->dgap, &info->res_eq);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_v13, "stateMPC_v13");
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_re13, "stateMPC_re13");
 stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_2(params->C14, stateMPC_z13, stateMPC_D14, stateMPC_z14, params->e15, stateMPC_v14, stateMPC_re14, &info->dgap, &info->res_eq);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_v14, "stateMPC_v14");
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_re14, "stateMPC_re14");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C01, stateMPC_v01, stateMPC_D00, stateMPC_v00, stateMPC_grad_eq00);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq00, "stateMPC_grad_eq00");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C02, stateMPC_v02, stateMPC_D01, stateMPC_v01, stateMPC_grad_eq01);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq01, "stateMPC_grad_eq01");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C03, stateMPC_v03, stateMPC_D01, stateMPC_v02, stateMPC_grad_eq02);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq02, "stateMPC_grad_eq02");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C04, stateMPC_v04, stateMPC_D01, stateMPC_v03, stateMPC_grad_eq03);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq03, "stateMPC_grad_eq03");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C05, stateMPC_v05, stateMPC_D01, stateMPC_v04, stateMPC_grad_eq04);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq04, "stateMPC_grad_eq04");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C06, stateMPC_v06, stateMPC_D01, stateMPC_v05, stateMPC_grad_eq05);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq05, "stateMPC_grad_eq05");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C07, stateMPC_v07, stateMPC_D01, stateMPC_v06, stateMPC_grad_eq06);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq06, "stateMPC_grad_eq06");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C08, stateMPC_v08, stateMPC_D01, stateMPC_v07, stateMPC_grad_eq07);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq07, "stateMPC_grad_eq07");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C09, stateMPC_v09, stateMPC_D01, stateMPC_v08, stateMPC_grad_eq08);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq08, "stateMPC_grad_eq08");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C10, stateMPC_v10, stateMPC_D01, stateMPC_v09, stateMPC_grad_eq09);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq09, "stateMPC_grad_eq09");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C11, stateMPC_v11, stateMPC_D01, stateMPC_v10, stateMPC_grad_eq10);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq10, "stateMPC_grad_eq10");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C12, stateMPC_v12, stateMPC_D01, stateMPC_v11, stateMPC_grad_eq11);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq11, "stateMPC_grad_eq11");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C13, stateMPC_v13, stateMPC_D01, stateMPC_v12, stateMPC_grad_eq12);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq12, "stateMPC_grad_eq12");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C14, stateMPC_v14, stateMPC_D01, stateMPC_v13, stateMPC_grad_eq13);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq13, "stateMPC_grad_eq13");
 stateMPC_LA_DIAGZERO_MTVM_2_2(stateMPC_D14, stateMPC_v14, stateMPC_grad_eq14);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_grad_eq14, "stateMPC_grad_eq14");
 info->res_ineq = 0;
 stateMPC_LA_VSUBADD3_4(params->lb01, stateMPC_z00, stateMPC_lbIdx00, stateMPC_llb00, stateMPC_slb00, stateMPC_rilb00, &info->dgap, &info->res_ineq);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rilb00, "stateMPC_rilb00");
 stateMPC_LA_VSUBADD2_4(stateMPC_z00, stateMPC_ubIdx00, params->ub01, stateMPC_lub00, stateMPC_sub00, stateMPC_riub00, &info->dgap, &info->res_ineq);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_riub00, "stateMPC_riub00");
 stateMPC_LA_VSUBADD3_4(params->lb02, stateMPC_z01, stateMPC_lbIdx01, stateMPC_llb01, stateMPC_slb01, stateMPC_rilb01, &info->dgap, &info->res_ineq);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rilb01, "stateMPC_rilb01");
 stateMPC_LA_VSUBADD2_4(stateMPC_z01, stateMPC_ubIdx01, params->ub02, stateMPC_lub01, stateMPC_sub01, stateMPC_riub01, &info->dgap, &info->res_ineq);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_riub01, "stateMPC_riub01");
 stateMPC_LA_VSUBADD3_4(params->lb03, stateMPC_z02, stateMPC_lbIdx02, stateMPC_llb02, stateMPC_slb02, stateMPC_rilb02, &info->dgap, &info->res_ineq);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rilb02, "stateMPC_rilb02");
 stateMPC_LA_VSUBADD2_4(stateMPC_z02, stateMPC_ubIdx02, params->ub03, stateMPC_lub02, stateMPC_sub02, stateMPC_riub02, &info->dgap, &info->res_ineq);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_riub02, "stateMPC_riub02");
 stateMPC_LA_VSUBADD3_4(params->lb04, stateMPC_z03, stateMPC_lbIdx03, stateMPC_llb03, stateMPC_slb03, stateMPC_rilb03, &info->dgap, &info->res_ineq);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rilb03, "stateMPC_rilb03");
 stateMPC_LA_VSUBADD2_4(stateMPC_z03, stateMPC_ubIdx03, params->ub04, stateMPC_lub03, stateMPC_sub03, stateMPC_riub03, &info->dgap, &info->res_ineq);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_riub03, "stateMPC_riub03");
 stateMPC_LA_VSUBADD3_4(params->lb05, stateMPC_z04, stateMPC_lbIdx04, stateMPC_llb04, stateMPC_slb04, stateMPC_rilb04, &info->dgap, &info->res_ineq);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rilb04, "stateMPC_rilb04");
 stateMPC_LA_VSUBADD2_4(stateMPC_z04, stateMPC_ubIdx04, params->ub05, stateMPC_lub04, stateMPC_sub04, stateMPC_riub04, &info->dgap, &info->res_ineq);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_riub04, "stateMPC_riub04");
 stateMPC_LA_VSUBADD3_4(params->lb06, stateMPC_z05, stateMPC_lbIdx05, stateMPC_llb05, stateMPC_slb05, stateMPC_rilb05, &info->dgap, &info->res_ineq);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rilb05, "stateMPC_rilb05");
 stateMPC_LA_VSUBADD2_4(stateMPC_z05, stateMPC_ubIdx05, params->ub06, stateMPC_lub05, stateMPC_sub05, stateMPC_riub05, &info->dgap, &info->res_ineq);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_riub05, "stateMPC_riub05");
 stateMPC_LA_VSUBADD3_4(params->lb07, stateMPC_z06, stateMPC_lbIdx06, stateMPC_llb06, stateMPC_slb06, stateMPC_rilb06, &info->dgap, &info->res_ineq);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rilb06, "stateMPC_rilb06");
 stateMPC_LA_VSUBADD2_4(stateMPC_z06, stateMPC_ubIdx06, params->ub07, stateMPC_lub06, stateMPC_sub06, stateMPC_riub06, &info->dgap, &info->res_ineq);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_riub06, "stateMPC_riub06");
 stateMPC_LA_VSUBADD3_4(params->lb08, stateMPC_z07, stateMPC_lbIdx07, stateMPC_llb07, stateMPC_slb07, stateMPC_rilb07, &info->dgap, &info->res_ineq);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rilb07, "stateMPC_rilb07");
 stateMPC_LA_VSUBADD2_4(stateMPC_z07, stateMPC_ubIdx07, params->ub08, stateMPC_lub07, stateMPC_sub07, stateMPC_riub07, &info->dgap, &info->res_ineq);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_riub07, "stateMPC_riub07");
 stateMPC_LA_VSUBADD3_4(params->lb09, stateMPC_z08, stateMPC_lbIdx08, stateMPC_llb08, stateMPC_slb08, stateMPC_rilb08, &info->dgap, &info->res_ineq);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rilb08, "stateMPC_rilb08");
 stateMPC_LA_VSUBADD2_4(stateMPC_z08, stateMPC_ubIdx08, params->ub09, stateMPC_lub08, stateMPC_sub08, stateMPC_riub08, &info->dgap, &info->res_ineq);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_riub08, "stateMPC_riub08");
 stateMPC_LA_VSUBADD3_4(params->lb10, stateMPC_z09, stateMPC_lbIdx09, stateMPC_llb09, stateMPC_slb09, stateMPC_rilb09, &info->dgap, &info->res_ineq);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rilb09, "stateMPC_rilb09");
 stateMPC_LA_VSUBADD2_4(stateMPC_z09, stateMPC_ubIdx09, params->ub10, stateMPC_lub09, stateMPC_sub09, stateMPC_riub09, &info->dgap, &info->res_ineq);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_riub09, "stateMPC_riub09");
 stateMPC_LA_VSUBADD3_4(params->lb11, stateMPC_z10, stateMPC_lbIdx10, stateMPC_llb10, stateMPC_slb10, stateMPC_rilb10, &info->dgap, &info->res_ineq);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rilb10, "stateMPC_rilb10");
 stateMPC_LA_VSUBADD2_4(stateMPC_z10, stateMPC_ubIdx10, params->ub11, stateMPC_lub10, stateMPC_sub10, stateMPC_riub10, &info->dgap, &info->res_ineq);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_riub10, "stateMPC_riub10");
 stateMPC_LA_VSUBADD3_4(params->lb12, stateMPC_z11, stateMPC_lbIdx11, stateMPC_llb11, stateMPC_slb11, stateMPC_rilb11, &info->dgap, &info->res_ineq);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rilb11, "stateMPC_rilb11");
 stateMPC_LA_VSUBADD2_4(stateMPC_z11, stateMPC_ubIdx11, params->ub12, stateMPC_lub11, stateMPC_sub11, stateMPC_riub11, &info->dgap, &info->res_ineq);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_riub11, "stateMPC_riub11");
 stateMPC_LA_VSUBADD3_4(params->lb13, stateMPC_z12, stateMPC_lbIdx12, stateMPC_llb12, stateMPC_slb12, stateMPC_rilb12, &info->dgap, &info->res_ineq);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rilb12, "stateMPC_rilb12");
 stateMPC_LA_VSUBADD2_4(stateMPC_z12, stateMPC_ubIdx12, params->ub13, stateMPC_lub12, stateMPC_sub12, stateMPC_riub12, &info->dgap, &info->res_ineq);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_riub12, "stateMPC_riub12");
 stateMPC_LA_VSUBADD3_4(params->lb14, stateMPC_z13, stateMPC_lbIdx13, stateMPC_llb13, stateMPC_slb13, stateMPC_rilb13, &info->dgap, &info->res_ineq);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rilb13, "stateMPC_rilb13");
 stateMPC_LA_VSUBADD2_4(stateMPC_z13, stateMPC_ubIdx13, params->ub14, stateMPC_lub13, stateMPC_sub13, stateMPC_riub13, &info->dgap, &info->res_ineq);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_riub13, "stateMPC_riub13");
 stateMPC_LA_VSUBADD3_2(params->lb15, stateMPC_z14, stateMPC_lbIdx14, stateMPC_llb14, stateMPC_slb14, stateMPC_rilb14, &info->dgap, &info->res_ineq);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_rilb14, "stateMPC_rilb14");
 stateMPC_LA_VSUBADD2_2(stateMPC_z14, stateMPC_ubIdx14, params->ub15, stateMPC_lub14, stateMPC_sub14, stateMPC_riub14, &info->dgap, &info->res_ineq);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_riub14, "stateMPC_riub14");
 stateMPC_LA_INEQ_B_GRAD_4_4_4(stateMPC_lub00, stateMPC_sub00, stateMPC_riub00, stateMPC_llb00, stateMPC_slb00, stateMPC_rilb00, stateMPC_lbIdx00, stateMPC_ubIdx00, stateMPC_grad_ineq00, stateMPC_lubbysub00, stateMPC_llbbyslb00);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_lubbysub00, "stateMPC_lubbysub00");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_llbbyslb00, "stateMPC_llbbyslb00");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_ineq00, "stateMPC_grad_ineq00");
 stateMPC_LA_INEQ_B_GRAD_4_4_4(stateMPC_lub01, stateMPC_sub01, stateMPC_riub01, stateMPC_llb01, stateMPC_slb01, stateMPC_rilb01, stateMPC_lbIdx01, stateMPC_ubIdx01, stateMPC_grad_ineq01, stateMPC_lubbysub01, stateMPC_llbbyslb01);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_lubbysub01, "stateMPC_lubbysub01");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_llbbyslb01, "stateMPC_llbbyslb01");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_ineq01, "stateMPC_grad_ineq01");
 stateMPC_LA_INEQ_B_GRAD_4_4_4(stateMPC_lub02, stateMPC_sub02, stateMPC_riub02, stateMPC_llb02, stateMPC_slb02, stateMPC_rilb02, stateMPC_lbIdx02, stateMPC_ubIdx02, stateMPC_grad_ineq02, stateMPC_lubbysub02, stateMPC_llbbyslb02);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_lubbysub02, "stateMPC_lubbysub02");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_llbbyslb02, "stateMPC_llbbyslb02");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_ineq02, "stateMPC_grad_ineq02");
 stateMPC_LA_INEQ_B_GRAD_4_4_4(stateMPC_lub03, stateMPC_sub03, stateMPC_riub03, stateMPC_llb03, stateMPC_slb03, stateMPC_rilb03, stateMPC_lbIdx03, stateMPC_ubIdx03, stateMPC_grad_ineq03, stateMPC_lubbysub03, stateMPC_llbbyslb03);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_lubbysub03, "stateMPC_lubbysub03");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_llbbyslb03, "stateMPC_llbbyslb03");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_ineq03, "stateMPC_grad_ineq03");
 stateMPC_LA_INEQ_B_GRAD_4_4_4(stateMPC_lub04, stateMPC_sub04, stateMPC_riub04, stateMPC_llb04, stateMPC_slb04, stateMPC_rilb04, stateMPC_lbIdx04, stateMPC_ubIdx04, stateMPC_grad_ineq04, stateMPC_lubbysub04, stateMPC_llbbyslb04);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_lubbysub04, "stateMPC_lubbysub04");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_llbbyslb04, "stateMPC_llbbyslb04");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_ineq04, "stateMPC_grad_ineq04");
 stateMPC_LA_INEQ_B_GRAD_4_4_4(stateMPC_lub05, stateMPC_sub05, stateMPC_riub05, stateMPC_llb05, stateMPC_slb05, stateMPC_rilb05, stateMPC_lbIdx05, stateMPC_ubIdx05, stateMPC_grad_ineq05, stateMPC_lubbysub05, stateMPC_llbbyslb05);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_lubbysub05, "stateMPC_lubbysub05");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_llbbyslb05, "stateMPC_llbbyslb05");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_ineq05, "stateMPC_grad_ineq05");
 stateMPC_LA_INEQ_B_GRAD_4_4_4(stateMPC_lub06, stateMPC_sub06, stateMPC_riub06, stateMPC_llb06, stateMPC_slb06, stateMPC_rilb06, stateMPC_lbIdx06, stateMPC_ubIdx06, stateMPC_grad_ineq06, stateMPC_lubbysub06, stateMPC_llbbyslb06);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_lubbysub06, "stateMPC_lubbysub06");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_llbbyslb06, "stateMPC_llbbyslb06");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_ineq06, "stateMPC_grad_ineq06");
 stateMPC_LA_INEQ_B_GRAD_4_4_4(stateMPC_lub07, stateMPC_sub07, stateMPC_riub07, stateMPC_llb07, stateMPC_slb07, stateMPC_rilb07, stateMPC_lbIdx07, stateMPC_ubIdx07, stateMPC_grad_ineq07, stateMPC_lubbysub07, stateMPC_llbbyslb07);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_lubbysub07, "stateMPC_lubbysub07");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_llbbyslb07, "stateMPC_llbbyslb07");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_ineq07, "stateMPC_grad_ineq07");
 stateMPC_LA_INEQ_B_GRAD_4_4_4(stateMPC_lub08, stateMPC_sub08, stateMPC_riub08, stateMPC_llb08, stateMPC_slb08, stateMPC_rilb08, stateMPC_lbIdx08, stateMPC_ubIdx08, stateMPC_grad_ineq08, stateMPC_lubbysub08, stateMPC_llbbyslb08);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_lubbysub08, "stateMPC_lubbysub08");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_llbbyslb08, "stateMPC_llbbyslb08");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_ineq08, "stateMPC_grad_ineq08");
 stateMPC_LA_INEQ_B_GRAD_4_4_4(stateMPC_lub09, stateMPC_sub09, stateMPC_riub09, stateMPC_llb09, stateMPC_slb09, stateMPC_rilb09, stateMPC_lbIdx09, stateMPC_ubIdx09, stateMPC_grad_ineq09, stateMPC_lubbysub09, stateMPC_llbbyslb09);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_lubbysub09, "stateMPC_lubbysub09");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_llbbyslb09, "stateMPC_llbbyslb09");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_ineq09, "stateMPC_grad_ineq09");
 stateMPC_LA_INEQ_B_GRAD_4_4_4(stateMPC_lub10, stateMPC_sub10, stateMPC_riub10, stateMPC_llb10, stateMPC_slb10, stateMPC_rilb10, stateMPC_lbIdx10, stateMPC_ubIdx10, stateMPC_grad_ineq10, stateMPC_lubbysub10, stateMPC_llbbyslb10);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_lubbysub10, "stateMPC_lubbysub10");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_llbbyslb10, "stateMPC_llbbyslb10");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_ineq10, "stateMPC_grad_ineq10");
 stateMPC_LA_INEQ_B_GRAD_4_4_4(stateMPC_lub11, stateMPC_sub11, stateMPC_riub11, stateMPC_llb11, stateMPC_slb11, stateMPC_rilb11, stateMPC_lbIdx11, stateMPC_ubIdx11, stateMPC_grad_ineq11, stateMPC_lubbysub11, stateMPC_llbbyslb11);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_lubbysub11, "stateMPC_lubbysub11");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_llbbyslb11, "stateMPC_llbbyslb11");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_ineq11, "stateMPC_grad_ineq11");
 stateMPC_LA_INEQ_B_GRAD_4_4_4(stateMPC_lub12, stateMPC_sub12, stateMPC_riub12, stateMPC_llb12, stateMPC_slb12, stateMPC_rilb12, stateMPC_lbIdx12, stateMPC_ubIdx12, stateMPC_grad_ineq12, stateMPC_lubbysub12, stateMPC_llbbyslb12);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_lubbysub12, "stateMPC_lubbysub12");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_llbbyslb12, "stateMPC_llbbyslb12");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_ineq12, "stateMPC_grad_ineq12");
 stateMPC_LA_INEQ_B_GRAD_4_4_4(stateMPC_lub13, stateMPC_sub13, stateMPC_riub13, stateMPC_llb13, stateMPC_slb13, stateMPC_rilb13, stateMPC_lbIdx13, stateMPC_ubIdx13, stateMPC_grad_ineq13, stateMPC_lubbysub13, stateMPC_llbbyslb13);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_lubbysub13, "stateMPC_lubbysub13");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_llbbyslb13, "stateMPC_llbbyslb13");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_ineq13, "stateMPC_grad_ineq13");
 stateMPC_LA_INEQ_B_GRAD_2_2_2(stateMPC_lub14, stateMPC_sub14, stateMPC_riub14, stateMPC_llb14, stateMPC_slb14, stateMPC_rilb14, stateMPC_lbIdx14, stateMPC_ubIdx14, stateMPC_grad_ineq14, stateMPC_lubbysub14, stateMPC_llbbyslb14);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_lubbysub14, "stateMPC_lubbysub14");
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_llbbyslb14, "stateMPC_llbbyslb14");
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_grad_ineq14, "stateMPC_grad_ineq14");
 info->dobj = info->pobj - info->dgap;
 info->rdgap = info->pobj ? info->dgap / info->pobj : 1e6;
 if( info->rdgap < 0 ) info->rdgap = -info->rdgap;
-PRINTTEXT("  %3d  %3.1e  %3.1e  %+6.4e  %+6.4e  %+3.1e  %3.1e  %3.1e\n",info->it, info->res_eq, info->res_ineq, info->pobj, info->dobj, info->dgap, info->rdgap, info->mu);
 if( info->mu < stateMPC_SET_ACC_KKTCOMPL
     && (info->rdgap < stateMPC_SET_ACC_RDGAP || info->dgap < stateMPC_SET_ACC_KKTCOMPL)
     && info->res_eq < stateMPC_SET_ACC_RESEQ
     && info->res_ineq < stateMPC_SET_ACC_RESINEQ ){
-PRINTTEXT("OPTIMAL (within RESEQ=%2.1e, RESINEQ=%2.1e, (R)DGAP=(%2.1e)%2.1e, MU=%2.1e).\n",stateMPC_SET_ACC_RESEQ, stateMPC_SET_ACC_RESINEQ,stateMPC_SET_ACC_KKTCOMPL,stateMPC_SET_ACC_RDGAP,stateMPC_SET_ACC_KKTCOMPL);
 exitcode = stateMPC_OPTIMAL; break; }
 if( info->it == stateMPC_SET_MAXIT ){
-PRINTTEXT("Maximum number of iterations reached, exiting.\n");
 exitcode = stateMPC_MAXITREACHED; break; }
 stateMPC_LA_VVADD3_58(stateMPC_grad_cost, stateMPC_grad_eq, stateMPC_grad_ineq, stateMPC_rd);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rd00, "stateMPC_rd00");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rd01, "stateMPC_rd01");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rd02, "stateMPC_rd02");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rd03, "stateMPC_rd03");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rd04, "stateMPC_rd04");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rd05, "stateMPC_rd05");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rd06, "stateMPC_rd06");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rd07, "stateMPC_rd07");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rd08, "stateMPC_rd08");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rd09, "stateMPC_rd09");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rd10, "stateMPC_rd10");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rd11, "stateMPC_rd11");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rd12, "stateMPC_rd12");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rd13, "stateMPC_rd13");
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_rd14, "stateMPC_rd14");
 stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H01, stateMPC_llbbyslb00, stateMPC_lbIdx00, stateMPC_lubbysub00, stateMPC_ubIdx00, stateMPC_Phi00);
-stateMPC_PRINT_DIAGONAL_MATRIX_4(stateMPC_Phi00, "stateMPC_Phi00");
 stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_Phi00, params->C01, stateMPC_V00);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_4(stateMPC_V00, "stateMPC_V00");
 stateMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_4(stateMPC_Phi00, stateMPC_D00, stateMPC_W00);
-stateMPC_LA_DIAGZERO_PRINT_MATRIX_2_4(stateMPC_W00, "stateMPC_W00");
 stateMPC_LA_DENSE_DIAGZERO_MMTM_2_4_2(stateMPC_W00, stateMPC_V00, stateMPC_Ysd01);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_2(stateMPC_Ysd01, "stateMPC_Ysd01");
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi00, stateMPC_rd00, stateMPC_Lbyrd00);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_Lbyrd00, "stateMPC_Lbyrd00");
 stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H02, stateMPC_llbbyslb01, stateMPC_lbIdx01, stateMPC_lubbysub01, stateMPC_ubIdx01, stateMPC_Phi01);
-stateMPC_PRINT_DIAGONAL_MATRIX_4(stateMPC_Phi01, "stateMPC_Phi01");
 stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_Phi01, params->C02, stateMPC_V01);
 stateMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_4(stateMPC_Phi01, stateMPC_D01, stateMPC_W01);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_4(stateMPC_V01, "stateMPC_V01");
-stateMPC_LA_DIAGZERO_PRINT_MATRIX_2_4(stateMPC_W01, "stateMPC_W01");
 stateMPC_LA_DENSE_DIAGZERO_MMTM_2_4_2(stateMPC_W01, stateMPC_V01, stateMPC_Ysd02);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_2(stateMPC_Ysd02, "stateMPC_Ysd02");
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi01, stateMPC_rd01, stateMPC_Lbyrd01);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_Lbyrd01, "stateMPC_Lbyrd01");
 stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H03, stateMPC_llbbyslb02, stateMPC_lbIdx02, stateMPC_lubbysub02, stateMPC_ubIdx02, stateMPC_Phi02);
-stateMPC_PRINT_DIAGONAL_MATRIX_4(stateMPC_Phi02, "stateMPC_Phi02");
 stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_Phi02, params->C03, stateMPC_V02);
 stateMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_4(stateMPC_Phi02, stateMPC_D01, stateMPC_W02);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_4(stateMPC_V02, "stateMPC_V02");
-stateMPC_LA_DIAGZERO_PRINT_MATRIX_2_4(stateMPC_W02, "stateMPC_W02");
 stateMPC_LA_DENSE_DIAGZERO_MMTM_2_4_2(stateMPC_W02, stateMPC_V02, stateMPC_Ysd03);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_2(stateMPC_Ysd03, "stateMPC_Ysd03");
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi02, stateMPC_rd02, stateMPC_Lbyrd02);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_Lbyrd02, "stateMPC_Lbyrd02");
 stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H04, stateMPC_llbbyslb03, stateMPC_lbIdx03, stateMPC_lubbysub03, stateMPC_ubIdx03, stateMPC_Phi03);
-stateMPC_PRINT_DIAGONAL_MATRIX_4(stateMPC_Phi03, "stateMPC_Phi03");
 stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_Phi03, params->C04, stateMPC_V03);
 stateMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_4(stateMPC_Phi03, stateMPC_D01, stateMPC_W03);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_4(stateMPC_V03, "stateMPC_V03");
-stateMPC_LA_DIAGZERO_PRINT_MATRIX_2_4(stateMPC_W03, "stateMPC_W03");
 stateMPC_LA_DENSE_DIAGZERO_MMTM_2_4_2(stateMPC_W03, stateMPC_V03, stateMPC_Ysd04);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_2(stateMPC_Ysd04, "stateMPC_Ysd04");
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi03, stateMPC_rd03, stateMPC_Lbyrd03);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_Lbyrd03, "stateMPC_Lbyrd03");
 stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H05, stateMPC_llbbyslb04, stateMPC_lbIdx04, stateMPC_lubbysub04, stateMPC_ubIdx04, stateMPC_Phi04);
-stateMPC_PRINT_DIAGONAL_MATRIX_4(stateMPC_Phi04, "stateMPC_Phi04");
 stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_Phi04, params->C05, stateMPC_V04);
 stateMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_4(stateMPC_Phi04, stateMPC_D01, stateMPC_W04);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_4(stateMPC_V04, "stateMPC_V04");
-stateMPC_LA_DIAGZERO_PRINT_MATRIX_2_4(stateMPC_W04, "stateMPC_W04");
 stateMPC_LA_DENSE_DIAGZERO_MMTM_2_4_2(stateMPC_W04, stateMPC_V04, stateMPC_Ysd05);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_2(stateMPC_Ysd05, "stateMPC_Ysd05");
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi04, stateMPC_rd04, stateMPC_Lbyrd04);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_Lbyrd04, "stateMPC_Lbyrd04");
 stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H06, stateMPC_llbbyslb05, stateMPC_lbIdx05, stateMPC_lubbysub05, stateMPC_ubIdx05, stateMPC_Phi05);
-stateMPC_PRINT_DIAGONAL_MATRIX_4(stateMPC_Phi05, "stateMPC_Phi05");
 stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_Phi05, params->C06, stateMPC_V05);
 stateMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_4(stateMPC_Phi05, stateMPC_D01, stateMPC_W05);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_4(stateMPC_V05, "stateMPC_V05");
-stateMPC_LA_DIAGZERO_PRINT_MATRIX_2_4(stateMPC_W05, "stateMPC_W05");
 stateMPC_LA_DENSE_DIAGZERO_MMTM_2_4_2(stateMPC_W05, stateMPC_V05, stateMPC_Ysd06);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_2(stateMPC_Ysd06, "stateMPC_Ysd06");
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi05, stateMPC_rd05, stateMPC_Lbyrd05);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_Lbyrd05, "stateMPC_Lbyrd05");
 stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H07, stateMPC_llbbyslb06, stateMPC_lbIdx06, stateMPC_lubbysub06, stateMPC_ubIdx06, stateMPC_Phi06);
-stateMPC_PRINT_DIAGONAL_MATRIX_4(stateMPC_Phi06, "stateMPC_Phi06");
 stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_Phi06, params->C07, stateMPC_V06);
 stateMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_4(stateMPC_Phi06, stateMPC_D01, stateMPC_W06);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_4(stateMPC_V06, "stateMPC_V06");
-stateMPC_LA_DIAGZERO_PRINT_MATRIX_2_4(stateMPC_W06, "stateMPC_W06");
 stateMPC_LA_DENSE_DIAGZERO_MMTM_2_4_2(stateMPC_W06, stateMPC_V06, stateMPC_Ysd07);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_2(stateMPC_Ysd07, "stateMPC_Ysd07");
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi06, stateMPC_rd06, stateMPC_Lbyrd06);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_Lbyrd06, "stateMPC_Lbyrd06");
 stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H08, stateMPC_llbbyslb07, stateMPC_lbIdx07, stateMPC_lubbysub07, stateMPC_ubIdx07, stateMPC_Phi07);
-stateMPC_PRINT_DIAGONAL_MATRIX_4(stateMPC_Phi07, "stateMPC_Phi07");
 stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_Phi07, params->C08, stateMPC_V07);
 stateMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_4(stateMPC_Phi07, stateMPC_D01, stateMPC_W07);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_4(stateMPC_V07, "stateMPC_V07");
-stateMPC_LA_DIAGZERO_PRINT_MATRIX_2_4(stateMPC_W07, "stateMPC_W07");
 stateMPC_LA_DENSE_DIAGZERO_MMTM_2_4_2(stateMPC_W07, stateMPC_V07, stateMPC_Ysd08);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_2(stateMPC_Ysd08, "stateMPC_Ysd08");
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi07, stateMPC_rd07, stateMPC_Lbyrd07);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_Lbyrd07, "stateMPC_Lbyrd07");
 stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H09, stateMPC_llbbyslb08, stateMPC_lbIdx08, stateMPC_lubbysub08, stateMPC_ubIdx08, stateMPC_Phi08);
-stateMPC_PRINT_DIAGONAL_MATRIX_4(stateMPC_Phi08, "stateMPC_Phi08");
 stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_Phi08, params->C09, stateMPC_V08);
 stateMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_4(stateMPC_Phi08, stateMPC_D01, stateMPC_W08);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_4(stateMPC_V08, "stateMPC_V08");
-stateMPC_LA_DIAGZERO_PRINT_MATRIX_2_4(stateMPC_W08, "stateMPC_W08");
 stateMPC_LA_DENSE_DIAGZERO_MMTM_2_4_2(stateMPC_W08, stateMPC_V08, stateMPC_Ysd09);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_2(stateMPC_Ysd09, "stateMPC_Ysd09");
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi08, stateMPC_rd08, stateMPC_Lbyrd08);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_Lbyrd08, "stateMPC_Lbyrd08");
 stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H10, stateMPC_llbbyslb09, stateMPC_lbIdx09, stateMPC_lubbysub09, stateMPC_ubIdx09, stateMPC_Phi09);
-stateMPC_PRINT_DIAGONAL_MATRIX_4(stateMPC_Phi09, "stateMPC_Phi09");
 stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_Phi09, params->C10, stateMPC_V09);
 stateMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_4(stateMPC_Phi09, stateMPC_D01, stateMPC_W09);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_4(stateMPC_V09, "stateMPC_V09");
-stateMPC_LA_DIAGZERO_PRINT_MATRIX_2_4(stateMPC_W09, "stateMPC_W09");
 stateMPC_LA_DENSE_DIAGZERO_MMTM_2_4_2(stateMPC_W09, stateMPC_V09, stateMPC_Ysd10);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_2(stateMPC_Ysd10, "stateMPC_Ysd10");
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi09, stateMPC_rd09, stateMPC_Lbyrd09);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_Lbyrd09, "stateMPC_Lbyrd09");
 stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H11, stateMPC_llbbyslb10, stateMPC_lbIdx10, stateMPC_lubbysub10, stateMPC_ubIdx10, stateMPC_Phi10);
-stateMPC_PRINT_DIAGONAL_MATRIX_4(stateMPC_Phi10, "stateMPC_Phi10");
 stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_Phi10, params->C11, stateMPC_V10);
 stateMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_4(stateMPC_Phi10, stateMPC_D01, stateMPC_W10);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_4(stateMPC_V10, "stateMPC_V10");
-stateMPC_LA_DIAGZERO_PRINT_MATRIX_2_4(stateMPC_W10, "stateMPC_W10");
 stateMPC_LA_DENSE_DIAGZERO_MMTM_2_4_2(stateMPC_W10, stateMPC_V10, stateMPC_Ysd11);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_2(stateMPC_Ysd11, "stateMPC_Ysd11");
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi10, stateMPC_rd10, stateMPC_Lbyrd10);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_Lbyrd10, "stateMPC_Lbyrd10");
 stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H12, stateMPC_llbbyslb11, stateMPC_lbIdx11, stateMPC_lubbysub11, stateMPC_ubIdx11, stateMPC_Phi11);
-stateMPC_PRINT_DIAGONAL_MATRIX_4(stateMPC_Phi11, "stateMPC_Phi11");
 stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_Phi11, params->C12, stateMPC_V11);
 stateMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_4(stateMPC_Phi11, stateMPC_D01, stateMPC_W11);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_4(stateMPC_V11, "stateMPC_V11");
-stateMPC_LA_DIAGZERO_PRINT_MATRIX_2_4(stateMPC_W11, "stateMPC_W11");
 stateMPC_LA_DENSE_DIAGZERO_MMTM_2_4_2(stateMPC_W11, stateMPC_V11, stateMPC_Ysd12);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_2(stateMPC_Ysd12, "stateMPC_Ysd12");
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi11, stateMPC_rd11, stateMPC_Lbyrd11);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_Lbyrd11, "stateMPC_Lbyrd11");
 stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H13, stateMPC_llbbyslb12, stateMPC_lbIdx12, stateMPC_lubbysub12, stateMPC_ubIdx12, stateMPC_Phi12);
-stateMPC_PRINT_DIAGONAL_MATRIX_4(stateMPC_Phi12, "stateMPC_Phi12");
 stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_Phi12, params->C13, stateMPC_V12);
 stateMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_4(stateMPC_Phi12, stateMPC_D01, stateMPC_W12);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_4(stateMPC_V12, "stateMPC_V12");
-stateMPC_LA_DIAGZERO_PRINT_MATRIX_2_4(stateMPC_W12, "stateMPC_W12");
 stateMPC_LA_DENSE_DIAGZERO_MMTM_2_4_2(stateMPC_W12, stateMPC_V12, stateMPC_Ysd13);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_2(stateMPC_Ysd13, "stateMPC_Ysd13");
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi12, stateMPC_rd12, stateMPC_Lbyrd12);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_Lbyrd12, "stateMPC_Lbyrd12");
 stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H14, stateMPC_llbbyslb13, stateMPC_lbIdx13, stateMPC_lubbysub13, stateMPC_ubIdx13, stateMPC_Phi13);
-stateMPC_PRINT_DIAGONAL_MATRIX_4(stateMPC_Phi13, "stateMPC_Phi13");
 stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_Phi13, params->C14, stateMPC_V13);
 stateMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_4(stateMPC_Phi13, stateMPC_D01, stateMPC_W13);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_4(stateMPC_V13, "stateMPC_V13");
-stateMPC_LA_DIAGZERO_PRINT_MATRIX_2_4(stateMPC_W13, "stateMPC_W13");
 stateMPC_LA_DENSE_DIAGZERO_MMTM_2_4_2(stateMPC_W13, stateMPC_V13, stateMPC_Ysd14);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_2(stateMPC_Ysd14, "stateMPC_Ysd14");
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi13, stateMPC_rd13, stateMPC_Lbyrd13);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_Lbyrd13, "stateMPC_Lbyrd13");
 stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_2_2_2(params->H15, stateMPC_llbbyslb14, stateMPC_lbIdx14, stateMPC_lubbysub14, stateMPC_ubIdx14, stateMPC_Phi14);
-stateMPC_PRINT_DIAGONAL_MATRIX_2(stateMPC_Phi14, "stateMPC_Phi14");
 stateMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_2(stateMPC_Phi14, stateMPC_D14, stateMPC_W14);
-stateMPC_LA_DIAGZERO_PRINT_MATRIX_2_2(stateMPC_W14, "stateMPC_W14");
 stateMPC_LA_DIAG_FORWARDSUB_2(stateMPC_Phi14, stateMPC_rd14, stateMPC_Lbyrd14);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_Lbyrd14, "stateMPC_Lbyrd14");
 stateMPC_LA_DIAGZERO_MMT_2(stateMPC_W00, stateMPC_Yd00);
-stateMPC_PRINT_TRIANGULAR_MATRIX_2(stateMPC_Yd00, "stateMPC_Yd00");
 stateMPC_LA_DIAGZERO_MVMSUB7_2(stateMPC_W00, stateMPC_Lbyrd00, stateMPC_re00, stateMPC_beta00);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_beta00, "stateMPC_beta00");
 stateMPC_LA_DENSE_DIAGZERO_MMT2_2_4_4(stateMPC_V00, stateMPC_W01, stateMPC_Yd01);
-stateMPC_PRINT_TRIANGULAR_MATRIX_2(stateMPC_Yd01, "stateMPC_Yd01");
 stateMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_4_4(stateMPC_V00, stateMPC_Lbyrd00, stateMPC_W01, stateMPC_Lbyrd01, stateMPC_re01, stateMPC_beta01);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_beta01, "stateMPC_beta01");
 stateMPC_LA_DENSE_DIAGZERO_MMT2_2_4_4(stateMPC_V01, stateMPC_W02, stateMPC_Yd02);
-stateMPC_PRINT_TRIANGULAR_MATRIX_2(stateMPC_Yd02, "stateMPC_Yd02");
 stateMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_4_4(stateMPC_V01, stateMPC_Lbyrd01, stateMPC_W02, stateMPC_Lbyrd02, stateMPC_re02, stateMPC_beta02);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_beta02, "stateMPC_beta02");
 stateMPC_LA_DENSE_DIAGZERO_MMT2_2_4_4(stateMPC_V02, stateMPC_W03, stateMPC_Yd03);
-stateMPC_PRINT_TRIANGULAR_MATRIX_2(stateMPC_Yd03, "stateMPC_Yd03");
 stateMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_4_4(stateMPC_V02, stateMPC_Lbyrd02, stateMPC_W03, stateMPC_Lbyrd03, stateMPC_re03, stateMPC_beta03);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_beta03, "stateMPC_beta03");
 stateMPC_LA_DENSE_DIAGZERO_MMT2_2_4_4(stateMPC_V03, stateMPC_W04, stateMPC_Yd04);
-stateMPC_PRINT_TRIANGULAR_MATRIX_2(stateMPC_Yd04, "stateMPC_Yd04");
 stateMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_4_4(stateMPC_V03, stateMPC_Lbyrd03, stateMPC_W04, stateMPC_Lbyrd04, stateMPC_re04, stateMPC_beta04);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_beta04, "stateMPC_beta04");
 stateMPC_LA_DENSE_DIAGZERO_MMT2_2_4_4(stateMPC_V04, stateMPC_W05, stateMPC_Yd05);
-stateMPC_PRINT_TRIANGULAR_MATRIX_2(stateMPC_Yd05, "stateMPC_Yd05");
 stateMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_4_4(stateMPC_V04, stateMPC_Lbyrd04, stateMPC_W05, stateMPC_Lbyrd05, stateMPC_re05, stateMPC_beta05);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_beta05, "stateMPC_beta05");
 stateMPC_LA_DENSE_DIAGZERO_MMT2_2_4_4(stateMPC_V05, stateMPC_W06, stateMPC_Yd06);
-stateMPC_PRINT_TRIANGULAR_MATRIX_2(stateMPC_Yd06, "stateMPC_Yd06");
 stateMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_4_4(stateMPC_V05, stateMPC_Lbyrd05, stateMPC_W06, stateMPC_Lbyrd06, stateMPC_re06, stateMPC_beta06);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_beta06, "stateMPC_beta06");
 stateMPC_LA_DENSE_DIAGZERO_MMT2_2_4_4(stateMPC_V06, stateMPC_W07, stateMPC_Yd07);
-stateMPC_PRINT_TRIANGULAR_MATRIX_2(stateMPC_Yd07, "stateMPC_Yd07");
 stateMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_4_4(stateMPC_V06, stateMPC_Lbyrd06, stateMPC_W07, stateMPC_Lbyrd07, stateMPC_re07, stateMPC_beta07);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_beta07, "stateMPC_beta07");
 stateMPC_LA_DENSE_DIAGZERO_MMT2_2_4_4(stateMPC_V07, stateMPC_W08, stateMPC_Yd08);
-stateMPC_PRINT_TRIANGULAR_MATRIX_2(stateMPC_Yd08, "stateMPC_Yd08");
 stateMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_4_4(stateMPC_V07, stateMPC_Lbyrd07, stateMPC_W08, stateMPC_Lbyrd08, stateMPC_re08, stateMPC_beta08);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_beta08, "stateMPC_beta08");
 stateMPC_LA_DENSE_DIAGZERO_MMT2_2_4_4(stateMPC_V08, stateMPC_W09, stateMPC_Yd09);
-stateMPC_PRINT_TRIANGULAR_MATRIX_2(stateMPC_Yd09, "stateMPC_Yd09");
 stateMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_4_4(stateMPC_V08, stateMPC_Lbyrd08, stateMPC_W09, stateMPC_Lbyrd09, stateMPC_re09, stateMPC_beta09);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_beta09, "stateMPC_beta09");
 stateMPC_LA_DENSE_DIAGZERO_MMT2_2_4_4(stateMPC_V09, stateMPC_W10, stateMPC_Yd10);
-stateMPC_PRINT_TRIANGULAR_MATRIX_2(stateMPC_Yd10, "stateMPC_Yd10");
 stateMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_4_4(stateMPC_V09, stateMPC_Lbyrd09, stateMPC_W10, stateMPC_Lbyrd10, stateMPC_re10, stateMPC_beta10);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_beta10, "stateMPC_beta10");
 stateMPC_LA_DENSE_DIAGZERO_MMT2_2_4_4(stateMPC_V10, stateMPC_W11, stateMPC_Yd11);
-stateMPC_PRINT_TRIANGULAR_MATRIX_2(stateMPC_Yd11, "stateMPC_Yd11");
 stateMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_4_4(stateMPC_V10, stateMPC_Lbyrd10, stateMPC_W11, stateMPC_Lbyrd11, stateMPC_re11, stateMPC_beta11);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_beta11, "stateMPC_beta11");
 stateMPC_LA_DENSE_DIAGZERO_MMT2_2_4_4(stateMPC_V11, stateMPC_W12, stateMPC_Yd12);
-stateMPC_PRINT_TRIANGULAR_MATRIX_2(stateMPC_Yd12, "stateMPC_Yd12");
 stateMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_4_4(stateMPC_V11, stateMPC_Lbyrd11, stateMPC_W12, stateMPC_Lbyrd12, stateMPC_re12, stateMPC_beta12);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_beta12, "stateMPC_beta12");
 stateMPC_LA_DENSE_DIAGZERO_MMT2_2_4_4(stateMPC_V12, stateMPC_W13, stateMPC_Yd13);
-stateMPC_PRINT_TRIANGULAR_MATRIX_2(stateMPC_Yd13, "stateMPC_Yd13");
 stateMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_4_4(stateMPC_V12, stateMPC_Lbyrd12, stateMPC_W13, stateMPC_Lbyrd13, stateMPC_re13, stateMPC_beta13);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_beta13, "stateMPC_beta13");
 stateMPC_LA_DENSE_DIAGZERO_MMT2_2_4_2(stateMPC_V13, stateMPC_W14, stateMPC_Yd14);
-stateMPC_PRINT_TRIANGULAR_MATRIX_2(stateMPC_Yd14, "stateMPC_Yd14");
 stateMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_4_2(stateMPC_V13, stateMPC_Lbyrd13, stateMPC_W14, stateMPC_Lbyrd14, stateMPC_re14, stateMPC_beta14);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_beta14, "stateMPC_beta14");
 stateMPC_LA_DENSE_CHOL_2(stateMPC_Yd00, stateMPC_Ld00);
-stateMPC_PRINT_TRIANGULAR_MATRIX_2(stateMPC_Ld00, "stateMPC_Ld00");
 stateMPC_LA_DENSE_FORWARDSUB_2(stateMPC_Ld00, stateMPC_beta00, stateMPC_yy00);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_yy00, "stateMPC_yy00");
 stateMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(stateMPC_Ld00, stateMPC_Ysd01, stateMPC_Lsd01);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_2(stateMPC_Lsd01, "stateMPC_Lsd01");
 stateMPC_LA_DENSE_MMTSUB_2_2(stateMPC_Lsd01, stateMPC_Yd01);
 stateMPC_LA_DENSE_CHOL_2(stateMPC_Yd01, stateMPC_Ld01);
-stateMPC_PRINT_TRIANGULAR_MATRIX_2(stateMPC_Ld01, "stateMPC_Ld01");
 stateMPC_LA_DENSE_MVMSUB1_2_2(stateMPC_Lsd01, stateMPC_yy00, stateMPC_beta01, stateMPC_bmy01);
 stateMPC_LA_DENSE_FORWARDSUB_2(stateMPC_Ld01, stateMPC_bmy01, stateMPC_yy01);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_yy01, "stateMPC_yy01");
 stateMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(stateMPC_Ld01, stateMPC_Ysd02, stateMPC_Lsd02);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_2(stateMPC_Lsd02, "stateMPC_Lsd02");
 stateMPC_LA_DENSE_MMTSUB_2_2(stateMPC_Lsd02, stateMPC_Yd02);
 stateMPC_LA_DENSE_CHOL_2(stateMPC_Yd02, stateMPC_Ld02);
-stateMPC_PRINT_TRIANGULAR_MATRIX_2(stateMPC_Ld02, "stateMPC_Ld02");
 stateMPC_LA_DENSE_MVMSUB1_2_2(stateMPC_Lsd02, stateMPC_yy01, stateMPC_beta02, stateMPC_bmy02);
 stateMPC_LA_DENSE_FORWARDSUB_2(stateMPC_Ld02, stateMPC_bmy02, stateMPC_yy02);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_yy02, "stateMPC_yy02");
 stateMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(stateMPC_Ld02, stateMPC_Ysd03, stateMPC_Lsd03);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_2(stateMPC_Lsd03, "stateMPC_Lsd03");
 stateMPC_LA_DENSE_MMTSUB_2_2(stateMPC_Lsd03, stateMPC_Yd03);
 stateMPC_LA_DENSE_CHOL_2(stateMPC_Yd03, stateMPC_Ld03);
-stateMPC_PRINT_TRIANGULAR_MATRIX_2(stateMPC_Ld03, "stateMPC_Ld03");
 stateMPC_LA_DENSE_MVMSUB1_2_2(stateMPC_Lsd03, stateMPC_yy02, stateMPC_beta03, stateMPC_bmy03);
 stateMPC_LA_DENSE_FORWARDSUB_2(stateMPC_Ld03, stateMPC_bmy03, stateMPC_yy03);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_yy03, "stateMPC_yy03");
 stateMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(stateMPC_Ld03, stateMPC_Ysd04, stateMPC_Lsd04);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_2(stateMPC_Lsd04, "stateMPC_Lsd04");
 stateMPC_LA_DENSE_MMTSUB_2_2(stateMPC_Lsd04, stateMPC_Yd04);
 stateMPC_LA_DENSE_CHOL_2(stateMPC_Yd04, stateMPC_Ld04);
-stateMPC_PRINT_TRIANGULAR_MATRIX_2(stateMPC_Ld04, "stateMPC_Ld04");
 stateMPC_LA_DENSE_MVMSUB1_2_2(stateMPC_Lsd04, stateMPC_yy03, stateMPC_beta04, stateMPC_bmy04);
 stateMPC_LA_DENSE_FORWARDSUB_2(stateMPC_Ld04, stateMPC_bmy04, stateMPC_yy04);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_yy04, "stateMPC_yy04");
 stateMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(stateMPC_Ld04, stateMPC_Ysd05, stateMPC_Lsd05);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_2(stateMPC_Lsd05, "stateMPC_Lsd05");
 stateMPC_LA_DENSE_MMTSUB_2_2(stateMPC_Lsd05, stateMPC_Yd05);
 stateMPC_LA_DENSE_CHOL_2(stateMPC_Yd05, stateMPC_Ld05);
-stateMPC_PRINT_TRIANGULAR_MATRIX_2(stateMPC_Ld05, "stateMPC_Ld05");
 stateMPC_LA_DENSE_MVMSUB1_2_2(stateMPC_Lsd05, stateMPC_yy04, stateMPC_beta05, stateMPC_bmy05);
 stateMPC_LA_DENSE_FORWARDSUB_2(stateMPC_Ld05, stateMPC_bmy05, stateMPC_yy05);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_yy05, "stateMPC_yy05");
 stateMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(stateMPC_Ld05, stateMPC_Ysd06, stateMPC_Lsd06);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_2(stateMPC_Lsd06, "stateMPC_Lsd06");
 stateMPC_LA_DENSE_MMTSUB_2_2(stateMPC_Lsd06, stateMPC_Yd06);
 stateMPC_LA_DENSE_CHOL_2(stateMPC_Yd06, stateMPC_Ld06);
-stateMPC_PRINT_TRIANGULAR_MATRIX_2(stateMPC_Ld06, "stateMPC_Ld06");
 stateMPC_LA_DENSE_MVMSUB1_2_2(stateMPC_Lsd06, stateMPC_yy05, stateMPC_beta06, stateMPC_bmy06);
 stateMPC_LA_DENSE_FORWARDSUB_2(stateMPC_Ld06, stateMPC_bmy06, stateMPC_yy06);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_yy06, "stateMPC_yy06");
 stateMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(stateMPC_Ld06, stateMPC_Ysd07, stateMPC_Lsd07);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_2(stateMPC_Lsd07, "stateMPC_Lsd07");
 stateMPC_LA_DENSE_MMTSUB_2_2(stateMPC_Lsd07, stateMPC_Yd07);
 stateMPC_LA_DENSE_CHOL_2(stateMPC_Yd07, stateMPC_Ld07);
-stateMPC_PRINT_TRIANGULAR_MATRIX_2(stateMPC_Ld07, "stateMPC_Ld07");
 stateMPC_LA_DENSE_MVMSUB1_2_2(stateMPC_Lsd07, stateMPC_yy06, stateMPC_beta07, stateMPC_bmy07);
 stateMPC_LA_DENSE_FORWARDSUB_2(stateMPC_Ld07, stateMPC_bmy07, stateMPC_yy07);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_yy07, "stateMPC_yy07");
 stateMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(stateMPC_Ld07, stateMPC_Ysd08, stateMPC_Lsd08);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_2(stateMPC_Lsd08, "stateMPC_Lsd08");
 stateMPC_LA_DENSE_MMTSUB_2_2(stateMPC_Lsd08, stateMPC_Yd08);
 stateMPC_LA_DENSE_CHOL_2(stateMPC_Yd08, stateMPC_Ld08);
-stateMPC_PRINT_TRIANGULAR_MATRIX_2(stateMPC_Ld08, "stateMPC_Ld08");
 stateMPC_LA_DENSE_MVMSUB1_2_2(stateMPC_Lsd08, stateMPC_yy07, stateMPC_beta08, stateMPC_bmy08);
 stateMPC_LA_DENSE_FORWARDSUB_2(stateMPC_Ld08, stateMPC_bmy08, stateMPC_yy08);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_yy08, "stateMPC_yy08");
 stateMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(stateMPC_Ld08, stateMPC_Ysd09, stateMPC_Lsd09);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_2(stateMPC_Lsd09, "stateMPC_Lsd09");
 stateMPC_LA_DENSE_MMTSUB_2_2(stateMPC_Lsd09, stateMPC_Yd09);
 stateMPC_LA_DENSE_CHOL_2(stateMPC_Yd09, stateMPC_Ld09);
-stateMPC_PRINT_TRIANGULAR_MATRIX_2(stateMPC_Ld09, "stateMPC_Ld09");
 stateMPC_LA_DENSE_MVMSUB1_2_2(stateMPC_Lsd09, stateMPC_yy08, stateMPC_beta09, stateMPC_bmy09);
 stateMPC_LA_DENSE_FORWARDSUB_2(stateMPC_Ld09, stateMPC_bmy09, stateMPC_yy09);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_yy09, "stateMPC_yy09");
 stateMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(stateMPC_Ld09, stateMPC_Ysd10, stateMPC_Lsd10);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_2(stateMPC_Lsd10, "stateMPC_Lsd10");
 stateMPC_LA_DENSE_MMTSUB_2_2(stateMPC_Lsd10, stateMPC_Yd10);
 stateMPC_LA_DENSE_CHOL_2(stateMPC_Yd10, stateMPC_Ld10);
-stateMPC_PRINT_TRIANGULAR_MATRIX_2(stateMPC_Ld10, "stateMPC_Ld10");
 stateMPC_LA_DENSE_MVMSUB1_2_2(stateMPC_Lsd10, stateMPC_yy09, stateMPC_beta10, stateMPC_bmy10);
 stateMPC_LA_DENSE_FORWARDSUB_2(stateMPC_Ld10, stateMPC_bmy10, stateMPC_yy10);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_yy10, "stateMPC_yy10");
 stateMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(stateMPC_Ld10, stateMPC_Ysd11, stateMPC_Lsd11);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_2(stateMPC_Lsd11, "stateMPC_Lsd11");
 stateMPC_LA_DENSE_MMTSUB_2_2(stateMPC_Lsd11, stateMPC_Yd11);
 stateMPC_LA_DENSE_CHOL_2(stateMPC_Yd11, stateMPC_Ld11);
-stateMPC_PRINT_TRIANGULAR_MATRIX_2(stateMPC_Ld11, "stateMPC_Ld11");
 stateMPC_LA_DENSE_MVMSUB1_2_2(stateMPC_Lsd11, stateMPC_yy10, stateMPC_beta11, stateMPC_bmy11);
 stateMPC_LA_DENSE_FORWARDSUB_2(stateMPC_Ld11, stateMPC_bmy11, stateMPC_yy11);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_yy11, "stateMPC_yy11");
 stateMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(stateMPC_Ld11, stateMPC_Ysd12, stateMPC_Lsd12);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_2(stateMPC_Lsd12, "stateMPC_Lsd12");
 stateMPC_LA_DENSE_MMTSUB_2_2(stateMPC_Lsd12, stateMPC_Yd12);
 stateMPC_LA_DENSE_CHOL_2(stateMPC_Yd12, stateMPC_Ld12);
-stateMPC_PRINT_TRIANGULAR_MATRIX_2(stateMPC_Ld12, "stateMPC_Ld12");
 stateMPC_LA_DENSE_MVMSUB1_2_2(stateMPC_Lsd12, stateMPC_yy11, stateMPC_beta12, stateMPC_bmy12);
 stateMPC_LA_DENSE_FORWARDSUB_2(stateMPC_Ld12, stateMPC_bmy12, stateMPC_yy12);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_yy12, "stateMPC_yy12");
 stateMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(stateMPC_Ld12, stateMPC_Ysd13, stateMPC_Lsd13);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_2(stateMPC_Lsd13, "stateMPC_Lsd13");
 stateMPC_LA_DENSE_MMTSUB_2_2(stateMPC_Lsd13, stateMPC_Yd13);
 stateMPC_LA_DENSE_CHOL_2(stateMPC_Yd13, stateMPC_Ld13);
-stateMPC_PRINT_TRIANGULAR_MATRIX_2(stateMPC_Ld13, "stateMPC_Ld13");
 stateMPC_LA_DENSE_MVMSUB1_2_2(stateMPC_Lsd13, stateMPC_yy12, stateMPC_beta13, stateMPC_bmy13);
 stateMPC_LA_DENSE_FORWARDSUB_2(stateMPC_Ld13, stateMPC_bmy13, stateMPC_yy13);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_yy13, "stateMPC_yy13");
 stateMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(stateMPC_Ld13, stateMPC_Ysd14, stateMPC_Lsd14);
-stateMPC_LA_DENSE_PRINT_MATRIX_CM_2_2(stateMPC_Lsd14, "stateMPC_Lsd14");
 stateMPC_LA_DENSE_MMTSUB_2_2(stateMPC_Lsd14, stateMPC_Yd14);
 stateMPC_LA_DENSE_CHOL_2(stateMPC_Yd14, stateMPC_Ld14);
-stateMPC_PRINT_TRIANGULAR_MATRIX_2(stateMPC_Ld14, "stateMPC_Ld14");
 stateMPC_LA_DENSE_MVMSUB1_2_2(stateMPC_Lsd14, stateMPC_yy13, stateMPC_beta14, stateMPC_bmy14);
 stateMPC_LA_DENSE_FORWARDSUB_2(stateMPC_Ld14, stateMPC_bmy14, stateMPC_yy14);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_yy14, "stateMPC_yy14");
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld14, stateMPC_yy14, stateMPC_dvaff14);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dvaff14, "stateMPC_dvaff14");
 stateMPC_LA_DENSE_MTVMSUB_2_2(stateMPC_Lsd14, stateMPC_dvaff14, stateMPC_yy13, stateMPC_bmy13);
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld13, stateMPC_bmy13, stateMPC_dvaff13);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dvaff13, "stateMPC_dvaff13");
 stateMPC_LA_DENSE_MTVMSUB_2_2(stateMPC_Lsd13, stateMPC_dvaff13, stateMPC_yy12, stateMPC_bmy12);
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld12, stateMPC_bmy12, stateMPC_dvaff12);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dvaff12, "stateMPC_dvaff12");
 stateMPC_LA_DENSE_MTVMSUB_2_2(stateMPC_Lsd12, stateMPC_dvaff12, stateMPC_yy11, stateMPC_bmy11);
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld11, stateMPC_bmy11, stateMPC_dvaff11);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dvaff11, "stateMPC_dvaff11");
 stateMPC_LA_DENSE_MTVMSUB_2_2(stateMPC_Lsd11, stateMPC_dvaff11, stateMPC_yy10, stateMPC_bmy10);
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld10, stateMPC_bmy10, stateMPC_dvaff10);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dvaff10, "stateMPC_dvaff10");
 stateMPC_LA_DENSE_MTVMSUB_2_2(stateMPC_Lsd10, stateMPC_dvaff10, stateMPC_yy09, stateMPC_bmy09);
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld09, stateMPC_bmy09, stateMPC_dvaff09);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dvaff09, "stateMPC_dvaff09");
 stateMPC_LA_DENSE_MTVMSUB_2_2(stateMPC_Lsd09, stateMPC_dvaff09, stateMPC_yy08, stateMPC_bmy08);
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld08, stateMPC_bmy08, stateMPC_dvaff08);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dvaff08, "stateMPC_dvaff08");
 stateMPC_LA_DENSE_MTVMSUB_2_2(stateMPC_Lsd08, stateMPC_dvaff08, stateMPC_yy07, stateMPC_bmy07);
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld07, stateMPC_bmy07, stateMPC_dvaff07);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dvaff07, "stateMPC_dvaff07");
 stateMPC_LA_DENSE_MTVMSUB_2_2(stateMPC_Lsd07, stateMPC_dvaff07, stateMPC_yy06, stateMPC_bmy06);
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld06, stateMPC_bmy06, stateMPC_dvaff06);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dvaff06, "stateMPC_dvaff06");
 stateMPC_LA_DENSE_MTVMSUB_2_2(stateMPC_Lsd06, stateMPC_dvaff06, stateMPC_yy05, stateMPC_bmy05);
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld05, stateMPC_bmy05, stateMPC_dvaff05);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dvaff05, "stateMPC_dvaff05");
 stateMPC_LA_DENSE_MTVMSUB_2_2(stateMPC_Lsd05, stateMPC_dvaff05, stateMPC_yy04, stateMPC_bmy04);
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld04, stateMPC_bmy04, stateMPC_dvaff04);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dvaff04, "stateMPC_dvaff04");
 stateMPC_LA_DENSE_MTVMSUB_2_2(stateMPC_Lsd04, stateMPC_dvaff04, stateMPC_yy03, stateMPC_bmy03);
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld03, stateMPC_bmy03, stateMPC_dvaff03);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dvaff03, "stateMPC_dvaff03");
 stateMPC_LA_DENSE_MTVMSUB_2_2(stateMPC_Lsd03, stateMPC_dvaff03, stateMPC_yy02, stateMPC_bmy02);
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld02, stateMPC_bmy02, stateMPC_dvaff02);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dvaff02, "stateMPC_dvaff02");
 stateMPC_LA_DENSE_MTVMSUB_2_2(stateMPC_Lsd02, stateMPC_dvaff02, stateMPC_yy01, stateMPC_bmy01);
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld01, stateMPC_bmy01, stateMPC_dvaff01);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dvaff01, "stateMPC_dvaff01");
 stateMPC_LA_DENSE_MTVMSUB_2_2(stateMPC_Lsd01, stateMPC_dvaff01, stateMPC_yy00, stateMPC_bmy00);
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld00, stateMPC_bmy00, stateMPC_dvaff00);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dvaff00, "stateMPC_dvaff00");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C01, stateMPC_dvaff01, stateMPC_D00, stateMPC_dvaff00, stateMPC_grad_eq00);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq00, "stateMPC_grad_eq00");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C02, stateMPC_dvaff02, stateMPC_D01, stateMPC_dvaff01, stateMPC_grad_eq01);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq01, "stateMPC_grad_eq01");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C03, stateMPC_dvaff03, stateMPC_D01, stateMPC_dvaff02, stateMPC_grad_eq02);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq02, "stateMPC_grad_eq02");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C04, stateMPC_dvaff04, stateMPC_D01, stateMPC_dvaff03, stateMPC_grad_eq03);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq03, "stateMPC_grad_eq03");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C05, stateMPC_dvaff05, stateMPC_D01, stateMPC_dvaff04, stateMPC_grad_eq04);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq04, "stateMPC_grad_eq04");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C06, stateMPC_dvaff06, stateMPC_D01, stateMPC_dvaff05, stateMPC_grad_eq05);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq05, "stateMPC_grad_eq05");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C07, stateMPC_dvaff07, stateMPC_D01, stateMPC_dvaff06, stateMPC_grad_eq06);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq06, "stateMPC_grad_eq06");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C08, stateMPC_dvaff08, stateMPC_D01, stateMPC_dvaff07, stateMPC_grad_eq07);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq07, "stateMPC_grad_eq07");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C09, stateMPC_dvaff09, stateMPC_D01, stateMPC_dvaff08, stateMPC_grad_eq08);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq08, "stateMPC_grad_eq08");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C10, stateMPC_dvaff10, stateMPC_D01, stateMPC_dvaff09, stateMPC_grad_eq09);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq09, "stateMPC_grad_eq09");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C11, stateMPC_dvaff11, stateMPC_D01, stateMPC_dvaff10, stateMPC_grad_eq10);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq10, "stateMPC_grad_eq10");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C12, stateMPC_dvaff12, stateMPC_D01, stateMPC_dvaff11, stateMPC_grad_eq11);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq11, "stateMPC_grad_eq11");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C13, stateMPC_dvaff13, stateMPC_D01, stateMPC_dvaff12, stateMPC_grad_eq12);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq12, "stateMPC_grad_eq12");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C14, stateMPC_dvaff14, stateMPC_D01, stateMPC_dvaff13, stateMPC_grad_eq13);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq13, "stateMPC_grad_eq13");
 stateMPC_LA_DIAGZERO_MTVM_2_2(stateMPC_D14, stateMPC_dvaff14, stateMPC_grad_eq14);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_grad_eq14, "stateMPC_grad_eq14");
 stateMPC_LA_VSUB2_58(stateMPC_rd, stateMPC_grad_eq, stateMPC_rd);
 stateMPC_LA_DIAG_FORWARDBACKWARDSUB_4(stateMPC_Phi00, stateMPC_rd00, stateMPC_dzaff00);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dzaff00, "stateMPC_dzaff00");
 stateMPC_LA_DIAG_FORWARDBACKWARDSUB_4(stateMPC_Phi01, stateMPC_rd01, stateMPC_dzaff01);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dzaff01, "stateMPC_dzaff01");
 stateMPC_LA_DIAG_FORWARDBACKWARDSUB_4(stateMPC_Phi02, stateMPC_rd02, stateMPC_dzaff02);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dzaff02, "stateMPC_dzaff02");
 stateMPC_LA_DIAG_FORWARDBACKWARDSUB_4(stateMPC_Phi03, stateMPC_rd03, stateMPC_dzaff03);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dzaff03, "stateMPC_dzaff03");
 stateMPC_LA_DIAG_FORWARDBACKWARDSUB_4(stateMPC_Phi04, stateMPC_rd04, stateMPC_dzaff04);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dzaff04, "stateMPC_dzaff04");
 stateMPC_LA_DIAG_FORWARDBACKWARDSUB_4(stateMPC_Phi05, stateMPC_rd05, stateMPC_dzaff05);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dzaff05, "stateMPC_dzaff05");
 stateMPC_LA_DIAG_FORWARDBACKWARDSUB_4(stateMPC_Phi06, stateMPC_rd06, stateMPC_dzaff06);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dzaff06, "stateMPC_dzaff06");
 stateMPC_LA_DIAG_FORWARDBACKWARDSUB_4(stateMPC_Phi07, stateMPC_rd07, stateMPC_dzaff07);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dzaff07, "stateMPC_dzaff07");
 stateMPC_LA_DIAG_FORWARDBACKWARDSUB_4(stateMPC_Phi08, stateMPC_rd08, stateMPC_dzaff08);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dzaff08, "stateMPC_dzaff08");
 stateMPC_LA_DIAG_FORWARDBACKWARDSUB_4(stateMPC_Phi09, stateMPC_rd09, stateMPC_dzaff09);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dzaff09, "stateMPC_dzaff09");
 stateMPC_LA_DIAG_FORWARDBACKWARDSUB_4(stateMPC_Phi10, stateMPC_rd10, stateMPC_dzaff10);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dzaff10, "stateMPC_dzaff10");
 stateMPC_LA_DIAG_FORWARDBACKWARDSUB_4(stateMPC_Phi11, stateMPC_rd11, stateMPC_dzaff11);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dzaff11, "stateMPC_dzaff11");
 stateMPC_LA_DIAG_FORWARDBACKWARDSUB_4(stateMPC_Phi12, stateMPC_rd12, stateMPC_dzaff12);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dzaff12, "stateMPC_dzaff12");
 stateMPC_LA_DIAG_FORWARDBACKWARDSUB_4(stateMPC_Phi13, stateMPC_rd13, stateMPC_dzaff13);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dzaff13, "stateMPC_dzaff13");
 stateMPC_LA_DIAG_FORWARDBACKWARDSUB_2(stateMPC_Phi14, stateMPC_rd14, stateMPC_dzaff14);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dzaff14, "stateMPC_dzaff14");
 stateMPC_LA_VSUB_INDEXED_4(stateMPC_dzaff00, stateMPC_lbIdx00, stateMPC_rilb00, stateMPC_dslbaff00);
 stateMPC_LA_VSUB3_4(stateMPC_llbbyslb00, stateMPC_dslbaff00, stateMPC_llb00, stateMPC_dllbaff00);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dslbaff00, "stateMPC_dslbaff00");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dllbaff00, "stateMPC_dllbaff00");
 stateMPC_LA_VSUB2_INDEXED_4(stateMPC_riub00, stateMPC_dzaff00, stateMPC_ubIdx00, stateMPC_dsubaff00);
 stateMPC_LA_VSUB3_4(stateMPC_lubbysub00, stateMPC_dsubaff00, stateMPC_lub00, stateMPC_dlubaff00);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dsubaff00, "stateMPC_dsubaff00");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dlubaff00, "stateMPC_dlubaff00");
 stateMPC_LA_VSUB_INDEXED_4(stateMPC_dzaff01, stateMPC_lbIdx01, stateMPC_rilb01, stateMPC_dslbaff01);
 stateMPC_LA_VSUB3_4(stateMPC_llbbyslb01, stateMPC_dslbaff01, stateMPC_llb01, stateMPC_dllbaff01);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dslbaff01, "stateMPC_dslbaff01");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dllbaff01, "stateMPC_dllbaff01");
 stateMPC_LA_VSUB2_INDEXED_4(stateMPC_riub01, stateMPC_dzaff01, stateMPC_ubIdx01, stateMPC_dsubaff01);
 stateMPC_LA_VSUB3_4(stateMPC_lubbysub01, stateMPC_dsubaff01, stateMPC_lub01, stateMPC_dlubaff01);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dsubaff01, "stateMPC_dsubaff01");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dlubaff01, "stateMPC_dlubaff01");
 stateMPC_LA_VSUB_INDEXED_4(stateMPC_dzaff02, stateMPC_lbIdx02, stateMPC_rilb02, stateMPC_dslbaff02);
 stateMPC_LA_VSUB3_4(stateMPC_llbbyslb02, stateMPC_dslbaff02, stateMPC_llb02, stateMPC_dllbaff02);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dslbaff02, "stateMPC_dslbaff02");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dllbaff02, "stateMPC_dllbaff02");
 stateMPC_LA_VSUB2_INDEXED_4(stateMPC_riub02, stateMPC_dzaff02, stateMPC_ubIdx02, stateMPC_dsubaff02);
 stateMPC_LA_VSUB3_4(stateMPC_lubbysub02, stateMPC_dsubaff02, stateMPC_lub02, stateMPC_dlubaff02);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dsubaff02, "stateMPC_dsubaff02");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dlubaff02, "stateMPC_dlubaff02");
 stateMPC_LA_VSUB_INDEXED_4(stateMPC_dzaff03, stateMPC_lbIdx03, stateMPC_rilb03, stateMPC_dslbaff03);
 stateMPC_LA_VSUB3_4(stateMPC_llbbyslb03, stateMPC_dslbaff03, stateMPC_llb03, stateMPC_dllbaff03);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dslbaff03, "stateMPC_dslbaff03");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dllbaff03, "stateMPC_dllbaff03");
 stateMPC_LA_VSUB2_INDEXED_4(stateMPC_riub03, stateMPC_dzaff03, stateMPC_ubIdx03, stateMPC_dsubaff03);
 stateMPC_LA_VSUB3_4(stateMPC_lubbysub03, stateMPC_dsubaff03, stateMPC_lub03, stateMPC_dlubaff03);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dsubaff03, "stateMPC_dsubaff03");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dlubaff03, "stateMPC_dlubaff03");
 stateMPC_LA_VSUB_INDEXED_4(stateMPC_dzaff04, stateMPC_lbIdx04, stateMPC_rilb04, stateMPC_dslbaff04);
 stateMPC_LA_VSUB3_4(stateMPC_llbbyslb04, stateMPC_dslbaff04, stateMPC_llb04, stateMPC_dllbaff04);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dslbaff04, "stateMPC_dslbaff04");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dllbaff04, "stateMPC_dllbaff04");
 stateMPC_LA_VSUB2_INDEXED_4(stateMPC_riub04, stateMPC_dzaff04, stateMPC_ubIdx04, stateMPC_dsubaff04);
 stateMPC_LA_VSUB3_4(stateMPC_lubbysub04, stateMPC_dsubaff04, stateMPC_lub04, stateMPC_dlubaff04);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dsubaff04, "stateMPC_dsubaff04");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dlubaff04, "stateMPC_dlubaff04");
 stateMPC_LA_VSUB_INDEXED_4(stateMPC_dzaff05, stateMPC_lbIdx05, stateMPC_rilb05, stateMPC_dslbaff05);
 stateMPC_LA_VSUB3_4(stateMPC_llbbyslb05, stateMPC_dslbaff05, stateMPC_llb05, stateMPC_dllbaff05);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dslbaff05, "stateMPC_dslbaff05");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dllbaff05, "stateMPC_dllbaff05");
 stateMPC_LA_VSUB2_INDEXED_4(stateMPC_riub05, stateMPC_dzaff05, stateMPC_ubIdx05, stateMPC_dsubaff05);
 stateMPC_LA_VSUB3_4(stateMPC_lubbysub05, stateMPC_dsubaff05, stateMPC_lub05, stateMPC_dlubaff05);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dsubaff05, "stateMPC_dsubaff05");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dlubaff05, "stateMPC_dlubaff05");
 stateMPC_LA_VSUB_INDEXED_4(stateMPC_dzaff06, stateMPC_lbIdx06, stateMPC_rilb06, stateMPC_dslbaff06);
 stateMPC_LA_VSUB3_4(stateMPC_llbbyslb06, stateMPC_dslbaff06, stateMPC_llb06, stateMPC_dllbaff06);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dslbaff06, "stateMPC_dslbaff06");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dllbaff06, "stateMPC_dllbaff06");
 stateMPC_LA_VSUB2_INDEXED_4(stateMPC_riub06, stateMPC_dzaff06, stateMPC_ubIdx06, stateMPC_dsubaff06);
 stateMPC_LA_VSUB3_4(stateMPC_lubbysub06, stateMPC_dsubaff06, stateMPC_lub06, stateMPC_dlubaff06);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dsubaff06, "stateMPC_dsubaff06");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dlubaff06, "stateMPC_dlubaff06");
 stateMPC_LA_VSUB_INDEXED_4(stateMPC_dzaff07, stateMPC_lbIdx07, stateMPC_rilb07, stateMPC_dslbaff07);
 stateMPC_LA_VSUB3_4(stateMPC_llbbyslb07, stateMPC_dslbaff07, stateMPC_llb07, stateMPC_dllbaff07);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dslbaff07, "stateMPC_dslbaff07");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dllbaff07, "stateMPC_dllbaff07");
 stateMPC_LA_VSUB2_INDEXED_4(stateMPC_riub07, stateMPC_dzaff07, stateMPC_ubIdx07, stateMPC_dsubaff07);
 stateMPC_LA_VSUB3_4(stateMPC_lubbysub07, stateMPC_dsubaff07, stateMPC_lub07, stateMPC_dlubaff07);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dsubaff07, "stateMPC_dsubaff07");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dlubaff07, "stateMPC_dlubaff07");
 stateMPC_LA_VSUB_INDEXED_4(stateMPC_dzaff08, stateMPC_lbIdx08, stateMPC_rilb08, stateMPC_dslbaff08);
 stateMPC_LA_VSUB3_4(stateMPC_llbbyslb08, stateMPC_dslbaff08, stateMPC_llb08, stateMPC_dllbaff08);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dslbaff08, "stateMPC_dslbaff08");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dllbaff08, "stateMPC_dllbaff08");
 stateMPC_LA_VSUB2_INDEXED_4(stateMPC_riub08, stateMPC_dzaff08, stateMPC_ubIdx08, stateMPC_dsubaff08);
 stateMPC_LA_VSUB3_4(stateMPC_lubbysub08, stateMPC_dsubaff08, stateMPC_lub08, stateMPC_dlubaff08);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dsubaff08, "stateMPC_dsubaff08");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dlubaff08, "stateMPC_dlubaff08");
 stateMPC_LA_VSUB_INDEXED_4(stateMPC_dzaff09, stateMPC_lbIdx09, stateMPC_rilb09, stateMPC_dslbaff09);
 stateMPC_LA_VSUB3_4(stateMPC_llbbyslb09, stateMPC_dslbaff09, stateMPC_llb09, stateMPC_dllbaff09);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dslbaff09, "stateMPC_dslbaff09");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dllbaff09, "stateMPC_dllbaff09");
 stateMPC_LA_VSUB2_INDEXED_4(stateMPC_riub09, stateMPC_dzaff09, stateMPC_ubIdx09, stateMPC_dsubaff09);
 stateMPC_LA_VSUB3_4(stateMPC_lubbysub09, stateMPC_dsubaff09, stateMPC_lub09, stateMPC_dlubaff09);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dsubaff09, "stateMPC_dsubaff09");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dlubaff09, "stateMPC_dlubaff09");
 stateMPC_LA_VSUB_INDEXED_4(stateMPC_dzaff10, stateMPC_lbIdx10, stateMPC_rilb10, stateMPC_dslbaff10);
 stateMPC_LA_VSUB3_4(stateMPC_llbbyslb10, stateMPC_dslbaff10, stateMPC_llb10, stateMPC_dllbaff10);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dslbaff10, "stateMPC_dslbaff10");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dllbaff10, "stateMPC_dllbaff10");
 stateMPC_LA_VSUB2_INDEXED_4(stateMPC_riub10, stateMPC_dzaff10, stateMPC_ubIdx10, stateMPC_dsubaff10);
 stateMPC_LA_VSUB3_4(stateMPC_lubbysub10, stateMPC_dsubaff10, stateMPC_lub10, stateMPC_dlubaff10);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dsubaff10, "stateMPC_dsubaff10");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dlubaff10, "stateMPC_dlubaff10");
 stateMPC_LA_VSUB_INDEXED_4(stateMPC_dzaff11, stateMPC_lbIdx11, stateMPC_rilb11, stateMPC_dslbaff11);
 stateMPC_LA_VSUB3_4(stateMPC_llbbyslb11, stateMPC_dslbaff11, stateMPC_llb11, stateMPC_dllbaff11);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dslbaff11, "stateMPC_dslbaff11");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dllbaff11, "stateMPC_dllbaff11");
 stateMPC_LA_VSUB2_INDEXED_4(stateMPC_riub11, stateMPC_dzaff11, stateMPC_ubIdx11, stateMPC_dsubaff11);
 stateMPC_LA_VSUB3_4(stateMPC_lubbysub11, stateMPC_dsubaff11, stateMPC_lub11, stateMPC_dlubaff11);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dsubaff11, "stateMPC_dsubaff11");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dlubaff11, "stateMPC_dlubaff11");
 stateMPC_LA_VSUB_INDEXED_4(stateMPC_dzaff12, stateMPC_lbIdx12, stateMPC_rilb12, stateMPC_dslbaff12);
 stateMPC_LA_VSUB3_4(stateMPC_llbbyslb12, stateMPC_dslbaff12, stateMPC_llb12, stateMPC_dllbaff12);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dslbaff12, "stateMPC_dslbaff12");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dllbaff12, "stateMPC_dllbaff12");
 stateMPC_LA_VSUB2_INDEXED_4(stateMPC_riub12, stateMPC_dzaff12, stateMPC_ubIdx12, stateMPC_dsubaff12);
 stateMPC_LA_VSUB3_4(stateMPC_lubbysub12, stateMPC_dsubaff12, stateMPC_lub12, stateMPC_dlubaff12);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dsubaff12, "stateMPC_dsubaff12");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dlubaff12, "stateMPC_dlubaff12");
 stateMPC_LA_VSUB_INDEXED_4(stateMPC_dzaff13, stateMPC_lbIdx13, stateMPC_rilb13, stateMPC_dslbaff13);
 stateMPC_LA_VSUB3_4(stateMPC_llbbyslb13, stateMPC_dslbaff13, stateMPC_llb13, stateMPC_dllbaff13);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dslbaff13, "stateMPC_dslbaff13");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dllbaff13, "stateMPC_dllbaff13");
 stateMPC_LA_VSUB2_INDEXED_4(stateMPC_riub13, stateMPC_dzaff13, stateMPC_ubIdx13, stateMPC_dsubaff13);
 stateMPC_LA_VSUB3_4(stateMPC_lubbysub13, stateMPC_dsubaff13, stateMPC_lub13, stateMPC_dlubaff13);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dsubaff13, "stateMPC_dsubaff13");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dlubaff13, "stateMPC_dlubaff13");
 stateMPC_LA_VSUB_INDEXED_2(stateMPC_dzaff14, stateMPC_lbIdx14, stateMPC_rilb14, stateMPC_dslbaff14);
 stateMPC_LA_VSUB3_2(stateMPC_llbbyslb14, stateMPC_dslbaff14, stateMPC_llb14, stateMPC_dllbaff14);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dslbaff14, "stateMPC_dslbaff14");
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dllbaff14, "stateMPC_dllbaff14");
 stateMPC_LA_VSUB2_INDEXED_2(stateMPC_riub14, stateMPC_dzaff14, stateMPC_ubIdx14, stateMPC_dsubaff14);
 stateMPC_LA_VSUB3_2(stateMPC_lubbysub14, stateMPC_dsubaff14, stateMPC_lub14, stateMPC_dlubaff14);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dsubaff14, "stateMPC_dsubaff14");
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dlubaff14, "stateMPC_dlubaff14");
 info->lsit_aff = stateMPC_LINESEARCH_BACKTRACKING_AFFINE(stateMPC_l, stateMPC_s, stateMPC_dl_aff, stateMPC_ds_aff, &info->step_aff, &info->mu_aff);
 if( info->lsit_aff == stateMPC_NOPROGRESS ){
-PRINTTEXT("Affine line search could not proceed at iteration %d.\nThe problem might be infeasible -- exiting.\n",info->it+1);
 exitcode = stateMPC_NOPROGRESS; break;
 }
-stateMPC_LA_DENSE_PRINT_VECTOR_116(stateMPC_l, "stateMPC_l");
-stateMPC_LA_DENSE_PRINT_VECTOR_116(stateMPC_s, "stateMPC_s");
-stateMPC_LA_DENSE_PRINT_VECTOR_116(stateMPC_dl_aff, "stateMPC_dl_aff");
-stateMPC_LA_DENSE_PRINT_VECTOR_116(stateMPC_ds_aff, "stateMPC_ds_aff");
 sigma_3rdroot = info->mu_aff / info->mu;
 info->sigma = sigma_3rdroot*sigma_3rdroot*sigma_3rdroot;
 musigma = info->mu * info->sigma;
 stateMPC_LA_VSUB5_116(stateMPC_ds_aff, stateMPC_dl_aff, musigma, stateMPC_ccrhs);
-stateMPC_LA_DENSE_PRINT_VECTOR_116(stateMPC_ccrhs, "stateMPC_ccrhs");
 stateMPC_LA_VSUB6_INDEXED_4_4_4(stateMPC_ccrhsub00, stateMPC_sub00, stateMPC_ubIdx00, stateMPC_ccrhsl00, stateMPC_slb00, stateMPC_lbIdx00, stateMPC_rd00);
 stateMPC_LA_VSUB6_INDEXED_4_4_4(stateMPC_ccrhsub01, stateMPC_sub01, stateMPC_ubIdx01, stateMPC_ccrhsl01, stateMPC_slb01, stateMPC_lbIdx01, stateMPC_rd01);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rd00, "stateMPC_rd00");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rd01, "stateMPC_rd01");
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi00, stateMPC_rd00, stateMPC_Lbyrd00);
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi01, stateMPC_rd01, stateMPC_Lbyrd01);
 stateMPC_LA_DIAGZERO_MVM_2(stateMPC_W00, stateMPC_Lbyrd00, stateMPC_beta00);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_beta00, "stateMPC_beta00");
 stateMPC_LA_DENSE_FORWARDSUB_2(stateMPC_Ld00, stateMPC_beta00, stateMPC_yy00);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_yy00, "stateMPC_yy00");
 stateMPC_LA_DENSE_DIAGZERO_2MVMADD_2_4_4(stateMPC_V00, stateMPC_Lbyrd00, stateMPC_W01, stateMPC_Lbyrd01, stateMPC_beta01);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_beta01, "stateMPC_beta01");
 stateMPC_LA_DENSE_MVMSUB1_2_2(stateMPC_Lsd01, stateMPC_yy00, stateMPC_beta01, stateMPC_bmy01);
 stateMPC_LA_DENSE_FORWARDSUB_2(stateMPC_Ld01, stateMPC_bmy01, stateMPC_yy01);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_yy01, "stateMPC_yy01");
 stateMPC_LA_VSUB6_INDEXED_4_4_4(stateMPC_ccrhsub02, stateMPC_sub02, stateMPC_ubIdx02, stateMPC_ccrhsl02, stateMPC_slb02, stateMPC_lbIdx02, stateMPC_rd02);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rd02, "stateMPC_rd02");
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi02, stateMPC_rd02, stateMPC_Lbyrd02);
 stateMPC_LA_DENSE_DIAGZERO_2MVMADD_2_4_4(stateMPC_V01, stateMPC_Lbyrd01, stateMPC_W02, stateMPC_Lbyrd02, stateMPC_beta02);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_beta02, "stateMPC_beta02");
 stateMPC_LA_DENSE_MVMSUB1_2_2(stateMPC_Lsd02, stateMPC_yy01, stateMPC_beta02, stateMPC_bmy02);
 stateMPC_LA_DENSE_FORWARDSUB_2(stateMPC_Ld02, stateMPC_bmy02, stateMPC_yy02);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_yy02, "stateMPC_yy02");
 stateMPC_LA_VSUB6_INDEXED_4_4_4(stateMPC_ccrhsub03, stateMPC_sub03, stateMPC_ubIdx03, stateMPC_ccrhsl03, stateMPC_slb03, stateMPC_lbIdx03, stateMPC_rd03);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rd03, "stateMPC_rd03");
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi03, stateMPC_rd03, stateMPC_Lbyrd03);
 stateMPC_LA_DENSE_DIAGZERO_2MVMADD_2_4_4(stateMPC_V02, stateMPC_Lbyrd02, stateMPC_W03, stateMPC_Lbyrd03, stateMPC_beta03);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_beta03, "stateMPC_beta03");
 stateMPC_LA_DENSE_MVMSUB1_2_2(stateMPC_Lsd03, stateMPC_yy02, stateMPC_beta03, stateMPC_bmy03);
 stateMPC_LA_DENSE_FORWARDSUB_2(stateMPC_Ld03, stateMPC_bmy03, stateMPC_yy03);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_yy03, "stateMPC_yy03");
 stateMPC_LA_VSUB6_INDEXED_4_4_4(stateMPC_ccrhsub04, stateMPC_sub04, stateMPC_ubIdx04, stateMPC_ccrhsl04, stateMPC_slb04, stateMPC_lbIdx04, stateMPC_rd04);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rd04, "stateMPC_rd04");
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi04, stateMPC_rd04, stateMPC_Lbyrd04);
 stateMPC_LA_DENSE_DIAGZERO_2MVMADD_2_4_4(stateMPC_V03, stateMPC_Lbyrd03, stateMPC_W04, stateMPC_Lbyrd04, stateMPC_beta04);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_beta04, "stateMPC_beta04");
 stateMPC_LA_DENSE_MVMSUB1_2_2(stateMPC_Lsd04, stateMPC_yy03, stateMPC_beta04, stateMPC_bmy04);
 stateMPC_LA_DENSE_FORWARDSUB_2(stateMPC_Ld04, stateMPC_bmy04, stateMPC_yy04);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_yy04, "stateMPC_yy04");
 stateMPC_LA_VSUB6_INDEXED_4_4_4(stateMPC_ccrhsub05, stateMPC_sub05, stateMPC_ubIdx05, stateMPC_ccrhsl05, stateMPC_slb05, stateMPC_lbIdx05, stateMPC_rd05);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rd05, "stateMPC_rd05");
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi05, stateMPC_rd05, stateMPC_Lbyrd05);
 stateMPC_LA_DENSE_DIAGZERO_2MVMADD_2_4_4(stateMPC_V04, stateMPC_Lbyrd04, stateMPC_W05, stateMPC_Lbyrd05, stateMPC_beta05);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_beta05, "stateMPC_beta05");
 stateMPC_LA_DENSE_MVMSUB1_2_2(stateMPC_Lsd05, stateMPC_yy04, stateMPC_beta05, stateMPC_bmy05);
 stateMPC_LA_DENSE_FORWARDSUB_2(stateMPC_Ld05, stateMPC_bmy05, stateMPC_yy05);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_yy05, "stateMPC_yy05");
 stateMPC_LA_VSUB6_INDEXED_4_4_4(stateMPC_ccrhsub06, stateMPC_sub06, stateMPC_ubIdx06, stateMPC_ccrhsl06, stateMPC_slb06, stateMPC_lbIdx06, stateMPC_rd06);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rd06, "stateMPC_rd06");
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi06, stateMPC_rd06, stateMPC_Lbyrd06);
 stateMPC_LA_DENSE_DIAGZERO_2MVMADD_2_4_4(stateMPC_V05, stateMPC_Lbyrd05, stateMPC_W06, stateMPC_Lbyrd06, stateMPC_beta06);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_beta06, "stateMPC_beta06");
 stateMPC_LA_DENSE_MVMSUB1_2_2(stateMPC_Lsd06, stateMPC_yy05, stateMPC_beta06, stateMPC_bmy06);
 stateMPC_LA_DENSE_FORWARDSUB_2(stateMPC_Ld06, stateMPC_bmy06, stateMPC_yy06);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_yy06, "stateMPC_yy06");
 stateMPC_LA_VSUB6_INDEXED_4_4_4(stateMPC_ccrhsub07, stateMPC_sub07, stateMPC_ubIdx07, stateMPC_ccrhsl07, stateMPC_slb07, stateMPC_lbIdx07, stateMPC_rd07);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rd07, "stateMPC_rd07");
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi07, stateMPC_rd07, stateMPC_Lbyrd07);
 stateMPC_LA_DENSE_DIAGZERO_2MVMADD_2_4_4(stateMPC_V06, stateMPC_Lbyrd06, stateMPC_W07, stateMPC_Lbyrd07, stateMPC_beta07);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_beta07, "stateMPC_beta07");
 stateMPC_LA_DENSE_MVMSUB1_2_2(stateMPC_Lsd07, stateMPC_yy06, stateMPC_beta07, stateMPC_bmy07);
 stateMPC_LA_DENSE_FORWARDSUB_2(stateMPC_Ld07, stateMPC_bmy07, stateMPC_yy07);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_yy07, "stateMPC_yy07");
 stateMPC_LA_VSUB6_INDEXED_4_4_4(stateMPC_ccrhsub08, stateMPC_sub08, stateMPC_ubIdx08, stateMPC_ccrhsl08, stateMPC_slb08, stateMPC_lbIdx08, stateMPC_rd08);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rd08, "stateMPC_rd08");
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi08, stateMPC_rd08, stateMPC_Lbyrd08);
 stateMPC_LA_DENSE_DIAGZERO_2MVMADD_2_4_4(stateMPC_V07, stateMPC_Lbyrd07, stateMPC_W08, stateMPC_Lbyrd08, stateMPC_beta08);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_beta08, "stateMPC_beta08");
 stateMPC_LA_DENSE_MVMSUB1_2_2(stateMPC_Lsd08, stateMPC_yy07, stateMPC_beta08, stateMPC_bmy08);
 stateMPC_LA_DENSE_FORWARDSUB_2(stateMPC_Ld08, stateMPC_bmy08, stateMPC_yy08);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_yy08, "stateMPC_yy08");
 stateMPC_LA_VSUB6_INDEXED_4_4_4(stateMPC_ccrhsub09, stateMPC_sub09, stateMPC_ubIdx09, stateMPC_ccrhsl09, stateMPC_slb09, stateMPC_lbIdx09, stateMPC_rd09);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rd09, "stateMPC_rd09");
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi09, stateMPC_rd09, stateMPC_Lbyrd09);
 stateMPC_LA_DENSE_DIAGZERO_2MVMADD_2_4_4(stateMPC_V08, stateMPC_Lbyrd08, stateMPC_W09, stateMPC_Lbyrd09, stateMPC_beta09);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_beta09, "stateMPC_beta09");
 stateMPC_LA_DENSE_MVMSUB1_2_2(stateMPC_Lsd09, stateMPC_yy08, stateMPC_beta09, stateMPC_bmy09);
 stateMPC_LA_DENSE_FORWARDSUB_2(stateMPC_Ld09, stateMPC_bmy09, stateMPC_yy09);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_yy09, "stateMPC_yy09");
 stateMPC_LA_VSUB6_INDEXED_4_4_4(stateMPC_ccrhsub10, stateMPC_sub10, stateMPC_ubIdx10, stateMPC_ccrhsl10, stateMPC_slb10, stateMPC_lbIdx10, stateMPC_rd10);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rd10, "stateMPC_rd10");
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi10, stateMPC_rd10, stateMPC_Lbyrd10);
 stateMPC_LA_DENSE_DIAGZERO_2MVMADD_2_4_4(stateMPC_V09, stateMPC_Lbyrd09, stateMPC_W10, stateMPC_Lbyrd10, stateMPC_beta10);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_beta10, "stateMPC_beta10");
 stateMPC_LA_DENSE_MVMSUB1_2_2(stateMPC_Lsd10, stateMPC_yy09, stateMPC_beta10, stateMPC_bmy10);
 stateMPC_LA_DENSE_FORWARDSUB_2(stateMPC_Ld10, stateMPC_bmy10, stateMPC_yy10);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_yy10, "stateMPC_yy10");
 stateMPC_LA_VSUB6_INDEXED_4_4_4(stateMPC_ccrhsub11, stateMPC_sub11, stateMPC_ubIdx11, stateMPC_ccrhsl11, stateMPC_slb11, stateMPC_lbIdx11, stateMPC_rd11);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rd11, "stateMPC_rd11");
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi11, stateMPC_rd11, stateMPC_Lbyrd11);
 stateMPC_LA_DENSE_DIAGZERO_2MVMADD_2_4_4(stateMPC_V10, stateMPC_Lbyrd10, stateMPC_W11, stateMPC_Lbyrd11, stateMPC_beta11);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_beta11, "stateMPC_beta11");
 stateMPC_LA_DENSE_MVMSUB1_2_2(stateMPC_Lsd11, stateMPC_yy10, stateMPC_beta11, stateMPC_bmy11);
 stateMPC_LA_DENSE_FORWARDSUB_2(stateMPC_Ld11, stateMPC_bmy11, stateMPC_yy11);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_yy11, "stateMPC_yy11");
 stateMPC_LA_VSUB6_INDEXED_4_4_4(stateMPC_ccrhsub12, stateMPC_sub12, stateMPC_ubIdx12, stateMPC_ccrhsl12, stateMPC_slb12, stateMPC_lbIdx12, stateMPC_rd12);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rd12, "stateMPC_rd12");
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi12, stateMPC_rd12, stateMPC_Lbyrd12);
 stateMPC_LA_DENSE_DIAGZERO_2MVMADD_2_4_4(stateMPC_V11, stateMPC_Lbyrd11, stateMPC_W12, stateMPC_Lbyrd12, stateMPC_beta12);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_beta12, "stateMPC_beta12");
 stateMPC_LA_DENSE_MVMSUB1_2_2(stateMPC_Lsd12, stateMPC_yy11, stateMPC_beta12, stateMPC_bmy12);
 stateMPC_LA_DENSE_FORWARDSUB_2(stateMPC_Ld12, stateMPC_bmy12, stateMPC_yy12);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_yy12, "stateMPC_yy12");
 stateMPC_LA_VSUB6_INDEXED_4_4_4(stateMPC_ccrhsub13, stateMPC_sub13, stateMPC_ubIdx13, stateMPC_ccrhsl13, stateMPC_slb13, stateMPC_lbIdx13, stateMPC_rd13);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_rd13, "stateMPC_rd13");
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi13, stateMPC_rd13, stateMPC_Lbyrd13);
 stateMPC_LA_DENSE_DIAGZERO_2MVMADD_2_4_4(stateMPC_V12, stateMPC_Lbyrd12, stateMPC_W13, stateMPC_Lbyrd13, stateMPC_beta13);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_beta13, "stateMPC_beta13");
 stateMPC_LA_DENSE_MVMSUB1_2_2(stateMPC_Lsd13, stateMPC_yy12, stateMPC_beta13, stateMPC_bmy13);
 stateMPC_LA_DENSE_FORWARDSUB_2(stateMPC_Ld13, stateMPC_bmy13, stateMPC_yy13);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_yy13, "stateMPC_yy13");
 stateMPC_LA_VSUB6_INDEXED_2_2_2(stateMPC_ccrhsub14, stateMPC_sub14, stateMPC_ubIdx14, stateMPC_ccrhsl14, stateMPC_slb14, stateMPC_lbIdx14, stateMPC_rd14);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_rd14, "stateMPC_rd14");
 stateMPC_LA_DIAG_FORWARDSUB_2(stateMPC_Phi14, stateMPC_rd14, stateMPC_Lbyrd14);
 stateMPC_LA_DENSE_DIAGZERO_2MVMADD_2_4_2(stateMPC_V13, stateMPC_Lbyrd13, stateMPC_W14, stateMPC_Lbyrd14, stateMPC_beta14);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_beta14, "stateMPC_beta14");
 stateMPC_LA_DENSE_MVMSUB1_2_2(stateMPC_Lsd14, stateMPC_yy13, stateMPC_beta14, stateMPC_bmy14);
 stateMPC_LA_DENSE_FORWARDSUB_2(stateMPC_Ld14, stateMPC_bmy14, stateMPC_yy14);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_yy14, "stateMPC_yy14");
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld14, stateMPC_yy14, stateMPC_dvcc14);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dvcc14, "stateMPC_dvcc14");
 stateMPC_LA_DENSE_MTVMSUB_2_2(stateMPC_Lsd14, stateMPC_dvcc14, stateMPC_yy13, stateMPC_bmy13);
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld13, stateMPC_bmy13, stateMPC_dvcc13);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dvcc13, "stateMPC_dvcc13");
 stateMPC_LA_DENSE_MTVMSUB_2_2(stateMPC_Lsd13, stateMPC_dvcc13, stateMPC_yy12, stateMPC_bmy12);
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld12, stateMPC_bmy12, stateMPC_dvcc12);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dvcc12, "stateMPC_dvcc12");
 stateMPC_LA_DENSE_MTVMSUB_2_2(stateMPC_Lsd12, stateMPC_dvcc12, stateMPC_yy11, stateMPC_bmy11);
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld11, stateMPC_bmy11, stateMPC_dvcc11);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dvcc11, "stateMPC_dvcc11");
 stateMPC_LA_DENSE_MTVMSUB_2_2(stateMPC_Lsd11, stateMPC_dvcc11, stateMPC_yy10, stateMPC_bmy10);
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld10, stateMPC_bmy10, stateMPC_dvcc10);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dvcc10, "stateMPC_dvcc10");
 stateMPC_LA_DENSE_MTVMSUB_2_2(stateMPC_Lsd10, stateMPC_dvcc10, stateMPC_yy09, stateMPC_bmy09);
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld09, stateMPC_bmy09, stateMPC_dvcc09);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dvcc09, "stateMPC_dvcc09");
 stateMPC_LA_DENSE_MTVMSUB_2_2(stateMPC_Lsd09, stateMPC_dvcc09, stateMPC_yy08, stateMPC_bmy08);
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld08, stateMPC_bmy08, stateMPC_dvcc08);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dvcc08, "stateMPC_dvcc08");
 stateMPC_LA_DENSE_MTVMSUB_2_2(stateMPC_Lsd08, stateMPC_dvcc08, stateMPC_yy07, stateMPC_bmy07);
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld07, stateMPC_bmy07, stateMPC_dvcc07);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dvcc07, "stateMPC_dvcc07");
 stateMPC_LA_DENSE_MTVMSUB_2_2(stateMPC_Lsd07, stateMPC_dvcc07, stateMPC_yy06, stateMPC_bmy06);
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld06, stateMPC_bmy06, stateMPC_dvcc06);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dvcc06, "stateMPC_dvcc06");
 stateMPC_LA_DENSE_MTVMSUB_2_2(stateMPC_Lsd06, stateMPC_dvcc06, stateMPC_yy05, stateMPC_bmy05);
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld05, stateMPC_bmy05, stateMPC_dvcc05);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dvcc05, "stateMPC_dvcc05");
 stateMPC_LA_DENSE_MTVMSUB_2_2(stateMPC_Lsd05, stateMPC_dvcc05, stateMPC_yy04, stateMPC_bmy04);
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld04, stateMPC_bmy04, stateMPC_dvcc04);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dvcc04, "stateMPC_dvcc04");
 stateMPC_LA_DENSE_MTVMSUB_2_2(stateMPC_Lsd04, stateMPC_dvcc04, stateMPC_yy03, stateMPC_bmy03);
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld03, stateMPC_bmy03, stateMPC_dvcc03);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dvcc03, "stateMPC_dvcc03");
 stateMPC_LA_DENSE_MTVMSUB_2_2(stateMPC_Lsd03, stateMPC_dvcc03, stateMPC_yy02, stateMPC_bmy02);
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld02, stateMPC_bmy02, stateMPC_dvcc02);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dvcc02, "stateMPC_dvcc02");
 stateMPC_LA_DENSE_MTVMSUB_2_2(stateMPC_Lsd02, stateMPC_dvcc02, stateMPC_yy01, stateMPC_bmy01);
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld01, stateMPC_bmy01, stateMPC_dvcc01);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dvcc01, "stateMPC_dvcc01");
 stateMPC_LA_DENSE_MTVMSUB_2_2(stateMPC_Lsd01, stateMPC_dvcc01, stateMPC_yy00, stateMPC_bmy00);
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld00, stateMPC_bmy00, stateMPC_dvcc00);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dvcc00, "stateMPC_dvcc00");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C01, stateMPC_dvcc01, stateMPC_D00, stateMPC_dvcc00, stateMPC_grad_eq00);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq00, "stateMPC_grad_eq00");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C02, stateMPC_dvcc02, stateMPC_D01, stateMPC_dvcc01, stateMPC_grad_eq01);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq01, "stateMPC_grad_eq01");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C03, stateMPC_dvcc03, stateMPC_D01, stateMPC_dvcc02, stateMPC_grad_eq02);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq02, "stateMPC_grad_eq02");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C04, stateMPC_dvcc04, stateMPC_D01, stateMPC_dvcc03, stateMPC_grad_eq03);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq03, "stateMPC_grad_eq03");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C05, stateMPC_dvcc05, stateMPC_D01, stateMPC_dvcc04, stateMPC_grad_eq04);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq04, "stateMPC_grad_eq04");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C06, stateMPC_dvcc06, stateMPC_D01, stateMPC_dvcc05, stateMPC_grad_eq05);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq05, "stateMPC_grad_eq05");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C07, stateMPC_dvcc07, stateMPC_D01, stateMPC_dvcc06, stateMPC_grad_eq06);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq06, "stateMPC_grad_eq06");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C08, stateMPC_dvcc08, stateMPC_D01, stateMPC_dvcc07, stateMPC_grad_eq07);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq07, "stateMPC_grad_eq07");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C09, stateMPC_dvcc09, stateMPC_D01, stateMPC_dvcc08, stateMPC_grad_eq08);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq08, "stateMPC_grad_eq08");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C10, stateMPC_dvcc10, stateMPC_D01, stateMPC_dvcc09, stateMPC_grad_eq09);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq09, "stateMPC_grad_eq09");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C11, stateMPC_dvcc11, stateMPC_D01, stateMPC_dvcc10, stateMPC_grad_eq10);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq10, "stateMPC_grad_eq10");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C12, stateMPC_dvcc12, stateMPC_D01, stateMPC_dvcc11, stateMPC_grad_eq11);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq11, "stateMPC_grad_eq11");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C13, stateMPC_dvcc13, stateMPC_D01, stateMPC_dvcc12, stateMPC_grad_eq12);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq12, "stateMPC_grad_eq12");
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C14, stateMPC_dvcc14, stateMPC_D01, stateMPC_dvcc13, stateMPC_grad_eq13);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_grad_eq13, "stateMPC_grad_eq13");
 stateMPC_LA_DIAGZERO_MTVM_2_2(stateMPC_D14, stateMPC_dvcc14, stateMPC_grad_eq14);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_grad_eq14, "stateMPC_grad_eq14");
 stateMPC_LA_VSUB_58(stateMPC_rd, stateMPC_grad_eq, stateMPC_rd);
 stateMPC_LA_DIAG_FORWARDBACKWARDSUB_4(stateMPC_Phi00, stateMPC_rd00, stateMPC_dzcc00);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dzcc00, "stateMPC_dzcc00");
 stateMPC_LA_DIAG_FORWARDBACKWARDSUB_4(stateMPC_Phi01, stateMPC_rd01, stateMPC_dzcc01);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dzcc01, "stateMPC_dzcc01");
 stateMPC_LA_DIAG_FORWARDBACKWARDSUB_4(stateMPC_Phi02, stateMPC_rd02, stateMPC_dzcc02);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dzcc02, "stateMPC_dzcc02");
 stateMPC_LA_DIAG_FORWARDBACKWARDSUB_4(stateMPC_Phi03, stateMPC_rd03, stateMPC_dzcc03);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dzcc03, "stateMPC_dzcc03");
 stateMPC_LA_DIAG_FORWARDBACKWARDSUB_4(stateMPC_Phi04, stateMPC_rd04, stateMPC_dzcc04);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dzcc04, "stateMPC_dzcc04");
 stateMPC_LA_DIAG_FORWARDBACKWARDSUB_4(stateMPC_Phi05, stateMPC_rd05, stateMPC_dzcc05);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dzcc05, "stateMPC_dzcc05");
 stateMPC_LA_DIAG_FORWARDBACKWARDSUB_4(stateMPC_Phi06, stateMPC_rd06, stateMPC_dzcc06);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dzcc06, "stateMPC_dzcc06");
 stateMPC_LA_DIAG_FORWARDBACKWARDSUB_4(stateMPC_Phi07, stateMPC_rd07, stateMPC_dzcc07);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dzcc07, "stateMPC_dzcc07");
 stateMPC_LA_DIAG_FORWARDBACKWARDSUB_4(stateMPC_Phi08, stateMPC_rd08, stateMPC_dzcc08);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dzcc08, "stateMPC_dzcc08");
 stateMPC_LA_DIAG_FORWARDBACKWARDSUB_4(stateMPC_Phi09, stateMPC_rd09, stateMPC_dzcc09);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dzcc09, "stateMPC_dzcc09");
 stateMPC_LA_DIAG_FORWARDBACKWARDSUB_4(stateMPC_Phi10, stateMPC_rd10, stateMPC_dzcc10);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dzcc10, "stateMPC_dzcc10");
 stateMPC_LA_DIAG_FORWARDBACKWARDSUB_4(stateMPC_Phi11, stateMPC_rd11, stateMPC_dzcc11);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dzcc11, "stateMPC_dzcc11");
 stateMPC_LA_DIAG_FORWARDBACKWARDSUB_4(stateMPC_Phi12, stateMPC_rd12, stateMPC_dzcc12);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dzcc12, "stateMPC_dzcc12");
 stateMPC_LA_DIAG_FORWARDBACKWARDSUB_4(stateMPC_Phi13, stateMPC_rd13, stateMPC_dzcc13);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dzcc13, "stateMPC_dzcc13");
 stateMPC_LA_DIAG_FORWARDBACKWARDSUB_2(stateMPC_Phi14, stateMPC_rd14, stateMPC_dzcc14);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dzcc14, "stateMPC_dzcc14");
 stateMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_4(stateMPC_ccrhsl00, stateMPC_slb00, stateMPC_llbbyslb00, stateMPC_dzcc00, stateMPC_lbIdx00, stateMPC_dllbcc00);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dllbcc00, "stateMPC_dllbcc00");
 stateMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_4(stateMPC_ccrhsub00, stateMPC_sub00, stateMPC_lubbysub00, stateMPC_dzcc00, stateMPC_ubIdx00, stateMPC_dlubcc00);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dlubcc00, "stateMPC_dlubcc00");
 stateMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_4(stateMPC_ccrhsl01, stateMPC_slb01, stateMPC_llbbyslb01, stateMPC_dzcc01, stateMPC_lbIdx01, stateMPC_dllbcc01);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dllbcc01, "stateMPC_dllbcc01");
 stateMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_4(stateMPC_ccrhsub01, stateMPC_sub01, stateMPC_lubbysub01, stateMPC_dzcc01, stateMPC_ubIdx01, stateMPC_dlubcc01);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dlubcc01, "stateMPC_dlubcc01");
 stateMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_4(stateMPC_ccrhsl02, stateMPC_slb02, stateMPC_llbbyslb02, stateMPC_dzcc02, stateMPC_lbIdx02, stateMPC_dllbcc02);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dllbcc02, "stateMPC_dllbcc02");
 stateMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_4(stateMPC_ccrhsub02, stateMPC_sub02, stateMPC_lubbysub02, stateMPC_dzcc02, stateMPC_ubIdx02, stateMPC_dlubcc02);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dlubcc02, "stateMPC_dlubcc02");
 stateMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_4(stateMPC_ccrhsl03, stateMPC_slb03, stateMPC_llbbyslb03, stateMPC_dzcc03, stateMPC_lbIdx03, stateMPC_dllbcc03);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dllbcc03, "stateMPC_dllbcc03");
 stateMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_4(stateMPC_ccrhsub03, stateMPC_sub03, stateMPC_lubbysub03, stateMPC_dzcc03, stateMPC_ubIdx03, stateMPC_dlubcc03);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dlubcc03, "stateMPC_dlubcc03");
 stateMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_4(stateMPC_ccrhsl04, stateMPC_slb04, stateMPC_llbbyslb04, stateMPC_dzcc04, stateMPC_lbIdx04, stateMPC_dllbcc04);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dllbcc04, "stateMPC_dllbcc04");
 stateMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_4(stateMPC_ccrhsub04, stateMPC_sub04, stateMPC_lubbysub04, stateMPC_dzcc04, stateMPC_ubIdx04, stateMPC_dlubcc04);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dlubcc04, "stateMPC_dlubcc04");
 stateMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_4(stateMPC_ccrhsl05, stateMPC_slb05, stateMPC_llbbyslb05, stateMPC_dzcc05, stateMPC_lbIdx05, stateMPC_dllbcc05);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dllbcc05, "stateMPC_dllbcc05");
 stateMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_4(stateMPC_ccrhsub05, stateMPC_sub05, stateMPC_lubbysub05, stateMPC_dzcc05, stateMPC_ubIdx05, stateMPC_dlubcc05);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dlubcc05, "stateMPC_dlubcc05");
 stateMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_4(stateMPC_ccrhsl06, stateMPC_slb06, stateMPC_llbbyslb06, stateMPC_dzcc06, stateMPC_lbIdx06, stateMPC_dllbcc06);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dllbcc06, "stateMPC_dllbcc06");
 stateMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_4(stateMPC_ccrhsub06, stateMPC_sub06, stateMPC_lubbysub06, stateMPC_dzcc06, stateMPC_ubIdx06, stateMPC_dlubcc06);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dlubcc06, "stateMPC_dlubcc06");
 stateMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_4(stateMPC_ccrhsl07, stateMPC_slb07, stateMPC_llbbyslb07, stateMPC_dzcc07, stateMPC_lbIdx07, stateMPC_dllbcc07);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dllbcc07, "stateMPC_dllbcc07");
 stateMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_4(stateMPC_ccrhsub07, stateMPC_sub07, stateMPC_lubbysub07, stateMPC_dzcc07, stateMPC_ubIdx07, stateMPC_dlubcc07);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dlubcc07, "stateMPC_dlubcc07");
 stateMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_4(stateMPC_ccrhsl08, stateMPC_slb08, stateMPC_llbbyslb08, stateMPC_dzcc08, stateMPC_lbIdx08, stateMPC_dllbcc08);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dllbcc08, "stateMPC_dllbcc08");
 stateMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_4(stateMPC_ccrhsub08, stateMPC_sub08, stateMPC_lubbysub08, stateMPC_dzcc08, stateMPC_ubIdx08, stateMPC_dlubcc08);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dlubcc08, "stateMPC_dlubcc08");
 stateMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_4(stateMPC_ccrhsl09, stateMPC_slb09, stateMPC_llbbyslb09, stateMPC_dzcc09, stateMPC_lbIdx09, stateMPC_dllbcc09);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dllbcc09, "stateMPC_dllbcc09");
 stateMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_4(stateMPC_ccrhsub09, stateMPC_sub09, stateMPC_lubbysub09, stateMPC_dzcc09, stateMPC_ubIdx09, stateMPC_dlubcc09);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dlubcc09, "stateMPC_dlubcc09");
 stateMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_4(stateMPC_ccrhsl10, stateMPC_slb10, stateMPC_llbbyslb10, stateMPC_dzcc10, stateMPC_lbIdx10, stateMPC_dllbcc10);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dllbcc10, "stateMPC_dllbcc10");
 stateMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_4(stateMPC_ccrhsub10, stateMPC_sub10, stateMPC_lubbysub10, stateMPC_dzcc10, stateMPC_ubIdx10, stateMPC_dlubcc10);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dlubcc10, "stateMPC_dlubcc10");
 stateMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_4(stateMPC_ccrhsl11, stateMPC_slb11, stateMPC_llbbyslb11, stateMPC_dzcc11, stateMPC_lbIdx11, stateMPC_dllbcc11);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dllbcc11, "stateMPC_dllbcc11");
 stateMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_4(stateMPC_ccrhsub11, stateMPC_sub11, stateMPC_lubbysub11, stateMPC_dzcc11, stateMPC_ubIdx11, stateMPC_dlubcc11);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dlubcc11, "stateMPC_dlubcc11");
 stateMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_4(stateMPC_ccrhsl12, stateMPC_slb12, stateMPC_llbbyslb12, stateMPC_dzcc12, stateMPC_lbIdx12, stateMPC_dllbcc12);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dllbcc12, "stateMPC_dllbcc12");
 stateMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_4(stateMPC_ccrhsub12, stateMPC_sub12, stateMPC_lubbysub12, stateMPC_dzcc12, stateMPC_ubIdx12, stateMPC_dlubcc12);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dlubcc12, "stateMPC_dlubcc12");
 stateMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_4(stateMPC_ccrhsl13, stateMPC_slb13, stateMPC_llbbyslb13, stateMPC_dzcc13, stateMPC_lbIdx13, stateMPC_dllbcc13);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dllbcc13, "stateMPC_dllbcc13");
 stateMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_4(stateMPC_ccrhsub13, stateMPC_sub13, stateMPC_lubbysub13, stateMPC_dzcc13, stateMPC_ubIdx13, stateMPC_dlubcc13);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dlubcc13, "stateMPC_dlubcc13");
 stateMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_2(stateMPC_ccrhsl14, stateMPC_slb14, stateMPC_llbbyslb14, stateMPC_dzcc14, stateMPC_lbIdx14, stateMPC_dllbcc14);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dllbcc14, "stateMPC_dllbcc14");
 stateMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_2(stateMPC_ccrhsub14, stateMPC_sub14, stateMPC_lubbysub14, stateMPC_dzcc14, stateMPC_ubIdx14, stateMPC_dlubcc14);
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dlubcc14, "stateMPC_dlubcc14");
 stateMPC_LA_VSUB7_116(stateMPC_l, stateMPC_ccrhs, stateMPC_s, stateMPC_dl_cc, stateMPC_ds_cc);
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dslbcc00, "stateMPC_dslbcc00");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dsubcc00, "stateMPC_dsubcc00");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dslbcc01, "stateMPC_dslbcc01");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dsubcc01, "stateMPC_dsubcc01");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dslbcc02, "stateMPC_dslbcc02");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dsubcc02, "stateMPC_dsubcc02");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dslbcc03, "stateMPC_dslbcc03");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dsubcc03, "stateMPC_dsubcc03");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dslbcc04, "stateMPC_dslbcc04");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dsubcc04, "stateMPC_dsubcc04");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dslbcc05, "stateMPC_dslbcc05");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dsubcc05, "stateMPC_dsubcc05");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dslbcc06, "stateMPC_dslbcc06");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dsubcc06, "stateMPC_dsubcc06");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dslbcc07, "stateMPC_dslbcc07");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dsubcc07, "stateMPC_dsubcc07");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dslbcc08, "stateMPC_dslbcc08");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dsubcc08, "stateMPC_dsubcc08");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dslbcc09, "stateMPC_dslbcc09");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dsubcc09, "stateMPC_dsubcc09");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dslbcc10, "stateMPC_dslbcc10");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dsubcc10, "stateMPC_dsubcc10");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dslbcc11, "stateMPC_dslbcc11");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dsubcc11, "stateMPC_dsubcc11");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dslbcc12, "stateMPC_dslbcc12");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dsubcc12, "stateMPC_dsubcc12");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dslbcc13, "stateMPC_dslbcc13");
-stateMPC_LA_DENSE_PRINT_VECTOR_4(stateMPC_dsubcc13, "stateMPC_dsubcc13");
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dslbcc14, "stateMPC_dslbcc14");
-stateMPC_LA_DENSE_PRINT_VECTOR_2(stateMPC_dsubcc14, "stateMPC_dsubcc14");
-stateMPC_LA_DENSE_PRINT_VECTOR_58(stateMPC_dz_aff, "stateMPC_dz_aff");
-stateMPC_LA_DENSE_PRINT_VECTOR_30(stateMPC_dv_aff, "stateMPC_dv_aff");
-stateMPC_LA_DENSE_PRINT_VECTOR_116(stateMPC_dl_aff, "stateMPC_dl_aff");
-stateMPC_LA_DENSE_PRINT_VECTOR_116(stateMPC_ds_aff, "stateMPC_ds_aff");
-stateMPC_LA_DENSE_PRINT_VECTOR_58(stateMPC_dz_cc, "stateMPC_dz_cc");
-stateMPC_LA_DENSE_PRINT_VECTOR_30(stateMPC_dv_cc, "stateMPC_dv_cc");
-stateMPC_LA_DENSE_PRINT_VECTOR_116(stateMPC_dl_cc, "stateMPC_dl_cc");
-stateMPC_LA_DENSE_PRINT_VECTOR_116(stateMPC_ds_cc, "stateMPC_ds_cc");
 stateMPC_LA_VADD_58(stateMPC_dz_cc, stateMPC_dz_aff);
 stateMPC_LA_VADD_30(stateMPC_dv_cc, stateMPC_dv_aff);
 stateMPC_LA_VADD_116(stateMPC_dl_cc, stateMPC_dl_aff);
 stateMPC_LA_VADD_116(stateMPC_ds_cc, stateMPC_ds_aff);
-stateMPC_LA_DENSE_PRINT_VECTOR_58(stateMPC_z, "stateMPC_z");
-stateMPC_LA_DENSE_PRINT_VECTOR_30(stateMPC_v, "stateMPC_v");
-stateMPC_LA_DENSE_PRINT_VECTOR_116(stateMPC_l, "stateMPC_l");
-stateMPC_LA_DENSE_PRINT_VECTOR_116(stateMPC_s, "stateMPC_s");
-stateMPC_LA_DENSE_PRINT_VECTOR_58(stateMPC_dz_cc, "stateMPC_dz_cc");
-stateMPC_LA_DENSE_PRINT_VECTOR_30(stateMPC_dv_cc, "stateMPC_dv_cc");
-stateMPC_LA_DENSE_PRINT_VECTOR_116(stateMPC_dl_cc, "stateMPC_dl_cc");
-stateMPC_LA_DENSE_PRINT_VECTOR_116(stateMPC_ds_cc, "stateMPC_ds_cc");
 info->lsit_cc = stateMPC_LINESEARCH_BACKTRACKING_COMBINED(stateMPC_z, stateMPC_v, stateMPC_l, stateMPC_s, stateMPC_dz_cc, stateMPC_dv_cc, stateMPC_dl_cc, stateMPC_ds_cc, &info->step_cc, &info->mu);
 if( info->lsit_cc == stateMPC_NOPROGRESS ){
-PRINTTEXT("Line search could not proceed at iteration %d, exiting.\n",info->it+1);
 exitcode = stateMPC_NOPROGRESS; break;
 }
-stateMPC_LA_DENSE_PRINT_VECTOR_58(stateMPC_z, "stateMPC_z");
-stateMPC_LA_DENSE_PRINT_VECTOR_30(stateMPC_v, "stateMPC_v");
-stateMPC_LA_DENSE_PRINT_VECTOR_116(stateMPC_l, "stateMPC_l");
-stateMPC_LA_DENSE_PRINT_VECTOR_116(stateMPC_s, "stateMPC_s");
 info->it++;
 }
 output->z1[0] = stateMPC_z00[0];

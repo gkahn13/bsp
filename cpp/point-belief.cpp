@@ -361,7 +361,7 @@ void beliefCollocation(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DI
 			std::cerr << "Some problem in solver" << std::endl;
 			std::exit(-1);
 		}
-		std::cout << "Optimized cost: " << optcost << std::endl;
+		//std::cout << "Optimized cost: " << optcost << std::endl;
 
 		if ((optcost > prevcost) | (abs(optcost - prevcost)/prevcost < 0.01)) 
 			break; 
@@ -551,9 +551,11 @@ int main(int argc, char* argv[])
 	pythonDisplayTrajectory(B, U);
 #endif
 
+	/*
 	for (size_t t = 0; t < T; ++t) {
 		std::cout << ~B[t] << std::endl;
 	}
+	*/
 
 	int k;
 	std::cin >> k;

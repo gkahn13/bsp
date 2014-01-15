@@ -165,6 +165,43 @@ void computeCostGradDiagHess(const std::vector< Matrix<X_DIM> >& X, const std::v
 	evalCostGradDiagHess(result, vars);
 }
 
+bool isValidInputs(double *result) {
+	/*
+	int nvars = 2*(T*X_DIM + (T-1)*U_DIM) + 1;
+	for(int i = 0; i < nvars; ++i) {
+		std::cout << result[i] << std::endl;
+	}
+	*/
+
+	//stateMPC_FLOAT **H, **f, **lb, **ub, **C, **e, **z;
+	for(int t = 0; t < T-1; ++t) {
+
+		std::cout << "t: " << t << std::endl << std::endl;
+
+		/*
+		std::cout << "lb x: " << lb[t][0] << " " << lb[t][1] << std::endl;
+		std::cout << "lb u: " << lb[t][2] << " " << lb[t][3] << std::endl;
+
+		std::cout << "ub x: " << ub[t][0] << " " << ub[t][1] << std::endl;
+		std::cout << "ub u: " << ub[t][2] << " " << ub[t][3] << std::endl;
+
+		*/
+
+		std::cout << "f: " << std::endl;
+		for(int i = 0; i < 4; ++i) {
+			std::cout << f[t][i] << std::endl;
+		}
+
+		std::cout << "H: " << std::endl;
+		for(int i = 0; i < 4; ++i) {
+			std::cout << H[t][i] << std::endl;
+		}
+
+		std::cout << std::endl << std::endl;
+	}
+	return true;
+}
+
 void stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >& U, stateMPC_params& problem, stateMPC_output& output, stateMPC_info& info)
 {
 	int maxIter = 10;
@@ -209,7 +246,7 @@ void stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM
 				Hzbar[i] = H[t][i]*zbar[i];
 			}
 
-			f[t][0] = result[1+t*X_DIM] - Hzbar[0];
+			f[t][0] = result[1+t*X_DIM]- Hzbar[0];
 			f[t][1] = result[1+t*X_DIM+1] - Hzbar[1];
 			f[t][2] = result[1+T*X_DIM+t*U_DIM] - Hzbar[2];
 			f[t][3] = result[1+T*X_DIM+t*U_DIM+1] - Hzbar[3];
@@ -221,6 +258,7 @@ void stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM
 			lb[t][1] = MAX(xMin[1], xt[1] - Xeps);
 			lb[t][2] = MAX(uMin[0], ut[0] - Ueps);
 			lb[t][3] = MAX(uMin[1], ut[1] - Ueps);
+
 
 			ub[t][0] = MIN(xMax[0], xt[0] + Xeps);
 			ub[t][1] = MIN(xMax[1], xt[1] + Xeps);
@@ -268,6 +306,10 @@ void stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM
 		e[T-1][0] = 0; e[T-1][1] = 0;
 
 		// Verify problem inputs
+		if (!isValidInputs(result)) {
+			std::cout << "Inputs are not valid!" << std::endl;
+			exit(0);
+		}
 
 		//int num;
 		//std::cin >> num;

@@ -4,3 +4,8 @@
 cpp/bin/*
 cpp/build/*
 @*
+matlab/beliefMPC
+matlab/stateMPC
+matlab/lpMPC
+matlab/*.zip
+matlab/*.mexa64

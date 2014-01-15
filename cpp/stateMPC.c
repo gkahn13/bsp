@@ -25,22 +25,16 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 /* SAFE DIVISION ------------------------------------------------------- */
 #define MAX(X,Y)  ((X) < (Y) ? (Y) : (X))
 #define MIN(X,Y)  ((X) < (Y) ? (X) : (Y))
-#define SAFEDIV_POS(X,Y)  ( (Y) < EPS ? ((X)/EPS) : (X)/(Y) ) 
-#define EPS (1.0000E-013)
-#define BIGM (1E20)
-#define BIGMM (1E30)
+/*#define SAFEDIV_POS(X,Y)  ( (Y) < EPS ? ((X)/EPS) : (X)/(Y) ) 
+#define EPS (1.0000E-013) */
+#define BIGM (1E30)
+#define BIGMM (1E60)
 
 /* includes for parallel computation if necessary */
 
 
 /* SYSTEM INCLUDES FOR PRINTING ---------------------------------------- */
-#ifndef USEMEXPRINTS
-#include <stdio.h>
-#define PRINTTEXT printf
-#else
-#include "mex.h"
-#define PRINTTEXT mexPrintf
-#endif
+
 
 
 
@@ -849,7 +843,7 @@ void stateMPC_LA_DENSE_CHOL_2(stateMPC_FLOAT *A, stateMPC_FLOAT *L)
         
 #if stateMPC_SET_PRINTLEVEL > 0 && defined PRINTNUMERICALWARNINGS
         if( Mii < 1.0000000000000000E-013 ){
-             PRINTTEXT("WARNING: small pivot in Cholesky fact. (=%3.1e < eps=%3.1e), regularizing to %3.1e\n",Mii,1.0000000000000000E-013,4.0000000000000002E-004);
+             PRINTTEXT("WARNING (CHOL): small %d-th pivot in Cholesky fact. (=%3.1e < eps=%3.1e), regularizing to %3.1e\n",i,Mii,1.0000000000000000E-013,4.0000000000000002E-004);
 			 L[ii+i] = 2.0000000000000000E-002;
 		} else
 		{
@@ -866,8 +860,10 @@ void stateMPC_LA_DENSE_CHOL_2(stateMPC_FLOAT *A, stateMPC_FLOAT *L)
                 l += L[jj+k]*L[ii+k];
             }
 
-			if( l >  BIGM ){ l = BIGMM; }
-			if( l < -BIGM ){ l = -BIGMM; }
+			/* saturate values for numerical stability */
+			l = MIN(l,  BIGMM);
+			l = MAX(l, -BIGMM);
+
             L[jj+i] = (L[jj+i] - l)/L[ii+i];            
 			jj += ++dj;
         }
@@ -894,7 +890,7 @@ void stateMPC_LA_DENSE_FORWARDSUB_2(stateMPC_FLOAT *L, stateMPC_FLOAT *b, stateM
             yel -= y[j]*L[ii+j];
         }
 
-		/* saturate for numerical stability */
+		/* saturate for numerical stability  */
 		yel = MIN(yel, BIGM);
 		yel = MAX(yel, -BIGM);
 
@@ -929,7 +925,7 @@ void stateMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(stateMPC_FLOAT *L, stateMPC_FLOAT *
 
 			/* saturate for numerical stability */
 			a = MIN(a, BIGM);
-			a = MAX(a, -BIGM);
+			a = MAX(a, -BIGM); 
 
 			A[j*2+i] = a/L[ii+j];			
         }
@@ -1011,7 +1007,7 @@ void stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_FLOAT *L, stateMPC_FLOAT *y, state
 
 		/* saturate for numerical stability */
 		xel = MIN(xel, BIGM);
-		xel = MAX(xel, -BIGM);
+		xel = MAX(xel, -BIGM); 
 
         x[i] = xel / L[ii+i];
         ii -= di--;
@@ -2207,6 +2203,7 @@ stateMPC_FLOAT stateMPC_L_0[6];
 int stateMPC_solve(stateMPC_params* params, stateMPC_output* output, stateMPC_info* info)
 {	
 int exitcode;
+
 #if stateMPC_SET_TIMING == 1
 	stateMPC_timer solvertimer;
 	stateMPC_tic(&solvertimer);
@@ -2322,10 +2319,8 @@ if( info->mu < stateMPC_SET_ACC_KKTCOMPL
     && (info->rdgap < stateMPC_SET_ACC_RDGAP || info->dgap < stateMPC_SET_ACC_KKTCOMPL)
     && info->res_eq < stateMPC_SET_ACC_RESEQ
     && info->res_ineq < stateMPC_SET_ACC_RESINEQ ){
-PRINTTEXT("OPTIMAL (within RESEQ=%2.1e, RESINEQ=%2.1e, (R)DGAP=(%2.1e)%2.1e, MU=%2.1e).\n",stateMPC_SET_ACC_RESEQ, stateMPC_SET_ACC_RESINEQ,stateMPC_SET_ACC_KKTCOMPL,stateMPC_SET_ACC_RDGAP,stateMPC_SET_ACC_KKTCOMPL);
 exitcode = stateMPC_OPTIMAL; break; }
 if( info->it == stateMPC_SET_MAXIT ){
-PRINTTEXT("Maximum number of iterations reached, exiting.\n");
 exitcode = stateMPC_MAXITREACHED; break; }
 stateMPC_LA_VVADD3_58(stateMPC_grad_cost, stateMPC_grad_eq, stateMPC_grad_ineq, stateMPC_rd);
 stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H01, stateMPC_llbbyslb00, stateMPC_lbIdx00, stateMPC_lubbysub00, stateMPC_ubIdx00, stateMPC_Phi00);
@@ -2625,7 +2620,6 @@ stateMPC_LA_VSUB2_INDEXED_2(stateMPC_riub14, stateMPC_dzaff14, stateMPC_ubIdx14,
 stateMPC_LA_VSUB3_2(stateMPC_lubbysub14, stateMPC_dsubaff14, stateMPC_lub14, stateMPC_dlubaff14);
 info->lsit_aff = stateMPC_LINESEARCH_BACKTRACKING_AFFINE(stateMPC_l, stateMPC_s, stateMPC_dl_aff, stateMPC_ds_aff, &info->step_aff, &info->mu_aff);
 if( info->lsit_aff == stateMPC_NOPROGRESS ){
-PRINTTEXT("Affine line search could not proceed at iteration %d.\nThe problem might be infeasible -- exiting.\n",info->it+1);
 exitcode = stateMPC_NOPROGRESS; break;
 }
 sigma_3rdroot = info->mu_aff / info->mu;
@@ -2803,7 +2797,6 @@ stateMPC_LA_VADD_116(stateMPC_dl_cc, stateMPC_dl_aff);
 stateMPC_LA_VADD_116(stateMPC_ds_cc, stateMPC_ds_aff);
 info->lsit_cc = stateMPC_LINESEARCH_BACKTRACKING_COMBINED(stateMPC_z, stateMPC_v, stateMPC_l, stateMPC_s, stateMPC_dz_cc, stateMPC_dv_cc, stateMPC_dl_cc, stateMPC_ds_cc, &info->step_cc, &info->mu);
 if( info->lsit_cc == stateMPC_NOPROGRESS ){
-PRINTTEXT("Line search could not proceed at iteration %d, exiting.\n",info->it+1);
 exitcode = stateMPC_NOPROGRESS; break;
 }
 info->it++;

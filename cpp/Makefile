@@ -1,27 +1,45 @@
-OBJS = build/stateMPC.o build/symeval.o build/timer.o build/point-state.o
-FLAGS_C = -c -std=gnu99
-BUILD_DIR = build
-	
-state: $(OBJS)
-	g++ $(OBJS) -o bin/point-state
-	
-build/stateMPC.o : stateMPC.c
-	gcc -c -std=gnu99 -o build/stateMPC.o stateMPC.c
-	
+OBJS_BELIEF = build/beliefMPC.o build/timer.o build/point-belief.o
+OBJS_STATE = build/stateMPC.o build/symeval.o build/timer.o build/point-state.o
+OBJS_LP = build/lpMPC.o build/symeval.o build/timer.o build/point-lp.o
+
 build/timer.o : timer/Timer.h timer/Timer.cpp
 	g++ -c -std=c++0x -o build/timer.o timer/Timer.cpp
 	
 build/symeval.o : symeval.h symeval.c
 	gcc -c -std=gnu99 -o build/symeval.o symeval.c
 	
+
+# make point-belief
+belief: $(OBJS_BELIEF)
+	g++ $(OBJS_BELIEF) -o bin/point-belief -lpython2.7 -lboost_python
+	
+build/beliefMPC.o : beliefMPC.c beliefMPC.h
+	gcc -c -std=c99 -o build/beliefMPC.o beliefMPC.c
+	
+build/point-belief.o : timer/Timer.h timer/Timer.cpp beliefMPC.c point-belief.cpp
+	g++ -I/usr/include/python2.7 -c -std=c++0x -o build/point-belief.o point-belief.cpp
+
+	
+# make point-state
+state: $(OBJS_STATE)
+	g++ $(OBJS_STATE) -o bin/point-state -lpython2.7 -lboost_python
+	
+build/stateMPC.o : stateMPC.c stateMPC.h
+	gcc -c -std=gnu99 -o build/stateMPC.o stateMPC.c
+	
 build/point-state.o : timer/Timer.h symeval.h timer/Timer.cpp symeval.c stateMPC.c point-state.cpp
 	g++ -I/usr/include/python2.7 -c -std=c++0x -o build/point-state.o point-state.cpp
 
-belief:
-	gcc -c -std=c99 -o build/beliefMPC.o beliefMPC.c	
-	g++ -c -std=c++0x -o build/timer.o timer/Timer.cpp
-	g++ -I/usr/include/python2.7 -c -std=c++0x -o build/point-belief.o point-belief.cpp
-	g++ -o bin/point build/beliefMPC.o build/point-belief.o build/timer.o -lpython2.7 -lboost_python
+
+# make point-lp
+lp: $(OBJS_LP)
+	g++ $(OBJS_LP) -o bin/point-lp -lpython2.7 -lboost_python
+	
+build/lpMPC.o : lpMPC.c lpMPC.h
+	gcc -c -std=gnu99 -o build/lpMPC.o lpMPC.c
+	
+build/point-lp.o : timer/Timer.h symeval.h timer/Timer.cpp symeval.c lpMPC.c point-lp.cpp
+	g++ -I/usr/include/python2.7 -c -std=c++0x -o build/point-lp.o point-lp.cpp
 
 
 clean:

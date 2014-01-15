@@ -299,9 +299,9 @@ bool isValidInputs(double *result) {
 
 void lpCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >& U, lpMPC_params& problem, lpMPC_output& output, lpMPC_info& info)
 {
-	int maxIter = 10;
-	double Xeps = 1;
-	double Ueps = 1;
+	int maxIter = 100;
+	double Xeps = .1;
+	double Ueps = .1;
 
 	// box constraint around goal
 	double delta = 0.01;
@@ -418,7 +418,7 @@ void lpCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >
 		//std::cout << "Prev cost: " << prevcost << std::endl;
 		//std::cout << "Optimized cost: " << optcost << std::endl;
 
-		if ((optcost > prevcost) | (abs(optcost - prevcost)/prevcost < 0.01))
+		if ((optcost > prevcost) || (fabs(optcost - prevcost)/prevcost < 0.01))
 			break;
 		else {
 			prevcost = optcost;

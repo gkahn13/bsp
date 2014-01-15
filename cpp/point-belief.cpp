@@ -361,7 +361,7 @@ void beliefCollocation(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DI
 			std::cerr << "Some problem in solver" << std::endl;
 			std::exit(-1);
 		}
-		//std::cout << "Optimized cost: " << optcost << std::endl;
+		std::cout << "Optimized cost: " << optcost << std::endl;
 
 		if ((optcost > prevcost) | (abs(optcost - prevcost)/prevcost < 0.01)) 
 			break; 
@@ -501,9 +501,9 @@ void displayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DI
 
 int main(int argc, char* argv[])
 {
-	x0[0] = -4; x0[1] = 2;
+	x0[0] = -3.5; x0[1] = 2;
 	SqrtSigma0 = identity<X_DIM>();
-	xGoal[0] = -1; xGoal[1] = -2;
+	xGoal[0] = -3.5; xGoal[1] = -2;
 
 	xMin[0] = -5; xMin[1] = -3; 
 	xMax[0] = 5; xMax[1] = 3;
@@ -521,6 +521,7 @@ int main(int argc, char* argv[])
 	vec(x0, SqrtSigma0, B[0]);
 	for (size_t t = 0; t < T-1; ++t) {
 		B[t+1] = beliefDynamics(B[t], U[t]);
+		//std::cout << ~B[t] << std::endl;
 	}
 
 	//for (size_t t = 0; t < T; ++t) {
@@ -549,6 +550,10 @@ int main(int argc, char* argv[])
 #else
 	pythonDisplayTrajectory(B, U);
 #endif
+
+	for (size_t t = 0; t < T; ++t) {
+		std::cout << ~B[t] << std::endl;
+	}
 
 	int k;
 	std::cin >> k;

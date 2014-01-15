@@ -165,6 +165,35 @@ void computeCostGradDiagHess(const std::vector< Matrix<X_DIM> >& X, const std::v
 	evalCostGradDiagHess(result, vars);
 }
 
+void forcePsdHessian(int force_type) {
+	// zero out negative diagonal entries
+	if (force_type == 0) {
+		for(int t = 0; t < T; ++t) {
+			for(int i = 0; i < (X_DIM+U_DIM); ++i) {
+				H[t][i] = (H[t][i] < 0) ? 0 : H[t][i];
+			}
+		}
+	}
+
+	// add abs of most negative Hessian to all Hessian values
+	if (force_type == 1) {
+		double min_eig = INFTY;
+		for(int t = 0; t < T; ++t) {
+			for(int i = 0; i < (X_DIM+U_DIM); ++i) {
+				min_eig = MIN(min_eig, H[t][i]);
+			}
+		}
+
+		if (min_eig < 0) {
+			for(int t = 0; t < T; ++t) {
+				for(int i = 0; i < (X_DIM+U_DIM); ++i) {
+					H[t][i] += -min_eig;
+				}
+			}
+		}
+	}
+}
+
 bool isValidInputs(double *result) {
 	/*
 	int nvars = 2*(T*X_DIM + (T-1)*U_DIM) + 1;
@@ -185,12 +214,13 @@ bool isValidInputs(double *result) {
 		std::cout << "ub x: " << ub[t][0] << " " << ub[t][1] << std::endl;
 		std::cout << "ub u: " << ub[t][2] << " " << ub[t][3] << std::endl;
 
-		*/
+
 
 		std::cout << "f: " << std::endl;
 		for(int i = 0; i < 4; ++i) {
 			std::cout << f[t][i] << std::endl;
 		}
+		*/
 
 		std::cout << "H: " << std::endl;
 		for(int i = 0; i < 4; ++i) {
@@ -202,6 +232,7 @@ bool isValidInputs(double *result) {
 	return true;
 }
 
+const bool FORCE_PSD_HESSIAN = true;
 void stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >& U, stateMPC_params& problem, stateMPC_output& output, stateMPC_info& info)
 {
 	int maxIter = 10;
@@ -213,7 +244,7 @@ void stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM
 
 	Matrix<X_DIM,1> x0 = X[0];
 
-	double prevcost, optcost;
+	double prevcost = 118, optcost;
 
 	int dim = T*X_DIM + (T-1)*U_DIM;
 	double* result = new double[2*dim + 1];
@@ -224,10 +255,23 @@ void stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM
 
 	for(int it = 0; it < maxIter; ++it)
 	{
-		//std::cout << "Iter: " << it << std::endl;
+		std::cout << "Iter: " << it << std::endl;
 		computeCostGradDiagHess(X, U, result);
 
-		// linearize belief dynamics constraint here
+
+		// compute Hessian first
+		// so can force it to be PSD
+		for (int t = 0; t < T-1; ++t) {
+			H[t][0] = result[1+dim+t*X_DIM];
+			H[t][1] = result[1+dim+t*X_DIM+1];
+			H[t][2] = result[1+dim+T*X_DIM+t*U_DIM];
+			H[t][3] = result[1+dim+T*X_DIM+t*U_DIM+1];
+		}
+
+		if (FORCE_PSD_HESSIAN) {
+			forcePsdHessian(1);
+		}
+
 		for (int t = 0; t < T-1; ++t)
 		{
 			Matrix<X_DIM>& xt = X[t];
@@ -237,10 +281,12 @@ void stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM
 			zbar.insert(0,0,xt);
 			zbar.insert(X_DIM,0,ut);
 
+			/*
 			H[t][0] = result[1+dim+t*X_DIM];
 			H[t][1] = result[1+dim+t*X_DIM+1];
 			H[t][2] = result[1+dim+T*X_DIM+t*U_DIM];
 			H[t][3] = result[1+dim+T*X_DIM+t*U_DIM+1];
+			 */
 
 			for(int i = 0; i < (X_DIM+U_DIM); ++i) {
 				Hzbar[i] = H[t][i]*zbar[i];
@@ -306,10 +352,12 @@ void stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM
 		e[T-1][0] = 0; e[T-1][1] = 0;
 
 		// Verify problem inputs
+
 		if (!isValidInputs(result)) {
 			std::cout << "Inputs are not valid!" << std::endl;
 			exit(0);
 		}
+
 
 		//int num;
 		//std::cin >> num;
@@ -335,9 +383,10 @@ void stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM
 			std::cerr << "Some problem in solver" << std::endl;
 			std::exit(-1);
 		}
-		//std::cout << "Optimized cost: " << optcost << std::endl;
+		std::cout << "Prev cost: " << prevcost << std::endl;
+		std::cout << "Optimized cost: " << optcost << std::endl;
 
-		if ((optcost > prevcost) | (abs(optcost - prevcost)/prevcost < 0.01))
+		if ((optcost > prevcost*1.1) | (abs(optcost - prevcost)/prevcost < 0.01))
 			break;
 		else {
 			prevcost = optcost;
@@ -372,7 +421,6 @@ int main(int argc, char* argv[])
 	X[0] = x0;
 	for (int t = 0; t < T-1; ++t) {
 		X[t+1] = dynfunc(X[t], U[t], zeros<Q_DIM,1>());
-		//std::cout << ~X[t+1] << std::endl;
 	}
 
 	setupDstarInterface();
@@ -394,6 +442,11 @@ int main(int argc, char* argv[])
 	std::cout << "Compute time: " << t.getElapsedTimeInMilliSec() << " mS" << std::endl;
 
 	cleanup();
+
+	std::cout << "Final X:" << std::endl;
+	for (int t = 0; t < T; ++t) {
+		std::cout << ~X[t] << std::endl;
+	}
 
 	int k;
 	std::cin >> k;

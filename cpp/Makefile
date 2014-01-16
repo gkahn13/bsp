@@ -1,22 +1,24 @@
-OBJS_BELIEF = build/beliefMPC.o build/timer.o build/point-belief.o
-OBJS_STATE = build/stateMPC.o build/symeval.o build/timer.o build/point-state.o
-OBJS_LP = build/lpMPC.o build/symeval.o build/timer.o build/point-lp.o
+OBJS_BELIEF = build/beliefMPC.o build/timer.o build/point-belief.o build/logging.o
+OBJS_STATE = build/stateMPC.o build/symeval.o build/timer.o build/point-state.o build/logging.o
+OBJS_LP = build/lpMPC.o build/symeval.o build/timer.o build/point-lp.o build/logging.o
 
-build/timer.o : timer/Timer.h timer/Timer.cpp
+build/timer.o : timer/Timer.cpp
 	g++ -c -std=c++0x -o build/timer.o timer/Timer.cpp
+
+build/logging.o : logging.cpp
+	g++ -c -std=c++0x -o build/logging.o logging.cpp
 	
-build/symeval.o : symeval.h symeval.c
+build/symeval.o : symeval.c
 	gcc -c -std=gnu99 -o build/symeval.o symeval.c
-	
 
 # make point-belief
 belief: $(OBJS_BELIEF)
 	g++ $(OBJS_BELIEF) -o bin/point-belief -lpython2.7 -lboost_python
 	
-build/beliefMPC.o : beliefMPC.c beliefMPC.h
+build/beliefMPC.o : beliefMPC.c
 	gcc -c -std=c99 -o build/beliefMPC.o beliefMPC.c
 	
-build/point-belief.o : timer/Timer.h timer/Timer.cpp beliefMPC.c point-belief.cpp
+build/point-belief.o : point-belief.cpp
 	g++ -I/usr/include/python2.7 -c -std=c++0x -o build/point-belief.o point-belief.cpp
 
 	
@@ -24,10 +26,10 @@ build/point-belief.o : timer/Timer.h timer/Timer.cpp beliefMPC.c point-belief.cp
 state: $(OBJS_STATE)
 	g++ $(OBJS_STATE) -o bin/point-state -lpython2.7 -lboost_python
 	
-build/stateMPC.o : stateMPC.c stateMPC.h
+build/stateMPC.o : stateMPC.c
 	gcc -c -std=gnu99 -o build/stateMPC.o stateMPC.c
 	
-build/point-state.o : timer/Timer.h symeval.h timer/Timer.cpp symeval.c stateMPC.c point-state.cpp
+build/point-state.o : point-state.cpp
 	g++ -I/usr/include/python2.7 -c -std=c++0x -o build/point-state.o point-state.cpp
 	
 
@@ -35,13 +37,14 @@ build/point-state.o : timer/Timer.h symeval.h timer/Timer.cpp symeval.c stateMPC
 lp: $(OBJS_LP)
 	g++ $(OBJS_LP) -o bin/point-lp -lpython2.7 -lboost_python
 	
-build/lpMPC.o : lpMPC.c lpMPC.h
+build/lpMPC.o : lpMPC.c
 	gcc -c -std=gnu99 -o build/lpMPC.o lpMPC.c
 	
-build/point-lp.o : timer/Timer.h symeval.h timer/Timer.cpp symeval.c lpMPC.c point-lp.cpp
+build/point-lp.o : point-lp.cpp
 	g++ -I/usr/include/python2.7 -c -std=c++0x -o build/point-lp.o point-lp.cpp
 
 
 clean:
 	rm -f bin/*
 	rm -rf build/*
+	rm -f *~

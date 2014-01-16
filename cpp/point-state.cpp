@@ -4,11 +4,11 @@
 #include <cstdlib>
 #include <iomanip>
 
-//#include "callisto.h"
 #include "matrix.h"
 #include "utils.h"
+#include "timer/Timer.h"
+#include "logging.h"
 
-#include <timer/Timer.h>
 #include <Python.h>
 #include <boost/python.hpp>
 #include <numpy/ndarrayobject.h>
@@ -22,7 +22,7 @@ extern "C" {
 #include "stateMPC.h"
 }
 
-#define TIMESTEPS 5
+#define TIMESTEPS 15
 #define DT 1.0
 #define X_DIM 2
 #define U_DIM 2
@@ -48,11 +48,11 @@ const double INFTY = 1e10;
 const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 1;
 
 namespace cfg {
-	const double improve_ratio_threshold = .25;
-	const double min_approx_improve = 1e-2;
-	const double min_trust_box_size = 1e-2;
-	const double trust_shrink_ratio = .1;
-	const double trust_expand_ratio = 2;
+const double improve_ratio_threshold = .25;
+const double min_approx_improve = 1e-2;
+const double min_trust_box_size = 1e-2;
+const double trust_shrink_ratio = .1;
+const double trust_expand_ratio = 2;
 }
 
 // stateMPC vars
@@ -64,24 +64,19 @@ stateMPC_FLOAT **H, **f, **lb, **ub, **C, **e, **z;
 double *inputVars;
 std::vector<int> maskIndices;
 
-#ifdef WIN32
-// Callisto variables
-int cal_env, cal_goal, cal_domain, cal_traj;
-#endif
-
 inline Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<U_DIM>& q)
-{  
+		{
 	Matrix<X_DIM> xNew = x + u*DT + 0.01*q;
 	return xNew;
-}
+		}
 
 // Observation model
 inline Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r)
-{
+		{
 	double intensity = sqrt(sqr(0.5*x[0]) + 1e-6);
 	Matrix<Z_DIM> z = x + intensity*r;
 	return z;
-}
+		}
 
 // Jacobians: df(x,u,q)/dx, df(x,u,q)/dq
 inline void linearizeDynamics(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<Q_DIM>& q, Matrix<X_DIM,X_DIM>& A, Matrix<X_DIM,Q_DIM>& M)
@@ -190,15 +185,15 @@ void setupStateMPCVars(stateMPC_params& problem, stateMPC_output& output)
 	// output
 	z = new stateMPC_FLOAT*[T];
 
-
+	/*
 #define SET_VARS_0_TO_9(n)      \
-  H[ BOOST_PP_SUB(n,1) ] = problem.H0##n ;	\
-  f[ BOOST_PP_SUB(n,1) ] = problem.f0##n ;	\
-  lb[ BOOST_PP_SUB(n,1) ] = problem.lb0##n ;	\
-  ub[ BOOST_PP_SUB(n,1) ] = problem.ub0##n ;	\
-  C[ BOOST_PP_SUB(n,1) ] = problem.C0##n ;  \
-  e[ BOOST_PP_SUB(n,1) ] = problem.e0##n ;  \
-  z[ BOOST_PP_SUB(n,1) ] = output.z##n ;
+		H[ BOOST_PP_SUB(n,1) ] = problem.H0##n ;	\
+		f[ BOOST_PP_SUB(n,1) ] = problem.f0##n ;	\
+		lb[ BOOST_PP_SUB(n,1) ] = problem.lb0##n ;	\
+		ub[ BOOST_PP_SUB(n,1) ] = problem.ub0##n ;	\
+		C[ BOOST_PP_SUB(n,1) ] = problem.C0##n ;  \
+		e[ BOOST_PP_SUB(n,1) ] = problem.e0##n ;  \
+		z[ BOOST_PP_SUB(n,1) ] = output.z##n ;
 
 #define BOOST_PP_LOCAL_MACRO(n) SET_VARS_0_TO_9(n)
 #if TIMESTEPS>9
@@ -210,20 +205,20 @@ void setupStateMPCVars(stateMPC_params& problem, stateMPC_output& output)
 
 #if TIMESTEPS>9
 #define SET_VARS_OVER_10(n)    \
-  H[ BOOST_PP_SUB(n,1)) ] = problem.H##n ;	\
-    f[ BOOST_PP_SUB(n,1) ] = problem.f##n ;     \
-  lb[ BOOST_PP_SUB(n,1) ] = problem.lb##n ;	\
-  ub[ BOOST_PP_SUB(n,1) ] = problem.ub##n ;	\
-  C[ BOOST_PP_SUB(n,1) ] = problem.C##n ;  \
-  e[ BOOST_PP_SUB(n,1) ] = problem.e##n ;  \
-  z[ BOOST_PP_SUB(n,1) ] = output.z##n ;
+		H[ BOOST_PP_SUB(n,1)) ] = problem.H##n ;	\
+		f[ BOOST_PP_SUB(n,1) ] = problem.f##n ;     \
+		lb[ BOOST_PP_SUB(n,1) ] = problem.lb##n ;	\
+		ub[ BOOST_PP_SUB(n,1) ] = problem.ub##n ;	\
+		C[ BOOST_PP_SUB(n,1) ] = problem.C##n ;  \
+		e[ BOOST_PP_SUB(n,1) ] = problem.e##n ;  \
+		z[ BOOST_PP_SUB(n,1) ] = output.z##n ;
 
 #define BOOST_PP_LOCAL_MACRO(n) SET_VARS_OVER_10(n)
 #define BOOST_PP_LOCAL_LIMITS (10, TIMESTEPS)
 #include BOOST_PP_LOCAL_ITERATE()
 #endif
+*/
 
-	/*
 	H[0] = problem.H01; f[0] = problem.f01; lb[0] = problem.lb01; ub[0] = problem.ub01; C[0] = problem.C01; e[0] = problem.e01;
 	H[1] = problem.H02; f[1] = problem.f02; lb[1] = problem.lb02; ub[1] = problem.ub02; C[1] = problem.C02; e[1] = problem.e02;
 	H[2] = problem.H03; f[2] = problem.f03; lb[2] = problem.lb03; ub[2] = problem.ub03; C[2] = problem.C03; e[2] = problem.e03;
@@ -243,7 +238,6 @@ void setupStateMPCVars(stateMPC_params& problem, stateMPC_output& output)
 	z[0] = output.z1; z[1] = output.z2; z[2] = output.z3; z[3] = output.z4; z[4] = output.z5;
 	z[5] = output.z6; z[6] = output.z7; z[7] = output.z8; z[8] = output.z9; z[9] = output.z10; 
 	z[10] = output.z11; z[11] = output.z12; z[12] = output.z13; z[13] = output.z14; z[14] = output.z15; 
-	*/
 }
 
 void setupDstarInterface() 
@@ -255,7 +249,7 @@ void setupDstarInterface()
 	int nvars = T * X_DIM + (T - 1) * U_DIM + Q_DIM + R_DIM + (X_DIM * X_DIM) + nparams;
 
 	inputVars = new double[nvars];
-	
+
 	std::ifstream fptr("masks.txt");
 	int val;
 	for(int i = 0; i < nvars; ++i) {
@@ -301,7 +295,7 @@ void computeCostGradDiagHess(const std::vector< Matrix<X_DIM> >& X, const std::v
 		inputVars[idx++] = Sigma0[i];
 	}
 	inputVars[idx++] = alpha_belief; inputVars[idx++] = alpha_control; inputVars[idx++] = alpha_final_belief;
-	
+
 	int nvars = (int)maskIndices.size();
 	double* vars = new double[nvars];
 
@@ -352,7 +346,7 @@ bool isValidInputs(double *result) {
 	for(int i = 0; i < nvars; ++i) {
 		std::cout << result[i] << std::endl;
 	}
-	*/
+	 */
 
 	//stateMPC_FLOAT **H, **f, **lb, **ub, **C, **e, **z;
 	for(int t = 0; t < T-1; ++t) {
@@ -372,7 +366,7 @@ bool isValidInputs(double *result) {
 		for(int i = 0; i < 4; ++i) {
 			std::cout << f[t][i] << std::endl;
 		}
-		*/
+		 */
 
 		std::cout << "H: " << std::endl;
 		for(int i = 0; i < 4; ++i) {
@@ -420,20 +414,20 @@ double computeConstantTerms(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix
 
 	for(int t = 0; t < T-1; ++t) {
 		hessian_constant += H[t][0]*X[t][0]*X[t][0] +
-							H[t][1]*X[t][1]*X[t][1] +
-							H[t][2]*U[t][0]*U[t][0] +
-							H[t][3]*U[t][1]*U[t][1];
+				H[t][1]*X[t][1]*X[t][1] +
+				H[t][2]*U[t][0]*U[t][0] +
+				H[t][3]*U[t][1]*U[t][1];
 
 		jac_constant += -(f[t][0]*X[t][0] +
-						  f[t][1]*X[t][1] +
-						  f[t][2]*U[t][0] +
-						  f[t][3]*U[t][1]);
+				f[t][1]*X[t][1] +
+				f[t][2]*U[t][0] +
+				f[t][3]*U[t][1]);
 	}
 	hessian_constant += H[T-1][0]*X[T-1][0]*X[T-1][0] +
-						H[T-1][1]*X[T-1][1]*X[T-1][1];
+			H[T-1][1]*X[T-1][1]*X[T-1][1];
 
 	jac_constant += -(f[T-1][0]*X[T-1][0] +
-					  f[T-1][1]*X[T-1][1]);
+			f[T-1][1]*X[T-1][1]);
 
 	return .5*hessian_constant + jac_constant;
 
@@ -561,8 +555,6 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 
 		e[T-1][0] = 0; e[T-1][1] = 0;
 
-
-
 		// Verify problem inputs
 		/*
 		if (!isValidInputs(result)) {
@@ -598,11 +590,12 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 		model_merit = optcost + constants_cost; // need to add constant terms that were dropped
 		new_merit = result[0]; // Cost from symbolic code
 
-
+#ifdef DEBUG_PRINT
 		std::cout << "merit: " << merit << std::endl;
 		std::cout << "model_merit: " << model_merit << std::endl;
 		std::cout << "new_merit: " << new_merit << std::endl;
 		std::cout << "constants_cost: " << constants_cost << std::endl;
+#endif
 
 		approx_merit_improve = merit - model_merit;
 		exact_merit_improve = merit - new_merit;
@@ -666,8 +659,8 @@ void pythonDisplayTrajectory(std::vector< Matrix<X_DIM> >& X, std::vector< Matri
 	}
 
 	py::list Uvec;
-		for(int j=0; j < U_DIM; j++) {
-			for(int i=0; i < T-1; i++) {
+	for(int j=0; j < U_DIM; j++) {
+		for(int i=0; i < T-1; i++) {
 			Uvec.append(U[i][j]);
 		}
 	}
@@ -714,7 +707,7 @@ int main(int argc, char* argv[])
 	}
 
 	setupDstarInterface();
-	
+
 	stateMPC_params problem;
 	stateMPC_output output;
 	stateMPC_info info;
@@ -731,10 +724,18 @@ int main(int argc, char* argv[])
 	std::cout << "Cost: " << std::setprecision(10) << cost << std::endl;
 	std::cout << "Compute time: " << t.getElapsedTimeInMilliSec() << " mS" << std::endl;
 
-	pythonDisplayTrajectory(X, U);
+	// Sachin -- gives me an error because I do not have the source for displaying belief trajectory; commenting it out for now
+	//pythonDisplayTrajectory(X, U);
 
 	cleanup();
 
+	LOG_FATAL("fatal");
+	LOG_ERROR("error");
+	LOG_WARN("warn");
+	LOG_INFO("info");
+	LOG_DEBUG("debug");
+	LOG_TRACE("trace %d", 3);
+	printf("hi\n");
 
 	int k;
 	std::cin >> k;

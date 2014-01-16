@@ -4,11 +4,10 @@
 #include <cstdlib>
 #include <iomanip>
 
-//#include "callisto.h"
 #include "matrix.h"
 #include "utils.h"
+#include "timer/Timer.h"
 
-#include <timer/Timer.h>
 #include <Python.h>
 #include <boost/python.hpp>
 #include <numpy/ndarrayobject.h>
@@ -58,13 +57,6 @@ lpMPC_FLOAT **f, **lb, **ub, **C, **e, **z;
 
 double *inputVars;
 std::vector<int> maskIndices;
-
-#ifdef WIN32
-// Callisto variables
-int cal_env, cal_goal, cal_domain, cal_traj;
-#endif
-
-#define genVar(x,y) x##.##y
 
 inline Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<U_DIM>& q)
 {  

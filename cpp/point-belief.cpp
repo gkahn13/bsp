@@ -1,10 +1,9 @@
 #include <vector>
 
-#include "callisto.h"
 #include "matrix.h"
 #include "utils.h"
-
 #include "timer/Timer.h"
+
 #include <Python.h>
 #include <boost/python.hpp>
 #include <numpy/ndarrayobject.h>
@@ -42,11 +41,6 @@ beliefMPC_FLOAT **lb, **ub, **C, **e, **z;
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
-
-#ifdef WIN32
-// Callisto variables
-int cal_env, cal_goal, cal_domain, cal_traj;
-#endif
 
 inline Matrix<X_DIM> f(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<U_DIM>& q)
 {  
@@ -417,88 +411,6 @@ void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matri
 
 }
 
-#ifdef WIN32
-void displayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U)
-{
-	// Init environment
-	CAL_Initialisation(true, true, true);
-	// Set view params
-	CAL_SetViewParams(0, -2, 0, 10.5, -2, 0, 0, 0, 1, 0);
-	
-	CAL_CreateGroup(&cal_env, 0, true, "Environment");
-	
-	// Visualize goal region
-	float pos[3], or[3], sc[3];
-	int id;
-	CAL_CreateGroup(&cal_goal, 0, false, "Goal");
-	CAL_CreateSphere(cal_goal, (float)0.1, (float)xGoal[0], (float)xGoal[1], 0.01f);
-	CAL_SetGroupColor(cal_goal, 0.0f, 1.0f, 0.0f, 0.5f);
-	CAL_SetGroupScaling(cal_goal, 1.0f, 1.0f, 0.01f);
-
-	// Visualize sensing region
-	CAL_CreateGroup(&cal_domain, 0, false, "Domain");
-	int texid;
-	int retcode = CAL_LoadTexture(0, "data\\light-dark.png", 1.0f);
-	CAL_CreateBox(cal_domain, 10.0f, 6.0f, 0.0f, -2.0f, 0.0f, -0.05f, &texid);
-	CAL_SetObjectTexture (texid, 0, 1.0f, 1.0f);
-
-	CAL_CreateGroup(&cal_traj, 0, false);
-	CAL_SetGroupColor(cal_traj, 0.0f, 0.0f, 0.0f);
-	
-	float elpsc = 1.0f;
-	
-	vec(x0, SqrtSigma0, B[0]);
-	for (int t = 0; t < T-1; ++t) {
-		B[t+1] = beliefDynamics(B[t], U[t]);
-	}
-
-	Matrix<X_DIM> xt, xtp1;
-	Matrix<X_DIM,X_DIM> SqrtSigmat, SqrtSigmatp1;
-	int np[1] = {2};
-	float path[6];
-	
-	Matrix<X_DIM,X_DIM> V, D;
-
-	for (int t = 0; t < T-1; ++t) 
-	{
-		unVec(B[t], xt, SqrtSigmat);
-		unVec(B[t+1], xtp1, SqrtSigmatp1);
-		
-		path[0] = (float)xt[0]; path[1] = (float)xt[1]; path[2] = 0.0f;
-		path[3] = (float)xtp1[0]; path[4] = (float)xtp1[1]; path[5] = 0.0f;
-		
-		CAL_CreatePolyline(cal_traj, 1, np, path, &id);
-		CAL_SetObjectColor(id, 1.0f, 0.0f, 0.0f);
-
-		pos[0] = (float)xt[0]; pos[1] = (float)xt[1]; pos[2] = 0.0f;
-		CAL_CreateSphere(cal_traj, 0.025f, pos[0], pos[1], pos[2]);
-		
-		jacobi((SqrtSigmat*SqrtSigmat).subMatrix<X_DIM,X_DIM>(0,0), V, D);
-
-		or[0] = 0.0f; or[1] = 0.0f; or[2] = (float)mod2pi(atan2(V(1,0), V(0,0)));
-		sc[0] = elpsc*(float)(sqrt(D(0,0))); sc[1] = elpsc*(float)(sqrt(D(1,1))); sc[2] = 1.0f;
-
-		CAL_CreateUserDrawn(cal_traj, drawUnitCircle, NULL, 0.0f, 0.0f, 0.0f, &id);
-		CAL_SetObjectPosition(id, pos[0], pos[1], pos[2]);
-		CAL_SetObjectOrientation(id, or[0], or[1], or[2]);
-		CAL_SetObjectScaling(id, sc[0], sc[1], sc[2]);
-	}
-
-	pos[0] = (float)xtp1[0]; pos[1] = (float)xtp1[1]; pos[2] = 0.0f;
-	CAL_CreateSphere(cal_traj, 0.025f, pos[0], pos[1], pos[2]);
-
-	jacobi((SqrtSigmatp1*SqrtSigmatp1).subMatrix<X_DIM,X_DIM>(0,0), V, D);
-
-	or[0] = 0.0f; or[1] = 0.0f; or[2] = (float)mod2pi(atan2(V(1,0), V(0,0)));
-	sc[0] = elpsc*(float)(sqrt(D(0,0))); sc[1] = elpsc*(float)(sqrt(D(1,1))); sc[2] = 1.0f;
-
-	CAL_CreateUserDrawn(cal_traj, drawUnitCircle, NULL, 0.0f, 0.0f, 0.0f, &id);
-	CAL_SetObjectPosition(id, pos[0], pos[1], pos[2]);
-	CAL_SetObjectOrientation(id, or[0], or[1], or[2]);
-	CAL_SetObjectScaling(id, sc[0], sc[1], sc[2]);
-}
-#endif
-
 int main(int argc, char* argv[])
 {
 	x0[0] = -3.5; x0[1] = 2;
@@ -545,11 +457,7 @@ int main(int argc, char* argv[])
 	
 	cleanupBeliefMPCVars();
 
-#ifdef WIN32
-	displayTrajectory(B, U);
-#else
 	pythonDisplayTrajectory(B, U);
-#endif
 
 	/*
 	for (size_t t = 0; t < T; ++t) {

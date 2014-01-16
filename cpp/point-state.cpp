@@ -46,9 +46,10 @@ const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 1;
 
 namespace cfg {
 	const double improve_ratio_threshold = .25;
-	const double min_approx_improve = 1e-8;
-	const double min_trust_box_size = 1e-5;
+	const double min_approx_improve = 1e-2;
+	const double min_trust_box_size = 1e-2;
 	const double trust_shrink_ratio = .1;
+	const double trust_expand_ratio = 2;
 }
 
 // stateMPC vars
@@ -353,7 +354,6 @@ bool isValidInputs(double *result) {
 double computeConstantTerms(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >& U, double* result) {
 	int dim = T*X_DIM + (T-1)*U_DIM;
 	double hessian_constant = 0, jac_constant = 0;
-	//double Hzbar[4];
 
 	// compute Hessian first
 	// so can force it to be PSD
@@ -362,6 +362,11 @@ double computeConstantTerms(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix
 		H[t][1] = result[1+dim+t*X_DIM+1];
 		H[t][2] = result[1+dim+T*X_DIM+t*U_DIM];
 		H[t][3] = result[1+dim+T*X_DIM+t*U_DIM+1];
+
+		f[t][0] = result[1+t*X_DIM];
+		f[t][1] = result[1+t*X_DIM+1];
+		f[t][2] = result[1+T*X_DIM+t*U_DIM];
+		f[t][3] = result[1+T*X_DIM+t*U_DIM+1];
 	}
 	H[T-1][0] = result[1+dim+(T-1)*X_DIM];
 	H[T-1][1] = result[1+dim+(T-1)*X_DIM+1];
@@ -370,33 +375,8 @@ double computeConstantTerms(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix
 		forcePsdHessian(0);
 	}
 
-	for (int t = 0; t < T-1; ++t)
-	{
-		Matrix<X_DIM>& xt = X[t];
-		Matrix<U_DIM>& ut = U[t];
-
-		Matrix<X_DIM+U_DIM> zbar;
-		zbar.insert(0,0,xt);
-		zbar.insert(X_DIM,0,ut);
-
-		//for(int i = 0; i < (X_DIM+U_DIM); ++i) {
-		//	Hzbar[i] = H[t][i]*zbar[i];
-		//}
-
-		f[t][0] = result[1+t*X_DIM];// - Hzbar[0];
-		f[t][1] = result[1+t*X_DIM+1];// - Hzbar[1];
-		f[t][2] = result[1+T*X_DIM+t*U_DIM];// - Hzbar[2];
-		f[t][3] = result[1+T*X_DIM+t*U_DIM+1];// - Hzbar[3];
-	}
-
-	Matrix<X_DIM>& xT = X[T-1];
-
-	//for(int i = 0; i < X_DIM; ++i) {
-	//	Hzbar[i] = H[T-1][i]*xT[i];
-	//}
-
-	f[T-1][0] = result[1+(T-1)*X_DIM];// - Hzbar[0];
-	f[T-1][1] = result[1+(T-1)*X_DIM+1];// - Hzbar[1];
+	f[T-1][0] = result[1+(T-1)*X_DIM];
+	f[T-1][1] = result[1+(T-1)*X_DIM+1];
 
 	// now compute the constants
 
@@ -406,26 +386,26 @@ double computeConstantTerms(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix
 							H[t][2]*U[t][0]*U[t][0] +
 							H[t][3]*U[t][1]*U[t][1];
 
-		jac_constant += -(f[t][0]*X[t][0]*X[t][0] +
-						  f[t][1]*X[t][1]*X[t][1] +
-						  f[t][2]*U[t][0]*U[t][0] +
-						  f[t][3]*U[t][1]*U[t][1]);
+		jac_constant += -(f[t][0]*X[t][0] +
+						  f[t][1]*X[t][1] +
+						  f[t][2]*U[t][0] +
+						  f[t][3]*U[t][1]);
 	}
 	hessian_constant += H[T-1][0]*X[T-1][0]*X[T-1][0] +
 						H[T-1][1]*X[T-1][1]*X[T-1][1];
 
-	jac_constant += -(f[T-1][0]*X[T-1][0]*X[T-1][0] +
-					  f[T-1][1]*X[T-1][1]*X[T-1][1]);
+	jac_constant += -(f[T-1][0]*X[T-1][0] +
+					  f[T-1][1]*X[T-1][1]);
 
-	return hessian_constant + jac_constant;
+	return .5*hessian_constant + jac_constant;
 
 }
 
 double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >& U, stateMPC_params& problem, stateMPC_output& output, stateMPC_info& info)
 {
-	int maxIter = 10;
+	int maxIter = 100;
 	double Xeps = 1;
-	double Ueps = .5;
+	double Ueps = 1;
 
 	// box constraint around goal
 	double delta = 0.01;
@@ -435,6 +415,7 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 	double prevcost = INFTY, optcost;
 	double merit, model_merit, new_merit;
 	double approx_merit_improve, exact_merit_improve, merit_improve_ratio;
+	double constants_cost;
 
 	int dim = T*X_DIM + (T-1)*U_DIM;
 	double* result = new double[2*dim + 1];
@@ -446,9 +427,18 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 	computeCostGradDiagHess(X, U, result);
 	prevcost = result[0];
 
+	std::vector<Matrix<X_DIM> > Xopt(T);
+	std::vector<Matrix<U_DIM> > Uopt(T-1);
+
+
 	for(int it = 0; it < maxIter; ++it)
 	{
 		std::cout << std::endl << "Iter: " << it << std::endl;
+
+		computeCostGradDiagHess(X, U, result);
+		merit = result[0];
+		constants_cost = computeConstantTerms(X, U, result) + result[0];
+
 
 		// compute Hessian first
 		// so can force it to be PSD
@@ -474,13 +464,6 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 			zbar.insert(0,0,xt);
 			zbar.insert(X_DIM,0,ut);
 
-			/*
-			H[t][0] = result[1+dim+t*X_DIM];
-			H[t][1] = result[1+dim+t*X_DIM+1];
-			H[t][2] = result[1+dim+T*X_DIM+t*U_DIM];
-			H[t][3] = result[1+dim+T*X_DIM+t*U_DIM+1];
-			 */
-
 			for(int i = 0; i < (X_DIM+U_DIM); ++i) {
 				Hzbar[i] = H[t][i]*zbar[i];
 			}
@@ -489,7 +472,6 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 			f[t][1] = result[1+t*X_DIM+1] - Hzbar[1];
 			f[t][2] = result[1+T*X_DIM+t*U_DIM] - Hzbar[2];
 			f[t][3] = result[1+T*X_DIM+t*U_DIM+1] - Hzbar[3];
-
 
 
 			// Fill in lb, ub, C, e
@@ -525,9 +507,6 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 
 		Matrix<X_DIM>& xT = X[T-1];
 
-		//H[T-1][0] = result[1+dim+(T-1)*X_DIM];
-		//H[T-1][1] = result[1+dim+(T-1)*X_DIM+1];
-
 		for(int i = 0; i < X_DIM; ++i) {
 			Hzbar[i] = H[T-1][i]*xT[i];
 		}
@@ -544,6 +523,8 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 
 		e[T-1][0] = 0; e[T-1][1] = 0;
 
+
+
 		// Verify problem inputs
 		/*
 		if (!isValidInputs(result)) {
@@ -552,14 +533,11 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 		}
 		 */
 
-		//int num;
-		//std::cin >> num;
-
 		int exitflag = stateMPC_solve(&problem, &output, &info);
 		if (exitflag == 1) {
 			for(int t = 0; t < T-1; ++t) {
-				Matrix<X_DIM>& xt = X[t];
-				Matrix<U_DIM>& ut = U[t];
+				Matrix<X_DIM>& xt = Xopt[t];
+				Matrix<U_DIM>& ut = Uopt[t];
 
 				for(int i = 0; i < X_DIM; ++i) {
 					xt[i] = z[t][i];
@@ -569,7 +547,7 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 				}
 				optcost = info.pobj;
 			}
-			Matrix<X_DIM>& xt = X[T-1];
+			Matrix<X_DIM>& xt = Xopt[T-1];
 			xt[0] = z[T-1][0]; xt[1] = z[T-1][1];
 		}
 		else {
@@ -577,13 +555,11 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 			std::exit(-1);
 		}
 
-		computeCostGradDiagHess(X, U, result);
+		computeCostGradDiagHess(Xopt, Uopt, result);
 
-		merit = prevcost;
-		model_merit = optcost; // need to add constant terms that were dropped
+		model_merit = optcost + constants_cost; // need to add constant terms that were dropped
 		new_merit = result[0]; // Cost from symbolic code
 
-		double constants_cost = computeConstantTerms(X, U, result); // for optimized traj, i.e. model_merit and optcost
 
 		std::cout << "merit: " << merit << std::endl;
 		std::cout << "model_merit: " << model_merit << std::endl;
@@ -598,44 +574,35 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 		std::cout << "exact_merit_improve: " << exact_merit_improve << std::endl;
 		std::cout << "merit_improve_ratio: " << merit_improve_ratio << std::endl;
 
-		/*
+
 		if (approx_merit_improve < -1e-5) {
 			std::cout << "Approximate merit function got worse " << approx_merit_improve << std::endl;
 			std::cout << "Failure!" << std::endl;
+			delete[] result;
 			return INFTY;
 		} else if (approx_merit_improve < cfg::min_approx_improve) {
 			std::cout << "Converged: improvement small enough" << std::endl;
-			return optcost;
+			X = Xopt; U = Uopt;
+			break;
 		} else if ((exact_merit_improve < 0) || (merit_improve_ratio < cfg::improve_ratio_threshold)) {
-			std::cout << "Shrinking trust boxes..." << std::endl;
+			std::cout << "Shrinking trust boxes. trust region: " << Xeps << " " << Ueps << std::endl;
 			Xeps *= cfg::trust_shrink_ratio;
 			Ueps *= cfg::trust_shrink_ratio;
 		} else {
-			std::cout << "Else clause" << std::endl;
-			prevcost = optcost;
+			std::cout << "Else clause, increasing trust region: " << Xeps << " " << Ueps << std::endl;
 			// expand Xeps and Ueps and break into outermost loop (which we don't have)
-		}
-		*/
-
-
-		//std::cout << "ratio: " << fabs(optcost - prevcost)/prevcost << std::endl;
-
-
-		if ((optcost > prevcost) || (fabs(optcost - prevcost)/prevcost < 1e-03)) {
-			return optcost;
-		}
-		else {
+			Xeps *= cfg::trust_expand_ratio;
+			Ueps *= cfg::trust_expand_ratio;
+			X = Xopt; U = Uopt;
 			prevcost = optcost;
-			// TODO: integrate trajectory?
-			// TODO: plot trajectory
 		}
 
-
-
-		//int num;
-		//std::cin >> num;
 	}
+
+	computeCostGradDiagHess(Xopt, Uopt, result);
+	optcost = result[0];
 	delete[] result;
+
 	return optcost;
 }
 
@@ -652,11 +619,6 @@ void pythonDisplayTrajectory(std::vector< Matrix<X_DIM> >& X, std::vector< Matri
 	for (size_t t = 0; t < T-1; ++t) {
 		B[t+1] = beliefDynamics(B[t], U[t]);
 	}
-
-	/*for(int t = 0; t < T; ++t) {
-		B[t].insert(0, 0, X[t]);
-		std::cout << ~B[t] << std::endl;
-	}*/
 
 	py::list Bvec;
 	for(int j=0; j < B_DIM; j++) {
@@ -734,14 +696,6 @@ int main(int argc, char* argv[])
 	pythonDisplayTrajectory(X, U);
 
 	cleanup();
-
-	for (int t = 0; t < T; ++t) {
-		//std::cout << "t: " << t << std::endl;
-		//std::cout << ~X[t];
-		//if (t < T-1) {
-		//	std::cout << ~U[t] << std::endl;
-		//}
-	}
 
 
 	int k;

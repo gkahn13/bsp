@@ -2,7 +2,7 @@
 
 #include "matrix.h"
 #include "utils.h"
-#include "timer/Timer.h"
+#include "util/Timer.h"
 
 #include <Python.h>
 #include <boost/python.hpp>
@@ -446,7 +446,7 @@ int main(int argc, char* argv[])
 
 	setupBeliefMPCVars(problem, output);
 
-	Timer t;
+	util::Timer t;
 	t.start();
 	
 	// B&U optimized in-place
@@ -457,7 +457,8 @@ int main(int argc, char* argv[])
 	
 	cleanupBeliefMPCVars();
 
-	pythonDisplayTrajectory(B, U);
+	// Commented out because this does not work for me -- Sachin
+	//pythonDisplayTrajectory(B, U);
 
 	/*
 	for (size_t t = 0; t < T; ++t) {

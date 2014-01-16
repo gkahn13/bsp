@@ -6,8 +6,8 @@
 
 #include "matrix.h"
 #include "utils.h"
-#include "timer/Timer.h"
-#include "logging.h"
+#include "util/Timer.h"
+#include "util/logging.h"
 
 #include <Python.h>
 #include <boost/python.hpp>
@@ -364,7 +364,7 @@ bool isValidInputs(double *result) {
 
 		std::cout << "f: " << std::endl;
 		for(int i = 0; i < 4; ++i) {
-			std::cout << f[t][i] << std::endl;
+			std::cout << f-O3 [t][i] << std::endl;
 		}
 		 */
 
@@ -441,7 +441,6 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 
 	// box constraint around goal
 	double delta = 0.01;
-
 	Matrix<X_DIM,1> x0 = X[0];
 
 	double prevcost = INFTY, optcost;
@@ -454,18 +453,17 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 
 	double Hzbar[4];
 
-	//std::cout << "Initialization trajectory cost: " << std::setprecision(10) << prevcost << std::endl;
-
 	computeCostGradDiagHess(X, U, result);
 	prevcost = result[0];
+
+	LOG_DEBUG("Initialization trajectory cost: %4.10f", prevcost);
 
 	std::vector<Matrix<X_DIM> > Xopt(T);
 	std::vector<Matrix<U_DIM> > Uopt(T-1);
 
-
 	for(int it = 0; it < maxIter; ++it)
 	{
-		std::cout << std::endl << "Iter: " << it << std::endl;
+		LOG_DEBUG("\nIter: %d", it);
 
 		computeCostGradDiagHess(X, U, result);
 		merit = result[0];
@@ -581,7 +579,7 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 			xt[0] = z[T-1][0]; xt[1] = z[T-1][1];
 		}
 		else {
-			std::cerr << "Some problem in solver" << std::endl;
+			LOG_FATAL("Some problem in solver");
 			std::exit(-1);
 		}
 
@@ -590,44 +588,40 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 		model_merit = optcost + constants_cost; // need to add constant terms that were dropped
 		new_merit = result[0]; // Cost from symbolic code
 
-#ifdef DEBUG_PRINT
-		std::cout << "merit: " << merit << std::endl;
-		std::cout << "model_merit: " << model_merit << std::endl;
-		std::cout << "new_merit: " << new_merit << std::endl;
-		std::cout << "constants_cost: " << constants_cost << std::endl;
-#endif
+		LOG_DEBUG("merit: %f", merit);
+		LOG_DEBUG("model_merit: %f", model_merit);
+		LOG_DEBUG("new_merit: %f", new_merit);
+		LOG_DEBUG("constant cost term: %f", constants_cost);
 
 		approx_merit_improve = merit - model_merit;
 		exact_merit_improve = merit - new_merit;
 		merit_improve_ratio = exact_merit_improve / approx_merit_improve;
 
-		std::cout << "approx_merit_improve: " << approx_merit_improve << std::endl;
-		std::cout << "exact_merit_improve: " << exact_merit_improve << std::endl;
-		std::cout << "merit_improve_ratio: " << merit_improve_ratio << std::endl;
-
+		LOG_DEBUG("approx_merit_improve: %f", approx_merit_improve);
+		LOG_DEBUG("exact_merit_improve: %f", exact_merit_improve);
+		LOG_DEBUG("merit_improve_ratio: %f", merit_improve_ratio);
 
 		if (approx_merit_improve < -1e-5) {
-			std::cout << "Approximate merit function got worse " << approx_merit_improve << std::endl;
-			std::cout << "Failure!" << std::endl;
+			LOG_ERROR("Approximate merit function got worse: %f", approx_merit_improve);
+			LOG_ERROR("Failure!");
 			delete[] result;
 			return INFTY;
 		} else if (approx_merit_improve < cfg::min_approx_improve) {
-			std::cout << "Converged: improvement small enough" << std::endl;
+			LOG_DEBUG("Converged: improvement small enough");
 			X = Xopt; U = Uopt;
 			break;
 		} else if ((exact_merit_improve < 0) || (merit_improve_ratio < cfg::improve_ratio_threshold)) {
-			std::cout << "Shrinking trust boxes. trust region: " << Xeps << " " << Ueps << std::endl;
+			LOG_DEBUG("Shrinking trust region size to: %2.6f %2.6f", Xeps, Ueps);
 			Xeps *= cfg::trust_shrink_ratio;
 			Ueps *= cfg::trust_shrink_ratio;
 		} else {
-			std::cout << "Else clause, increasing trust region: " << Xeps << " " << Ueps << std::endl;
+			LOG_DEBUG("Accepted, Increasing trust region size to:  %2.6f %2.6f", Xeps, Ueps);
 			// expand Xeps and Ueps and break into outermost loop (which we don't have)
 			Xeps *= cfg::trust_expand_ratio;
 			Ueps *= cfg::trust_expand_ratio;
 			X = Xopt; U = Uopt;
 			prevcost = optcost;
 		}
-
 	}
 
 	computeCostGradDiagHess(Xopt, Uopt, result);
@@ -636,7 +630,6 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 
 	return optcost;
 }
-
 
 // default for unix
 // requires path to Python bsp already be on PYTHONPATH
@@ -680,7 +673,6 @@ void pythonDisplayTrajectory(std::vector< Matrix<X_DIM> >& X, std::vector< Matri
 	{
 		PyErr_Print();
 	}
-
 }
 
 int main(int argc, char* argv[])
@@ -714,28 +706,20 @@ int main(int argc, char* argv[])
 
 	setupStateMPCVars(problem, output);
 
-	Timer t;
+	util::Timer t;
 	t.start();
 
 	// compute cost for the trajectory
 	double cost = stateCollocation(X, U, problem, output, info);
 
 	t.stop();
-	std::cout << "Cost: " << std::setprecision(10) << cost << std::endl;
-	std::cout << "Compute time: " << t.getElapsedTimeInMilliSec() << " mS" << std::endl;
+	LOG_INFO("Cost: %4.10f", cost);
+	LOG_INFO("Compute time: %1.10f mS", t.getElapsedTimeInMilliSec());
 
-	// Sachin -- gives me an error because I do not have the source for displaying belief trajectory; commenting it out for now
+	// Commented out because this does not work for me -- Sachin
 	//pythonDisplayTrajectory(X, U);
 
 	cleanup();
-
-	LOG_FATAL("fatal");
-	LOG_ERROR("error");
-	LOG_WARN("warn");
-	LOG_INFO("info");
-	LOG_DEBUG("debug");
-	LOG_TRACE("trace %d", 3);
-	printf("hi\n");
 
 	int k;
 	std::cin >> k;

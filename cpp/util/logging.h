@@ -2,7 +2,7 @@
 #include <cstdio>
 
 namespace util {
-  
+
 enum LogLevel {
   LevelFatal = 0,
   LevelError = 1,

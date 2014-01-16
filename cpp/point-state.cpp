@@ -12,6 +12,8 @@
 #include <Python.h>
 #include <boost/python.hpp>
 #include <numpy/ndarrayobject.h>
+#include <boost/preprocessor/iteration/local.hpp>
+#include <boost/preprocessor/arithmetic/sub.hpp>
 
 namespace py = boost::python;
 
@@ -20,6 +22,7 @@ extern "C" {
 #include "stateMPC.h"
 }
 
+#define TIMESTEPS 5
 #define DT 1.0
 #define X_DIM 2
 #define U_DIM 2
@@ -40,7 +43,7 @@ Matrix<X_DIM> xGoal;
 Matrix<X_DIM> xMin, xMax;
 Matrix<U_DIM> uMin, uMax;
 
-const int T = 15;
+const int T = TIMESTEPS;
 const double INFTY = 1e10;
 const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 1;
 
@@ -186,6 +189,40 @@ void setupStateMPCVars(stateMPC_params& problem, stateMPC_output& output)
 	// output
 	z = new stateMPC_FLOAT*[T];
 
+
+#define SET_VARS_0_TO_9(n)      \
+  H[ BOOST_PP_SUB(n,1) ] = problem.H0##n ;	\
+  f[ BOOST_PP_SUB(n,1) ] = problem.f0##n ;	\
+  lb[ BOOST_PP_SUB(n,1) ] = problem.lb0##n ;	\
+  ub[ BOOST_PP_SUB(n,1) ] = problem.ub0##n ;	\
+  C[ BOOST_PP_SUB(n,1) ] = problem.C0##n ;  \
+  e[ BOOST_PP_SUB(n,1) ] = problem.e0##n ;  \
+  z[ BOOST_PP_SUB(n,1) ] = output.z##n ;
+
+#define BOOST_PP_LOCAL_MACRO(n) SET_VARS_0_TO_9(n)
+#if TIMESTEPS>9
+#define BOOST_PP_LOCAL_LIMITS (1, 9)
+#else
+#define BOOST_PP_LOCAL_LIMITS (1, TIMESTEPS)
+#endif
+#include BOOST_PP_LOCAL_ITERATE()
+
+#if TIMESTEPS>9
+#define SET_VARS_OVER_10(n)    \
+  H[ BOOST_PP_SUB(n,1)) ] = problem.H##n ;	\
+    f[ BOOST_PP_SUB(n,1) ] = problem.f##n ;     \
+  lb[ BOOST_PP_SUB(n,1) ] = problem.lb##n ;	\
+  ub[ BOOST_PP_SUB(n,1) ] = problem.ub##n ;	\
+  C[ BOOST_PP_SUB(n,1) ] = problem.C##n ;  \
+  e[ BOOST_PP_SUB(n,1) ] = problem.e##n ;  \
+  z[ BOOST_PP_SUB(n,1) ] = output.z##n ;
+
+#define BOOST_PP_LOCAL_MACRO(n) SET_VARS_OVER_10(n)
+#define BOOST_PP_LOCAL_LIMITS (10, TIMESTEPS)
+#include BOOST_PP_LOCAL_ITERATE()
+#endif
+
+	/*
 	H[0] = problem.H01; f[0] = problem.f01; lb[0] = problem.lb01; ub[0] = problem.ub01; C[0] = problem.C01; e[0] = problem.e01;
 	H[1] = problem.H02; f[1] = problem.f02; lb[1] = problem.lb02; ub[1] = problem.ub02; C[1] = problem.C02; e[1] = problem.e02;
 	H[2] = problem.H03; f[2] = problem.f03; lb[2] = problem.lb03; ub[2] = problem.ub03; C[2] = problem.C03; e[2] = problem.e03;
@@ -205,6 +242,7 @@ void setupStateMPCVars(stateMPC_params& problem, stateMPC_output& output)
 	z[0] = output.z1; z[1] = output.z2; z[2] = output.z3; z[3] = output.z4; z[4] = output.z5;
 	z[5] = output.z6; z[6] = output.z7; z[7] = output.z8; z[8] = output.z9; z[9] = output.z10; 
 	z[10] = output.z11; z[11] = output.z12; z[12] = output.z13; z[13] = output.z14; z[14] = output.z15; 
+	*/
 }
 
 void setupDstarInterface() 

@@ -1,7 +1,7 @@
 #include <vector>
 
-#include "matrix.h"
-#include "utils.h"
+#include "util/matrix.h"
+#include "util/utils.h"
 #include "util/Timer.h"
 
 #include <Python.h>

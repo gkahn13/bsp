@@ -6,8 +6,8 @@ cpp/build/*
 cpp/.project 
 cpp/.cproject
 @*
-matlab/beliefMPC
-matlab/stateMPC
-matlab/lpMPC
-matlab/*.zip
-matlab/*.mexa64
+forces/beliefMPC
+forces/stateMPC
+forces/lpMPC
+forces/*.zip
+forces/*.mexa64

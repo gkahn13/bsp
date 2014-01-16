@@ -1,51 +1,85 @@
-OBJS_BELIEF = build/beliefMPC.o build/timer.o build/point-belief.o build/logging.o
-OBJS_STATE = build/stateMPC.o build/symeval.o build/timer.o build/point-state.o build/logging.o
-OBJS_LP = build/lpMPC.o build/symeval.o build/timer.o build/point-lp.o build/logging.o
+CXX = g++
+CC = gcc
 
-BOOST_FLAGS = -lpython2.7 -lboost_python -lboost_filesystem -lboost_system
+# default to debug build
+BUILD := debug
 
-build/timer.o : util/Timer.cpp
-	g++ -c -std=c++0x -o build/timer.o util/Timer.cpp
+BFLAGS.debug = -g -Wall
+BFLAGS.release = -O3
+BFLAGS := $(BFLAGS.$(BUILD))
 
-build/logging.o : util/logging.cpp
-	g++ -c -std=c++0x -o build/logging.o util/logging.cpp
-	
-build/symeval.o : symeval.c
-	gcc -c -std=gnu99 -o build/symeval.o symeval.c
+OBJ_DIR = build/$(BUILD)
+BIN_DIR = bin/$(BUILD)
+
+C_FLAGS = -std=gnu99
+CPP_FLAGS = -std=c++0x
+PYTHON_FLAGS = -I/usr/include/python2.7 -lpython2.7
+BOOST_FLAGS = -lboost_python -lboost_filesystem -lboost_system
+LINKER_FLAGS = -lrt
+
+###### UTIL ############
+
+$(OBJ_DIR)/Timer.o : util/Timer.cpp util/Timer.h
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) -c -o $(OBJ_DIR)/Timer.o util/Timer.cpp
+
+$(OBJ_DIR)/logging.o : util/logging.cpp
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) -c -o $(OBJ_DIR)/logging.o util/logging.cpp
+
+###### POINT ##########
+
+# symeval	
+PT_SYM_DIR = point/sym
+
+$(OBJ_DIR)/pt_symeval.o : $(PT_SYM_DIR)/symeval.c $(PT_SYM_DIR)/symeval.h
+	gcc -c $(C_FLAGS) $(BFLAGS) -o $(OBJ_DIR)/pt_symeval.o $(PT_SYM_DIR)/symeval.c
 
 # make point-belief
-belief: $(OBJS_BELIEF)
-	g++ $(OBJS_BELIEF) -o bin/point-belief $(BOOST_FLAGS)
-	
-build/beliefMPC.o : beliefMPC.c
-	gcc -c -std=c99 -o build/beliefMPC.o beliefMPC.c
-	
-build/point-belief.o : point-belief.cpp
-	g++ -I/usr/include/python2.7 -c -std=c++0x -o build/point-belief.o point-belief.cpp
+PT_BELIEF_DIR = point/belief
+PT_BELIEF_FILES = beliefMPC Timer point-belief logging
+PT_BELIEF_OBJS = $(PT_BELIEF_FILES:%=$(OBJ_DIR)/%.o)
 
+belief: $(PT_BELIEF_OBJS)
+	$(CXX) $(BFLAGS) $(PT_BELIEF_OBJS) -o $(BIN_DIR)/point-belief $(BOOST_FLAGS) $(PYTHON_FLAGS)
+	
+$(OBJ_DIR)/beliefMPC.o : $(PT_BELIEF_DIR)/beliefMPC.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+	
+$(OBJ_DIR)/point-belief.o : $(PT_BELIEF_DIR)/point-belief.cpp
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $^
+	
 	
 # make point-state
-state: $(OBJS_STATE)
-	g++ $(OBJS_STATE) -o bin/point-state $(BOOST_FLAGS) -lrt
+PT_STATE_DIR = point/state
+PT_STATE_FILES = stateMPC pt_symeval Timer point-state logging
+PT_STATE_OBJS = $(PT_STATE_FILES:%=$(OBJ_DIR)/%.o)
+
+state: $(PT_STATE_OBJS)
+	$(CXX) $(BFLAGS) $(PT_STATE_OBJS) -o $(BIN_DIR)/point-state $(BOOST_FLAGS) $(PYTHON_FLAGS)
+
+$(OBJ_DIR)/stateMPC.o : $(PT_STATE_DIR)/stateMPC.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
 	
-build/stateMPC.o : stateMPC.c
-	gcc -c -std=gnu99 -o build/stateMPC.o stateMPC.c
-	
-build/point-state.o : point-state.cpp
-	g++ -I/usr/include/python2.7 -c -std=c++0x -o build/point-state.o point-state.cpp
-	
+$(OBJ_DIR)/point-state.o : $(PT_STATE_DIR)/point-state.cpp
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $^
+
 
 # make point-lp
-lp: $(OBJS_LP)
-	g++ $(OBJS_LP) -o bin/point-lp $(BOOST_FLAGS)
-	
-build/lpMPC.o : lpMPC.c
-	gcc -c -std=gnu99 -o build/lpMPC.o lpMPC.c
-	
-build/point-lp.o : point-lp.cpp
-	g++ -I/usr/include/python2.7 -c -std=c++0x -o build/point-lp.o point-lp.cpp
+PT_LP_DIR = point/lp
+PT_LP_FILES = lpMPC pt_symeval Timer point-lp logging
+PT_LP_OBJS = $(PT_LP_FILES:%=$(OBJ_DIR)/%.o)
 
+lp: $(PT_LP_OBJS)
+	$(CXX) $(BFLAGS) $(PT_LP_OBJS) -o $(BIN_DIR)/point-LP $(BOOST_FLAGS) $(PYTHON_FLAGS)
+
+$(OBJ_DIR)/lpMPC.o : $(PT_LP_DIR)/lpMPC.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+	
+$(OBJ_DIR)/point-lp.o : $(PT_LP_DIR)/point-lp.cpp
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $^
+
+
+###### CLEAN ########
 
 clean:
-	rm -f bin/*
-	rm -rf build/*
+	rm -f $(BIN_DIR)/*
+	rm -f $(OBJ_DIR)/*.o

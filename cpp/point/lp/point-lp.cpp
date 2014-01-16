@@ -4,8 +4,8 @@
 #include <cstdlib>
 #include <iomanip>
 
-#include "matrix.h"
-#include "utils.h"
+#include "util/matrix.h"
+#include "util/utils.h"
 #include "util/Timer.h"
 #include "util/logging.h"
 
@@ -17,7 +17,7 @@
 namespace py = boost::python;
 
 extern "C" {
-#include "symeval.h"
+#include "../sym/symeval.h"
 #include "lpMPC.h"
 }
 
@@ -211,7 +211,7 @@ void setupDstarInterface()
 
 	inputVars = new double[nvars];
 	
-	std::ifstream fptr("masks.txt");
+	std::ifstream fptr("point/masks.txt");
 	int val;
 	for(int i = 0; i < nvars; ++i) {
 		fptr >> val;
@@ -563,7 +563,8 @@ void pythonDisplayTrajectory(std::vector< Matrix<X_DIM> >& X, std::vector< Matri
 		}
 	}
 
-	std::string workingDir = boost::filesystem::absolute("./").normalize().string();
+	std::string workingDir = boost::filesystem::current_path().normalize().string();
+	std::string bspDir = workingDir.substr(0,workingDir.find("bsp"));
 
 	try
 	{
@@ -571,7 +572,7 @@ void pythonDisplayTrajectory(std::vector< Matrix<X_DIM> >& X, std::vector< Matri
 		py::object main_module = py::import("__main__");
 		py::object main_namespace = main_module.attr("__dict__");
 		py::exec("import sys, os", main_namespace);
-		py::exec(py::str("sys.path.append('"+workingDir+"/../python')"), main_namespace);
+		py::exec(py::str("sys.path.append('"+bspDir+"bsp/python')"), main_namespace);
 		py::exec("from bsp_light_dark import LightDarkModel", main_namespace);
 		py::object model = py::eval("LightDarkModel()", main_namespace);
 		py::object plot_mod = py::import("plot");

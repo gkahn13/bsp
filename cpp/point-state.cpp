@@ -362,20 +362,17 @@ double computeConstantTerms(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix
 		H[t][1] = result[1+dim+t*X_DIM+1];
 		H[t][2] = result[1+dim+T*X_DIM+t*U_DIM];
 		H[t][3] = result[1+dim+T*X_DIM+t*U_DIM+1];
+
+		f[t][0] = result[1+t*X_DIM];
+		f[t][1] = result[1+t*X_DIM+1];
+		f[t][2] = result[1+T*X_DIM+t*U_DIM];
+		f[t][3] = result[1+T*X_DIM+t*U_DIM+1];
 	}
 	H[T-1][0] = result[1+dim+(T-1)*X_DIM];
 	H[T-1][1] = result[1+dim+(T-1)*X_DIM+1];
 
 	if (FORCE_PSD_HESSIAN) {
 		forcePsdHessian(0);
-	}
-
-	for (int t = 0; t < T-1; ++t)
-	{
-		f[t][0] = result[1+t*X_DIM];
-		f[t][1] = result[1+t*X_DIM+1];
-		f[t][2] = result[1+T*X_DIM+t*U_DIM];
-		f[t][3] = result[1+T*X_DIM+t*U_DIM+1];
 	}
 
 	f[T-1][0] = result[1+(T-1)*X_DIM];

@@ -42,6 +42,14 @@ const int T = 15;
 const double INFTY = 1e10;
 const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 1;
 
+namespace cfg {
+	const double improve_ratio_threshold = .25;
+	const double min_approx_improve = 1e-2;
+	const double min_trust_box_size = 1e-2;
+	const double trust_shrink_ratio = .1;
+	const double trust_expand_ratio = 2;
+}
+
 // lpMPC vars
 lpMPC_FLOAT **f, **lb, **ub, **C, **e, **z;
 
@@ -299,9 +307,50 @@ bool isValidInputs(double *result) {
 	return true;
 }
 
-void lpCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >& U, lpMPC_params& problem, lpMPC_output& output, lpMPC_info& info)
+/*
+ * Need to compute:
+ * -f * z_bar
+ */
+double computeConstantTerms(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >& U, double* result) {
+	double jac_constant = 0;
+
+	for (int t = 0; t < T-1; ++t)
+	{
+		Matrix<X_DIM>& xt = X[t];
+		Matrix<U_DIM>& ut = U[t];
+
+		Matrix<X_DIM+U_DIM> zbar;
+		zbar.insert(0,0,xt);
+		zbar.insert(X_DIM,0,ut);
+
+		f[t][0] = result[1+t*X_DIM];
+		f[t][1] = result[1+t*X_DIM+1];
+		f[t][2] = result[1+T*X_DIM+t*U_DIM];
+		f[t][3] = result[1+T*X_DIM+t*U_DIM+1];
+	}
+
+	Matrix<X_DIM>& xT = X[T-1];
+
+	f[T-1][0] = result[1+(T-1)*X_DIM];
+	f[T-1][1] = result[1+(T-1)*X_DIM+1];
+
+	// now compute the constants
+
+	for(int t = 0; t < T-1; ++t) {
+		jac_constant += -(f[t][0]*X[t][0] +
+						  f[t][1]*X[t][1] +
+						  f[t][2]*U[t][0] +
+						  f[t][3]*U[t][1]);
+	}
+	jac_constant += -(f[T-1][0]*X[T-1][0] +
+					  f[T-1][1]*X[T-1][1]);
+
+	return jac_constant;
+}
+
+double lpCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >& U, lpMPC_params& problem, lpMPC_output& output, lpMPC_info& info)
 {
-	int maxIter = 10;
+	int maxIter = 100;
 	double Xeps = 1;
 	double Ueps = 1;
 
@@ -311,6 +360,9 @@ void lpCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >
 	Matrix<X_DIM,1> x0 = X[0];
 
 	double prevcost = 118, optcost;
+	double merit, model_merit, new_merit;
+	double approx_merit_improve, exact_merit_improve, merit_improve_ratio;
+	double constants_cost;
 
 	// use same symbolic differentiator that computes Hessian
 	// but ignore Hessian. therefore indexing is the same
@@ -324,9 +376,16 @@ void lpCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >
 	computeCostGradDiagHess(X, U, result);
 	prevcost = result[0];
 
+	std::vector<Matrix<X_DIM> > Xopt(T);
+	std::vector<Matrix<U_DIM> > Uopt(T-1);
+
 	for(int it = 0; it < maxIter; ++it)
 	{
-		//std::cout << "Iter: " << it << std::endl;
+		std::cout << std::endl << "Iter: " << it << std::endl;
+
+		computeCostGradDiagHess(X, U, result);
+		merit = result[0];
+		constants_cost = computeConstantTerms(X, U, result) + result[0];
 
 		for (int t = 0; t < T-1; ++t)
 		{
@@ -397,8 +456,8 @@ void lpCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >
 		int exitflag = lpMPC_solve(&problem, &output, &info);
 		if (exitflag == 1) {
 			for(int t = 0; t < T-1; ++t) {
-				Matrix<X_DIM>& xt = X[t];
-				Matrix<U_DIM>& ut = U[t];
+				Matrix<X_DIM>& xt = Xopt[t];
+				Matrix<U_DIM>& ut = Uopt[t];
 
 				for(int i = 0; i < X_DIM; ++i) {
 					xt[i] = z[t][i];
@@ -408,30 +467,79 @@ void lpCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >
 				}
 				optcost = info.pobj;
 			}
-			Matrix<X_DIM>& xt = X[T-1];
+			Matrix<X_DIM>& xt = Xopt[T-1];
 			xt[0] = z[T-1][0]; xt[1] = z[T-1][1];
 		}
 		else {
 			std::cerr << "Some problem in solver" << std::endl;
 			std::exit(-1);
 		}
-		//std::cout << "Prev cost: " << prevcost << std::endl;
-		//std::cout << "Optimized cost: " << optcost << std::endl;
+
+		computeCostGradDiagHess(Xopt, Uopt, result);
+
+		model_merit = optcost + constants_cost; // need to add constant terms that were dropped
+		new_merit = result[0]; // Cost from symbolic code
+
+
+		std::cout << "merit: " << merit << std::endl;
+		std::cout << "model_merit: " << model_merit << std::endl;
+		std::cout << "new_merit: " << new_merit << std::endl;
+		std::cout << "constants_cost: " << constants_cost << std::endl;
+
+		approx_merit_improve = merit - model_merit;
+		exact_merit_improve = merit - new_merit;
+		merit_improve_ratio = exact_merit_improve / approx_merit_improve;
+
+		std::cout << "approx_merit_improve: " << approx_merit_improve << std::endl;
+		std::cout << "exact_merit_improve: " << exact_merit_improve << std::endl;
+		std::cout << "merit_improve_ratio: " << merit_improve_ratio << std::endl;
+
+
+		if (approx_merit_improve < -1e-5) {
+			std::cout << "Approximate merit function got worse " << approx_merit_improve << std::endl;
+			std::cout << "Failure!" << std::endl;
+			delete[] result;
+			return INFTY;
+		} else if (approx_merit_improve < cfg::min_approx_improve) {
+			std::cout << "Converged: improvement small enough" << std::endl;
+			X = Xopt; U = Uopt;
+			break;
+		} else if ((exact_merit_improve < 0) || (merit_improve_ratio < cfg::improve_ratio_threshold)) {
+			std::cout << "Shrinking trust boxes. trust region: " << Xeps << " " << Ueps << std::endl;
+			Xeps *= cfg::trust_shrink_ratio;
+			Ueps *= cfg::trust_shrink_ratio;
+		} else {
+			std::cout << "Else clause, increasing trust region: " << Xeps << " " << Ueps << std::endl;
+			// expand Xeps and Ueps and break into outermost loop (which we don't have)
+			Xeps *= cfg::trust_expand_ratio;
+			Ueps *= cfg::trust_expand_ratio;
+			X = Xopt; U = Uopt;
+			prevcost = optcost;
+		}
+
+
+		/*
+		std::cout << "Prev cost: " << prevcost << std::endl;
+		std::cout << "Optimized cost: " << optcost << std::endl;
 
 		if ((optcost > prevcost) || (fabs(optcost - prevcost)/prevcost < 0.01))
 			break;
 		else {
+			X = Xopt; U = Uopt;
 			prevcost = optcost;
 			// TODO: integrate trajectory?
 			// TODO: plot trajectory
 		}
+		*/
 
 		computeCostGradDiagHess(X, U, result);
 
-		//int num;
-		//std::cin >> num;
 	}
+	computeCostGradDiagHess(Xopt, Uopt, result);
+	optcost = result[0];
 	delete[] result;
+
+	return optcost;
 }
 
 // default for unix
@@ -519,10 +627,10 @@ int main(int argc, char* argv[])
 	t.start();
 
 	// compute cost for the trajectory
-	lpCollocation(X, U, problem, output, info);
+	double cost = lpCollocation(X, U, problem, output, info);
 
 	t.stop();
-	//std::cout << "Cost: " << std::setprecision(10) << cost << std::endl;
+	std::cout << "Cost: " << std::setprecision(10) << cost << std::endl;
 	std::cout << "Compute time: " << t.getElapsedTimeInMilliSec() << " mS" << std::endl;
 
 	pythonDisplayTrajectory(X, U);

@@ -372,20 +372,11 @@ double computeConstantTerms(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix
 
 	for (int t = 0; t < T-1; ++t)
 	{
-		Matrix<X_DIM>& xt = X[t];
-		Matrix<U_DIM>& ut = U[t];
-
-		Matrix<X_DIM+U_DIM> zbar;
-		zbar.insert(0,0,xt);
-		zbar.insert(X_DIM,0,ut);
-
 		f[t][0] = result[1+t*X_DIM];
 		f[t][1] = result[1+t*X_DIM+1];
 		f[t][2] = result[1+T*X_DIM+t*U_DIM];
 		f[t][3] = result[1+T*X_DIM+t*U_DIM+1];
 	}
-
-	Matrix<X_DIM>& xT = X[T-1];
 
 	f[T-1][0] = result[1+(T-1)*X_DIM];
 	f[T-1][1] = result[1+(T-1)*X_DIM+1];
@@ -449,7 +440,7 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 
 		computeCostGradDiagHess(X, U, result);
 		merit = result[0];
-		constants_cost = computeConstantTerms(X, U, result) + result[0]; // for optimized traj, i.e. model_merit and optcost
+		constants_cost = computeConstantTerms(X, U, result) + result[0];
 
 
 		// compute Hessian first

@@ -56,6 +56,8 @@ std::vector<int> maskIndices;
 int cal_env, cal_goal, cal_domain, cal_traj;
 #endif
 
+#define genVar(x,y) x##.##y
+
 inline Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<U_DIM>& q)
 {  
 	Matrix<X_DIM> xNew = x + u*DT + 0.01*q;
@@ -299,9 +301,9 @@ bool isValidInputs(double *result) {
 
 void lpCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >& U, lpMPC_params& problem, lpMPC_output& output, lpMPC_info& info)
 {
-	int maxIter = 100;
-	double Xeps = .1;
-	double Ueps = .1;
+	int maxIter = 10;
+	double Xeps = 1;
+	double Ueps = 1;
 
 	// box constraint around goal
 	double delta = 0.01;
@@ -391,8 +393,6 @@ void lpCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >
 		}
 		 */
 
-		//int num;
-		//std::cin >> num;
 
 		int exitflag = lpMPC_solve(&problem, &output, &info);
 		if (exitflag == 1) {

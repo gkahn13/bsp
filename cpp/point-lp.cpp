@@ -12,6 +12,7 @@
 #include <Python.h>
 #include <boost/python.hpp>
 #include <numpy/ndarrayobject.h>
+#include <boost/filesystem.hpp>
 
 namespace py = boost::python;
 
@@ -562,15 +563,20 @@ void pythonDisplayTrajectory(std::vector< Matrix<X_DIM> >& X, std::vector< Matri
 		}
 	}
 
-	Py_Initialize();
-	py::object main_module = py::import("__main__");
-	py::object main_namespace = main_module.attr("__dict__");
-	py::exec("from bsp_light_dark import LightDarkModel", main_namespace);
-	py::object model = py::eval("LightDarkModel()", main_namespace);
-	py::object plot_mod = py::import("plot");
-	py::object plot_traj = plot_mod.attr("plot_belief_trajectory");
+	std::string workingDir = boost::filesystem::absolute("./").normalize().string();
+
 	try
 	{
+		Py_Initialize();
+		py::object main_module = py::import("__main__");
+		py::object main_namespace = main_module.attr("__dict__");
+		py::exec("import sys, os", main_namespace);
+		py::exec(py::str("sys.path.append('"+workingDir+"/../python')"), main_namespace);
+		py::exec("from bsp_light_dark import LightDarkModel", main_namespace);
+		py::object model = py::eval("LightDarkModel()", main_namespace);
+		py::object plot_mod = py::import("plot");
+		py::object plot_traj = plot_mod.attr("plot_belief_trajectory");
+
 		plot_traj(Bvec, Uvec, model);
 	}
 	catch(py::error_already_set const &)
@@ -622,7 +628,7 @@ int main(int argc, char* argv[])
 	LOG_INFO("Compute time: %1.10f mS", t.getElapsedTimeInMilliSec());
 
 	// Commented out because this does not work for me -- Sachin
-	//pythonDisplayTrajectory(X, U);
+	pythonDisplayTrajectory(X, U);
 
 	cleanup();
 

@@ -26,7 +26,7 @@ build/point-belief.o : point-belief.cpp
 	
 # make point-state
 state: $(OBJS_STATE)
-	g++ $(OBJS_STATE) -o bin/point-state $(BOOST_FLAGS)
+	g++ $(OBJS_STATE) -o bin/point-state $(BOOST_FLAGS) -lrt
 	
 build/stateMPC.o : stateMPC.c
 	gcc -c -std=gnu99 -o build/stateMPC.o stateMPC.c

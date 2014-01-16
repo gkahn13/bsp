@@ -16,6 +16,16 @@
 #include <boost/preprocessor/arithmetic/sub.hpp>
 #include <boost/filesystem.hpp>
 
+#include <boost/timer.hpp>
+#include "boost/date_time/posix_time/posix_time.hpp"
+#include <chrono>
+#include <time.h>
+#include <util/cycle.h>
+
+typedef boost::posix_time::ptime Time;
+typedef boost::posix_time::time_duration TimeDuration;
+
+
 namespace py = boost::python;
 
 extern "C" {
@@ -186,7 +196,7 @@ void setupStateMPCVars(stateMPC_params& problem, stateMPC_output& output)
 	// output
 	z = new stateMPC_FLOAT*[T];
 
-	/*
+/*
 #define SET_VARS_0_TO_9(n)      \
 		H[ BOOST_PP_SUB(n,1) ] = problem.H0##n ;	\
 		f[ BOOST_PP_SUB(n,1) ] = problem.f0##n ;	\
@@ -220,6 +230,7 @@ void setupStateMPCVars(stateMPC_params& problem, stateMPC_output& output)
 #endif
 */
 
+
 	H[0] = problem.H01; f[0] = problem.f01; lb[0] = problem.lb01; ub[0] = problem.ub01; C[0] = problem.C01; e[0] = problem.e01;
 	H[1] = problem.H02; f[1] = problem.f02; lb[1] = problem.lb02; ub[1] = problem.ub02; C[1] = problem.C02; e[1] = problem.e02;
 	H[2] = problem.H03; f[2] = problem.f03; lb[2] = problem.lb03; ub[2] = problem.ub03; C[2] = problem.C03; e[2] = problem.e03;
@@ -238,7 +249,8 @@ void setupStateMPCVars(stateMPC_params& problem, stateMPC_output& output)
 
 	z[0] = output.z1; z[1] = output.z2; z[2] = output.z3; z[3] = output.z4; z[4] = output.z5;
 	z[5] = output.z6; z[6] = output.z7; z[7] = output.z8; z[8] = output.z9; z[9] = output.z10; 
-	z[10] = output.z11; z[11] = output.z12; z[12] = output.z13; z[13] = output.z14; z[14] = output.z15; 
+	z[10] = output.z11; z[11] = output.z12; z[12] = output.z13; z[13] = output.z14; z[14] = output.z15;
+
 }
 
 void setupDstarInterface() 
@@ -659,7 +671,8 @@ void pythonDisplayTrajectory(std::vector< Matrix<X_DIM> >& X, std::vector< Matri
 		}
 	}
 
-	std::string workingDir = boost::filesystem::absolute("./").normalize().string();
+	std::string workingDir = boost::filesystem::current_path().normalize().string();
+	std::string bspDir = workingDir.substr(0,workingDir.find("bsp"));
 
 	try
 	{
@@ -667,7 +680,7 @@ void pythonDisplayTrajectory(std::vector< Matrix<X_DIM> >& X, std::vector< Matri
 		py::object main_module = py::import("__main__");
 		py::object main_namespace = main_module.attr("__dict__");
 		py::exec("import sys, os", main_namespace);
-		py::exec(py::str("sys.path.append('"+workingDir+"/../python')"), main_namespace);
+		py::exec(py::str("sys.path.append('"+bspDir+"bsp/python')"), main_namespace);
 		py::exec("from bsp_light_dark import LightDarkModel", main_namespace);
 		py::object model = py::eval("LightDarkModel()", main_namespace);
 		py::object plot_mod = py::import("plot");
@@ -712,15 +725,72 @@ int main(int argc, char* argv[])
 
 	setupStateMPCVars(problem, output);
 
-	util::Timer t;
-	t.start();
+	/*
+	// CHRONO ATTEMPT
+	std::chrono::high_resolution_clock::time_point start = std::chrono::high_resolution_clock::now();
+
+	//boost::chrono::system_clock::time_point start = boost::chrono::system_clock::now();
+
+
+	for(int i = 0; i < 100000; ++i) {
+		   for (int t = 0; t < T-1; ++t) {
+				   X[t+1] = dynfunc(X[t], U[t], zeros<Q_DIM,1>());
+		   }
+   }
+
+	std::chrono::high_resolution_clock::time_point end = std::chrono::high_resolution_clock::now();
+
+	std::chrono::duration<double> time_span = std::chrono::duration_cast<std::chrono::duration<double>>(end - start);
+
+	//double elapsed = std::chrono::duration_cast<std::chrono::milliseconds>
+	//                        (end - start).count();
+
+
+	std::cout << time_span.count()*1000 << " mS" << std::endl;
+
+	//boost::chrono::duration<double> sec = boost::chrono::system_clock::now() - start;
+	//std::cout << "took " << sec.count() << " seconds\n";
+
+
+	// CLOCK_GETTIME ATTEMPT
+	timespec res;
+	clock_getres(CLOCK_THREAD_CPUTIME_ID, &res);
+	printf("CLOCK_THREAD_CPUTIME_ID: %ldns\n", res.tv_nsec);
+
+	timespec start, end;
+	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &start);
+
+	clock_gettime(CLOCK_THREAD_CPUTIME_ID, &end);
+	double elapsed = 1e-6*(end.tv_nsec - start.tv_nsec);
+
+	// CYCLE.H
+	ticks start = getticks();
+
+	ticks end = getticks();
+	double elapsed = end - start;
+
+	*/
+
+	//util::Timer t;
+	//t.start();
+
 
 	// compute cost for the trajectory
+	//double cost = 0;
 	double cost = stateCollocation(X, U, problem, output, info);
+	//for(int i = 0; i < 100000; ++i) {
+	//		   for (int t = 0; t < T-1; ++t) {
+	//				   X[t+1] = dynfunc(X[t], U[t], zeros<Q_DIM,1>());
+	//		   }
+	 //  }
 
-	t.stop();
+	//t.stop();
+	// double elapsed = t.getElapsedTimeInMilliSec();
+
 	LOG_INFO("Cost: %4.10f", cost);
-	LOG_INFO("Compute time: %1.10f mS", t.getElapsedTimeInMilliSec());
+	LOG_INFO("Compute time: %1.10f mS", elapsed);
+
+	return 0;
 
 	// Commented out because this does not work for me -- Sachin
 	pythonDisplayTrajectory(X, U);

@@ -221,7 +221,11 @@ void setupDstarInterface()
 
 	inputVars = new double[nvars];
 
-	std::ifstream fptr("point/state-masks.txt");
+	std::ifstream fptr("point/state-masks-15.txt");
+	if(!fptr.is_open()) {
+		LOG_FATAL("Mask file handle not opened, check!, exiting");
+		std::exit(-1);
+	}
 	int val;
 	for(int i = 0; i < nvars; ++i) {
 		fptr >> val;
@@ -690,7 +694,7 @@ int main(int argc, char* argv[])
 	double cost = stateCollocation(X, U, problem, output, info);
 
 	double solvetime = util::Timer_toc(&solveTimer);
-	//LOG_INFO("Cost: %4.10f", cost);
+	LOG_INFO("Cost: %4.10f", cost);
 	LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 
 	//pythonDisplayTrajectory(X, U);

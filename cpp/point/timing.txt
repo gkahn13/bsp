@@ -10,9 +10,9 @@ FORCES penalty SQP belief state:
 10: 25 ms
 15: 31 ms
 20: 30 ms
-25:
-30:
-40:
+25: 45 ms
+30: 43 ms
+40: 70 ms
 
 FORCES SQP state:
 25:

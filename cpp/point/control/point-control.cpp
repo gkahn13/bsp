@@ -24,7 +24,7 @@ extern "C" {
 #include "controlMPC.h"
 }
 
-#define TIMESTEPS 10
+#define TIMESTEPS 15
 #define DT 1.0
 #define X_DIM 2
 #define U_DIM 2
@@ -586,12 +586,12 @@ int main(int argc, char* argv[])
 	LOG_INFO("Cost: %4.10f", cost);
 	LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 
-	//pythonDisplayTrajectory(U);
+	pythonDisplayTrajectory(U);
 
 	cleanup();
 
-	//int k;
-	//std::cin >> k;
+	int k;
+	std::cin >> k;
 
 	//CAL_End();
 	return 0;

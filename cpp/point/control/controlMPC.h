@@ -192,6 +192,66 @@ typedef struct controlMPC_params
     /* vector of size 2 */
     controlMPC_FLOAT ub9[2];
 
+    /* diagonal matrix of size [2 x 2] (only the diagonal is stored) */
+    controlMPC_FLOAT H10[2];
+
+    /* vector of size 2 */
+    controlMPC_FLOAT f10[2];
+
+    /* vector of size 2 */
+    controlMPC_FLOAT lb10[2];
+
+    /* vector of size 2 */
+    controlMPC_FLOAT ub10[2];
+
+    /* diagonal matrix of size [2 x 2] (only the diagonal is stored) */
+    controlMPC_FLOAT H11[2];
+
+    /* vector of size 2 */
+    controlMPC_FLOAT f11[2];
+
+    /* vector of size 2 */
+    controlMPC_FLOAT lb11[2];
+
+    /* vector of size 2 */
+    controlMPC_FLOAT ub11[2];
+
+    /* diagonal matrix of size [2 x 2] (only the diagonal is stored) */
+    controlMPC_FLOAT H12[2];
+
+    /* vector of size 2 */
+    controlMPC_FLOAT f12[2];
+
+    /* vector of size 2 */
+    controlMPC_FLOAT lb12[2];
+
+    /* vector of size 2 */
+    controlMPC_FLOAT ub12[2];
+
+    /* diagonal matrix of size [2 x 2] (only the diagonal is stored) */
+    controlMPC_FLOAT H13[2];
+
+    /* vector of size 2 */
+    controlMPC_FLOAT f13[2];
+
+    /* vector of size 2 */
+    controlMPC_FLOAT lb13[2];
+
+    /* vector of size 2 */
+    controlMPC_FLOAT ub13[2];
+
+    /* diagonal matrix of size [2 x 2] (only the diagonal is stored) */
+    controlMPC_FLOAT H14[2];
+
+    /* vector of size 2 */
+    controlMPC_FLOAT f14[2];
+
+    /* vector of size 2 */
+    controlMPC_FLOAT lb14[2];
+
+    /* vector of size 2 */
+    controlMPC_FLOAT ub14[2];
+
 } controlMPC_params;
 
 
@@ -225,6 +285,21 @@ typedef struct controlMPC_output
 
     /* vector of size 2 */
     controlMPC_FLOAT z9[2];
+
+    /* vector of size 2 */
+    controlMPC_FLOAT z10[2];
+
+    /* vector of size 2 */
+    controlMPC_FLOAT z11[2];
+
+    /* vector of size 2 */
+    controlMPC_FLOAT z12[2];
+
+    /* vector of size 2 */
+    controlMPC_FLOAT z13[2];
+
+    /* vector of size 2 */
+    controlMPC_FLOAT z14[2];
 
 } controlMPC_output;
 

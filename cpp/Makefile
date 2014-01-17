@@ -37,6 +37,9 @@ PT_SYM_DIR = point/sym
 $(OBJ_DIR)/pt_symeval.o : $(PT_SYM_DIR)/symeval.c
 	gcc -c $(C_FLAGS) $(BFLAGS) -o $(OBJ_DIR)/pt_symeval.o $(PT_SYM_DIR)/symeval.c
 	
+$(OBJ_DIR)/state_symeval.o : $(PT_SYM_DIR)/state-symeval.c
+	gcc -c $(C_FLAGS) $(BFLAGS) -o $(OBJ_DIR)/state_symeval.o $(PT_SYM_DIR)/state-symeval.c
+
 $(OBJ_DIR)/control_symeval.o : $(PT_SYM_DIR)/control-symeval.c
 	gcc -c $(C_FLAGS) $(BFLAGS) -o $(OBJ_DIR)/control_symeval.o $(PT_SYM_DIR)/control-symeval.c
 	
@@ -61,7 +64,7 @@ $(OBJ_DIR)/point-belief.o : $(PT_BELIEF_DIR)/point-belief.cpp
 	
 # make point-state
 PT_STATE_DIR = point/state
-PT_STATE_FILES = stateMPC pt_symeval point-state logging
+PT_STATE_FILES = stateMPC state_symeval point-state logging
 PT_STATE_OBJS = $(PT_STATE_FILES:%=$(OBJ_DIR)/%.o)
 
 state: $(PT_STATE_OBJS)

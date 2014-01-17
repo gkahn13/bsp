@@ -19,7 +19,7 @@
 namespace py = boost::python;
 
 extern "C" {
-#include "../sym/symeval.h"
+#include "../sym/state-symeval.h"
 #include "stateMPC.h"
 }
 

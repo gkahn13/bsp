@@ -1,9 +1,7 @@
 // Code generated from D* symbolic/automatic differentiation
-
-#ifndef __symeval_H__
-#define __symeval_H__
-
-// For 15 timesteps for the point example
+// common across all time steps
+#ifndef __state_symeval_H__
+#define __state_symeval_H__
 
 // Function definitions
 void evalCost(double *result, double *vars);

@@ -65,6 +65,17 @@ $(OBJ_DIR)/stateMPC.o : $(PT_STATE_DIR)/stateMPC.c
 	
 $(OBJ_DIR)/point-state.o : $(PT_STATE_DIR)/point-state.cpp
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $^
+	
+# make point-state-finitediff
+PT_STATE_FD_DIR = $(PT_STATE_DIR)
+PT_STATE_FD_FILES = stateMPC pt_symeval point-state-finitediff logging
+PT_STATE_FD_OBJS = $(PT_STATE_FD_FILES:%=$(OBJ_DIR)/%.o)
+
+state-finitediff: $(PT_STATE_FD_OBJS)
+	$(CXX) $(BFLAGS) $(PT_STATE_FD_OBJS) -o $(BIN_DIR)/point-state-finitediff $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
+	
+$(OBJ_DIR)/point-state-finitediff.o : $(PT_STATE_FD_DIR)/point-state-finitediff.cpp
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $^
 
 
 # make point-lp

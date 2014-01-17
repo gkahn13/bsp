@@ -576,7 +576,7 @@ void stateMPC_LA_DENSE_DIAGZERO_MMTM_2_4_2(stateMPC_FLOAT *A, stateMPC_FLOAT *B,
 /**
  * Forward substitution to solve L*y = b where L is a
  * diagonal matrix in vector storage format.
- *
+ * 
  * The dimensions involved are 4.
  */
 void stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_FLOAT *L, stateMPC_FLOAT *b, stateMPC_FLOAT *y)
@@ -650,7 +650,7 @@ void stateMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_2(stateMPC_FLOAT *L, stateMPC
 /**
  * Forward substitution to solve L*y = b where L is a
  * diagonal matrix in vector storage format.
- *
+ * 
  * The dimensions involved are 2.
  */
 void stateMPC_LA_DIAG_FORWARDSUB_2(stateMPC_FLOAT *L, stateMPC_FLOAT *b, stateMPC_FLOAT *y)
@@ -681,7 +681,7 @@ void stateMPC_LA_DIAGZERO_MMT_2(stateMPC_FLOAT *B, stateMPC_FLOAT *L)
 }
 
 
-/*
+/* 
  * Computes r = b - B*u
  * B is stored in diagzero format
  */
@@ -691,8 +691,8 @@ void stateMPC_LA_DIAGZERO_MVMSUB7_2(stateMPC_FLOAT *B, stateMPC_FLOAT *u, stateM
 
 	for( i=0; i<2; i++ ){
 		r[i] = b[i] - B[i]*u[i];
-	}
-
+	}	
+	
 }
 
 
@@ -701,16 +701,16 @@ void stateMPC_LA_DIAGZERO_MVMSUB7_2(stateMPC_FLOAT *B, stateMPC_FLOAT *u, stateM
  * and A is a dense matrix of size [2 x 4] in column
  * storage format, and B is of size [2 x 4] diagonalzero
  * storage format.
- *
- * THIS ONE HAS THE WORST ACCES PATTERN POSSIBLE.
+ * 
+ * THIS ONE HAS THE WORST ACCES PATTERN POSSIBLE. 
  * POSSIBKE FIX: PUT A AND B INTO ROW MAJOR FORMAT FIRST.
- *
+ * 
  */
 void stateMPC_LA_DENSE_DIAGZERO_MMT2_2_4_4(stateMPC_FLOAT *A, stateMPC_FLOAT *B, stateMPC_FLOAT *L)
 {
     int i, j, k, ii, di;
     stateMPC_FLOAT ltemp;
-
+    
     ii = 0; di = 0;
     for( i=0; i<2; i++ ){        
         for( j=0; j<=i; j++ ){
@@ -2219,15 +2219,15 @@ stateMPC_LA_DOTACC_116(stateMPC_l, stateMPC_s, &info->mu);
 info->mu /= 116;
 while( 1 ){
 info->pobj = 0;
-stateMPC_LA_DIAG_QUADFCN_4(params->H01, params->f01, stateMPC_z00, stateMPC_grad_cost00, &info->pobj);
-stateMPC_LA_DIAG_QUADFCN_4(params->H02, params->f02, stateMPC_z01, stateMPC_grad_cost01, &info->pobj);
-stateMPC_LA_DIAG_QUADFCN_4(params->H03, params->f03, stateMPC_z02, stateMPC_grad_cost02, &info->pobj);
-stateMPC_LA_DIAG_QUADFCN_4(params->H04, params->f04, stateMPC_z03, stateMPC_grad_cost03, &info->pobj);
-stateMPC_LA_DIAG_QUADFCN_4(params->H05, params->f05, stateMPC_z04, stateMPC_grad_cost04, &info->pobj);
-stateMPC_LA_DIAG_QUADFCN_4(params->H06, params->f06, stateMPC_z05, stateMPC_grad_cost05, &info->pobj);
-stateMPC_LA_DIAG_QUADFCN_4(params->H07, params->f07, stateMPC_z06, stateMPC_grad_cost06, &info->pobj);
-stateMPC_LA_DIAG_QUADFCN_4(params->H08, params->f08, stateMPC_z07, stateMPC_grad_cost07, &info->pobj);
-stateMPC_LA_DIAG_QUADFCN_4(params->H09, params->f09, stateMPC_z08, stateMPC_grad_cost08, &info->pobj);
+stateMPC_LA_DIAG_QUADFCN_4(params->H1, params->f1, stateMPC_z00, stateMPC_grad_cost00, &info->pobj);
+stateMPC_LA_DIAG_QUADFCN_4(params->H2, params->f2, stateMPC_z01, stateMPC_grad_cost01, &info->pobj);
+stateMPC_LA_DIAG_QUADFCN_4(params->H3, params->f3, stateMPC_z02, stateMPC_grad_cost02, &info->pobj);
+stateMPC_LA_DIAG_QUADFCN_4(params->H4, params->f4, stateMPC_z03, stateMPC_grad_cost03, &info->pobj);
+stateMPC_LA_DIAG_QUADFCN_4(params->H5, params->f5, stateMPC_z04, stateMPC_grad_cost04, &info->pobj);
+stateMPC_LA_DIAG_QUADFCN_4(params->H6, params->f6, stateMPC_z05, stateMPC_grad_cost05, &info->pobj);
+stateMPC_LA_DIAG_QUADFCN_4(params->H7, params->f7, stateMPC_z06, stateMPC_grad_cost06, &info->pobj);
+stateMPC_LA_DIAG_QUADFCN_4(params->H8, params->f8, stateMPC_z07, stateMPC_grad_cost07, &info->pobj);
+stateMPC_LA_DIAG_QUADFCN_4(params->H9, params->f9, stateMPC_z08, stateMPC_grad_cost08, &info->pobj);
 stateMPC_LA_DIAG_QUADFCN_4(params->H10, params->f10, stateMPC_z09, stateMPC_grad_cost09, &info->pobj);
 stateMPC_LA_DIAG_QUADFCN_4(params->H11, params->f11, stateMPC_z10, stateMPC_grad_cost10, &info->pobj);
 stateMPC_LA_DIAG_QUADFCN_4(params->H12, params->f12, stateMPC_z11, stateMPC_grad_cost11, &info->pobj);
@@ -2236,30 +2236,30 @@ stateMPC_LA_DIAG_QUADFCN_4(params->H14, params->f14, stateMPC_z13, stateMPC_grad
 stateMPC_LA_DIAG_QUADFCN_2(params->H15, params->f15, stateMPC_z14, stateMPC_grad_cost14, &info->pobj);
 info->res_eq = 0;
 info->dgap = 0;
-stateMPC_LA_DIAGZERO_MVMSUB6_2(stateMPC_D00, stateMPC_z00, params->e01, stateMPC_v00, stateMPC_re00, &info->dgap, &info->res_eq);
-stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C01, stateMPC_z00, stateMPC_D01, stateMPC_z01, params->e02, stateMPC_v01, stateMPC_re01, &info->dgap, &info->res_eq);
-stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C02, stateMPC_z01, stateMPC_D01, stateMPC_z02, params->e03, stateMPC_v02, stateMPC_re02, &info->dgap, &info->res_eq);
-stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C03, stateMPC_z02, stateMPC_D01, stateMPC_z03, params->e04, stateMPC_v03, stateMPC_re03, &info->dgap, &info->res_eq);
-stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C04, stateMPC_z03, stateMPC_D01, stateMPC_z04, params->e05, stateMPC_v04, stateMPC_re04, &info->dgap, &info->res_eq);
-stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C05, stateMPC_z04, stateMPC_D01, stateMPC_z05, params->e06, stateMPC_v05, stateMPC_re05, &info->dgap, &info->res_eq);
-stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C06, stateMPC_z05, stateMPC_D01, stateMPC_z06, params->e07, stateMPC_v06, stateMPC_re06, &info->dgap, &info->res_eq);
-stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C07, stateMPC_z06, stateMPC_D01, stateMPC_z07, params->e08, stateMPC_v07, stateMPC_re07, &info->dgap, &info->res_eq);
-stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C08, stateMPC_z07, stateMPC_D01, stateMPC_z08, params->e09, stateMPC_v08, stateMPC_re08, &info->dgap, &info->res_eq);
-stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C09, stateMPC_z08, stateMPC_D01, stateMPC_z09, params->e10, stateMPC_v09, stateMPC_re09, &info->dgap, &info->res_eq);
+stateMPC_LA_DIAGZERO_MVMSUB6_2(stateMPC_D00, stateMPC_z00, params->e1, stateMPC_v00, stateMPC_re00, &info->dgap, &info->res_eq);
+stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C1, stateMPC_z00, stateMPC_D01, stateMPC_z01, params->e2, stateMPC_v01, stateMPC_re01, &info->dgap, &info->res_eq);
+stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C2, stateMPC_z01, stateMPC_D01, stateMPC_z02, params->e3, stateMPC_v02, stateMPC_re02, &info->dgap, &info->res_eq);
+stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C3, stateMPC_z02, stateMPC_D01, stateMPC_z03, params->e4, stateMPC_v03, stateMPC_re03, &info->dgap, &info->res_eq);
+stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C4, stateMPC_z03, stateMPC_D01, stateMPC_z04, params->e5, stateMPC_v04, stateMPC_re04, &info->dgap, &info->res_eq);
+stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C5, stateMPC_z04, stateMPC_D01, stateMPC_z05, params->e6, stateMPC_v05, stateMPC_re05, &info->dgap, &info->res_eq);
+stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C6, stateMPC_z05, stateMPC_D01, stateMPC_z06, params->e7, stateMPC_v06, stateMPC_re06, &info->dgap, &info->res_eq);
+stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C7, stateMPC_z06, stateMPC_D01, stateMPC_z07, params->e8, stateMPC_v07, stateMPC_re07, &info->dgap, &info->res_eq);
+stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C8, stateMPC_z07, stateMPC_D01, stateMPC_z08, params->e9, stateMPC_v08, stateMPC_re08, &info->dgap, &info->res_eq);
+stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C9, stateMPC_z08, stateMPC_D01, stateMPC_z09, params->e10, stateMPC_v09, stateMPC_re09, &info->dgap, &info->res_eq);
 stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C10, stateMPC_z09, stateMPC_D01, stateMPC_z10, params->e11, stateMPC_v10, stateMPC_re10, &info->dgap, &info->res_eq);
 stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C11, stateMPC_z10, stateMPC_D01, stateMPC_z11, params->e12, stateMPC_v11, stateMPC_re11, &info->dgap, &info->res_eq);
 stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C12, stateMPC_z11, stateMPC_D01, stateMPC_z12, params->e13, stateMPC_v12, stateMPC_re12, &info->dgap, &info->res_eq);
 stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_4(params->C13, stateMPC_z12, stateMPC_D01, stateMPC_z13, params->e14, stateMPC_v13, stateMPC_re13, &info->dgap, &info->res_eq);
 stateMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_4_2(params->C14, stateMPC_z13, stateMPC_D14, stateMPC_z14, params->e15, stateMPC_v14, stateMPC_re14, &info->dgap, &info->res_eq);
-stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C01, stateMPC_v01, stateMPC_D00, stateMPC_v00, stateMPC_grad_eq00);
-stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C02, stateMPC_v02, stateMPC_D01, stateMPC_v01, stateMPC_grad_eq01);
-stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C03, stateMPC_v03, stateMPC_D01, stateMPC_v02, stateMPC_grad_eq02);
-stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C04, stateMPC_v04, stateMPC_D01, stateMPC_v03, stateMPC_grad_eq03);
-stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C05, stateMPC_v05, stateMPC_D01, stateMPC_v04, stateMPC_grad_eq04);
-stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C06, stateMPC_v06, stateMPC_D01, stateMPC_v05, stateMPC_grad_eq05);
-stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C07, stateMPC_v07, stateMPC_D01, stateMPC_v06, stateMPC_grad_eq06);
-stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C08, stateMPC_v08, stateMPC_D01, stateMPC_v07, stateMPC_grad_eq07);
-stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C09, stateMPC_v09, stateMPC_D01, stateMPC_v08, stateMPC_grad_eq08);
+stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C1, stateMPC_v01, stateMPC_D00, stateMPC_v00, stateMPC_grad_eq00);
+stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C2, stateMPC_v02, stateMPC_D01, stateMPC_v01, stateMPC_grad_eq01);
+stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C3, stateMPC_v03, stateMPC_D01, stateMPC_v02, stateMPC_grad_eq02);
+stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C4, stateMPC_v04, stateMPC_D01, stateMPC_v03, stateMPC_grad_eq03);
+stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C5, stateMPC_v05, stateMPC_D01, stateMPC_v04, stateMPC_grad_eq04);
+stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C6, stateMPC_v06, stateMPC_D01, stateMPC_v05, stateMPC_grad_eq05);
+stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C7, stateMPC_v07, stateMPC_D01, stateMPC_v06, stateMPC_grad_eq06);
+stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C8, stateMPC_v08, stateMPC_D01, stateMPC_v07, stateMPC_grad_eq07);
+stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C9, stateMPC_v09, stateMPC_D01, stateMPC_v08, stateMPC_grad_eq08);
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C10, stateMPC_v10, stateMPC_D01, stateMPC_v09, stateMPC_grad_eq09);
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C11, stateMPC_v11, stateMPC_D01, stateMPC_v10, stateMPC_grad_eq10);
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C12, stateMPC_v12, stateMPC_D01, stateMPC_v11, stateMPC_grad_eq11);
@@ -2267,24 +2267,24 @@ stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C13, stateMPC_v13, stateMPC_D01, 
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C14, stateMPC_v14, stateMPC_D01, stateMPC_v13, stateMPC_grad_eq13);
 stateMPC_LA_DIAGZERO_MTVM_2_2(stateMPC_D14, stateMPC_v14, stateMPC_grad_eq14);
 info->res_ineq = 0;
-stateMPC_LA_VSUBADD3_4(params->lb01, stateMPC_z00, stateMPC_lbIdx00, stateMPC_llb00, stateMPC_slb00, stateMPC_rilb00, &info->dgap, &info->res_ineq);
-stateMPC_LA_VSUBADD2_4(stateMPC_z00, stateMPC_ubIdx00, params->ub01, stateMPC_lub00, stateMPC_sub00, stateMPC_riub00, &info->dgap, &info->res_ineq);
-stateMPC_LA_VSUBADD3_4(params->lb02, stateMPC_z01, stateMPC_lbIdx01, stateMPC_llb01, stateMPC_slb01, stateMPC_rilb01, &info->dgap, &info->res_ineq);
-stateMPC_LA_VSUBADD2_4(stateMPC_z01, stateMPC_ubIdx01, params->ub02, stateMPC_lub01, stateMPC_sub01, stateMPC_riub01, &info->dgap, &info->res_ineq);
-stateMPC_LA_VSUBADD3_4(params->lb03, stateMPC_z02, stateMPC_lbIdx02, stateMPC_llb02, stateMPC_slb02, stateMPC_rilb02, &info->dgap, &info->res_ineq);
-stateMPC_LA_VSUBADD2_4(stateMPC_z02, stateMPC_ubIdx02, params->ub03, stateMPC_lub02, stateMPC_sub02, stateMPC_riub02, &info->dgap, &info->res_ineq);
-stateMPC_LA_VSUBADD3_4(params->lb04, stateMPC_z03, stateMPC_lbIdx03, stateMPC_llb03, stateMPC_slb03, stateMPC_rilb03, &info->dgap, &info->res_ineq);
-stateMPC_LA_VSUBADD2_4(stateMPC_z03, stateMPC_ubIdx03, params->ub04, stateMPC_lub03, stateMPC_sub03, stateMPC_riub03, &info->dgap, &info->res_ineq);
-stateMPC_LA_VSUBADD3_4(params->lb05, stateMPC_z04, stateMPC_lbIdx04, stateMPC_llb04, stateMPC_slb04, stateMPC_rilb04, &info->dgap, &info->res_ineq);
-stateMPC_LA_VSUBADD2_4(stateMPC_z04, stateMPC_ubIdx04, params->ub05, stateMPC_lub04, stateMPC_sub04, stateMPC_riub04, &info->dgap, &info->res_ineq);
-stateMPC_LA_VSUBADD3_4(params->lb06, stateMPC_z05, stateMPC_lbIdx05, stateMPC_llb05, stateMPC_slb05, stateMPC_rilb05, &info->dgap, &info->res_ineq);
-stateMPC_LA_VSUBADD2_4(stateMPC_z05, stateMPC_ubIdx05, params->ub06, stateMPC_lub05, stateMPC_sub05, stateMPC_riub05, &info->dgap, &info->res_ineq);
-stateMPC_LA_VSUBADD3_4(params->lb07, stateMPC_z06, stateMPC_lbIdx06, stateMPC_llb06, stateMPC_slb06, stateMPC_rilb06, &info->dgap, &info->res_ineq);
-stateMPC_LA_VSUBADD2_4(stateMPC_z06, stateMPC_ubIdx06, params->ub07, stateMPC_lub06, stateMPC_sub06, stateMPC_riub06, &info->dgap, &info->res_ineq);
-stateMPC_LA_VSUBADD3_4(params->lb08, stateMPC_z07, stateMPC_lbIdx07, stateMPC_llb07, stateMPC_slb07, stateMPC_rilb07, &info->dgap, &info->res_ineq);
-stateMPC_LA_VSUBADD2_4(stateMPC_z07, stateMPC_ubIdx07, params->ub08, stateMPC_lub07, stateMPC_sub07, stateMPC_riub07, &info->dgap, &info->res_ineq);
-stateMPC_LA_VSUBADD3_4(params->lb09, stateMPC_z08, stateMPC_lbIdx08, stateMPC_llb08, stateMPC_slb08, stateMPC_rilb08, &info->dgap, &info->res_ineq);
-stateMPC_LA_VSUBADD2_4(stateMPC_z08, stateMPC_ubIdx08, params->ub09, stateMPC_lub08, stateMPC_sub08, stateMPC_riub08, &info->dgap, &info->res_ineq);
+stateMPC_LA_VSUBADD3_4(params->lb1, stateMPC_z00, stateMPC_lbIdx00, stateMPC_llb00, stateMPC_slb00, stateMPC_rilb00, &info->dgap, &info->res_ineq);
+stateMPC_LA_VSUBADD2_4(stateMPC_z00, stateMPC_ubIdx00, params->ub1, stateMPC_lub00, stateMPC_sub00, stateMPC_riub00, &info->dgap, &info->res_ineq);
+stateMPC_LA_VSUBADD3_4(params->lb2, stateMPC_z01, stateMPC_lbIdx01, stateMPC_llb01, stateMPC_slb01, stateMPC_rilb01, &info->dgap, &info->res_ineq);
+stateMPC_LA_VSUBADD2_4(stateMPC_z01, stateMPC_ubIdx01, params->ub2, stateMPC_lub01, stateMPC_sub01, stateMPC_riub01, &info->dgap, &info->res_ineq);
+stateMPC_LA_VSUBADD3_4(params->lb3, stateMPC_z02, stateMPC_lbIdx02, stateMPC_llb02, stateMPC_slb02, stateMPC_rilb02, &info->dgap, &info->res_ineq);
+stateMPC_LA_VSUBADD2_4(stateMPC_z02, stateMPC_ubIdx02, params->ub3, stateMPC_lub02, stateMPC_sub02, stateMPC_riub02, &info->dgap, &info->res_ineq);
+stateMPC_LA_VSUBADD3_4(params->lb4, stateMPC_z03, stateMPC_lbIdx03, stateMPC_llb03, stateMPC_slb03, stateMPC_rilb03, &info->dgap, &info->res_ineq);
+stateMPC_LA_VSUBADD2_4(stateMPC_z03, stateMPC_ubIdx03, params->ub4, stateMPC_lub03, stateMPC_sub03, stateMPC_riub03, &info->dgap, &info->res_ineq);
+stateMPC_LA_VSUBADD3_4(params->lb5, stateMPC_z04, stateMPC_lbIdx04, stateMPC_llb04, stateMPC_slb04, stateMPC_rilb04, &info->dgap, &info->res_ineq);
+stateMPC_LA_VSUBADD2_4(stateMPC_z04, stateMPC_ubIdx04, params->ub5, stateMPC_lub04, stateMPC_sub04, stateMPC_riub04, &info->dgap, &info->res_ineq);
+stateMPC_LA_VSUBADD3_4(params->lb6, stateMPC_z05, stateMPC_lbIdx05, stateMPC_llb05, stateMPC_slb05, stateMPC_rilb05, &info->dgap, &info->res_ineq);
+stateMPC_LA_VSUBADD2_4(stateMPC_z05, stateMPC_ubIdx05, params->ub6, stateMPC_lub05, stateMPC_sub05, stateMPC_riub05, &info->dgap, &info->res_ineq);
+stateMPC_LA_VSUBADD3_4(params->lb7, stateMPC_z06, stateMPC_lbIdx06, stateMPC_llb06, stateMPC_slb06, stateMPC_rilb06, &info->dgap, &info->res_ineq);
+stateMPC_LA_VSUBADD2_4(stateMPC_z06, stateMPC_ubIdx06, params->ub7, stateMPC_lub06, stateMPC_sub06, stateMPC_riub06, &info->dgap, &info->res_ineq);
+stateMPC_LA_VSUBADD3_4(params->lb8, stateMPC_z07, stateMPC_lbIdx07, stateMPC_llb07, stateMPC_slb07, stateMPC_rilb07, &info->dgap, &info->res_ineq);
+stateMPC_LA_VSUBADD2_4(stateMPC_z07, stateMPC_ubIdx07, params->ub8, stateMPC_lub07, stateMPC_sub07, stateMPC_riub07, &info->dgap, &info->res_ineq);
+stateMPC_LA_VSUBADD3_4(params->lb9, stateMPC_z08, stateMPC_lbIdx08, stateMPC_llb08, stateMPC_slb08, stateMPC_rilb08, &info->dgap, &info->res_ineq);
+stateMPC_LA_VSUBADD2_4(stateMPC_z08, stateMPC_ubIdx08, params->ub9, stateMPC_lub08, stateMPC_sub08, stateMPC_riub08, &info->dgap, &info->res_ineq);
 stateMPC_LA_VSUBADD3_4(params->lb10, stateMPC_z09, stateMPC_lbIdx09, stateMPC_llb09, stateMPC_slb09, stateMPC_rilb09, &info->dgap, &info->res_ineq);
 stateMPC_LA_VSUBADD2_4(stateMPC_z09, stateMPC_ubIdx09, params->ub10, stateMPC_lub09, stateMPC_sub09, stateMPC_riub09, &info->dgap, &info->res_ineq);
 stateMPC_LA_VSUBADD3_4(params->lb11, stateMPC_z10, stateMPC_lbIdx10, stateMPC_llb10, stateMPC_slb10, stateMPC_rilb10, &info->dgap, &info->res_ineq);
@@ -2323,48 +2323,48 @@ exitcode = stateMPC_OPTIMAL; break; }
 if( info->it == stateMPC_SET_MAXIT ){
 exitcode = stateMPC_MAXITREACHED; break; }
 stateMPC_LA_VVADD3_58(stateMPC_grad_cost, stateMPC_grad_eq, stateMPC_grad_ineq, stateMPC_rd);
-stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H01, stateMPC_llbbyslb00, stateMPC_lbIdx00, stateMPC_lubbysub00, stateMPC_ubIdx00, stateMPC_Phi00);
-stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_Phi00, params->C01, stateMPC_V00);
+stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H1, stateMPC_llbbyslb00, stateMPC_lbIdx00, stateMPC_lubbysub00, stateMPC_ubIdx00, stateMPC_Phi00);
+stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_Phi00, params->C1, stateMPC_V00);
 stateMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_4(stateMPC_Phi00, stateMPC_D00, stateMPC_W00);
 stateMPC_LA_DENSE_DIAGZERO_MMTM_2_4_2(stateMPC_W00, stateMPC_V00, stateMPC_Ysd01);
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi00, stateMPC_rd00, stateMPC_Lbyrd00);
-stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H02, stateMPC_llbbyslb01, stateMPC_lbIdx01, stateMPC_lubbysub01, stateMPC_ubIdx01, stateMPC_Phi01);
-stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_Phi01, params->C02, stateMPC_V01);
+stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H2, stateMPC_llbbyslb01, stateMPC_lbIdx01, stateMPC_lubbysub01, stateMPC_ubIdx01, stateMPC_Phi01);
+stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_Phi01, params->C2, stateMPC_V01);
 stateMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_4(stateMPC_Phi01, stateMPC_D01, stateMPC_W01);
 stateMPC_LA_DENSE_DIAGZERO_MMTM_2_4_2(stateMPC_W01, stateMPC_V01, stateMPC_Ysd02);
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi01, stateMPC_rd01, stateMPC_Lbyrd01);
-stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H03, stateMPC_llbbyslb02, stateMPC_lbIdx02, stateMPC_lubbysub02, stateMPC_ubIdx02, stateMPC_Phi02);
-stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_Phi02, params->C03, stateMPC_V02);
+stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H3, stateMPC_llbbyslb02, stateMPC_lbIdx02, stateMPC_lubbysub02, stateMPC_ubIdx02, stateMPC_Phi02);
+stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_Phi02, params->C3, stateMPC_V02);
 stateMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_4(stateMPC_Phi02, stateMPC_D01, stateMPC_W02);
 stateMPC_LA_DENSE_DIAGZERO_MMTM_2_4_2(stateMPC_W02, stateMPC_V02, stateMPC_Ysd03);
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi02, stateMPC_rd02, stateMPC_Lbyrd02);
-stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H04, stateMPC_llbbyslb03, stateMPC_lbIdx03, stateMPC_lubbysub03, stateMPC_ubIdx03, stateMPC_Phi03);
-stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_Phi03, params->C04, stateMPC_V03);
+stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H4, stateMPC_llbbyslb03, stateMPC_lbIdx03, stateMPC_lubbysub03, stateMPC_ubIdx03, stateMPC_Phi03);
+stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_Phi03, params->C4, stateMPC_V03);
 stateMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_4(stateMPC_Phi03, stateMPC_D01, stateMPC_W03);
 stateMPC_LA_DENSE_DIAGZERO_MMTM_2_4_2(stateMPC_W03, stateMPC_V03, stateMPC_Ysd04);
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi03, stateMPC_rd03, stateMPC_Lbyrd03);
-stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H05, stateMPC_llbbyslb04, stateMPC_lbIdx04, stateMPC_lubbysub04, stateMPC_ubIdx04, stateMPC_Phi04);
-stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_Phi04, params->C05, stateMPC_V04);
+stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H5, stateMPC_llbbyslb04, stateMPC_lbIdx04, stateMPC_lubbysub04, stateMPC_ubIdx04, stateMPC_Phi04);
+stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_Phi04, params->C5, stateMPC_V04);
 stateMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_4(stateMPC_Phi04, stateMPC_D01, stateMPC_W04);
 stateMPC_LA_DENSE_DIAGZERO_MMTM_2_4_2(stateMPC_W04, stateMPC_V04, stateMPC_Ysd05);
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi04, stateMPC_rd04, stateMPC_Lbyrd04);
-stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H06, stateMPC_llbbyslb05, stateMPC_lbIdx05, stateMPC_lubbysub05, stateMPC_ubIdx05, stateMPC_Phi05);
-stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_Phi05, params->C06, stateMPC_V05);
+stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H6, stateMPC_llbbyslb05, stateMPC_lbIdx05, stateMPC_lubbysub05, stateMPC_ubIdx05, stateMPC_Phi05);
+stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_Phi05, params->C6, stateMPC_V05);
 stateMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_4(stateMPC_Phi05, stateMPC_D01, stateMPC_W05);
 stateMPC_LA_DENSE_DIAGZERO_MMTM_2_4_2(stateMPC_W05, stateMPC_V05, stateMPC_Ysd06);
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi05, stateMPC_rd05, stateMPC_Lbyrd05);
-stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H07, stateMPC_llbbyslb06, stateMPC_lbIdx06, stateMPC_lubbysub06, stateMPC_ubIdx06, stateMPC_Phi06);
-stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_Phi06, params->C07, stateMPC_V06);
+stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H7, stateMPC_llbbyslb06, stateMPC_lbIdx06, stateMPC_lubbysub06, stateMPC_ubIdx06, stateMPC_Phi06);
+stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_Phi06, params->C7, stateMPC_V06);
 stateMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_4(stateMPC_Phi06, stateMPC_D01, stateMPC_W06);
 stateMPC_LA_DENSE_DIAGZERO_MMTM_2_4_2(stateMPC_W06, stateMPC_V06, stateMPC_Ysd07);
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi06, stateMPC_rd06, stateMPC_Lbyrd06);
-stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H08, stateMPC_llbbyslb07, stateMPC_lbIdx07, stateMPC_lubbysub07, stateMPC_ubIdx07, stateMPC_Phi07);
-stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_Phi07, params->C08, stateMPC_V07);
+stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H8, stateMPC_llbbyslb07, stateMPC_lbIdx07, stateMPC_lubbysub07, stateMPC_ubIdx07, stateMPC_Phi07);
+stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_Phi07, params->C8, stateMPC_V07);
 stateMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_4(stateMPC_Phi07, stateMPC_D01, stateMPC_W07);
 stateMPC_LA_DENSE_DIAGZERO_MMTM_2_4_2(stateMPC_W07, stateMPC_V07, stateMPC_Ysd08);
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi07, stateMPC_rd07, stateMPC_Lbyrd07);
-stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H09, stateMPC_llbbyslb08, stateMPC_lbIdx08, stateMPC_lubbysub08, stateMPC_ubIdx08, stateMPC_Phi08);
-stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_Phi08, params->C09, stateMPC_V08);
+stateMPC_LA_DIAG_CHOL_ONELOOP_LBUB_4_4_4(params->H9, stateMPC_llbbyslb08, stateMPC_lbIdx08, stateMPC_lubbysub08, stateMPC_ubIdx08, stateMPC_Phi08);
+stateMPC_LA_DIAG_MATRIXFORWARDSUB_2_4(stateMPC_Phi08, params->C9, stateMPC_V08);
 stateMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_4(stateMPC_Phi08, stateMPC_D01, stateMPC_W08);
 stateMPC_LA_DENSE_DIAGZERO_MMTM_2_4_2(stateMPC_W08, stateMPC_V08, stateMPC_Ysd09);
 stateMPC_LA_DIAG_FORWARDSUB_4(stateMPC_Phi08, stateMPC_rd08, stateMPC_Lbyrd08);
@@ -2527,15 +2527,15 @@ stateMPC_LA_DENSE_MTVMSUB_2_2(stateMPC_Lsd02, stateMPC_dvaff02, stateMPC_yy01, s
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld01, stateMPC_bmy01, stateMPC_dvaff01);
 stateMPC_LA_DENSE_MTVMSUB_2_2(stateMPC_Lsd01, stateMPC_dvaff01, stateMPC_yy00, stateMPC_bmy00);
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld00, stateMPC_bmy00, stateMPC_dvaff00);
-stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C01, stateMPC_dvaff01, stateMPC_D00, stateMPC_dvaff00, stateMPC_grad_eq00);
-stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C02, stateMPC_dvaff02, stateMPC_D01, stateMPC_dvaff01, stateMPC_grad_eq01);
-stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C03, stateMPC_dvaff03, stateMPC_D01, stateMPC_dvaff02, stateMPC_grad_eq02);
-stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C04, stateMPC_dvaff04, stateMPC_D01, stateMPC_dvaff03, stateMPC_grad_eq03);
-stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C05, stateMPC_dvaff05, stateMPC_D01, stateMPC_dvaff04, stateMPC_grad_eq04);
-stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C06, stateMPC_dvaff06, stateMPC_D01, stateMPC_dvaff05, stateMPC_grad_eq05);
-stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C07, stateMPC_dvaff07, stateMPC_D01, stateMPC_dvaff06, stateMPC_grad_eq06);
-stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C08, stateMPC_dvaff08, stateMPC_D01, stateMPC_dvaff07, stateMPC_grad_eq07);
-stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C09, stateMPC_dvaff09, stateMPC_D01, stateMPC_dvaff08, stateMPC_grad_eq08);
+stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C1, stateMPC_dvaff01, stateMPC_D00, stateMPC_dvaff00, stateMPC_grad_eq00);
+stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C2, stateMPC_dvaff02, stateMPC_D01, stateMPC_dvaff01, stateMPC_grad_eq01);
+stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C3, stateMPC_dvaff03, stateMPC_D01, stateMPC_dvaff02, stateMPC_grad_eq02);
+stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C4, stateMPC_dvaff04, stateMPC_D01, stateMPC_dvaff03, stateMPC_grad_eq03);
+stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C5, stateMPC_dvaff05, stateMPC_D01, stateMPC_dvaff04, stateMPC_grad_eq04);
+stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C6, stateMPC_dvaff06, stateMPC_D01, stateMPC_dvaff05, stateMPC_grad_eq05);
+stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C7, stateMPC_dvaff07, stateMPC_D01, stateMPC_dvaff06, stateMPC_grad_eq06);
+stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C8, stateMPC_dvaff08, stateMPC_D01, stateMPC_dvaff07, stateMPC_grad_eq07);
+stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C9, stateMPC_dvaff09, stateMPC_D01, stateMPC_dvaff08, stateMPC_grad_eq08);
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C10, stateMPC_dvaff10, stateMPC_D01, stateMPC_dvaff09, stateMPC_grad_eq09);
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C11, stateMPC_dvaff11, stateMPC_D01, stateMPC_dvaff10, stateMPC_grad_eq10);
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C12, stateMPC_dvaff12, stateMPC_D01, stateMPC_dvaff11, stateMPC_grad_eq11);
@@ -2729,15 +2729,15 @@ stateMPC_LA_DENSE_MTVMSUB_2_2(stateMPC_Lsd02, stateMPC_dvcc02, stateMPC_yy01, st
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld01, stateMPC_bmy01, stateMPC_dvcc01);
 stateMPC_LA_DENSE_MTVMSUB_2_2(stateMPC_Lsd01, stateMPC_dvcc01, stateMPC_yy00, stateMPC_bmy00);
 stateMPC_LA_DENSE_BACKWARDSUB_2(stateMPC_Ld00, stateMPC_bmy00, stateMPC_dvcc00);
-stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C01, stateMPC_dvcc01, stateMPC_D00, stateMPC_dvcc00, stateMPC_grad_eq00);
-stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C02, stateMPC_dvcc02, stateMPC_D01, stateMPC_dvcc01, stateMPC_grad_eq01);
-stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C03, stateMPC_dvcc03, stateMPC_D01, stateMPC_dvcc02, stateMPC_grad_eq02);
-stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C04, stateMPC_dvcc04, stateMPC_D01, stateMPC_dvcc03, stateMPC_grad_eq03);
-stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C05, stateMPC_dvcc05, stateMPC_D01, stateMPC_dvcc04, stateMPC_grad_eq04);
-stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C06, stateMPC_dvcc06, stateMPC_D01, stateMPC_dvcc05, stateMPC_grad_eq05);
-stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C07, stateMPC_dvcc07, stateMPC_D01, stateMPC_dvcc06, stateMPC_grad_eq06);
-stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C08, stateMPC_dvcc08, stateMPC_D01, stateMPC_dvcc07, stateMPC_grad_eq07);
-stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C09, stateMPC_dvcc09, stateMPC_D01, stateMPC_dvcc08, stateMPC_grad_eq08);
+stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C1, stateMPC_dvcc01, stateMPC_D00, stateMPC_dvcc00, stateMPC_grad_eq00);
+stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C2, stateMPC_dvcc02, stateMPC_D01, stateMPC_dvcc01, stateMPC_grad_eq01);
+stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C3, stateMPC_dvcc03, stateMPC_D01, stateMPC_dvcc02, stateMPC_grad_eq02);
+stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C4, stateMPC_dvcc04, stateMPC_D01, stateMPC_dvcc03, stateMPC_grad_eq03);
+stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C5, stateMPC_dvcc05, stateMPC_D01, stateMPC_dvcc04, stateMPC_grad_eq04);
+stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C6, stateMPC_dvcc06, stateMPC_D01, stateMPC_dvcc05, stateMPC_grad_eq05);
+stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C7, stateMPC_dvcc07, stateMPC_D01, stateMPC_dvcc06, stateMPC_grad_eq06);
+stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C8, stateMPC_dvcc08, stateMPC_D01, stateMPC_dvcc07, stateMPC_grad_eq07);
+stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C9, stateMPC_dvcc09, stateMPC_D01, stateMPC_dvcc08, stateMPC_grad_eq08);
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C10, stateMPC_dvcc10, stateMPC_D01, stateMPC_dvcc09, stateMPC_grad_eq09);
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C11, stateMPC_dvcc11, stateMPC_D01, stateMPC_dvcc10, stateMPC_grad_eq10);
 stateMPC_LA_DENSE_DIAGZERO_MTVM2_2_4_2(params->C12, stateMPC_dvcc12, stateMPC_D01, stateMPC_dvcc11, stateMPC_grad_eq11);

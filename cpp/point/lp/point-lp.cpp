@@ -21,6 +21,7 @@ extern "C" {
 #include "lpMPC.h"
 }
 
+#define TIMESTEPS 15
 #define DT 1.0
 #define X_DIM 2
 #define U_DIM 2
@@ -39,7 +40,7 @@ Matrix<X_DIM> xGoal;
 Matrix<X_DIM> xMin, xMax;
 Matrix<U_DIM> uMin, uMax;
 
-const int T = 15;
+const int T = TIMESTEPS;
 const double INFTY = 1e10;
 const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 1;
 
@@ -167,7 +168,6 @@ inline Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>&
 	return g;
 }
 
-// TODO: Find better way to do this using macro expansions?
 void setupLpMPCVars(lpMPC_params& problem, lpMPC_output& output)
 {
 	// inputs
@@ -180,25 +180,29 @@ void setupLpMPCVars(lpMPC_params& problem, lpMPC_output& output)
 	// output
 	z = new lpMPC_FLOAT*[T];
 
-	f[0] = problem.f01; lb[0] = problem.lb01; ub[0] = problem.ub01; C[0] = problem.C01; e[0] = problem.e01;
-	f[1] = problem.f02; lb[1] = problem.lb02; ub[1] = problem.ub02; C[1] = problem.C02; e[1] = problem.e02;
-	f[2] = problem.f03; lb[2] = problem.lb03; ub[2] = problem.ub03; C[2] = problem.C03; e[2] = problem.e03;
-	f[3] = problem.f04; lb[3] = problem.lb04; ub[3] = problem.ub04; C[3] = problem.C04; e[3] = problem.e04;
-	f[4] = problem.f05; lb[4] = problem.lb05; ub[4] = problem.ub05; C[4] = problem.C05; e[4] = problem.e05;
-	f[5] = problem.f06; lb[5] = problem.lb06; ub[5] = problem.ub06; C[5] = problem.C06; e[5] = problem.e06;
-	f[6] = problem.f07; lb[6] = problem.lb07; ub[6] = problem.ub07; C[6] = problem.C07; e[6] = problem.e07;
-	f[7] = problem.f08; lb[7] = problem.lb08; ub[7] = problem.ub08; C[7] = problem.C08; e[7] = problem.e08;
-	f[8] = problem.f09; lb[8] = problem.lb09; ub[8] = problem.ub09; C[8] = problem.C09; e[8] = problem.e09;
-	f[9] = problem.f10; lb[9] = problem.lb10; ub[9] = problem.ub10; C[9] = problem.C10; e[9] = problem.e10;
-	f[10] = problem.f11; lb[10] = problem.lb11; ub[10] = problem.ub11; C[10] = problem.C11; e[10] = problem.e11;
-	f[11] = problem.f12; lb[11] = problem.lb12; ub[11] = problem.ub12; C[11] = problem.C12; e[11] = problem.e12;
-	f[12] = problem.f13; lb[12] = problem.lb13; ub[12] = problem.ub13; C[12] = problem.C13; e[12] = problem.e13;
-	f[13] = problem.f14; lb[13] = problem.lb14; ub[13] = problem.ub14; C[13] = problem.C14; e[13] = problem.e14;
-	f[14] = problem.f15; lb[14] = problem.lb15; ub[14] = problem.ub15;                      e[14] = problem.e15;
+#define SET_VARS(n)    \
+		f[ BOOST_PP_SUB(n,1) ] = problem.f##n ;  \
+		lb[ BOOST_PP_SUB(n,1) ] = problem.lb##n ;	\
+		ub[ BOOST_PP_SUB(n,1) ] = problem.ub##n ;	\
+		C[ BOOST_PP_SUB(n,1) ] = problem.C##n ; \
+		e[ BOOST_PP_SUB(n,1) ] = problem.e##n ;  \
+		z[ BOOST_PP_SUB(n,1) ] = output.z##n ;
 
-	z[0] = output.z1; z[1] = output.z2; z[2] = output.z3; z[3] = output.z4; z[4] = output.z5;
-	z[5] = output.z6; z[6] = output.z7; z[7] = output.z8; z[8] = output.z9; z[9] = output.z10; 
-	z[10] = output.z11; z[11] = output.z12; z[12] = output.z13; z[13] = output.z14; z[14] = output.z15; 
+#define BOOST_PP_LOCAL_MACRO(n) SET_VARS(n)
+#define BOOST_PP_LOCAL_LIMITS (1, TIMESTEPS-1)
+#include BOOST_PP_LOCAL_ITERATE()
+
+#define SET_LAST_VARS(n)    \
+		f[ BOOST_PP_SUB(n,1) ] = problem.f##n ;  \
+		lb[ BOOST_PP_SUB(n,1) ] = problem.lb##n ;	\
+		ub[ BOOST_PP_SUB(n,1) ] = problem.ub##n ;	\
+		e[ BOOST_PP_SUB(n,1) ] = problem.e##n ;  \
+		z[ BOOST_PP_SUB(n,1) ] = output.z##n ;
+
+#define BOOST_PP_LOCAL_MACRO(n) SET_LAST_VARS(n)
+#define BOOST_PP_LOCAL_LIMITS (TIMESTEPS, TIMESTEPS)
+#include BOOST_PP_LOCAL_ITERATE()
+
 }
 
 void setupDstarInterface() 

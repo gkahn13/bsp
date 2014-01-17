@@ -2,51 +2,51 @@
 %
 %   OUTPUT = lpMPC(PARAMS) solves a multistage problem
 %   subject to the parameters supplied in the following struct:
-%       PARAMS.f01 - column vector of length 4
-%       PARAMS.lb01 - column vector of length 4
-%       PARAMS.ub01 - column vector of length 4
-%       PARAMS.C01 - matrix of size [2 x 4]
-%       PARAMS.e01 - column vector of length 2
-%       PARAMS.f02 - column vector of length 4
-%       PARAMS.lb02 - column vector of length 4
-%       PARAMS.ub02 - column vector of length 4
-%       PARAMS.C02 - matrix of size [2 x 4]
-%       PARAMS.e02 - column vector of length 2
-%       PARAMS.f03 - column vector of length 4
-%       PARAMS.lb03 - column vector of length 4
-%       PARAMS.ub03 - column vector of length 4
-%       PARAMS.C03 - matrix of size [2 x 4]
-%       PARAMS.e03 - column vector of length 2
-%       PARAMS.f04 - column vector of length 4
-%       PARAMS.lb04 - column vector of length 4
-%       PARAMS.ub04 - column vector of length 4
-%       PARAMS.C04 - matrix of size [2 x 4]
-%       PARAMS.e04 - column vector of length 2
-%       PARAMS.f05 - column vector of length 4
-%       PARAMS.lb05 - column vector of length 4
-%       PARAMS.ub05 - column vector of length 4
-%       PARAMS.C05 - matrix of size [2 x 4]
-%       PARAMS.e05 - column vector of length 2
-%       PARAMS.f06 - column vector of length 4
-%       PARAMS.lb06 - column vector of length 4
-%       PARAMS.ub06 - column vector of length 4
-%       PARAMS.C06 - matrix of size [2 x 4]
-%       PARAMS.e06 - column vector of length 2
-%       PARAMS.f07 - column vector of length 4
-%       PARAMS.lb07 - column vector of length 4
-%       PARAMS.ub07 - column vector of length 4
-%       PARAMS.C07 - matrix of size [2 x 4]
-%       PARAMS.e07 - column vector of length 2
-%       PARAMS.f08 - column vector of length 4
-%       PARAMS.lb08 - column vector of length 4
-%       PARAMS.ub08 - column vector of length 4
-%       PARAMS.C08 - matrix of size [2 x 4]
-%       PARAMS.e08 - column vector of length 2
-%       PARAMS.f09 - column vector of length 4
-%       PARAMS.lb09 - column vector of length 4
-%       PARAMS.ub09 - column vector of length 4
-%       PARAMS.C09 - matrix of size [2 x 4]
-%       PARAMS.e09 - column vector of length 2
+%       PARAMS.f1 - column vector of length 4
+%       PARAMS.lb1 - column vector of length 4
+%       PARAMS.ub1 - column vector of length 4
+%       PARAMS.C1 - matrix of size [2 x 4]
+%       PARAMS.e1 - column vector of length 2
+%       PARAMS.f2 - column vector of length 4
+%       PARAMS.lb2 - column vector of length 4
+%       PARAMS.ub2 - column vector of length 4
+%       PARAMS.C2 - matrix of size [2 x 4]
+%       PARAMS.e2 - column vector of length 2
+%       PARAMS.f3 - column vector of length 4
+%       PARAMS.lb3 - column vector of length 4
+%       PARAMS.ub3 - column vector of length 4
+%       PARAMS.C3 - matrix of size [2 x 4]
+%       PARAMS.e3 - column vector of length 2
+%       PARAMS.f4 - column vector of length 4
+%       PARAMS.lb4 - column vector of length 4
+%       PARAMS.ub4 - column vector of length 4
+%       PARAMS.C4 - matrix of size [2 x 4]
+%       PARAMS.e4 - column vector of length 2
+%       PARAMS.f5 - column vector of length 4
+%       PARAMS.lb5 - column vector of length 4
+%       PARAMS.ub5 - column vector of length 4
+%       PARAMS.C5 - matrix of size [2 x 4]
+%       PARAMS.e5 - column vector of length 2
+%       PARAMS.f6 - column vector of length 4
+%       PARAMS.lb6 - column vector of length 4
+%       PARAMS.ub6 - column vector of length 4
+%       PARAMS.C6 - matrix of size [2 x 4]
+%       PARAMS.e6 - column vector of length 2
+%       PARAMS.f7 - column vector of length 4
+%       PARAMS.lb7 - column vector of length 4
+%       PARAMS.ub7 - column vector of length 4
+%       PARAMS.C7 - matrix of size [2 x 4]
+%       PARAMS.e7 - column vector of length 2
+%       PARAMS.f8 - column vector of length 4
+%       PARAMS.lb8 - column vector of length 4
+%       PARAMS.ub8 - column vector of length 4
+%       PARAMS.C8 - matrix of size [2 x 4]
+%       PARAMS.e8 - column vector of length 2
+%       PARAMS.f9 - column vector of length 4
+%       PARAMS.lb9 - column vector of length 4
+%       PARAMS.ub9 - column vector of length 4
+%       PARAMS.C9 - matrix of size [2 x 4]
+%       PARAMS.e9 - column vector of length 2
 %       PARAMS.f10 - column vector of length 4
 %       PARAMS.lb10 - column vector of length 4
 %       PARAMS.ub10 - column vector of length 4

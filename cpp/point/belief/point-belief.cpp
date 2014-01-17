@@ -28,6 +28,7 @@ beliefMPC_FLOAT **lb, **ub, **C, **e, **z;
 #endif
 }
 
+#define TIMESTEPS 15
 #define DT 1.0
 #define X_DIM 2
 #define U_DIM 2
@@ -46,7 +47,7 @@ Matrix<X_DIM> xGoal;
 Matrix<X_DIM> xMin, xMax;
 Matrix<U_DIM> uMin, uMax;
 
-#define T 15 // for MACRO
+const int T = 15;
 const double INFTY = 1e10;
 const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 1;
 
@@ -214,7 +215,6 @@ void linearizeBeliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u, Mat
 }
 
 #ifdef BELIEF_MPC
-// TODO: Find better way to do this using macro expansions?
 void setupBeliefVars(beliefMPC_params& problem, beliefMPC_output& output)
 {
 	lb = new beliefMPC_FLOAT*[T];
@@ -222,6 +222,18 @@ void setupBeliefVars(beliefMPC_params& problem, beliefMPC_output& output)
 	C = new beliefMPC_FLOAT*[T-1];
 	e = new beliefMPC_FLOAT*[T-1];
 	z = new beliefMPC_FLOAT*[T];
+
+#define SET_VARS(n)    \
+		C[ BOOST_PP_SUB(n,1) ] = problem.C##n ;  \
+		e[ BOOST_PP_SUB(n,1) ] = problem.e##n ;  \
+		lb[ BOOST_PP_SUB(n,1) ] = problem.lb##n ;	\
+		ub[ BOOST_PP_SUB(n,1) ] = problem.ub##n ;	\
+		z[ BOOST_PP_SUB(n,1) ] = output.z##n ;
+
+#define BOOST_PP_LOCAL_MACRO(n) SET_VARS(n)
+#define BOOST_PP_LOCAL_LIMITS (1, TIMESTEPS-1)
+#include BOOST_PP_LOCAL_ITERATE()
+
 #endif
 
 #ifdef BELIEF_PENALTY_MPC
@@ -233,8 +245,6 @@ void setupBeliefVars(beliefPenaltyMPC_params& problem, beliefPenaltyMPC_output& 
 	C = new beliefPenaltyMPC_FLOAT*[T-1];
 	e = new beliefPenaltyMPC_FLOAT*[T-1];
 	z = new beliefPenaltyMPC_FLOAT*[T];
-#endif
-
 
 #define SET_VARS(n)    \
 		f[ BOOST_PP_SUB(n,1) ] = problem.f##n ;  \
@@ -245,8 +255,10 @@ void setupBeliefVars(beliefPenaltyMPC_params& problem, beliefPenaltyMPC_output& 
 		z[ BOOST_PP_SUB(n,1) ] = output.z##n ;
 
 #define BOOST_PP_LOCAL_MACRO(n) SET_VARS(n)
-#define BOOST_PP_LOCAL_LIMITS (1, T-1)
+#define BOOST_PP_LOCAL_LIMITS (1, TIMESTEPS-1)
 #include BOOST_PP_LOCAL_ITERATE()
+
+#endif
 
 #define SET_LAST_VARS(n)    \
 		lb[ BOOST_PP_SUB(n,1) ] = problem.lb##n ;	\
@@ -254,30 +266,9 @@ void setupBeliefVars(beliefPenaltyMPC_params& problem, beliefPenaltyMPC_output& 
 		z[ BOOST_PP_SUB(n,1) ] = output.z##n ;
 
 #define BOOST_PP_LOCAL_MACRO(n) SET_LAST_VARS(n)
-#define BOOST_PP_LOCAL_LIMITS (T, T)
+#define BOOST_PP_LOCAL_LIMITS (TIMESTEPS, TIMESTEPS)
 #include BOOST_PP_LOCAL_ITERATE()
 
-	/*
-	f[0] = problem.f1; lb[0] = problem.lb1; ub[0] = problem.ub1; C[0] = problem.C1; e[0] = problem.e1;
-	f[1] = problem.f2; lb[1] = problem.lb2; ub[1] = problem.ub2; C[1] = problem.C2; e[1] = problem.e2;
-	f[2] = problem.f3; lb[2] = problem.lb3; ub[2] = problem.ub3; C[2] = problem.C3; e[2] = problem.e3;
-	f[3] = problem.f4; lb[3] = problem.lb4; ub[3] = problem.ub4; C[3] = problem.C4; e[3] = problem.e4;
-	f[4] = problem.f5; lb[4] = problem.lb5; ub[4] = problem.ub5; C[4] = problem.C5; e[4] = problem.e5;
-	f[5] = problem.f6; lb[5] = problem.lb6; ub[5] = problem.ub6; C[5] = problem.C6; e[5] = problem.e6;
-	f[6] = problem.f7; lb[6] = problem.lb7; ub[6] = problem.ub7; C[6] = problem.C7; e[6] = problem.e7;
-	f[7] = problem.f8; lb[7] = problem.lb8; ub[7] = problem.ub8; C[7] = problem.C8; e[7] = problem.e8;
-	f[8] = problem.f9; lb[8] = problem.lb9; ub[8] = problem.ub9; C[8] = problem.C9; e[8] = problem.e9;
-	f[9] = problem.f10; lb[9] = problem.lb10; ub[9] = problem.ub10; C[9] = problem.C10; e[9] = problem.e10;
-	f[10] = problem.f11; lb[10] = problem.lb11; ub[10] = problem.ub11; C[10] = problem.C11; e[10] = problem.e11;
-	f[11] = problem.f12; lb[11] = problem.lb12; ub[11] = problem.ub12; C[11] = problem.C12; e[11] = problem.e12;
-	f[12] = problem.f13; lb[12] = problem.lb13; ub[12] = problem.ub13; C[12] = problem.C13; e[12] = problem.e13;
-	f[13] = problem.f14; lb[13] = problem.lb14; ub[13] = problem.ub14; C[13] = problem.C14; e[13] = problem.e14;
-	lb[14] = problem.lb15; ub[14] = problem.ub15;
-
-	z[0] = output.z1; z[1] = output.z2; z[2] = output.z3; z[3] = output.z4; z[4] = output.z5;
-	z[5] = output.z6; z[6] = output.z7; z[7] = output.z8; z[8] = output.z9; z[9] = output.z10;
-	z[10] = output.z11; z[11] = output.z12; z[12] = output.z13; z[13] = output.z14; z[14] = output.z15;
-	*/
 }
 
 void cleanupBeliefMPCVars()

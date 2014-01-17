@@ -85,139 +85,139 @@ typedef double lpMPC_FLOAT;
 typedef struct lpMPC_params
 {
     /* vector of size 4 */
-    lpMPC_FLOAT f01[4];
+    lpMPC_FLOAT f1[4];
 
     /* vector of size 4 */
-    lpMPC_FLOAT lb01[4];
+    lpMPC_FLOAT lb1[4];
 
     /* vector of size 4 */
-    lpMPC_FLOAT ub01[4];
+    lpMPC_FLOAT ub1[4];
 
     /* matrix of size [2 x 4] (column major format) */
-    lpMPC_FLOAT C01[8];
+    lpMPC_FLOAT C1[8];
 
     /* vector of size 2 */
-    lpMPC_FLOAT e01[2];
+    lpMPC_FLOAT e1[2];
 
     /* vector of size 4 */
-    lpMPC_FLOAT f02[4];
+    lpMPC_FLOAT f2[4];
 
     /* vector of size 4 */
-    lpMPC_FLOAT lb02[4];
+    lpMPC_FLOAT lb2[4];
 
     /* vector of size 4 */
-    lpMPC_FLOAT ub02[4];
+    lpMPC_FLOAT ub2[4];
 
     /* matrix of size [2 x 4] (column major format) */
-    lpMPC_FLOAT C02[8];
+    lpMPC_FLOAT C2[8];
 
     /* vector of size 2 */
-    lpMPC_FLOAT e02[2];
+    lpMPC_FLOAT e2[2];
 
     /* vector of size 4 */
-    lpMPC_FLOAT f03[4];
+    lpMPC_FLOAT f3[4];
 
     /* vector of size 4 */
-    lpMPC_FLOAT lb03[4];
+    lpMPC_FLOAT lb3[4];
 
     /* vector of size 4 */
-    lpMPC_FLOAT ub03[4];
+    lpMPC_FLOAT ub3[4];
 
     /* matrix of size [2 x 4] (column major format) */
-    lpMPC_FLOAT C03[8];
+    lpMPC_FLOAT C3[8];
 
     /* vector of size 2 */
-    lpMPC_FLOAT e03[2];
+    lpMPC_FLOAT e3[2];
 
     /* vector of size 4 */
-    lpMPC_FLOAT f04[4];
+    lpMPC_FLOAT f4[4];
 
     /* vector of size 4 */
-    lpMPC_FLOAT lb04[4];
+    lpMPC_FLOAT lb4[4];
 
     /* vector of size 4 */
-    lpMPC_FLOAT ub04[4];
+    lpMPC_FLOAT ub4[4];
 
     /* matrix of size [2 x 4] (column major format) */
-    lpMPC_FLOAT C04[8];
+    lpMPC_FLOAT C4[8];
 
     /* vector of size 2 */
-    lpMPC_FLOAT e04[2];
+    lpMPC_FLOAT e4[2];
 
     /* vector of size 4 */
-    lpMPC_FLOAT f05[4];
+    lpMPC_FLOAT f5[4];
 
     /* vector of size 4 */
-    lpMPC_FLOAT lb05[4];
+    lpMPC_FLOAT lb5[4];
 
     /* vector of size 4 */
-    lpMPC_FLOAT ub05[4];
+    lpMPC_FLOAT ub5[4];
 
     /* matrix of size [2 x 4] (column major format) */
-    lpMPC_FLOAT C05[8];
+    lpMPC_FLOAT C5[8];
 
     /* vector of size 2 */
-    lpMPC_FLOAT e05[2];
+    lpMPC_FLOAT e5[2];
 
     /* vector of size 4 */
-    lpMPC_FLOAT f06[4];
+    lpMPC_FLOAT f6[4];
 
     /* vector of size 4 */
-    lpMPC_FLOAT lb06[4];
+    lpMPC_FLOAT lb6[4];
 
     /* vector of size 4 */
-    lpMPC_FLOAT ub06[4];
+    lpMPC_FLOAT ub6[4];
 
     /* matrix of size [2 x 4] (column major format) */
-    lpMPC_FLOAT C06[8];
+    lpMPC_FLOAT C6[8];
 
     /* vector of size 2 */
-    lpMPC_FLOAT e06[2];
+    lpMPC_FLOAT e6[2];
 
     /* vector of size 4 */
-    lpMPC_FLOAT f07[4];
+    lpMPC_FLOAT f7[4];
 
     /* vector of size 4 */
-    lpMPC_FLOAT lb07[4];
+    lpMPC_FLOAT lb7[4];
 
     /* vector of size 4 */
-    lpMPC_FLOAT ub07[4];
+    lpMPC_FLOAT ub7[4];
 
     /* matrix of size [2 x 4] (column major format) */
-    lpMPC_FLOAT C07[8];
+    lpMPC_FLOAT C7[8];
 
     /* vector of size 2 */
-    lpMPC_FLOAT e07[2];
+    lpMPC_FLOAT e7[2];
 
     /* vector of size 4 */
-    lpMPC_FLOAT f08[4];
+    lpMPC_FLOAT f8[4];
 
     /* vector of size 4 */
-    lpMPC_FLOAT lb08[4];
+    lpMPC_FLOAT lb8[4];
 
     /* vector of size 4 */
-    lpMPC_FLOAT ub08[4];
+    lpMPC_FLOAT ub8[4];
 
     /* matrix of size [2 x 4] (column major format) */
-    lpMPC_FLOAT C08[8];
+    lpMPC_FLOAT C8[8];
 
     /* vector of size 2 */
-    lpMPC_FLOAT e08[2];
+    lpMPC_FLOAT e8[2];
 
     /* vector of size 4 */
-    lpMPC_FLOAT f09[4];
+    lpMPC_FLOAT f9[4];
 
     /* vector of size 4 */
-    lpMPC_FLOAT lb09[4];
+    lpMPC_FLOAT lb9[4];
 
     /* vector of size 4 */
-    lpMPC_FLOAT ub09[4];
+    lpMPC_FLOAT ub9[4];
 
     /* matrix of size [2 x 4] (column major format) */
-    lpMPC_FLOAT C09[8];
+    lpMPC_FLOAT C9[8];
 
     /* vector of size 2 */
-    lpMPC_FLOAT e09[2];
+    lpMPC_FLOAT e9[2];
 
     /* vector of size 4 */
     lpMPC_FLOAT f10[4];

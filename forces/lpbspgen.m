@@ -15,7 +15,7 @@ stages = MultistageProblem(N+1);
 
 % first stage
 i=1;
-istr = sprintf('%02d',i);
+istr = sprintf('%d',i);
 
 % dimensions
 stages(i).dims.n = nx+nu;           % number of stage variables
@@ -42,7 +42,7 @@ params(end+1) = newParam(['e',istr], i, 'eq.c');
 stages(i).eq.D = [eye(nx), zeros(nx,nu)];
 
 for i = 2:N
-    istr = sprintf('%02d',i);
+    istr = sprintf('%d',i);
     
     % dimension
     stages(i).dims.n = nx+nu;    % number of stage variables
@@ -72,7 +72,7 @@ end
 
 % final stage
 i = N+1;
-istr = sprintf('%02d',i);
+istr = sprintf('%d',i);
 
 % dimension
 stages(i).dims.n = nx;    % number of stage variables

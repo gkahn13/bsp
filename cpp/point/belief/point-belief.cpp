@@ -3,6 +3,7 @@
 #include "util/matrix.h"
 #include "util/utils.h"
 #include "util/Timer.h"
+#include "util/logging.h"
 
 #include <Python.h>
 #include <boost/python.hpp>
@@ -228,7 +229,7 @@ void cleanupBeliefMPCVars()
 	delete[] z;
 }
 
-void beliefCollocation(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U, beliefMPC_params& problem, beliefMPC_output& output, beliefMPC_info& info)
+double beliefCollocation(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U, beliefMPC_params& problem, beliefMPC_output& output, beliefMPC_info& info)
 {
 	int maxIter = 10;
 	double Beps = 1;
@@ -353,10 +354,10 @@ void beliefCollocation(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DI
 			}
 		}
 		else {
-			std::cerr << "Some problem in solver" << std::endl;
+			LOG_ERROR("Some problem in solver");
 			std::exit(-1);
 		}
-		std::cout << "Optimized cost: " << optcost << std::endl;
+		LOG_DEBUG("Optimized cost: %4.10f", optcost);
 
 		if ((optcost > prevcost) || (fabs(optcost - prevcost)/prevcost < 0.01))
 			break; 
@@ -369,6 +370,7 @@ void beliefCollocation(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DI
 		//int num;
 		//std::cin >> num;
 	}
+	return computeCost(B, U);
 
 }
 
@@ -394,7 +396,8 @@ void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matri
 		}
 	}
 
-	std::string workingDir = boost::filesystem::absolute("./").normalize().string();
+	std::string workingDir = boost::filesystem::current_path().normalize().string();
+	std::string bspDir = workingDir.substr(0,workingDir.find("bsp"));
 
 	try
 	{
@@ -402,7 +405,7 @@ void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matri
 		py::object main_module = py::import("__main__");
 		py::object main_namespace = main_module.attr("__dict__");
 		py::exec("import sys, os", main_namespace);
-		py::exec(py::str("sys.path.append('"+workingDir+"/../python')"), main_namespace);
+		py::exec(py::str("sys.path.append('"+bspDir+"bsp/python')"), main_namespace);
 		py::exec("from bsp_light_dark import LightDarkModel", main_namespace);
 		py::object model = py::eval("LightDarkModel()", main_namespace);
 		py::object plot_mod = py::import("plot");
@@ -452,19 +455,19 @@ int main(int argc, char* argv[])
 
 	setupBeliefMPCVars(problem, output);
 
-	util::Timer t;
-	t.start();
+	util::Timer solveTimer;
+	util::Timer_tic(&solveTimer);
 	
 	// B&U optimized in-place
-	beliefCollocation(B, U, problem, output, info);
+	double cost = beliefCollocation(B, U, problem, output, info);
 
-	t.stop();
-	std::cout << "Optimization time: " << t.getElapsedTimeInMilliSec() << " mS" << std::endl;
+	double solvetime = util::Timer_toc(&solveTimer);
+	LOG_INFO("Optimized cost: %4.10f", cost);
+	LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 	
 	cleanupBeliefMPCVars();
 
-	// Commented out because this does not work for me -- Sachin
-	pythonDisplayTrajectory(B, U);
+	//pythonDisplayTrajectory(B, U);
 
 	/*
 	for (size_t t = 0; t < T; ++t) {
@@ -472,8 +475,8 @@ int main(int argc, char* argv[])
 	}
 	*/
 
-	int k;
-	std::cin >> k;
+	//int k;
+	//std::cin >> k;
 
 	//CAL_End();
 	return 0;

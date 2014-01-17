@@ -19,11 +19,8 @@ LINKER_FLAGS = -lrt
 
 ###### UTIL ############
 
-$(OBJ_DIR)/Timer.o : util/Timer.cpp util/Timer.h
-	$(CXX) $(CPP_FLAGS) $(BFLAGS) -c -o $(OBJ_DIR)/Timer.o util/Timer.cpp
-
 $(OBJ_DIR)/logging.o : util/logging.cpp
-	$(CXX) $(CPP_FLAGS) $(BFLAGS) -c -o $(OBJ_DIR)/logging.o util/logging.cpp
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) -c -o $@ $^
 
 ###### POINT ##########
 
@@ -35,11 +32,11 @@ $(OBJ_DIR)/pt_symeval.o : $(PT_SYM_DIR)/symeval.c $(PT_SYM_DIR)/symeval.h
 
 # make point-belief
 PT_BELIEF_DIR = point/belief
-PT_BELIEF_FILES = beliefMPC Timer point-belief logging
+PT_BELIEF_FILES = beliefMPC point-belief logging
 PT_BELIEF_OBJS = $(PT_BELIEF_FILES:%=$(OBJ_DIR)/%.o)
 
 belief: $(PT_BELIEF_OBJS)
-	$(CXX) $(BFLAGS) $(PT_BELIEF_OBJS) -o $(BIN_DIR)/point-belief $(BOOST_FLAGS) $(PYTHON_FLAGS)
+	$(CXX) $(BFLAGS) $(PT_BELIEF_OBJS) -o $(BIN_DIR)/point-belief $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
 	
 $(OBJ_DIR)/beliefMPC.o : $(PT_BELIEF_DIR)/beliefMPC.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
@@ -50,11 +47,11 @@ $(OBJ_DIR)/point-belief.o : $(PT_BELIEF_DIR)/point-belief.cpp
 	
 # make point-state
 PT_STATE_DIR = point/state
-PT_STATE_FILES = stateMPC pt_symeval Timer point-state logging
+PT_STATE_FILES = stateMPC pt_symeval point-state logging
 PT_STATE_OBJS = $(PT_STATE_FILES:%=$(OBJ_DIR)/%.o)
 
 state: $(PT_STATE_OBJS)
-	$(CXX) $(BFLAGS) $(PT_STATE_OBJS) -o $(BIN_DIR)/point-state $(BOOST_FLAGS) $(PYTHON_FLAGS)
+	$(CXX) $(BFLAGS) $(PT_STATE_OBJS) -o $(BIN_DIR)/point-state $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
 
 $(OBJ_DIR)/stateMPC.o : $(PT_STATE_DIR)/stateMPC.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
@@ -65,11 +62,11 @@ $(OBJ_DIR)/point-state.o : $(PT_STATE_DIR)/point-state.cpp
 
 # make point-lp
 PT_LP_DIR = point/lp
-PT_LP_FILES = lpMPC pt_symeval Timer point-lp logging
+PT_LP_FILES = lpMPC pt_symeval point-lp logging
 PT_LP_OBJS = $(PT_LP_FILES:%=$(OBJ_DIR)/%.o)
 
 lp: $(PT_LP_OBJS)
-	$(CXX) $(BFLAGS) $(PT_LP_OBJS) -o $(BIN_DIR)/point-LP $(BOOST_FLAGS) $(PYTHON_FLAGS)
+	$(CXX) $(BFLAGS) $(PT_LP_OBJS) -o $(BIN_DIR)/point-lp $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
 
 $(OBJ_DIR)/lpMPC.o : $(PT_LP_DIR)/lpMPC.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^

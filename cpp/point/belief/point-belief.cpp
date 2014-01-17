@@ -12,8 +12,17 @@
 
 namespace py = boost::python;
 
+#define BELIEF_PENALTY_MPC
+//#define BELIEF_MPC
+
 extern "C" {
+#ifdef BELIEF_PENALTY_MPC
+#include "beliefPenaltyMPC.h"
+#endif
+
+#ifdef BELIEF_MPC
 #include "beliefMPC.h"
+#endif
 }
 
 #define DT 1.0
@@ -190,6 +199,7 @@ void linearizeBeliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u, Mat
 	h = beliefDynamics(b, u);
 }
 
+#ifdef BELIEF_MPC
 // TODO: Find better way to do this using macro expansions?
 void setupBeliefMPCVars(beliefMPC_params& problem, beliefMPC_output& output)
 {
@@ -198,16 +208,27 @@ void setupBeliefMPCVars(beliefMPC_params& problem, beliefMPC_output& output)
 	C = new beliefMPC_FLOAT*[T-1];
 	e = new beliefMPC_FLOAT*[T-1];
 	z = new beliefMPC_FLOAT*[T];
+#endif
 
-	lb[0] = problem.lb01; ub[0] = problem.ub01; C[0] = problem.C01; e[0] = problem.e01;
-	lb[1] = problem.lb02; ub[1] = problem.ub02; C[1] = problem.C02; e[1] = problem.e02;
-	lb[2] = problem.lb03; ub[2] = problem.ub03; C[2] = problem.C03; e[2] = problem.e03;
-	lb[3] = problem.lb04; ub[3] = problem.ub04; C[3] = problem.C04; e[3] = problem.e04;
-	lb[4] = problem.lb05; ub[4] = problem.ub05; C[4] = problem.C05; e[4] = problem.e05;
-	lb[5] = problem.lb06; ub[5] = problem.ub06; C[5] = problem.C06; e[5] = problem.e06;
-	lb[6] = problem.lb07; ub[6] = problem.ub07; C[6] = problem.C07; e[6] = problem.e07;
-	lb[7] = problem.lb08; ub[7] = problem.ub08; C[7] = problem.C08; e[7] = problem.e08;
-	lb[8] = problem.lb09; ub[8] = problem.ub09; C[8] = problem.C09; e[8] = problem.e09;
+#ifdef BELIEF_PENALTY_MPC
+void setupBeliefMPCVars(beliefPenaltyMPC_params& problem, beliefPenaltyMPC_output& output)
+{
+	lb = new beliefPenaltyMPC_FLOAT*[T];
+	ub = new beliefPenaltyMPC_FLOAT*[T];
+	C = new beliefPenaltyMPC_FLOAT*[T-1];
+	e = new beliefPenaltyMPC_FLOAT*[T-1];
+	z = new beliefPenaltyMPC_FLOAT*[T];
+#endif
+
+	lb[0] = problem.lb1; ub[0] = problem.ub1; C[0] = problem.C1; e[0] = problem.e1;
+	lb[1] = problem.lb2; ub[1] = problem.ub2; C[1] = problem.C2; e[1] = problem.e2;
+	lb[2] = problem.lb3; ub[2] = problem.ub3; C[2] = problem.C3; e[2] = problem.e3;
+	lb[3] = problem.lb4; ub[3] = problem.ub4; C[3] = problem.C4; e[3] = problem.e4;
+	lb[4] = problem.lb5; ub[4] = problem.ub5; C[4] = problem.C5; e[4] = problem.e5;
+	lb[5] = problem.lb6; ub[5] = problem.ub6; C[5] = problem.C6; e[5] = problem.e6;
+	lb[6] = problem.lb7; ub[6] = problem.ub7; C[6] = problem.C7; e[6] = problem.e7;
+	lb[7] = problem.lb8; ub[7] = problem.ub8; C[7] = problem.C8; e[7] = problem.e8;
+	lb[8] = problem.lb9; ub[8] = problem.ub9; C[8] = problem.C9; e[8] = problem.e9;
 	lb[9] = problem.lb10; ub[9] = problem.ub10; C[9] = problem.C10; e[9] = problem.e10;
 	lb[10] = problem.lb11; ub[10] = problem.ub11; C[10] = problem.C11; e[10] = problem.e11;
 	lb[11] = problem.lb12; ub[11] = problem.ub12; C[11] = problem.C12; e[11] = problem.e12;
@@ -216,8 +237,8 @@ void setupBeliefMPCVars(beliefMPC_params& problem, beliefMPC_output& output)
 	lb[14] = problem.lb15; ub[14] = problem.ub15;
 
 	z[0] = output.z1; z[1] = output.z2; z[2] = output.z3; z[3] = output.z4; z[4] = output.z5;
-	z[5] = output.z6; z[6] = output.z7; z[7] = output.z8; z[8] = output.z9; z[9] = output.z10; 
-	z[10] = output.z11; z[11] = output.z12; z[12] = output.z13; z[13] = output.z14; z[14] = output.z15; 
+	z[5] = output.z6; z[6] = output.z7; z[7] = output.z8; z[8] = output.z9; z[9] = output.z10;
+	z[10] = output.z11; z[11] = output.z12; z[12] = output.z13; z[13] = output.z14; z[14] = output.z15;
 }
 
 void cleanupBeliefMPCVars()
@@ -229,6 +250,21 @@ void cleanupBeliefMPCVars()
 	delete[] z;
 }
 
+#ifdef BELIEF_PENALTY_MPC
+double beliefPenaltyCollocation(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U, beliefMPC_params& problem, beliefMPC_output& output, beliefMPC_info& info)
+{
+
+
+
+
+
+
+
+
+}
+#endif
+
+#ifdef BELIEF_MPC
 double beliefCollocation(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U, beliefMPC_params& problem, beliefMPC_output& output, beliefMPC_info& info)
 {
 	int maxIter = 10;
@@ -373,6 +409,7 @@ double beliefCollocation(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_
 	return computeCost(B, U);
 
 }
+#endif
 
 // default for unix
 // requires path to Python bsp already be on PYTHONPATH
@@ -449,9 +486,17 @@ int main(int argc, char* argv[])
 	//	std::cout << ~B[t];
 	//}
 
+#ifdef BELIEF_MPC
 	beliefMPC_params problem;
 	beliefMPC_output output;
 	beliefMPC_info info;
+#endif
+
+#ifdef BELIEF_PENALTY_MPC
+	beliefPenaltyMPC_params problem;
+	beliefPenaltyMPC_output output;
+	beliefPenaltyMPC_info info;
+#endif
 
 	setupBeliefMPCVars(problem, output);
 
@@ -459,7 +504,13 @@ int main(int argc, char* argv[])
 	util::Timer_tic(&solveTimer);
 	
 	// B&U optimized in-place
+#ifdef BELIEF_MPC
 	double cost = beliefCollocation(B, U, problem, output, info);
+#endif
+
+#ifdef BELIEF_PENALTY_MPC
+	double cost = beliefPenaltyCollocation(B, U, problem, output, info);
+#endif
 
 	double solvetime = util::Timer_toc(&solveTimer);
 	LOG_INFO("Optimized cost: %4.10f", cost);

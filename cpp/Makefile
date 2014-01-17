@@ -12,7 +12,7 @@ OBJ_DIR = build/$(BUILD)
 BIN_DIR = bin/$(BUILD)
 
 C_FLAGS = -std=gnu99
-CPP_FLAGS = -std=c++0x
+CPP_FLAGS = -std=c++0x -I.
 PYTHON_FLAGS = -I/usr/include/python2.7 -lpython2.7
 BOOST_FLAGS = -lboost_python -lboost_filesystem -lboost_system
 LINKER_FLAGS = -lrt

@@ -8,7 +8,7 @@ close all;
 clear all;
 
 % problem setup
-N = 39;
+N = 19;
 nx = 2;
 ns = 3;
 nb = 5;

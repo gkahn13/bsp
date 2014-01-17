@@ -24,7 +24,7 @@ extern "C" {
 #include "controlMPC.h"
 }
 
-#define TIMESTEPS 15
+#define TIMESTEPS 10
 #define DT 1.0
 #define X_DIM 2
 #define U_DIM 2
@@ -213,7 +213,7 @@ void setupDstarInterface()
 
 	inputVars = new double[nvars];
 
-	std::ifstream fptr("point/control-masks-15.txt");
+	std::ifstream fptr("point/control-masks.txt");
 	if(!fptr.is_open()) {
 		LOG_FATAL("Mask file handle not opened, check!, exiting");
 		std::exit(-1);

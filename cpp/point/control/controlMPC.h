@@ -40,13 +40,13 @@ typedef double controlMPC_FLOAT;
 /* #define PRINTNUMERICALWARNINGS */
 
 /* maximum number of iterations  */
-#define controlMPC_SET_MAXIT         (30)
+#define controlMPC_SET_MAXIT         (30)	
 
 /* scaling factor of line search (affine direction) */
-#define controlMPC_SET_LS_SCALE_AFF  (0.9)
+#define controlMPC_SET_LS_SCALE_AFF  (0.9)      
 
 /* scaling factor of line search (combined direction) */
-#define controlMPC_SET_LS_SCALE      (0.95)
+#define controlMPC_SET_LS_SCALE      (0.95)  
 
 /* minimum required step size in each iteration */
 #define controlMPC_SET_LS_MINSTEP    (1E-08)
@@ -192,66 +192,6 @@ typedef struct controlMPC_params
     /* vector of size 2 */
     controlMPC_FLOAT ub9[2];
 
-    /* diagonal matrix of size [2 x 2] (only the diagonal is stored) */
-    controlMPC_FLOAT H10[2];
-
-    /* vector of size 2 */
-    controlMPC_FLOAT f10[2];
-
-    /* vector of size 2 */
-    controlMPC_FLOAT lb10[2];
-
-    /* vector of size 2 */
-    controlMPC_FLOAT ub10[2];
-
-    /* diagonal matrix of size [2 x 2] (only the diagonal is stored) */
-    controlMPC_FLOAT H11[2];
-
-    /* vector of size 2 */
-    controlMPC_FLOAT f11[2];
-
-    /* vector of size 2 */
-    controlMPC_FLOAT lb11[2];
-
-    /* vector of size 2 */
-    controlMPC_FLOAT ub11[2];
-
-    /* diagonal matrix of size [2 x 2] (only the diagonal is stored) */
-    controlMPC_FLOAT H12[2];
-
-    /* vector of size 2 */
-    controlMPC_FLOAT f12[2];
-
-    /* vector of size 2 */
-    controlMPC_FLOAT lb12[2];
-
-    /* vector of size 2 */
-    controlMPC_FLOAT ub12[2];
-
-    /* diagonal matrix of size [2 x 2] (only the diagonal is stored) */
-    controlMPC_FLOAT H13[2];
-
-    /* vector of size 2 */
-    controlMPC_FLOAT f13[2];
-
-    /* vector of size 2 */
-    controlMPC_FLOAT lb13[2];
-
-    /* vector of size 2 */
-    controlMPC_FLOAT ub13[2];
-
-    /* diagonal matrix of size [2 x 2] (only the diagonal is stored) */
-    controlMPC_FLOAT H14[2];
-
-    /* vector of size 2 */
-    controlMPC_FLOAT f14[2];
-
-    /* vector of size 2 */
-    controlMPC_FLOAT lb14[2];
-
-    /* vector of size 2 */
-    controlMPC_FLOAT ub14[2];
-
 } controlMPC_params;
 
 
@@ -286,21 +226,6 @@ typedef struct controlMPC_output
     /* vector of size 2 */
     controlMPC_FLOAT z9[2];
 
-    /* vector of size 2 */
-    controlMPC_FLOAT z10[2];
-
-    /* vector of size 2 */
-    controlMPC_FLOAT z11[2];
-
-    /* vector of size 2 */
-    controlMPC_FLOAT z12[2];
-
-    /* vector of size 2 */
-    controlMPC_FLOAT z13[2];
-
-    /* vector of size 2 */
-    controlMPC_FLOAT z14[2];
-
 } controlMPC_output;
 
 
@@ -310,48 +235,48 @@ typedef struct controlMPC_info
 {
     /* iteration number */
     int it;
-
+	
     /* inf-norm of equality constraint residuals */
     controlMPC_FLOAT res_eq;
-
+	
     /* inf-norm of inequality constraint residuals */
     controlMPC_FLOAT res_ineq;
 
     /* primal objective */
-    controlMPC_FLOAT pobj;
-
+    controlMPC_FLOAT pobj;	
+	
     /* dual objective */
-    controlMPC_FLOAT dobj;
+    controlMPC_FLOAT dobj;	
 
     /* duality gap := pobj - dobj */
-    controlMPC_FLOAT dgap;
-
+    controlMPC_FLOAT dgap;		
+	
     /* relative duality gap := |dgap / pobj | */
-    controlMPC_FLOAT rdgap;
+    controlMPC_FLOAT rdgap;		
 
     /* duality measure */
     controlMPC_FLOAT mu;
 
 	/* duality measure (after affine step) */
     controlMPC_FLOAT mu_aff;
-
+	
     /* centering parameter */
     controlMPC_FLOAT sigma;
-
+	
     /* number of backtracking line search steps (affine direction) */
     int lsit_aff;
-
+    
     /* number of backtracking line search steps (combined direction) */
     int lsit_cc;
-
+    
     /* step size (affine direction) */
     controlMPC_FLOAT step_aff;
-
+    
     /* step size (combined direction) */
-    controlMPC_FLOAT step_cc;
+    controlMPC_FLOAT step_cc;    
 
 	/* solvertime */
-	controlMPC_FLOAT solvetime;
+	controlMPC_FLOAT solvetime;   
 
 } controlMPC_info;
 

@@ -8,7 +8,7 @@ close all;
 clear all;
 
 % problem setup
-N = 14;
+N = 39;
 nu = 2;
 stages = MultistageProblem(N);
 

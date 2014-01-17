@@ -199,7 +199,10 @@ void setupStateMPCVars(stateMPC_params& problem, stateMPC_output& output)
 
 #define BOOST_PP_LOCAL_MACRO(n) SET_VARS_0_TO_9(n)
 #if TIMESTEPS>9
-#define BOOST_PP_LOCAL_LIMITS (1, 9)
+#define BOOST_PP_LOCAL_LIMITS (1, 9)cfg.max_penalty_coeff_increases = 3;
+cfg.penalty_coeff_increase_ratio = 10;
+cfg.initial_trust_box_size = 5;
+cfg.initial_penalty_coeff = 50;
 #else
 #define BOOST_PP_LOCAL_LIMITS (1, TIMESTEPS)
 #endif

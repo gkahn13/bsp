@@ -28,7 +28,7 @@ typedef double beliefPenaltyMPC_FLOAT;
 /* SOLVER SETTINGS ------------------------------------------------------*/
 /* print level */
 #ifndef beliefPenaltyMPC_SET_PRINTLEVEL
-#define beliefPenaltyMPC_SET_PRINTLEVEL    (2)
+#define beliefPenaltyMPC_SET_PRINTLEVEL    (0)
 #endif
 
 /* timing */
@@ -85,6 +85,9 @@ typedef double beliefPenaltyMPC_FLOAT;
 typedef struct beliefPenaltyMPC_params
 {
     /* vector of size 17 */
+    beliefPenaltyMPC_FLOAT f1[17];
+
+    /* vector of size 17 */
     beliefPenaltyMPC_FLOAT lb1[17];
 
     /* vector of size 7 */
@@ -95,6 +98,9 @@ typedef struct beliefPenaltyMPC_params
 
     /* vector of size 10 */
     beliefPenaltyMPC_FLOAT e1[10];
+
+    /* vector of size 17 */
+    beliefPenaltyMPC_FLOAT f2[17];
 
     /* vector of size 17 */
     beliefPenaltyMPC_FLOAT lb2[17];
@@ -109,6 +115,9 @@ typedef struct beliefPenaltyMPC_params
     beliefPenaltyMPC_FLOAT e2[5];
 
     /* vector of size 17 */
+    beliefPenaltyMPC_FLOAT f3[17];
+
+    /* vector of size 17 */
     beliefPenaltyMPC_FLOAT lb3[17];
 
     /* vector of size 7 */
@@ -119,6 +128,9 @@ typedef struct beliefPenaltyMPC_params
 
     /* vector of size 5 */
     beliefPenaltyMPC_FLOAT e3[5];
+
+    /* vector of size 17 */
+    beliefPenaltyMPC_FLOAT f4[17];
 
     /* vector of size 17 */
     beliefPenaltyMPC_FLOAT lb4[17];
@@ -133,6 +145,9 @@ typedef struct beliefPenaltyMPC_params
     beliefPenaltyMPC_FLOAT e4[5];
 
     /* vector of size 17 */
+    beliefPenaltyMPC_FLOAT f5[17];
+
+    /* vector of size 17 */
     beliefPenaltyMPC_FLOAT lb5[17];
 
     /* vector of size 7 */
@@ -143,6 +158,9 @@ typedef struct beliefPenaltyMPC_params
 
     /* vector of size 5 */
     beliefPenaltyMPC_FLOAT e5[5];
+
+    /* vector of size 17 */
+    beliefPenaltyMPC_FLOAT f6[17];
 
     /* vector of size 17 */
     beliefPenaltyMPC_FLOAT lb6[17];
@@ -157,6 +175,9 @@ typedef struct beliefPenaltyMPC_params
     beliefPenaltyMPC_FLOAT e6[5];
 
     /* vector of size 17 */
+    beliefPenaltyMPC_FLOAT f7[17];
+
+    /* vector of size 17 */
     beliefPenaltyMPC_FLOAT lb7[17];
 
     /* vector of size 7 */
@@ -167,6 +188,9 @@ typedef struct beliefPenaltyMPC_params
 
     /* vector of size 5 */
     beliefPenaltyMPC_FLOAT e7[5];
+
+    /* vector of size 17 */
+    beliefPenaltyMPC_FLOAT f8[17];
 
     /* vector of size 17 */
     beliefPenaltyMPC_FLOAT lb8[17];
@@ -181,6 +205,9 @@ typedef struct beliefPenaltyMPC_params
     beliefPenaltyMPC_FLOAT e8[5];
 
     /* vector of size 17 */
+    beliefPenaltyMPC_FLOAT f9[17];
+
+    /* vector of size 17 */
     beliefPenaltyMPC_FLOAT lb9[17];
 
     /* vector of size 7 */
@@ -191,6 +218,9 @@ typedef struct beliefPenaltyMPC_params
 
     /* vector of size 5 */
     beliefPenaltyMPC_FLOAT e9[5];
+
+    /* vector of size 17 */
+    beliefPenaltyMPC_FLOAT f10[17];
 
     /* vector of size 17 */
     beliefPenaltyMPC_FLOAT lb10[17];
@@ -205,6 +235,9 @@ typedef struct beliefPenaltyMPC_params
     beliefPenaltyMPC_FLOAT e10[5];
 
     /* vector of size 17 */
+    beliefPenaltyMPC_FLOAT f11[17];
+
+    /* vector of size 17 */
     beliefPenaltyMPC_FLOAT lb11[17];
 
     /* vector of size 7 */
@@ -215,6 +248,9 @@ typedef struct beliefPenaltyMPC_params
 
     /* vector of size 5 */
     beliefPenaltyMPC_FLOAT e11[5];
+
+    /* vector of size 17 */
+    beliefPenaltyMPC_FLOAT f12[17];
 
     /* vector of size 17 */
     beliefPenaltyMPC_FLOAT lb12[17];
@@ -229,6 +265,9 @@ typedef struct beliefPenaltyMPC_params
     beliefPenaltyMPC_FLOAT e12[5];
 
     /* vector of size 17 */
+    beliefPenaltyMPC_FLOAT f13[17];
+
+    /* vector of size 17 */
     beliefPenaltyMPC_FLOAT lb13[17];
 
     /* vector of size 7 */
@@ -239,6 +278,9 @@ typedef struct beliefPenaltyMPC_params
 
     /* vector of size 5 */
     beliefPenaltyMPC_FLOAT e13[5];
+
+    /* vector of size 17 */
+    beliefPenaltyMPC_FLOAT f14[17];
 
     /* vector of size 17 */
     beliefPenaltyMPC_FLOAT lb14[17];

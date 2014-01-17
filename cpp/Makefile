@@ -39,13 +39,16 @@ $(OBJ_DIR)/pt_symeval.o : $(PT_SYM_DIR)/symeval.c
 
 # make point-belief
 PT_BELIEF_DIR = point/belief
-PT_BELIEF_FILES = beliefMPC point-belief logging
+PT_BELIEF_FILES = beliefMPC beliefPenaltyMPC point-belief logging
 PT_BELIEF_OBJS = $(PT_BELIEF_FILES:%=$(OBJ_DIR)/%.o)
 
 belief: $(PT_BELIEF_OBJS)
 	$(CXX) $(BFLAGS) $(PT_BELIEF_OBJS) -o $(BIN_DIR)/point-belief $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
 	
 $(OBJ_DIR)/beliefMPC.o : $(PT_BELIEF_DIR)/beliefMPC.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+
+$(OBJ_DIR)/beliefPenaltyMPC.o : $(PT_BELIEF_DIR)/beliefPenaltyMPC.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
 	
 $(OBJ_DIR)/point-belief.o : $(PT_BELIEF_DIR)/point-belief.cpp

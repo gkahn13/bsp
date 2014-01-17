@@ -1,4 +1,5 @@
 #include <vector>
+#include <iomanip>
 
 #include "util/matrix.h"
 #include "util/utils.h"
@@ -18,10 +19,12 @@ namespace py = boost::python;
 extern "C" {
 #ifdef BELIEF_PENALTY_MPC
 #include "beliefPenaltyMPC.h"
+beliefPenaltyMPC_FLOAT **f, **lb, **ub, **C, **e, **z;
 #endif
 
 #ifdef BELIEF_MPC
 #include "beliefMPC.h"
+beliefMPC_FLOAT **lb, **ub, **C, **e, **z;
 #endif
 }
 
@@ -47,20 +50,31 @@ const int T = 15;
 const double INFTY = 1e10;
 const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 1;
 
-// beliefMPC vars
-beliefMPC_FLOAT **lb, **ub, **C, **e, **z;
+namespace cfg {
+const double improve_ratio_threshold = .1;
+const double min_approx_improve = 1e-4;
+const double min_trust_box_size = 1e-3;
+const double trust_shrink_ratio = .1;
+const double trust_expand_ratio = 1.5;
+const double cnt_tolerance = 1e-4;
+const double penalty_coeff_increase_ratio = 10;
+const double initial_penalty_coeff = 10;
+const double initial_trust_box_size = 1;
+const int max_penalty_coeff_increases = 2;
+const int max_sqp_iterations = 50;
+}
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
-inline Matrix<X_DIM> f(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<U_DIM>& q)
+inline Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<U_DIM>& q)
 {  
 	Matrix<X_DIM> xNew = x + u*DT + 0.01*q;
 	return xNew;
 }
 
 // Observation model
-inline Matrix<Z_DIM> h(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r)
+inline Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r)
 {
 	double intensity = sqrt(sqr(0.5*x[0]) + 1e-6);
 	Matrix<Z_DIM> z = x + intensity*r;
@@ -74,7 +88,7 @@ inline void linearizeDynamics(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, co
 	Matrix<X_DIM> xr(x), xl(x);
 	for (size_t i = 0; i < X_DIM; ++i) {
 		xr[i] += step; xl[i] -= step;
-		A.insert(0,i, (f(xr, u, q) - f(xl, u, q)) / (xr[i] - xl[i]));
+		A.insert(0,i, (dynfunc(xr, u, q) - dynfunc(xl, u, q)) / (xr[i] - xl[i]));
 		xr[i] = x[i]; xl[i] = x[i];
 	}
 
@@ -82,7 +96,7 @@ inline void linearizeDynamics(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, co
 	Matrix<Q_DIM> qr(q), ql(q);
 	for (size_t i = 0; i < Q_DIM; ++i) {
 		qr[i] += step; ql[i] -= step;
-		M.insert(0,i, (f(x, u, qr) - f(x, u, ql)) / (qr[i] - ql[i]));
+		M.insert(0,i, (dynfunc(x, u, qr) - dynfunc(x, u, ql)) / (qr[i] - ql[i]));
 		qr[i] = q[i]; ql[i] = q[i];
 	}
 }
@@ -94,7 +108,7 @@ inline void linearizeObservation(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r,
 	Matrix<X_DIM> xr(x), xl(x);
 	for (size_t i = 0; i < X_DIM; ++i) {
 		xr[i] += step; xl[i] -= step;
-		H.insert(0,i, (h(xr, r) - h(xl, r)) / (xr[i] - xl[i]));
+		H.insert(0,i, (obsfunc(xr, r) - obsfunc(xl, r)) / (xr[i] - xl[i]));
 		xr[i] = x[i]; xl[i] = x[i];
 	}
 
@@ -102,7 +116,7 @@ inline void linearizeObservation(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r,
 	Matrix<R_DIM> rr(r), rl(r);
 	for (size_t i = 0; i < R_DIM; ++i) {
 		rr[i] += step; rl[i] -= step;
-		N.insert(0,i, (h(x, rr) - h(x, rl)) / (rr[i] - rl[i]));
+		N.insert(0,i, (obsfunc(x, rr) - obsfunc(x, rl)) / (rr[i] - rl[i]));
 		rr[i] = r[i]; rl[i] = r[i];
 	}
 }
@@ -143,7 +157,7 @@ inline Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>&
 	Matrix<X_DIM,Q_DIM> M;
 	linearizeDynamics(x, u, zeros<Q_DIM,1>(), A, M);
 
-	x = f(x, u, zeros<Q_DIM,1>());
+	x = dynfunc(x, u, zeros<Q_DIM,1>());
 	Sigma = A*Sigma*~A + M*~M;
 
 	Matrix<Z_DIM,X_DIM> H;
@@ -201,7 +215,7 @@ void linearizeBeliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u, Mat
 
 #ifdef BELIEF_MPC
 // TODO: Find better way to do this using macro expansions?
-void setupBeliefMPCVars(beliefMPC_params& problem, beliefMPC_output& output)
+void setupBeliefVars(beliefMPC_params& problem, beliefMPC_output& output)
 {
 	lb = new beliefMPC_FLOAT*[T];
 	ub = new beliefMPC_FLOAT*[T];
@@ -211,8 +225,9 @@ void setupBeliefMPCVars(beliefMPC_params& problem, beliefMPC_output& output)
 #endif
 
 #ifdef BELIEF_PENALTY_MPC
-void setupBeliefMPCVars(beliefPenaltyMPC_params& problem, beliefPenaltyMPC_output& output)
+void setupBeliefVars(beliefPenaltyMPC_params& problem, beliefPenaltyMPC_output& output)
 {
+	f = new beliefPenaltyMPC_FLOAT*[T-1];
 	lb = new beliefPenaltyMPC_FLOAT*[T];
 	ub = new beliefPenaltyMPC_FLOAT*[T];
 	C = new beliefPenaltyMPC_FLOAT*[T-1];
@@ -220,20 +235,20 @@ void setupBeliefMPCVars(beliefPenaltyMPC_params& problem, beliefPenaltyMPC_outpu
 	z = new beliefPenaltyMPC_FLOAT*[T];
 #endif
 
-	lb[0] = problem.lb1; ub[0] = problem.ub1; C[0] = problem.C1; e[0] = problem.e1;
-	lb[1] = problem.lb2; ub[1] = problem.ub2; C[1] = problem.C2; e[1] = problem.e2;
-	lb[2] = problem.lb3; ub[2] = problem.ub3; C[2] = problem.C3; e[2] = problem.e3;
-	lb[3] = problem.lb4; ub[3] = problem.ub4; C[3] = problem.C4; e[3] = problem.e4;
-	lb[4] = problem.lb5; ub[4] = problem.ub5; C[4] = problem.C5; e[4] = problem.e5;
-	lb[5] = problem.lb6; ub[5] = problem.ub6; C[5] = problem.C6; e[5] = problem.e6;
-	lb[6] = problem.lb7; ub[6] = problem.ub7; C[6] = problem.C7; e[6] = problem.e7;
-	lb[7] = problem.lb8; ub[7] = problem.ub8; C[7] = problem.C8; e[7] = problem.e8;
-	lb[8] = problem.lb9; ub[8] = problem.ub9; C[8] = problem.C9; e[8] = problem.e9;
-	lb[9] = problem.lb10; ub[9] = problem.ub10; C[9] = problem.C10; e[9] = problem.e10;
-	lb[10] = problem.lb11; ub[10] = problem.ub11; C[10] = problem.C11; e[10] = problem.e11;
-	lb[11] = problem.lb12; ub[11] = problem.ub12; C[11] = problem.C12; e[11] = problem.e12;
-	lb[12] = problem.lb13; ub[12] = problem.ub13; C[12] = problem.C13; e[12] = problem.e13;
-	lb[13] = problem.lb14; ub[13] = problem.ub14; C[13] = problem.C14; e[13] = problem.e14;
+	f[0] = problem.f1; lb[0] = problem.lb1; ub[0] = problem.ub1; C[0] = problem.C1; e[0] = problem.e1;
+	f[1] = problem.f2; lb[1] = problem.lb2; ub[1] = problem.ub2; C[1] = problem.C2; e[1] = problem.e2;
+	f[2] = problem.f3; lb[2] = problem.lb3; ub[2] = problem.ub3; C[2] = problem.C3; e[2] = problem.e3;
+	f[3] = problem.f4; lb[3] = problem.lb4; ub[3] = problem.ub4; C[3] = problem.C4; e[3] = problem.e4;
+	f[4] = problem.f5; lb[4] = problem.lb5; ub[4] = problem.ub5; C[4] = problem.C5; e[4] = problem.e5;
+	f[5] = problem.f6; lb[5] = problem.lb6; ub[5] = problem.ub6; C[5] = problem.C6; e[5] = problem.e6;
+	f[6] = problem.f7; lb[6] = problem.lb7; ub[6] = problem.ub7; C[6] = problem.C7; e[6] = problem.e7;
+	f[7] = problem.f8; lb[7] = problem.lb8; ub[7] = problem.ub8; C[7] = problem.C8; e[7] = problem.e8;
+	f[8] = problem.f9; lb[8] = problem.lb9; ub[8] = problem.ub9; C[8] = problem.C9; e[8] = problem.e9;
+	f[9] = problem.f10; lb[9] = problem.lb10; ub[9] = problem.ub10; C[9] = problem.C10; e[9] = problem.e10;
+	f[10] = problem.f11; lb[10] = problem.lb11; ub[10] = problem.ub11; C[10] = problem.C11; e[10] = problem.e11;
+	f[11] = problem.f12; lb[11] = problem.lb12; ub[11] = problem.ub12; C[11] = problem.C12; e[11] = problem.e12;
+	f[12] = problem.f13; lb[12] = problem.lb13; ub[12] = problem.ub13; C[12] = problem.C13; e[12] = problem.e13;
+	f[13] = problem.f14; lb[13] = problem.lb14; ub[13] = problem.ub14; C[13] = problem.C14; e[13] = problem.e14;
 	lb[14] = problem.lb15; ub[14] = problem.ub15;
 
 	z[0] = output.z1; z[1] = output.z2; z[2] = output.z3; z[3] = output.z4; z[4] = output.z5;
@@ -243,6 +258,10 @@ void setupBeliefMPCVars(beliefPenaltyMPC_params& problem, beliefPenaltyMPC_outpu
 
 void cleanupBeliefMPCVars()
 {
+#ifdef BELIEF_PENALTY_MPC
+	delete[] f;
+#endif
+
 	delete[] lb; 
 	delete[] ub; 
 	delete[] C;
@@ -251,16 +270,377 @@ void cleanupBeliefMPCVars()
 }
 
 #ifdef BELIEF_PENALTY_MPC
-double beliefPenaltyCollocation(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U, beliefMPC_params& problem, beliefMPC_output& output, beliefMPC_info& info)
+
+double computeMerit(const std::vector< Matrix<B_DIM> >& B, const std::vector< Matrix<U_DIM> >& U, double penalty_coeff)
 {
+	double merit = 0;
+	Matrix<X_DIM> x;
+	Matrix<X_DIM, X_DIM> SqrtSigma;
+	Matrix<B_DIM> dynviol;
+	for(int t = 0; t < T-1; ++t) {
+		unVec(B[t], x, SqrtSigma);
+		merit += alpha_belief*tr(SqrtSigma*SqrtSigma) + alpha_control*tr(~U[t]*U[t]);
+		dynviol = (B[t+1] - beliefDynamics(B[t], U[t]) );
+		for(int i = 0; i < B_DIM; ++i) {
+			merit += penalty_coeff*fabs(dynviol[i]);
+		}
+	}
+	unVec(B[T-1], x, SqrtSigma);
+	merit += alpha_final_belief*tr(SqrtSigma*SqrtSigma);
+	return merit;
+}
 
+bool isValidInputs()
+{
+	for(int t = 0; t < T-1; ++t) {
 
+		std::cout << "t: " << t << std::endl << std::endl;
 
+		std::cout << "f: ";
+		for(int i = 0; i < (3*B_DIM+U_DIM); ++i) {
+			std::cout << f[t][i] << " ";
+		}
+		std::cout << std::endl;
 
+		std::cout << "lb b: ";
+		for(int i = 0; i < B_DIM; ++i) {
+			std::cout << lb[t][i] << " ";
+		}
+		std::cout << std::endl;
 
+		std::cout << "lb u: ";
+		for(int i = 0; i < U_DIM; ++i) {
+			std::cout << lb[t][B_DIM+i] << " ";
+		}
+		std::cout << std::endl;
 
+		std::cout << "lb s, t: ";
+		for(int i = 0; i < 2*B_DIM; ++i) {
+			std::cout << lb[t][B_DIM+U_DIM+i] << " ";
+		}
+		std::cout << std::endl;
 
+		std::cout << "ub b: ";
+		for(int i = 0; i < B_DIM; ++i) {
+			std::cout << ub[t][i] << " ";
+		}
+		std::cout << std::endl;
 
+		std::cout << "ub u: ";
+		for(int i = 0; i < U_DIM; ++i) {
+			std::cout << ub[t][B_DIM+i] << " ";
+		}
+		std::cout << std::endl;
+
+		//std::cout << "ub s, t: ";
+		//for(int i = 0; i < 2*B_DIM; ++i) {
+		//	std::cout << ub[t][B_DIM+U_DIM+i] << " ";
+		//}
+		//std::cout << std::endl;
+
+		std::cout << "C:" << std::endl;
+		if (t == 0) {
+			for(int i = 0; i < 170; ++i) {
+				std::cout << C[t][i] << " ";
+			}
+		} else {
+			for(int i = 0; i < 85; ++i) {
+				std::cout << C[t][i] << " ";
+			}
+		}
+		std::cout << std::endl;
+
+		std::cout << "e:" << std::endl;
+		if (t == 0) {
+			for(int i = 0; i < 10; ++i) {
+				std::cout << e[t][i] << " ";
+			}
+		} else {
+			for(int i = 0; i < 5; ++i) {
+				std::cout << e[t][i] << " ";
+			}
+		}
+
+		std::cout << std::endl << std::endl;
+	}
+	return true;
+}
+
+bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U, beliefPenaltyMPC_params& problem, beliefPenaltyMPC_output& output, beliefPenaltyMPC_info& info, double penalty_coeff, double trust_box_size)
+{
+	LOG_DEBUG("Solving sqp problem with penalty parameter: %2.4f", penalty_coeff);
+
+	// box constraint around goal
+	double delta = 0.01;
+
+	Matrix<B_DIM,1> b0 = B[0];
+
+	std::vector< Matrix<B_DIM,B_DIM> > F(T-1);
+	std::vector< Matrix<B_DIM,U_DIM> > G(T-1);
+	std::vector< Matrix<B_DIM> > h(T-1);
+
+	double Beps = trust_box_size;
+	double Ueps = trust_box_size;
+
+	double prevcost, optcost;
+
+	std::vector<Matrix<B_DIM> > Bopt(T);
+	std::vector<Matrix<U_DIM> > Uopt(T-1);
+
+	double merit, model_merit, new_merit;
+	double approx_merit_improve, exact_merit_improve, merit_improve_ratio;
+
+	int sqp_iter = 1;
+	bool success;
+
+	Matrix<B_DIM,B_DIM> I = identity<B_DIM>();
+	Matrix<B_DIM,B_DIM> minusI = I;
+	for(int i = 0; i < B_DIM; ++i) {
+		minusI(i,i) = -1;
+	}
+
+	// sqp loop
+	while(true)
+	{
+		// In this loop, we repeatedly construct a linear approximation to the nonlinear belief dynamics constraint
+		LOG_DEBUG("  sqp iter: %d", sqp_iter);
+
+		merit = computeMerit(B, U, penalty_coeff);
+		LOG_DEBUG("  merit: %4.10f", merit);
+
+		for (int t = 0; t < T-1; ++t) {
+			linearizeBeliefDynamics(B[t], U[t], F[t], G[t], h[t]);
+		}
+
+		// trust region size adjustment
+		while(true)
+		{
+			LOG_DEBUG("       trust region size: %2.6f %2.6f", Beps, Ueps);
+
+			// solve the innermost QP here
+			for(int t = 0; t < T-1; ++t)
+			{
+				Matrix<B_DIM>& bt = B[t];
+				Matrix<U_DIM>& ut = U[t];
+
+				// Fill in f, lb, ub, C, e
+				for(int i = 0; i < (B_DIM+U_DIM); ++i) {
+					f[t][i] = 0;
+				}
+				for(int i = 0; i < 2*B_DIM; ++i) {
+					f[t][B_DIM+U_DIM+i] = penalty_coeff;
+				}
+				lb[t][0] = MAX(xMin[0], bt[0] - Beps);
+				lb[t][1] = MAX(xMin[1], bt[1] - Beps);
+				lb[t][2] = bt[2] - Beps;
+				lb[t][3] = bt[3] - Beps;
+				lb[t][4] = bt[4] - Beps;
+				lb[t][5] = MAX(uMin[0], ut[0] - Ueps);
+				lb[t][6] = MAX(uMin[1], ut[1] - Ueps);
+				for(int i = 0; i < 2*B_DIM; ++i) {
+					lb[t][B_DIM+U_DIM+i] = 0;
+				}
+
+				ub[t][0] = MIN(xMax[0], bt[0] + Beps);
+				ub[t][1] = MIN(xMax[1], bt[1] + Beps);
+				ub[t][2] = bt[2] + Beps;
+				ub[t][3] = bt[3] + Beps;
+				ub[t][4] = bt[4] + Beps;
+				ub[t][5] = MIN(uMax[0], ut[0] + Ueps);
+				ub[t][6] = MIN(uMax[1], ut[1] + Ueps);
+				//for(int i = 0; i < 2*B_DIM; ++i) {
+				//	ub[t][B_DIM+U_DIM+i] = INFTY;
+				//}
+
+				if (t > 0) {
+					Matrix<B_DIM,3*B_DIM+U_DIM> CMat;
+					Matrix<B_DIM> eVec;
+
+					CMat.insert<B_DIM,B_DIM>(0,0,F[t]);
+					CMat.insert<B_DIM,U_DIM>(0,B_DIM,G[t]);
+					CMat.insert<B_DIM,B_DIM>(0,B_DIM+U_DIM,I);
+					CMat.insert<B_DIM,B_DIM>(0,2*B_DIM+U_DIM,minusI);
+
+					//std::cout << CMat << std::endl;
+
+					int idx = 0;
+					int nrows = CMat.numRows(), ncols = CMat.numColumns();
+					for(int c = 0; c < ncols; ++c) {
+						for(int r = 0; r < nrows; ++r) {
+							C[t][idx++] = CMat[c + r*ncols];
+						}
+					}
+					eVec = -h[t] + F[t]*bt + G[t]*ut;
+					int nelems = eVec.numRows();
+					for(int i = 0; i < nelems; ++i) {
+						e[t][i] = eVec[i];
+					}
+				}
+				else {
+					Matrix<2*B_DIM,3*B_DIM+U_DIM> CMat;
+					Matrix<2*B_DIM> eVec;
+
+					CMat.insert<B_DIM,B_DIM>(0,0,I);
+					CMat.insert<B_DIM,U_DIM>(0,B_DIM,zeros<B_DIM,U_DIM>());
+					CMat.insert<B_DIM,2*B_DIM>(0,B_DIM+U_DIM,zeros<B_DIM,2*B_DIM>());
+
+					CMat.insert<B_DIM,B_DIM>(B_DIM,0,F[t]);
+					CMat.insert<B_DIM,U_DIM>(B_DIM,B_DIM,G[t]);
+					CMat.insert<B_DIM,B_DIM>(B_DIM,B_DIM+U_DIM,I);
+					CMat.insert<B_DIM,B_DIM>(B_DIM,2*B_DIM+U_DIM,minusI);
+
+					int idx = 0;
+					int nrows = CMat.numRows(), ncols = CMat.numColumns();
+					for(int c = 0; c < ncols; ++c) {
+						for(int r = 0; r < nrows; ++r) {
+							C[t][idx++] = CMat[c + r*ncols];
+						}
+					}
+					eVec.insert<B_DIM,1>(0,0,b0);
+					eVec.insert<B_DIM,1>(B_DIM,0,zeros<B_DIM,1>());
+					int nelems = eVec.numRows();
+					for(int i = 0; i < nelems; ++i) {
+						e[t][i] = eVec[i];
+					}
+				}
+			}
+
+			Matrix<B_DIM>& bT = B[T-1];
+
+			// Fill in lb, ub, C, e
+			lb[T-1][0] = MAX(xGoal[0] - delta, bT[0] - Beps);
+			lb[T-1][1] = MAX(xGoal[1] - delta, bT[1] - Beps);
+			lb[T-1][2] = bT[2] - Beps;
+			lb[T-1][3] = bT[3] - Beps;
+			lb[T-1][4] = bT[4] - Beps;
+
+			ub[T-1][0] = MIN(xGoal[0] + delta, bT[0] + Beps);
+			ub[T-1][1] = MIN(xGoal[1] + delta, bT[1] + Beps);
+			ub[T-1][2] = bT[2] + Beps;
+			ub[T-1][3] = bT[3] + Beps;
+			ub[T-1][4] = bT[4] + Beps;
+
+			// Verify problem inputs
+			//if (!isValidInputs()) {
+			//	std::cout << "Inputs are not valid!" << std::endl;
+			//	exit(-1);
+			//}
+
+			//std::cerr << "PAUSING INSIDE MINIMIZE MERIT FUNCTION FOR INPUT VERIFICATION" << std::endl;
+			//int num;
+			//std::cin >> num;
+
+			int exitflag = beliefPenaltyMPC_solve(&problem, &output, &info);
+			if (exitflag == 1) {
+				for(int t = 0; t < T-1; ++t) {
+					Matrix<B_DIM>& bt = Bopt[t];
+					Matrix<U_DIM>& ut = Uopt[t];
+
+					for(int i = 0; i < B_DIM; ++i) {
+						bt[i] = z[t][i];
+					}
+					for(int i = 0; i < U_DIM; ++i) {
+						ut[i] = z[t][B_DIM+i];
+					}
+					optcost = info.pobj;
+				}
+				for(int i = 0; i < B_DIM; ++i) {
+					Bopt[T-1][i] = z[T-1][i];
+				}
+			}
+			else {
+				LOG_ERROR("Some problem in solver");
+				std::exit(-1);
+			}
+
+			LOG_DEBUG("Optimized cost: %4.10f", optcost);
+
+			model_merit = optcost;
+			new_merit = computeMerit(Bopt, Uopt, penalty_coeff);
+
+			LOG_DEBUG("merit: %4.10f", merit);
+			LOG_DEBUG("model_merit: %4.10f", model_merit);
+			LOG_DEBUG("new_merit: %4.10f", new_merit);
+
+			approx_merit_improve = merit - model_merit;
+			exact_merit_improve = merit - new_merit;
+			merit_improve_ratio = exact_merit_improve / approx_merit_improve;
+
+			LOG_DEBUG("approx_merit_improve: %1.6f", approx_merit_improve);
+			LOG_DEBUG("exact_merit_improve: %1.6f", exact_merit_improve);
+			LOG_DEBUG("merit_improve_ratio: %1.6f", merit_improve_ratio);
+
+			//std::cout << "PAUSED INSIDE minimizeMeritFunction" << std::endl;
+			//int num;
+			//std::cin >> num;
+
+			if (approx_merit_improve < -1e-5) {
+				LOG_ERROR("Approximate merit function got worse: %1.6f", approx_merit_improve);
+				LOG_ERROR("Either convexification is wrong to zeroth order, or you are in numerical trouble");
+				LOG_ERROR("Failure!");
+				success = false;
+			} else if (approx_merit_improve < cfg::min_approx_improve) {
+				LOG_DEBUG("Converged: improvement small enough");
+				B = Bopt; U = Uopt;
+				return true;
+			} else if ((exact_merit_improve < 0) || (merit_improve_ratio < cfg::improve_ratio_threshold)) {
+				Beps *= cfg::trust_shrink_ratio;
+				Ueps *= cfg::trust_shrink_ratio;
+				LOG_DEBUG("Shrinking trust region size to: %2.6f %2.6f", Beps, Ueps);
+			} else {
+				Beps *= cfg::trust_expand_ratio;
+				Ueps *= cfg::trust_expand_ratio;
+				B = Bopt; U = Uopt;
+				prevcost = optcost;
+				LOG_DEBUG("Accepted, Increasing trust region size to:  %2.6f %2.6f", Beps, Ueps);
+				break;
+			}
+
+			if (Beps < cfg::min_trust_box_size && Ueps < cfg::min_trust_box_size) {
+			    LOG_DEBUG("Converged: x tolerance");
+			    return true;
+			}
+
+		} // trust region loop
+		sqp_iter++;
+	} // sqp loop
+
+	return success;
+}
+
+double beliefPenaltyCollocation(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U, beliefPenaltyMPC_params& problem, beliefPenaltyMPC_output& output, beliefPenaltyMPC_info& info)
+{
+	double penalty_coeff = cfg::initial_penalty_coeff;
+	double trust_box_size = cfg::initial_trust_box_size;
+
+	int penalty_increases = 0;
+
+	Matrix<B_DIM> dynviol;
+
+	// penalty loop
+	while(penalty_increases < cfg::max_penalty_coeff_increases)
+	{
+		bool success = minimizeMeritFunction(B, U, problem, output, info, penalty_coeff, trust_box_size);
+
+		double cntviol = 0;
+		for(int t = 0; t < T-1; ++t) {
+			dynviol = (B[t+1] - beliefDynamics(B[t], U[t]) );
+			for(int i = 0; i < B_DIM; ++i) {
+				cntviol += fabs(dynviol[i]);
+			}
+		}
+	    success = success && (cntviol < cfg::cnt_tolerance);
+	    LOG_DEBUG("Constraint violations: %2.10f",cntviol);
+	    if (!success) {
+	        penalty_increases++;
+	        penalty_coeff = penalty_coeff*cfg::penalty_coeff_increase_ratio;
+	        trust_box_size = cfg::initial_trust_box_size;
+	    }
+	    else {
+	    	return computeCost(B, U);
+	    }
+	}
+	return computeCost(B, U);
 }
 #endif
 
@@ -498,7 +878,7 @@ int main(int argc, char* argv[])
 	beliefPenaltyMPC_info info;
 #endif
 
-	setupBeliefMPCVars(problem, output);
+	setupBeliefVars(problem, output);
 
 	util::Timer solveTimer;
 	util::Timer_tic(&solveTimer);

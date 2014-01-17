@@ -34,13 +34,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 /* SYSTEM INCLUDES FOR PRINTING ---------------------------------------- */
-#ifndef USEMEXPRINTS
-#include <stdio.h>
-#define PRINTTEXT printf
-#else
-#include "mex.h"
-#define PRINTTEXT mexPrintf
-#endif
+
 
 
 
@@ -1938,7 +1932,6 @@ beliefPenaltyMPC_FLOAT beliefPenaltyMPC_ds_cc[346];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_ccrhs[346];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_grad_ineq[243];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_H00[17] = {0.0000000000000000E+000, 0.0000000000000000E+000, 2.0000000000000000E+001, 2.0000000000000000E+001, 2.0000000000000000E+001, 2.0000000000000000E+000, 2.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000};
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_f00[17] = {0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000};
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_z00 = beliefPenaltyMPC_z + 0;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzaff00 = beliefPenaltyMPC_dz_aff + 0;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzcc00 = beliefPenaltyMPC_dz_cc + 0;
@@ -1980,7 +1973,6 @@ beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dlubcc00 = beliefPenaltyMPC_dl_cc + 17;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dsubcc00 = beliefPenaltyMPC_ds_cc + 17;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_ccrhsub00 = beliefPenaltyMPC_ccrhs + 17;
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Phi00[17];
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_f01[17] = {0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000};
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_z01 = beliefPenaltyMPC_z + 17;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzaff01 = beliefPenaltyMPC_dz_aff + 17;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzcc01 = beliefPenaltyMPC_dz_cc + 17;
@@ -2042,7 +2034,6 @@ beliefPenaltyMPC_FLOAT beliefPenaltyMPC_D01[170] = {0.0000000000000000E+000, 0.0
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_W01[170];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Ysd01[50];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Lsd01[50];
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_f02[17] = {0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000};
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_z02 = beliefPenaltyMPC_z + 34;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzaff02 = beliefPenaltyMPC_dz_aff + 34;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzcc02 = beliefPenaltyMPC_dz_cc + 34;
@@ -2092,7 +2083,6 @@ beliefPenaltyMPC_FLOAT beliefPenaltyMPC_D02[17] = {-1.0000000000000000E+000,
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_W02[17];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Ysd02[25];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Lsd02[25];
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_f03[17] = {0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000};
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_z03 = beliefPenaltyMPC_z + 51;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzaff03 = beliefPenaltyMPC_dz_aff + 51;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzcc03 = beliefPenaltyMPC_dz_cc + 51;
@@ -2137,7 +2127,6 @@ beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Phi03[17];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_W03[17];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Ysd03[25];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Lsd03[25];
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_f04[17] = {0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000};
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_z04 = beliefPenaltyMPC_z + 68;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzaff04 = beliefPenaltyMPC_dz_aff + 68;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzcc04 = beliefPenaltyMPC_dz_cc + 68;
@@ -2182,7 +2171,6 @@ beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Phi04[17];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_W04[17];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Ysd04[25];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Lsd04[25];
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_f05[17] = {0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000};
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_z05 = beliefPenaltyMPC_z + 85;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzaff05 = beliefPenaltyMPC_dz_aff + 85;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzcc05 = beliefPenaltyMPC_dz_cc + 85;
@@ -2227,7 +2215,6 @@ beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Phi05[17];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_W05[17];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Ysd05[25];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Lsd05[25];
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_f06[17] = {0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000};
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_z06 = beliefPenaltyMPC_z + 102;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzaff06 = beliefPenaltyMPC_dz_aff + 102;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzcc06 = beliefPenaltyMPC_dz_cc + 102;
@@ -2272,7 +2259,6 @@ beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Phi06[17];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_W06[17];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Ysd06[25];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Lsd06[25];
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_f07[17] = {0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000};
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_z07 = beliefPenaltyMPC_z + 119;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzaff07 = beliefPenaltyMPC_dz_aff + 119;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzcc07 = beliefPenaltyMPC_dz_cc + 119;
@@ -2317,7 +2303,6 @@ beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Phi07[17];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_W07[17];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Ysd07[25];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Lsd07[25];
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_f08[17] = {0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000};
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_z08 = beliefPenaltyMPC_z + 136;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzaff08 = beliefPenaltyMPC_dz_aff + 136;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzcc08 = beliefPenaltyMPC_dz_cc + 136;
@@ -2362,7 +2347,6 @@ beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Phi08[17];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_W08[17];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Ysd08[25];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Lsd08[25];
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_f09[17] = {0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000};
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_z09 = beliefPenaltyMPC_z + 153;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzaff09 = beliefPenaltyMPC_dz_aff + 153;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzcc09 = beliefPenaltyMPC_dz_cc + 153;
@@ -2407,7 +2391,6 @@ beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Phi09[17];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_W09[17];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Ysd09[25];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Lsd09[25];
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_f10[17] = {0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000};
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_z10 = beliefPenaltyMPC_z + 170;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzaff10 = beliefPenaltyMPC_dz_aff + 170;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzcc10 = beliefPenaltyMPC_dz_cc + 170;
@@ -2452,7 +2435,6 @@ beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Phi10[17];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_W10[17];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Ysd10[25];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Lsd10[25];
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_f11[17] = {0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000};
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_z11 = beliefPenaltyMPC_z + 187;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzaff11 = beliefPenaltyMPC_dz_aff + 187;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzcc11 = beliefPenaltyMPC_dz_cc + 187;
@@ -2497,7 +2479,6 @@ beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Phi11[17];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_W11[17];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Ysd11[25];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Lsd11[25];
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_f12[17] = {0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000};
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_z12 = beliefPenaltyMPC_z + 204;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzaff12 = beliefPenaltyMPC_dz_aff + 204;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzcc12 = beliefPenaltyMPC_dz_cc + 204;
@@ -2542,7 +2523,6 @@ beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Phi12[17];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_W12[17];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Ysd12[25];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Lsd12[25];
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_f13[17] = {0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000, 1.0000000000000000E+000};
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_z13 = beliefPenaltyMPC_z + 221;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzaff13 = beliefPenaltyMPC_dz_aff + 221;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzcc13 = beliefPenaltyMPC_dz_cc + 221;
@@ -2652,26 +2632,22 @@ beliefPenaltyMPC_LA_INITIALIZEVECTOR_346(beliefPenaltyMPC_s, 1);
 info->mu = 0;
 beliefPenaltyMPC_LA_DOTACC_346(beliefPenaltyMPC_l, beliefPenaltyMPC_s, &info->mu);
 info->mu /= 346;
-PRINTTEXT("This is beliefPenaltyMPC, a solver generated by FORCES (forces.ethz.ch).\n");
-PRINTTEXT("(c) Alexander Domahidi, Automatic Control Laboratory, ETH Zurich, 2011-2014.\n");
-PRINTTEXT("\n  #it  res_eq   res_ineq     pobj         dobj       dgap     rdgap     mu\n");
-PRINTTEXT("  ---------------------------------------------------------------------------\n");
 while( 1 ){
 info->pobj = 0;
-beliefPenaltyMPC_LA_DIAG_QUADFCN_17(beliefPenaltyMPC_H00, beliefPenaltyMPC_f00, beliefPenaltyMPC_z00, beliefPenaltyMPC_grad_cost00, &info->pobj);
-beliefPenaltyMPC_LA_DIAG_QUADFCN_17(beliefPenaltyMPC_H00, beliefPenaltyMPC_f01, beliefPenaltyMPC_z01, beliefPenaltyMPC_grad_cost01, &info->pobj);
-beliefPenaltyMPC_LA_DIAG_QUADFCN_17(beliefPenaltyMPC_H00, beliefPenaltyMPC_f02, beliefPenaltyMPC_z02, beliefPenaltyMPC_grad_cost02, &info->pobj);
-beliefPenaltyMPC_LA_DIAG_QUADFCN_17(beliefPenaltyMPC_H00, beliefPenaltyMPC_f03, beliefPenaltyMPC_z03, beliefPenaltyMPC_grad_cost03, &info->pobj);
-beliefPenaltyMPC_LA_DIAG_QUADFCN_17(beliefPenaltyMPC_H00, beliefPenaltyMPC_f04, beliefPenaltyMPC_z04, beliefPenaltyMPC_grad_cost04, &info->pobj);
-beliefPenaltyMPC_LA_DIAG_QUADFCN_17(beliefPenaltyMPC_H00, beliefPenaltyMPC_f05, beliefPenaltyMPC_z05, beliefPenaltyMPC_grad_cost05, &info->pobj);
-beliefPenaltyMPC_LA_DIAG_QUADFCN_17(beliefPenaltyMPC_H00, beliefPenaltyMPC_f06, beliefPenaltyMPC_z06, beliefPenaltyMPC_grad_cost06, &info->pobj);
-beliefPenaltyMPC_LA_DIAG_QUADFCN_17(beliefPenaltyMPC_H00, beliefPenaltyMPC_f07, beliefPenaltyMPC_z07, beliefPenaltyMPC_grad_cost07, &info->pobj);
-beliefPenaltyMPC_LA_DIAG_QUADFCN_17(beliefPenaltyMPC_H00, beliefPenaltyMPC_f08, beliefPenaltyMPC_z08, beliefPenaltyMPC_grad_cost08, &info->pobj);
-beliefPenaltyMPC_LA_DIAG_QUADFCN_17(beliefPenaltyMPC_H00, beliefPenaltyMPC_f09, beliefPenaltyMPC_z09, beliefPenaltyMPC_grad_cost09, &info->pobj);
-beliefPenaltyMPC_LA_DIAG_QUADFCN_17(beliefPenaltyMPC_H00, beliefPenaltyMPC_f10, beliefPenaltyMPC_z10, beliefPenaltyMPC_grad_cost10, &info->pobj);
-beliefPenaltyMPC_LA_DIAG_QUADFCN_17(beliefPenaltyMPC_H00, beliefPenaltyMPC_f11, beliefPenaltyMPC_z11, beliefPenaltyMPC_grad_cost11, &info->pobj);
-beliefPenaltyMPC_LA_DIAG_QUADFCN_17(beliefPenaltyMPC_H00, beliefPenaltyMPC_f12, beliefPenaltyMPC_z12, beliefPenaltyMPC_grad_cost12, &info->pobj);
-beliefPenaltyMPC_LA_DIAG_QUADFCN_17(beliefPenaltyMPC_H00, beliefPenaltyMPC_f13, beliefPenaltyMPC_z13, beliefPenaltyMPC_grad_cost13, &info->pobj);
+beliefPenaltyMPC_LA_DIAG_QUADFCN_17(beliefPenaltyMPC_H00, params->f1, beliefPenaltyMPC_z00, beliefPenaltyMPC_grad_cost00, &info->pobj);
+beliefPenaltyMPC_LA_DIAG_QUADFCN_17(beliefPenaltyMPC_H00, params->f2, beliefPenaltyMPC_z01, beliefPenaltyMPC_grad_cost01, &info->pobj);
+beliefPenaltyMPC_LA_DIAG_QUADFCN_17(beliefPenaltyMPC_H00, params->f3, beliefPenaltyMPC_z02, beliefPenaltyMPC_grad_cost02, &info->pobj);
+beliefPenaltyMPC_LA_DIAG_QUADFCN_17(beliefPenaltyMPC_H00, params->f4, beliefPenaltyMPC_z03, beliefPenaltyMPC_grad_cost03, &info->pobj);
+beliefPenaltyMPC_LA_DIAG_QUADFCN_17(beliefPenaltyMPC_H00, params->f5, beliefPenaltyMPC_z04, beliefPenaltyMPC_grad_cost04, &info->pobj);
+beliefPenaltyMPC_LA_DIAG_QUADFCN_17(beliefPenaltyMPC_H00, params->f6, beliefPenaltyMPC_z05, beliefPenaltyMPC_grad_cost05, &info->pobj);
+beliefPenaltyMPC_LA_DIAG_QUADFCN_17(beliefPenaltyMPC_H00, params->f7, beliefPenaltyMPC_z06, beliefPenaltyMPC_grad_cost06, &info->pobj);
+beliefPenaltyMPC_LA_DIAG_QUADFCN_17(beliefPenaltyMPC_H00, params->f8, beliefPenaltyMPC_z07, beliefPenaltyMPC_grad_cost07, &info->pobj);
+beliefPenaltyMPC_LA_DIAG_QUADFCN_17(beliefPenaltyMPC_H00, params->f9, beliefPenaltyMPC_z08, beliefPenaltyMPC_grad_cost08, &info->pobj);
+beliefPenaltyMPC_LA_DIAG_QUADFCN_17(beliefPenaltyMPC_H00, params->f10, beliefPenaltyMPC_z09, beliefPenaltyMPC_grad_cost09, &info->pobj);
+beliefPenaltyMPC_LA_DIAG_QUADFCN_17(beliefPenaltyMPC_H00, params->f11, beliefPenaltyMPC_z10, beliefPenaltyMPC_grad_cost10, &info->pobj);
+beliefPenaltyMPC_LA_DIAG_QUADFCN_17(beliefPenaltyMPC_H00, params->f12, beliefPenaltyMPC_z11, beliefPenaltyMPC_grad_cost11, &info->pobj);
+beliefPenaltyMPC_LA_DIAG_QUADFCN_17(beliefPenaltyMPC_H00, params->f13, beliefPenaltyMPC_z12, beliefPenaltyMPC_grad_cost12, &info->pobj);
+beliefPenaltyMPC_LA_DIAG_QUADFCN_17(beliefPenaltyMPC_H00, params->f14, beliefPenaltyMPC_z13, beliefPenaltyMPC_grad_cost13, &info->pobj);
 beliefPenaltyMPC_LA_DIAG_QUADFCN_5(beliefPenaltyMPC_H14, beliefPenaltyMPC_f14, beliefPenaltyMPC_z14, beliefPenaltyMPC_grad_cost14, &info->pobj);
 info->res_eq = 0;
 info->dgap = 0;
@@ -2753,15 +2729,12 @@ beliefPenaltyMPC_LA_INEQ_B_GRAD_5_5_5(beliefPenaltyMPC_lub14, beliefPenaltyMPC_s
 info->dobj = info->pobj - info->dgap;
 info->rdgap = info->pobj ? info->dgap / info->pobj : 1e6;
 if( info->rdgap < 0 ) info->rdgap = -info->rdgap;
-PRINTTEXT("  %3d  %3.1e  %3.1e  %+6.4e  %+6.4e  %+3.1e  %3.1e  %3.1e\n",info->it, info->res_eq, info->res_ineq, info->pobj, info->dobj, info->dgap, info->rdgap, info->mu);
 if( info->mu < beliefPenaltyMPC_SET_ACC_KKTCOMPL
     && (info->rdgap < beliefPenaltyMPC_SET_ACC_RDGAP || info->dgap < beliefPenaltyMPC_SET_ACC_KKTCOMPL)
     && info->res_eq < beliefPenaltyMPC_SET_ACC_RESEQ
     && info->res_ineq < beliefPenaltyMPC_SET_ACC_RESINEQ ){
-PRINTTEXT("OPTIMAL (within RESEQ=%2.1e, RESINEQ=%2.1e, (R)DGAP=(%2.1e)%2.1e, MU=%2.1e).\n",beliefPenaltyMPC_SET_ACC_RESEQ, beliefPenaltyMPC_SET_ACC_RESINEQ,beliefPenaltyMPC_SET_ACC_KKTCOMPL,beliefPenaltyMPC_SET_ACC_RDGAP,beliefPenaltyMPC_SET_ACC_KKTCOMPL);
 exitcode = beliefPenaltyMPC_OPTIMAL; break; }
 if( info->it == beliefPenaltyMPC_SET_MAXIT ){
-PRINTTEXT("Maximum number of iterations reached, exiting.\n");
 exitcode = beliefPenaltyMPC_MAXITREACHED; break; }
 beliefPenaltyMPC_LA_VVADD3_243(beliefPenaltyMPC_grad_cost, beliefPenaltyMPC_grad_eq, beliefPenaltyMPC_grad_ineq, beliefPenaltyMPC_rd);
 beliefPenaltyMPC_LA_DIAG_CHOL_LBUB_17_17_7(beliefPenaltyMPC_H00, beliefPenaltyMPC_llbbyslb00, beliefPenaltyMPC_lbIdx00, beliefPenaltyMPC_lubbysub00, beliefPenaltyMPC_ubIdx00, beliefPenaltyMPC_Phi00);
@@ -3050,7 +3023,6 @@ beliefPenaltyMPC_LA_VSUB2_INDEXED_5(beliefPenaltyMPC_riub14, beliefPenaltyMPC_dz
 beliefPenaltyMPC_LA_VSUB3_5(beliefPenaltyMPC_lubbysub14, beliefPenaltyMPC_dsubaff14, beliefPenaltyMPC_lub14, beliefPenaltyMPC_dlubaff14);
 info->lsit_aff = beliefPenaltyMPC_LINESEARCH_BACKTRACKING_AFFINE(beliefPenaltyMPC_l, beliefPenaltyMPC_s, beliefPenaltyMPC_dl_aff, beliefPenaltyMPC_ds_aff, &info->step_aff, &info->mu_aff);
 if( info->lsit_aff == beliefPenaltyMPC_NOPROGRESS ){
-PRINTTEXT("Affine line search could not proceed at iteration %d.\nThe problem might be infeasible -- exiting.\n",info->it+1);
 exitcode = beliefPenaltyMPC_NOPROGRESS; break;
 }
 sigma_3rdroot = info->mu_aff / info->mu;
@@ -3223,7 +3195,6 @@ beliefPenaltyMPC_LA_VADD_346(beliefPenaltyMPC_dl_cc, beliefPenaltyMPC_dl_aff);
 beliefPenaltyMPC_LA_VADD_346(beliefPenaltyMPC_ds_cc, beliefPenaltyMPC_ds_aff);
 info->lsit_cc = beliefPenaltyMPC_LINESEARCH_BACKTRACKING_COMBINED(beliefPenaltyMPC_z, beliefPenaltyMPC_v, beliefPenaltyMPC_l, beliefPenaltyMPC_s, beliefPenaltyMPC_dz_cc, beliefPenaltyMPC_dv_cc, beliefPenaltyMPC_dl_cc, beliefPenaltyMPC_ds_cc, &info->step_cc, &info->mu);
 if( info->lsit_cc == beliefPenaltyMPC_NOPROGRESS ){
-PRINTTEXT("Line search could not proceed at iteration %d, exiting.\n",info->it+1);
 exitcode = beliefPenaltyMPC_NOPROGRESS; break;
 }
 info->it++;

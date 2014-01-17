@@ -8,7 +8,7 @@ Gurobi penalty SQP belief state:
 
 FORCES penalty SQP belief state:
 10: 25 ms
-15:
+15: 31 ms
 20: 30 ms
 25:
 30:

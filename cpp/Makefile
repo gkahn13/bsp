@@ -5,7 +5,7 @@ CC = gcc
 BUILD := debug
 
 BFLAGS.debug = -g -Wall
-BFLAGS.release = -O3
+BFLAGS.release = -O3 -fopenmp  
 BFLAGS := $(BFLAGS.$(BUILD))
 
 OBJ_DIR = build/$(BUILD)
@@ -36,6 +36,10 @@ PT_SYM_DIR = point/sym
 
 $(OBJ_DIR)/pt_symeval.o : $(PT_SYM_DIR)/symeval.c
 	gcc -c $(C_FLAGS) $(BFLAGS) -o $(OBJ_DIR)/pt_symeval.o $(PT_SYM_DIR)/symeval.c
+	
+$(OBJ_DIR)/control_symeval.o : $(PT_SYM_DIR)/control-symeval.c
+	gcc -c $(C_FLAGS) $(BFLAGS) -o $(OBJ_DIR)/control_symeval.o $(PT_SYM_DIR)/control-symeval.c
+	
 
 # make point-belief
 PT_BELIEF_DIR = point/belief
@@ -80,7 +84,6 @@ state-finitediff: $(PT_STATE_FD_OBJS)
 $(OBJ_DIR)/point-state-finitediff.o : $(PT_STATE_FD_DIR)/point-state-finitediff.cpp
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $^
 
-
 # make point-lp
 PT_LP_DIR = point/lp
 PT_LP_FILES = lpMPC pt_symeval point-lp logging
@@ -95,6 +98,19 @@ $(OBJ_DIR)/lpMPC.o : $(PT_LP_DIR)/lpMPC.c
 $(OBJ_DIR)/point-lp.o : $(PT_LP_DIR)/point-lp.cpp
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $^
 
+# make point-control
+PT_CONTROL_DIR = point/control
+PT_CONTROL_FILES = controlMPC control_symeval point-control logging
+PT_CONTROL_OBJS = $(PT_CONTROL_FILES:%=$(OBJ_DIR)/%.o)
+
+control: $(PT_CONTROL_OBJS)
+	$(CXX) $(BFLAGS) $(PT_CONTROL_OBJS) -o $(BIN_DIR)/point-control $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
+
+$(OBJ_DIR)/controlMPC.o : $(PT_CONTROL_DIR)/controlMPC.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+	
+$(OBJ_DIR)/point-control.o : $(PT_CONTROL_DIR)/point-control.cpp
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $^
 
 ###### CLEAN ########
 

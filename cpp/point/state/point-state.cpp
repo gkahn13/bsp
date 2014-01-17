@@ -12,7 +12,6 @@
 #include <Python.h>
 //#include <pythonrun.h>
 #include <boost/python.hpp>
-#include <numpy/ndarrayobject.h>
 #include <boost/preprocessor/iteration/local.hpp>
 #include <boost/preprocessor/arithmetic/sub.hpp>
 #include <boost/filesystem.hpp>
@@ -625,6 +624,12 @@ void pythonDisplayTrajectory(std::vector< Matrix<X_DIM> >& X, std::vector< Matri
 		}
 	}
 
+	py::list x0_list, xGoal_list;
+	for(int i=0; i < X_DIM; i++) {
+		x0_list.append(x0[0,i]);
+		xGoal_list.append(xGoal[0,i]);
+	}
+
 	std::string workingDir = boost::filesystem::current_path().normalize().string();
 	std::string bspDir = workingDir.substr(0,workingDir.find("bsp"));
 
@@ -640,7 +645,7 @@ void pythonDisplayTrajectory(std::vector< Matrix<X_DIM> >& X, std::vector< Matri
 		py::object plot_mod = py::import("plot");
 		py::object plot_traj = plot_mod.attr("plot_belief_trajectory");
 
-		plot_traj(Bvec, Uvec, model);
+		plot_traj(Bvec, Uvec, model, x0_list, xGoal_list);
 	}
 	catch(py::error_already_set const &)
 	{
@@ -697,12 +702,12 @@ int main(int argc, char* argv[])
 	LOG_INFO("Cost: %4.10f", cost);
 	LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 
-	//pythonDisplayTrajectory(X, U);
+	pythonDisplayTrajectory(X, U);
 
 	cleanup();
 
-	//int k;
-	//std::cin >> k;
+	int k;
+	std::cin >> k;
 
 	//CAL_End();
 	return 0;

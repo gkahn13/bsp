@@ -221,7 +221,7 @@ void setupDstarInterface()
 
 	inputVars = new double[nvars];
 
-	std::ifstream fptr("point/masks.txt");
+	std::ifstream fptr("point/state-masks.txt");
 	int val;
 	for(int i = 0; i < nvars; ++i) {
 		fptr >> val;

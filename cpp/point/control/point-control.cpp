@@ -45,7 +45,7 @@ Matrix<U_DIM> uMin, uMax;
 
 const int T = TIMESTEPS;
 const double INFTY = 1e10;
-const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 1, alpha_goal_state = 5;
+const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 1, alpha_goal_state = 10;
 
 namespace cfg {
 const double improve_ratio_threshold = .1;
@@ -213,7 +213,7 @@ void setupDstarInterface()
 
 	inputVars = new double[nvars];
 
-	std::ifstream fptr("point/control-masks.txt");
+	std::ifstream fptr("point/control-masks-15.txt");
 	int val;
 	for(int i = 0; i < nvars; ++i) {
 		fptr >> val;

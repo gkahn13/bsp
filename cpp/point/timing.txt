@@ -1,10 +1,12 @@
 All times in ms
 
-Gurobi penalty SQP belief state: 
+Gurobi penalty SQP belief state:
+10: 60
+15: 52
+20: 77
 25: 114
-50: 173
-75: 255
-100: 334
+30: 112
+40: 212
 
 FORCES penalty SQP belief state:
 10: 25 ms

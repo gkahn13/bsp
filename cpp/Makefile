@@ -17,6 +17,13 @@ PYTHON_FLAGS = -I/usr/include/python2.7 -lpython2.7
 BOOST_FLAGS = -lboost_python -lboost_filesystem -lboost_system
 LINKER_FLAGS = -lrt
 
+###### DIRECTORY CREATION ###########
+dir:
+	mkdir -p build/debug
+	mkdir -p build/release
+	mkdir -p bin/debug
+	mkdir -p bin/release
+
 ###### UTIL ############
 
 $(OBJ_DIR)/logging.o : util/logging.cpp
@@ -27,7 +34,7 @@ $(OBJ_DIR)/logging.o : util/logging.cpp
 # symeval	
 PT_SYM_DIR = point/sym
 
-$(OBJ_DIR)/pt_symeval.o : $(PT_SYM_DIR)/symeval.c $(PT_SYM_DIR)/symeval.h
+$(OBJ_DIR)/pt_symeval.o : $(PT_SYM_DIR)/symeval.c
 	gcc -c $(C_FLAGS) $(BFLAGS) -o $(OBJ_DIR)/pt_symeval.o $(PT_SYM_DIR)/symeval.c
 
 # make point-belief

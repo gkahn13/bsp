@@ -1,0 +1,29 @@
+Gurobi penalty SQP belief state: 
+25:
+50:
+75:
+100:
+
+FORCES penalty SQP belief state:
+25:
+50:
+75:
+100:
+
+FORCES SQP state:
+25:
+50:
+75:
+100:
+
+FORCES SLP state:
+25:
+50:
+75:
+100:
+
+FORCES SQP control:
+25:
+50:
+75:
+100:

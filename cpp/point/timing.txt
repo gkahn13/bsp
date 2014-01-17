@@ -22,7 +22,7 @@ FORCES SQP state:
 20: 1.5 ms
 25: 2.7 ms
 30: 3.2 ms
-40:
+40: 6.7 ms
 
 FORCES SLP state:
 25:

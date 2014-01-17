@@ -183,6 +183,18 @@ void setupcontrolMPCVars(controlMPC_params& problem, controlMPC_output& output)
 	// output
 	z = new controlMPC_FLOAT*[T-1];
 
+#define SET_VARS(n)    \
+		H[ BOOST_PP_SUB(n,1) ] = problem.H##n ;  \
+		f[ BOOST_PP_SUB(n,1) ] = problem.f##n ;  \
+		lb[ BOOST_PP_SUB(n,1) ] = problem.lb##n ;	\
+		ub[ BOOST_PP_SUB(n,1) ] = problem.ub##n ;	\
+		z[ BOOST_PP_SUB(n,1) ] = output.z##n ;
+
+#define BOOST_PP_LOCAL_MACRO(n) SET_VARS(n)
+#define BOOST_PP_LOCAL_LIMITS (1, TIMESTEPS-1)
+#include BOOST_PP_LOCAL_ITERATE()
+
+/*
 	H[0] = problem.H1; f[0] = problem.f1; lb[0] = problem.lb1; ub[0] = problem.ub1;
 	H[1] = problem.H2; f[1] = problem.f2; lb[1] = problem.lb2; ub[1] = problem.ub2;
 	H[2] = problem.H3; f[2] = problem.f3; lb[2] = problem.lb3; ub[2] = problem.ub3;
@@ -201,6 +213,7 @@ void setupcontrolMPCVars(controlMPC_params& problem, controlMPC_output& output)
 	z[0] = output.z1; z[1] = output.z2; z[2] = output.z3; z[3] = output.z4; z[4] = output.z5;
 	z[5] = output.z6; z[6] = output.z7; z[7] = output.z8; z[8] = output.z9; z[9] = output.z10;
 	z[10] = output.z11; z[11] = output.z12; z[12] = output.z13; z[13] = output.z14;
+	*/
 }
 
 void setupDstarInterface()

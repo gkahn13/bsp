@@ -46,7 +46,7 @@ Matrix<X_DIM> xGoal;
 Matrix<X_DIM> xMin, xMax;
 Matrix<U_DIM> uMin, uMax;
 
-const int T = 15;
+#define T 15 // for MACRO
 const double INFTY = 1e10;
 const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 1;
 
@@ -235,6 +235,29 @@ void setupBeliefVars(beliefPenaltyMPC_params& problem, beliefPenaltyMPC_output& 
 	z = new beliefPenaltyMPC_FLOAT*[T];
 #endif
 
+
+#define SET_VARS(n)    \
+		f[ BOOST_PP_SUB(n,1) ] = problem.f##n ;  \
+		C[ BOOST_PP_SUB(n,1) ] = problem.C##n ;  \
+		e[ BOOST_PP_SUB(n,1) ] = problem.e##n ;  \
+		lb[ BOOST_PP_SUB(n,1) ] = problem.lb##n ;	\
+		ub[ BOOST_PP_SUB(n,1) ] = problem.ub##n ;	\
+		z[ BOOST_PP_SUB(n,1) ] = output.z##n ;
+
+#define BOOST_PP_LOCAL_MACRO(n) SET_VARS(n)
+#define BOOST_PP_LOCAL_LIMITS (1, T-1)
+#include BOOST_PP_LOCAL_ITERATE()
+
+#define SET_LAST_VARS(n)    \
+		lb[ BOOST_PP_SUB(n,1) ] = problem.lb##n ;	\
+		ub[ BOOST_PP_SUB(n,1) ] = problem.ub##n ;	\
+		z[ BOOST_PP_SUB(n,1) ] = output.z##n ;
+
+#define BOOST_PP_LOCAL_MACRO(n) SET_LAST_VARS(n)
+#define BOOST_PP_LOCAL_LIMITS (T, T)
+#include BOOST_PP_LOCAL_ITERATE()
+
+	/*
 	f[0] = problem.f1; lb[0] = problem.lb1; ub[0] = problem.ub1; C[0] = problem.C1; e[0] = problem.e1;
 	f[1] = problem.f2; lb[1] = problem.lb2; ub[1] = problem.ub2; C[1] = problem.C2; e[1] = problem.e2;
 	f[2] = problem.f3; lb[2] = problem.lb3; ub[2] = problem.ub3; C[2] = problem.C3; e[2] = problem.e3;
@@ -254,6 +277,7 @@ void setupBeliefVars(beliefPenaltyMPC_params& problem, beliefPenaltyMPC_output& 
 	z[0] = output.z1; z[1] = output.z2; z[2] = output.z3; z[3] = output.z4; z[4] = output.z5;
 	z[5] = output.z6; z[6] = output.z7; z[7] = output.z8; z[8] = output.z9; z[9] = output.z10;
 	z[10] = output.z11; z[11] = output.z12; z[12] = output.z13; z[13] = output.z14; z[14] = output.z15;
+	*/
 }
 
 void cleanupBeliefMPCVars()

@@ -220,7 +220,7 @@ void setupDstarInterface()
 
 	inputVars = new double[nvars];
 
-	std::ifstream fptr("point/state-masks-15.txt");
+	std::ifstream fptr("point/state-masks.txt");
 	if(!fptr.is_open()) {
 		LOG_FATAL("Mask file handle not opened, check!, exiting");
 		std::exit(-1);

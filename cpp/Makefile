@@ -5,7 +5,7 @@ CC = gcc
 BUILD := debug
 
 BFLAGS.debug = -g -Wall
-BFLAGS.release = -O3 -fopenmp  
+BFLAGS.release = -O3
 BFLAGS := $(BFLAGS.$(BUILD))
 
 OBJ_DIR = build/$(BUILD)

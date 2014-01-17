@@ -2,42 +2,42 @@
 %
 %   OUTPUT = beliefMPC(PARAMS) solves a multistage problem
 %   subject to the parameters supplied in the following struct:
-%       PARAMS.lb01 - column vector of length 7
-%       PARAMS.ub01 - column vector of length 7
-%       PARAMS.C01 - matrix of size [10 x 7]
-%       PARAMS.e01 - column vector of length 10
-%       PARAMS.lb02 - column vector of length 7
-%       PARAMS.ub02 - column vector of length 7
-%       PARAMS.C02 - matrix of size [5 x 7]
-%       PARAMS.e02 - column vector of length 5
-%       PARAMS.lb03 - column vector of length 7
-%       PARAMS.ub03 - column vector of length 7
-%       PARAMS.C03 - matrix of size [5 x 7]
-%       PARAMS.e03 - column vector of length 5
-%       PARAMS.lb04 - column vector of length 7
-%       PARAMS.ub04 - column vector of length 7
-%       PARAMS.C04 - matrix of size [5 x 7]
-%       PARAMS.e04 - column vector of length 5
-%       PARAMS.lb05 - column vector of length 7
-%       PARAMS.ub05 - column vector of length 7
-%       PARAMS.C05 - matrix of size [5 x 7]
-%       PARAMS.e05 - column vector of length 5
-%       PARAMS.lb06 - column vector of length 7
-%       PARAMS.ub06 - column vector of length 7
-%       PARAMS.C06 - matrix of size [5 x 7]
-%       PARAMS.e06 - column vector of length 5
-%       PARAMS.lb07 - column vector of length 7
-%       PARAMS.ub07 - column vector of length 7
-%       PARAMS.C07 - matrix of size [5 x 7]
-%       PARAMS.e07 - column vector of length 5
-%       PARAMS.lb08 - column vector of length 7
-%       PARAMS.ub08 - column vector of length 7
-%       PARAMS.C08 - matrix of size [5 x 7]
-%       PARAMS.e08 - column vector of length 5
-%       PARAMS.lb09 - column vector of length 7
-%       PARAMS.ub09 - column vector of length 7
-%       PARAMS.C09 - matrix of size [5 x 7]
-%       PARAMS.e09 - column vector of length 5
+%       PARAMS.lb1 - column vector of length 7
+%       PARAMS.ub1 - column vector of length 7
+%       PARAMS.C1 - matrix of size [10 x 7]
+%       PARAMS.e1 - column vector of length 10
+%       PARAMS.lb2 - column vector of length 7
+%       PARAMS.ub2 - column vector of length 7
+%       PARAMS.C2 - matrix of size [5 x 7]
+%       PARAMS.e2 - column vector of length 5
+%       PARAMS.lb3 - column vector of length 7
+%       PARAMS.ub3 - column vector of length 7
+%       PARAMS.C3 - matrix of size [5 x 7]
+%       PARAMS.e3 - column vector of length 5
+%       PARAMS.lb4 - column vector of length 7
+%       PARAMS.ub4 - column vector of length 7
+%       PARAMS.C4 - matrix of size [5 x 7]
+%       PARAMS.e4 - column vector of length 5
+%       PARAMS.lb5 - column vector of length 7
+%       PARAMS.ub5 - column vector of length 7
+%       PARAMS.C5 - matrix of size [5 x 7]
+%       PARAMS.e5 - column vector of length 5
+%       PARAMS.lb6 - column vector of length 7
+%       PARAMS.ub6 - column vector of length 7
+%       PARAMS.C6 - matrix of size [5 x 7]
+%       PARAMS.e6 - column vector of length 5
+%       PARAMS.lb7 - column vector of length 7
+%       PARAMS.ub7 - column vector of length 7
+%       PARAMS.C7 - matrix of size [5 x 7]
+%       PARAMS.e7 - column vector of length 5
+%       PARAMS.lb8 - column vector of length 7
+%       PARAMS.ub8 - column vector of length 7
+%       PARAMS.C8 - matrix of size [5 x 7]
+%       PARAMS.e8 - column vector of length 5
+%       PARAMS.lb9 - column vector of length 7
+%       PARAMS.ub9 - column vector of length 7
+%       PARAMS.C9 - matrix of size [5 x 7]
+%       PARAMS.e9 - column vector of length 5
 %       PARAMS.lb10 - column vector of length 7
 %       PARAMS.ub10 - column vector of length 7
 %       PARAMS.C10 - matrix of size [5 x 7]

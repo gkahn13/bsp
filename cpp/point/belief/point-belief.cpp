@@ -27,8 +27,8 @@ beliefMPC_FLOAT **lb, **ub, **C, **e, **z;
 #endif
 }
 
-#define TIMESTEPS 15
 #define DT 1.0
+#define TIMESTEPS 10
 #define X_DIM 2
 #define U_DIM 2
 #define Z_DIM 2
@@ -46,7 +46,7 @@ Matrix<X_DIM> xGoal;
 Matrix<X_DIM> xMin, xMax;
 Matrix<U_DIM> uMin, uMax;
 
-const int T = 15;
+const int T = TIMESTEPS;
 const double INFTY = 1e10;
 const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 1;
 
@@ -805,8 +805,7 @@ double beliefCollocation(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_
 }
 #endif
 
-// default for unix
-// requires path to Python bsp already be on PYTHONPATH
+
 void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U)
 {
 	for (int t = 0; t < T-1; ++t) {

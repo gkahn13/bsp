@@ -35,8 +35,6 @@ extern "C" {
 #define S_DIM (((X_DIM+1)*X_DIM)/2)
 #define B_DIM (X_DIM+S_DIM)
 
-const bool FORCE_PSD_HESSIAN = true;
-
 const double step = 0.0078125*0.0078125;
 
 Matrix<X_DIM> x0;
@@ -383,6 +381,7 @@ bool isValidInputs(double *result) {
 	return true;
 }
 
+
 double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >& U, stateMPC_params& problem, stateMPC_output& output, stateMPC_info& info)
 {
 	int maxIter = 100;
@@ -447,9 +446,7 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 			H[T-1][0] = resultCostGradDiagHess[1+dim+(T-1)*X_DIM];
 			H[T-1][1] = resultCostGradDiagHess[1+dim+(T-1)*X_DIM+1];
 
-			if (FORCE_PSD_HESSIAN) {
-				forcePsdHessian(0);
-			}
+			forcePsdHessian(0);
 
 			for (int t = 0; t < T-1; ++t)
 			{
@@ -478,8 +475,8 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 					f[t][i] -= Hzbar[i];
 				}
 
+				// TODO: move following CMat code outside, is same every iteration
 				Matrix<X_DIM,X_DIM+U_DIM> CMat;
-				Matrix<X_DIM> eVec;
 
 				CMat.insert<X_DIM,X_DIM>(0,0,identity<X_DIM>());
 				CMat.insert<X_DIM,U_DIM>(0,X_DIM,DT*identity<U_DIM>());
@@ -611,7 +608,7 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 			solution_accepted = false;
 		} else {
 			LOG_DEBUG("Accepted, Increasing trust region size to:  %2.6f %2.6f", Xeps, Ueps);
-			// expand Xeps and Ueps and break into outermost loop (which we don't have)
+			// expand Xeps and Ueps
 			Xeps *= cfg::trust_expand_ratio;
 			Ueps *= cfg::trust_expand_ratio;
 			X = Xopt; U = Uopt;
@@ -631,8 +628,6 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 }
 
 
-// default for unix
-// requires path to Python bsp already be on PYTHONPATH
 void pythonDisplayTrajectory(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >& U)
 {
 	Matrix<B_DIM> binit = zeros<B_DIM>();

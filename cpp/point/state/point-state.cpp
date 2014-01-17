@@ -23,7 +23,7 @@ extern "C" {
 #include "stateMPC.h"
 }
 
-#define TIMESTEPS 15
+#define TIMESTEPS 10
 #define DT 1.0
 #define X_DIM 2
 #define U_DIM 2

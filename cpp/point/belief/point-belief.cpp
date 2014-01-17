@@ -8,7 +8,6 @@
 
 #include <Python.h>
 #include <boost/python.hpp>
-#include <numpy/ndarrayobject.h>
 #include <boost/filesystem.hpp>
 
 namespace py = boost::python;
@@ -828,6 +827,12 @@ void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matri
 		}
 	}
 
+	py::list x0_list, xGoal_list;
+	for(int i=0; i < X_DIM; i++) {
+		x0_list.append(x0[0,i]);
+		xGoal_list.append(xGoal[0,i]);
+	}
+
 	std::string workingDir = boost::filesystem::current_path().normalize().string();
 	std::string bspDir = workingDir.substr(0,workingDir.find("bsp"));
 
@@ -843,7 +848,7 @@ void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matri
 		py::object plot_mod = py::import("plot");
 		py::object plot_traj = plot_mod.attr("plot_belief_trajectory");
 
-		plot_traj(Bvec, Uvec, model);
+		plot_traj(Bvec, Uvec, model, x0_list, xGoal_list);
 	}
 	catch(py::error_already_set const &)
 	{

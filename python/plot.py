@@ -9,15 +9,15 @@ import belief
 
 import IPython
 
-def plot_belief_trajectory(B, U, model):
+def plot_belief_trajectory(B, U, model, start=None, goal=None):
     plt.clf()
     plt.cla()
 
     xDim = model.xDim
     bDim = model.bDim
     uDim = model.uDim
-    start = model.start
-    goal = model.goal
+    start = model.start if start is None else start
+    goal = model.goal if goal is None else goal
     T = model.T
 
     if type(B) == list:
@@ -33,6 +33,11 @@ def plot_belief_trajectory(B, U, model):
     plt.axis([-5,3,-3,3])
 
     model.plot_domain(B)
+
+    if start is not None:
+        plt.plot(start[0],start[1],'go',markersize=20.0)
+    if goal is not None:
+        plt.plot(goal[0],goal[1],'go',markersize=20.0)
 
     plot_mean(B[0:2,:])
 
@@ -51,6 +56,7 @@ def plot_belief_trajectory(B, U, model):
 
     plt.show(block=False)
     plt.pause(.05)
+
     
 def plot_mean(X):
     X = np.asarray(X)

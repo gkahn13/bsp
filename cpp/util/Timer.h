@@ -2,7 +2,11 @@
 #define TIMER_H_DEF
 
 #include <time.h>
-#include <sys/sysinfo.h>
+
+// from /usr/include/linux/time.h
+#ifndef CLOCK_MONOTONIC_RAW
+#define CLOCK_MONOTONIC_RAW 4
+#endif
 
 namespace util {
 

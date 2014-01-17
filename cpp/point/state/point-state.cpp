@@ -324,7 +324,10 @@ bool isValidInputs(double *result) {
 
 	//stateMPC_FLOAT **H, **f, **lb, **ub, **C, **e, **z;
 	for(int t = 0; t < T-1; ++t) {
-
+		25:
+		50:
+		75:
+		100:
 		std::cout << "t: " << t << std::endl << std::endl;
 
 		/*
@@ -702,12 +705,12 @@ int main(int argc, char* argv[])
 	LOG_INFO("Cost: %4.10f", cost);
 	LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 
-	pythonDisplayTrajectory(X, U);
+	//pythonDisplayTrajectory(X, U);
 
 	cleanup();
 
-	int k;
-	std::cin >> k;
+	//int k;
+	//std::cin >> k;
 
 	//CAL_End();
 	return 0;

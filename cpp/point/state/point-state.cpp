@@ -324,10 +324,6 @@ bool isValidInputs(double *result) {
 
 	//stateMPC_FLOAT **H, **f, **lb, **ub, **C, **e, **z;
 	for(int t = 0; t < T-1; ++t) {
-		25:
-		50:
-		75:
-		100:
 		std::cout << "t: " << t << std::endl << std::endl;
 
 		/*

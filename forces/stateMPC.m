@@ -86,11 +86,161 @@
 %       PARAMS.ub14 - column vector of length 4
 %       PARAMS.C14 - matrix of size [2 x 4]
 %       PARAMS.e14 - column vector of length 2
-%       PARAMS.H15 - matrix of size [2 x 2]
-%       PARAMS.f15 - column vector of length 2
-%       PARAMS.lb15 - column vector of length 2
-%       PARAMS.ub15 - column vector of length 2
+%       PARAMS.H15 - matrix of size [4 x 4]
+%       PARAMS.f15 - column vector of length 4
+%       PARAMS.lb15 - column vector of length 4
+%       PARAMS.ub15 - column vector of length 4
+%       PARAMS.C15 - matrix of size [2 x 4]
 %       PARAMS.e15 - column vector of length 2
+%       PARAMS.H16 - matrix of size [4 x 4]
+%       PARAMS.f16 - column vector of length 4
+%       PARAMS.lb16 - column vector of length 4
+%       PARAMS.ub16 - column vector of length 4
+%       PARAMS.C16 - matrix of size [2 x 4]
+%       PARAMS.e16 - column vector of length 2
+%       PARAMS.H17 - matrix of size [4 x 4]
+%       PARAMS.f17 - column vector of length 4
+%       PARAMS.lb17 - column vector of length 4
+%       PARAMS.ub17 - column vector of length 4
+%       PARAMS.C17 - matrix of size [2 x 4]
+%       PARAMS.e17 - column vector of length 2
+%       PARAMS.H18 - matrix of size [4 x 4]
+%       PARAMS.f18 - column vector of length 4
+%       PARAMS.lb18 - column vector of length 4
+%       PARAMS.ub18 - column vector of length 4
+%       PARAMS.C18 - matrix of size [2 x 4]
+%       PARAMS.e18 - column vector of length 2
+%       PARAMS.H19 - matrix of size [4 x 4]
+%       PARAMS.f19 - column vector of length 4
+%       PARAMS.lb19 - column vector of length 4
+%       PARAMS.ub19 - column vector of length 4
+%       PARAMS.C19 - matrix of size [2 x 4]
+%       PARAMS.e19 - column vector of length 2
+%       PARAMS.H20 - matrix of size [4 x 4]
+%       PARAMS.f20 - column vector of length 4
+%       PARAMS.lb20 - column vector of length 4
+%       PARAMS.ub20 - column vector of length 4
+%       PARAMS.C20 - matrix of size [2 x 4]
+%       PARAMS.e20 - column vector of length 2
+%       PARAMS.H21 - matrix of size [4 x 4]
+%       PARAMS.f21 - column vector of length 4
+%       PARAMS.lb21 - column vector of length 4
+%       PARAMS.ub21 - column vector of length 4
+%       PARAMS.C21 - matrix of size [2 x 4]
+%       PARAMS.e21 - column vector of length 2
+%       PARAMS.H22 - matrix of size [4 x 4]
+%       PARAMS.f22 - column vector of length 4
+%       PARAMS.lb22 - column vector of length 4
+%       PARAMS.ub22 - column vector of length 4
+%       PARAMS.C22 - matrix of size [2 x 4]
+%       PARAMS.e22 - column vector of length 2
+%       PARAMS.H23 - matrix of size [4 x 4]
+%       PARAMS.f23 - column vector of length 4
+%       PARAMS.lb23 - column vector of length 4
+%       PARAMS.ub23 - column vector of length 4
+%       PARAMS.C23 - matrix of size [2 x 4]
+%       PARAMS.e23 - column vector of length 2
+%       PARAMS.H24 - matrix of size [4 x 4]
+%       PARAMS.f24 - column vector of length 4
+%       PARAMS.lb24 - column vector of length 4
+%       PARAMS.ub24 - column vector of length 4
+%       PARAMS.C24 - matrix of size [2 x 4]
+%       PARAMS.e24 - column vector of length 2
+%       PARAMS.H25 - matrix of size [4 x 4]
+%       PARAMS.f25 - column vector of length 4
+%       PARAMS.lb25 - column vector of length 4
+%       PARAMS.ub25 - column vector of length 4
+%       PARAMS.C25 - matrix of size [2 x 4]
+%       PARAMS.e25 - column vector of length 2
+%       PARAMS.H26 - matrix of size [4 x 4]
+%       PARAMS.f26 - column vector of length 4
+%       PARAMS.lb26 - column vector of length 4
+%       PARAMS.ub26 - column vector of length 4
+%       PARAMS.C26 - matrix of size [2 x 4]
+%       PARAMS.e26 - column vector of length 2
+%       PARAMS.H27 - matrix of size [4 x 4]
+%       PARAMS.f27 - column vector of length 4
+%       PARAMS.lb27 - column vector of length 4
+%       PARAMS.ub27 - column vector of length 4
+%       PARAMS.C27 - matrix of size [2 x 4]
+%       PARAMS.e27 - column vector of length 2
+%       PARAMS.H28 - matrix of size [4 x 4]
+%       PARAMS.f28 - column vector of length 4
+%       PARAMS.lb28 - column vector of length 4
+%       PARAMS.ub28 - column vector of length 4
+%       PARAMS.C28 - matrix of size [2 x 4]
+%       PARAMS.e28 - column vector of length 2
+%       PARAMS.H29 - matrix of size [4 x 4]
+%       PARAMS.f29 - column vector of length 4
+%       PARAMS.lb29 - column vector of length 4
+%       PARAMS.ub29 - column vector of length 4
+%       PARAMS.C29 - matrix of size [2 x 4]
+%       PARAMS.e29 - column vector of length 2
+%       PARAMS.H30 - matrix of size [4 x 4]
+%       PARAMS.f30 - column vector of length 4
+%       PARAMS.lb30 - column vector of length 4
+%       PARAMS.ub30 - column vector of length 4
+%       PARAMS.C30 - matrix of size [2 x 4]
+%       PARAMS.e30 - column vector of length 2
+%       PARAMS.H31 - matrix of size [4 x 4]
+%       PARAMS.f31 - column vector of length 4
+%       PARAMS.lb31 - column vector of length 4
+%       PARAMS.ub31 - column vector of length 4
+%       PARAMS.C31 - matrix of size [2 x 4]
+%       PARAMS.e31 - column vector of length 2
+%       PARAMS.H32 - matrix of size [4 x 4]
+%       PARAMS.f32 - column vector of length 4
+%       PARAMS.lb32 - column vector of length 4
+%       PARAMS.ub32 - column vector of length 4
+%       PARAMS.C32 - matrix of size [2 x 4]
+%       PARAMS.e32 - column vector of length 2
+%       PARAMS.H33 - matrix of size [4 x 4]
+%       PARAMS.f33 - column vector of length 4
+%       PARAMS.lb33 - column vector of length 4
+%       PARAMS.ub33 - column vector of length 4
+%       PARAMS.C33 - matrix of size [2 x 4]
+%       PARAMS.e33 - column vector of length 2
+%       PARAMS.H34 - matrix of size [4 x 4]
+%       PARAMS.f34 - column vector of length 4
+%       PARAMS.lb34 - column vector of length 4
+%       PARAMS.ub34 - column vector of length 4
+%       PARAMS.C34 - matrix of size [2 x 4]
+%       PARAMS.e34 - column vector of length 2
+%       PARAMS.H35 - matrix of size [4 x 4]
+%       PARAMS.f35 - column vector of length 4
+%       PARAMS.lb35 - column vector of length 4
+%       PARAMS.ub35 - column vector of length 4
+%       PARAMS.C35 - matrix of size [2 x 4]
+%       PARAMS.e35 - column vector of length 2
+%       PARAMS.H36 - matrix of size [4 x 4]
+%       PARAMS.f36 - column vector of length 4
+%       PARAMS.lb36 - column vector of length 4
+%       PARAMS.ub36 - column vector of length 4
+%       PARAMS.C36 - matrix of size [2 x 4]
+%       PARAMS.e36 - column vector of length 2
+%       PARAMS.H37 - matrix of size [4 x 4]
+%       PARAMS.f37 - column vector of length 4
+%       PARAMS.lb37 - column vector of length 4
+%       PARAMS.ub37 - column vector of length 4
+%       PARAMS.C37 - matrix of size [2 x 4]
+%       PARAMS.e37 - column vector of length 2
+%       PARAMS.H38 - matrix of size [4 x 4]
+%       PARAMS.f38 - column vector of length 4
+%       PARAMS.lb38 - column vector of length 4
+%       PARAMS.ub38 - column vector of length 4
+%       PARAMS.C38 - matrix of size [2 x 4]
+%       PARAMS.e38 - column vector of length 2
+%       PARAMS.H39 - matrix of size [4 x 4]
+%       PARAMS.f39 - column vector of length 4
+%       PARAMS.lb39 - column vector of length 4
+%       PARAMS.ub39 - column vector of length 4
+%       PARAMS.C39 - matrix of size [2 x 4]
+%       PARAMS.e39 - column vector of length 2
+%       PARAMS.H40 - matrix of size [2 x 2]
+%       PARAMS.f40 - column vector of length 2
+%       PARAMS.lb40 - column vector of length 2
+%       PARAMS.ub40 - column vector of length 2
+%       PARAMS.e40 - column vector of length 2
 %
 %   OUTPUT returns the values of the last iteration of the solver where
 %       OUTPUT.z1 - column vector of size 4
@@ -107,7 +257,32 @@
 %       OUTPUT.z12 - column vector of size 4
 %       OUTPUT.z13 - column vector of size 4
 %       OUTPUT.z14 - column vector of size 4
-%       OUTPUT.z15 - column vector of size 2
+%       OUTPUT.z15 - column vector of size 4
+%       OUTPUT.z16 - column vector of size 4
+%       OUTPUT.z17 - column vector of size 4
+%       OUTPUT.z18 - column vector of size 4
+%       OUTPUT.z19 - column vector of size 4
+%       OUTPUT.z20 - column vector of size 4
+%       OUTPUT.z21 - column vector of size 4
+%       OUTPUT.z22 - column vector of size 4
+%       OUTPUT.z23 - column vector of size 4
+%       OUTPUT.z24 - column vector of size 4
+%       OUTPUT.z25 - column vector of size 4
+%       OUTPUT.z26 - column vector of size 4
+%       OUTPUT.z27 - column vector of size 4
+%       OUTPUT.z28 - column vector of size 4
+%       OUTPUT.z29 - column vector of size 4
+%       OUTPUT.z30 - column vector of size 4
+%       OUTPUT.z31 - column vector of size 4
+%       OUTPUT.z32 - column vector of size 4
+%       OUTPUT.z33 - column vector of size 4
+%       OUTPUT.z34 - column vector of size 4
+%       OUTPUT.z35 - column vector of size 4
+%       OUTPUT.z36 - column vector of size 4
+%       OUTPUT.z37 - column vector of size 4
+%       OUTPUT.z38 - column vector of size 4
+%       OUTPUT.z39 - column vector of size 4
+%       OUTPUT.z40 - column vector of size 2
 %
 %   [OUTPUT, EXITFLAG] = stateMPC(PARAMS) returns additionally
 %   the integer EXITFLAG indicating the state of the solution with 

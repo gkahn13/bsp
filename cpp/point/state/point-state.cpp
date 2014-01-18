@@ -23,7 +23,7 @@ extern "C" {
 #include "stateMPC.h"
 }
 
-#define TIMESTEPS 15
+#define TIMESTEPS 10
 #define DT 1.0
 #define X_DIM 2
 #define U_DIM 2
@@ -220,7 +220,9 @@ void setupDstarInterface()
 
 	inputVars = new double[nvars];
 
-	std::ifstream fptr("point/state-masks.txt");
+	std::stringstream file;
+	file << "point/masks/state-masks-" << TIMESTEPS << ".txt";
+	std::ifstream fptr(file.str());
 	if(!fptr.is_open()) {
 		LOG_FATAL("Mask file handle not opened, check!, exiting");
 		std::exit(-1);

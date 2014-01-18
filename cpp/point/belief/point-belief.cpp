@@ -28,7 +28,7 @@ beliefMPC_FLOAT **lb, **ub, **C, **e, **z;
 }
 
 #define DT 1.0
-#define TIMESTEPS 15
+#define TIMESTEPS 10
 #define X_DIM 2
 #define U_DIM 2
 #define Z_DIM 2

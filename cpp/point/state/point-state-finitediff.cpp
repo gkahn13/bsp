@@ -22,7 +22,7 @@ extern "C" {
 #include "stateMPC.h"
 }
 
-#define TIMESTEPS 15
+#define TIMESTEPS 10
 #define DT 1.0
 #define X_DIM 2
 #define U_DIM 2
@@ -219,8 +219,9 @@ void setupDstarInterface()
 
 	inputVars = new double[nvars];
 
-	std::ifstream fptr("point/state-masks.txt");
-	int val;
+	std::stringstream file;
+	file << "point/masks/state-masks-" << TIMESTEPS << ".txt";
+	std::ifstream fptr(file.str());int val;
 	for(int i = 0; i < nvars; ++i) {
 		fptr >> val;
 		if (val == 1) {

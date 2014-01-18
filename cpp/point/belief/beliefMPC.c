@@ -20,12 +20,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "beliefMPC.h"
 
 /* for square root */
-#include <math.h>
+#include <math.h> 
 
 /* SAFE DIVISION ------------------------------------------------------- */
 #define MAX(X,Y)  ((X) < (Y) ? (Y) : (X))
 #define MIN(X,Y)  ((X) < (Y) ? (X) : (Y))
-/*#define SAFEDIV_POS(X,Y)  ( (Y) < EPS ? ((X)/EPS) : (X)/(Y) )
+/*#define SAFEDIV_POS(X,Y)  ( (Y) < EPS ? ((X)/EPS) : (X)/(Y) ) 
 #define EPS (1.0000E-013) */
 #define BIGM (1E30)
 #define BIGMM (1E60)
@@ -78,8 +78,8 @@ void beliefMPC_LA_INITIALIZEVECTOR_206(beliefMPC_FLOAT* vec, beliefMPC_FLOAT val
 }
 
 
-/*
- * Calculates a dot product and adds it to a variable: z += x'*y;
+/* 
+ * Calculates a dot product and adds it to a variable: z += x'*y; 
  * This function is for vectors of length 206.
  */
 void beliefMPC_LA_DOTACC_206(beliefMPC_FLOAT *x, beliefMPC_FLOAT *y, beliefMPC_FLOAT *z)
@@ -104,7 +104,7 @@ void beliefMPC_LA_DOTACC_206(beliefMPC_FLOAT *x, beliefMPC_FLOAT *y, beliefMPC_F
 void beliefMPC_LA_DIAG_QUADFCN_7(beliefMPC_FLOAT* H, beliefMPC_FLOAT* f, beliefMPC_FLOAT* z, beliefMPC_FLOAT* grad, beliefMPC_FLOAT* value)
 {
 	int i;
-	beliefMPC_FLOAT hz;
+	beliefMPC_FLOAT hz;	
 	for( i=0; i<7; i++){
 		hz = H[i]*z[i];
 		grad[i] = hz + f[i];
@@ -126,7 +126,7 @@ void beliefMPC_LA_DIAG_QUADFCN_7(beliefMPC_FLOAT* H, beliefMPC_FLOAT* f, beliefM
 void beliefMPC_LA_DIAG_QUADFCN_5(beliefMPC_FLOAT* H, beliefMPC_FLOAT* f, beliefMPC_FLOAT* z, beliefMPC_FLOAT* grad, beliefMPC_FLOAT* value)
 {
 	int i;
-	beliefMPC_FLOAT hz;
+	beliefMPC_FLOAT hz;	
 	for( i=0; i<5; i++){
 		hz = H[i]*z[i];
 		grad[i] = hz + f[i];
@@ -135,7 +135,7 @@ void beliefMPC_LA_DIAG_QUADFCN_5(beliefMPC_FLOAT* H, beliefMPC_FLOAT* f, beliefM
 }
 
 
-/*
+/* 
  * Computes r = A*x + B*u - b
  * and      y = max([norm(r,inf), y])
  * and      z -= l'*r
@@ -155,17 +155,17 @@ void beliefMPC_LA_DENSE_MVMSUB3_10_7_7(beliefMPC_FLOAT *A, beliefMPC_FLOAT *x, b
 	/* do A*x + B*u first */
 	for( i=0; i<10; i++ ){
 		AxBu[i] = A[k++]*x[0] + B[m++]*u[0];
-	}
-	for( j=1; j<7; j++ ){
+	}	
+	for( j=1; j<7; j++ ){		
 		for( i=0; i<10; i++ ){
 			AxBu[i] += A[k++]*x[j];
 		}
 	}
-
+	
 	for( n=1; n<7; n++ ){
 		for( i=0; i<10; i++ ){
 			AxBu[i] += B[m++]*u[n];
-		}
+		}		
 	}
 
 	for( i=0; i<10; i++ ){
@@ -183,7 +183,7 @@ void beliefMPC_LA_DENSE_MVMSUB3_10_7_7(beliefMPC_FLOAT *A, beliefMPC_FLOAT *x, b
 }
 
 
-/*
+/* 
  * Computes r = A*x + B*u - b
  * and      y = max([norm(r,inf), y])
  * and      z -= l'*r
@@ -201,9 +201,9 @@ void beliefMPC_LA_DENSE_DIAGZERO_MVMSUB3_5_7_7(beliefMPC_FLOAT *A, beliefMPC_FLO
 	/* do A*x + B*u first */
 	for( i=0; i<5; i++ ){
 		AxBu[i] = A[k++]*x[0] + B[i]*u[i];
-	}
+	}	
 
-	for( j=1; j<7; j++ ){
+	for( j=1; j<7; j++ ){		
 		for( i=0; i<5; i++ ){
 			AxBu[i] += A[k++]*x[j];
 		}
@@ -224,7 +224,7 @@ void beliefMPC_LA_DENSE_DIAGZERO_MVMSUB3_5_7_7(beliefMPC_FLOAT *A, beliefMPC_FLO
 }
 
 
-/*
+/* 
  * Computes r = A*x + B*u - b
  * and      y = max([norm(r,inf), y])
  * and      z -= l'*r
@@ -242,9 +242,9 @@ void beliefMPC_LA_DENSE_DIAGZERO_MVMSUB3_5_7_5(beliefMPC_FLOAT *A, beliefMPC_FLO
 	/* do A*x + B*u first */
 	for( i=0; i<5; i++ ){
 		AxBu[i] = A[k++]*x[0] + B[i]*u[i];
-	}
+	}	
 
-	for( j=1; j<7; j++ ){
+	for( j=1; j<7; j++ ){		
 		for( i=0; i<5; i++ ){
 			AxBu[i] += A[k++]*x[j];
 		}
@@ -273,7 +273,7 @@ void beliefMPC_LA_DENSE_MTVM_10_7(beliefMPC_FLOAT *M, beliefMPC_FLOAT *x, belief
 {
 	int i;
 	int j;
-	int k = 0;
+	int k = 0; 
 	for( i=0; i<7; i++ ){
 		y[i] = 0;
 		for( j=0; j<10; j++ ){
@@ -284,7 +284,7 @@ void beliefMPC_LA_DENSE_MTVM_10_7(beliefMPC_FLOAT *M, beliefMPC_FLOAT *x, belief
 
 
 /*
- * Matrix vector multiplication z = A'*x + B'*y
+ * Matrix vector multiplication z = A'*x + B'*y 
  * where A is of size [5 x 7]
  * and B is of size [10 x 7]
  * and stored in column major format. Note the transposes of A and B!
@@ -309,7 +309,7 @@ void beliefMPC_LA_DENSE_MTVM2_5_7_10(beliefMPC_FLOAT *A, beliefMPC_FLOAT *x, bel
 
 
 /*
- * Matrix vector multiplication z = A'*x + B'*y
+ * Matrix vector multiplication z = A'*x + B'*y 
  * where A is of size [5 x 7] and stored in column major format.
  * and B is of size [5 x 7] and stored in diagzero format
  * Note the transposes of A and B!
@@ -479,7 +479,7 @@ void beliefMPC_LA_INEQ_B_GRAD_7_7_7(beliefMPC_FLOAT *lu, beliefMPC_FLOAT *su, be
 	for( i=0; i<7; i++ ){
 		grad[i] = 0;
 	}
-	for( i=0; i<7; i++ ){
+	for( i=0; i<7; i++ ){		
 		llbysl[i] = ll[i] / sl[i];
 		grad[lbIdx[i]] -= llbysl[i]*rl[i];
 	}
@@ -501,7 +501,7 @@ void beliefMPC_LA_INEQ_B_GRAD_5_5_5(beliefMPC_FLOAT *lu, beliefMPC_FLOAT *su, be
 	for( i=0; i<5; i++ ){
 		grad[i] = 0;
 	}
-	for( i=0; i<5; i++ ){
+	for( i=0; i<5; i++ ){		
 		llbysl[i] = ll[i] / sl[i];
 		grad[lbIdx[i]] -= llbysl[i]*rl[i];
 	}
@@ -526,7 +526,7 @@ void beliefMPC_LA_VVADD3_103(beliefMPC_FLOAT *u, beliefMPC_FLOAT *v, beliefMPC_F
 
 
 /*
- * Special function to compute the diagonal cholesky factorization of the
+ * Special function to compute the diagonal cholesky factorization of the 
  * positive definite augmented Hessian for block size 7.
  *
  * Inputs: - H = diagonal cost Hessian in diagonal storage format
@@ -541,7 +541,7 @@ void beliefMPC_LA_DIAG_CHOL_ONELOOP_LBUB_7_7_7(beliefMPC_FLOAT *H, beliefMPC_FLO
 
 {
 	int i;
-
+	
 	/* compute cholesky */
 	for( i=0; i<7; i++ ){
 		Phi[i] = H[i] + llbysl[i] + lubysu[i];
@@ -560,7 +560,7 @@ void beliefMPC_LA_DIAG_CHOL_ONELOOP_LBUB_7_7_7(beliefMPC_FLOAT *H, beliefMPC_FLO
 		Phi[i] = Phi[i] < 1.0000000000000000E-013 ? 2.0000000000000000E-002 : sqrt(Phi[i]);
 #endif
 	}
-
+	
 }
 
 
@@ -568,7 +568,7 @@ void beliefMPC_LA_DIAG_CHOL_ONELOOP_LBUB_7_7_7(beliefMPC_FLOAT *H, beliefMPC_FLO
  * Forward substitution for the matrix equation A*L' = B
  * where A is to be computed and is of size [10 x 7],
  * B is given and of size [10 x 7], L is a diagonal
- * matrix of size 10 stored in diagonal matrix
+ * matrix of size 10 stored in diagonal matrix 
  * storage format. Note the transpose of L has no impact!
  *
  * Result: A in column major storage format.
@@ -592,7 +592,7 @@ void beliefMPC_LA_DIAG_MATRIXFORWARDSUB_10_7(beliefMPC_FLOAT *L, beliefMPC_FLOAT
 /**
  * Forward substitution to solve L*y = b where L is a
  * diagonal matrix in vector storage format.
- *
+ * 
  * The dimensions involved are 7.
  */
 void beliefMPC_LA_DIAG_FORWARDSUB_7(beliefMPC_FLOAT *L, beliefMPC_FLOAT *b, beliefMPC_FLOAT *y)
@@ -609,7 +609,7 @@ void beliefMPC_LA_DIAG_FORWARDSUB_7(beliefMPC_FLOAT *L, beliefMPC_FLOAT *b, beli
  * Forward substitution for the matrix equation A*L' = B
  * where A is to be computed and is of size [5 x 7],
  * B is given and of size [5 x 7], L is a diagonal
- * matrix of size 5 stored in diagonal matrix
+ * matrix of size 5 stored in diagonal matrix 
  * storage format. Note the transpose of L has no impact!
  *
  * Result: A in column major storage format.
@@ -631,27 +631,27 @@ void beliefMPC_LA_DIAG_MATRIXFORWARDSUB_5_7(beliefMPC_FLOAT *L, beliefMPC_FLOAT 
 
 
 /**
- * Compute C = A*B' where
+ * Compute C = A*B' where 
  *
  *	size(A) = [10 x 7]
  *  size(B) = [5 x 7]
- *
+ * 
  * and all matrices are stored in column major format.
  *
- * THIS ONE HAS THE WORST ACCES PATTERN POSSIBLE.
- *
+ * THIS ONE HAS THE WORST ACCES PATTERN POSSIBLE.  
+ * 
  */
 void beliefMPC_LA_DENSE_MMTM_10_7_5(beliefMPC_FLOAT *A, beliefMPC_FLOAT *B, beliefMPC_FLOAT *C)
 {
     int i, j, k;
     beliefMPC_FLOAT temp;
-
-    for( i=0; i<10; i++ ){
+    
+    for( i=0; i<10; i++ ){        
         for( j=0; j<5; j++ ){
-            temp = 0;
+            temp = 0; 
             for( k=0; k<7; k++ ){
                 temp += A[k*10+i]*B[k*5+j];
-            }
+            }						
             C[j*10+i] = temp;
         }
     }
@@ -662,7 +662,7 @@ void beliefMPC_LA_DENSE_MMTM_10_7_5(beliefMPC_FLOAT *A, beliefMPC_FLOAT *B, beli
  * Forward substitution for the matrix equation A*L' = B
  * where A is to be computed and is of size [5 x 7],
  * B is given and of size [5 x 7], L is a diagonal
- *  matrix of size 7 stored in diagonal
+ *  matrix of size 7 stored in diagonal 
  * storage format. Note the transpose of L!
  *
  * Result: A in diagonalzero storage format.
@@ -671,26 +671,26 @@ void beliefMPC_LA_DENSE_MMTM_10_7_5(beliefMPC_FLOAT *A, beliefMPC_FLOAT *B, beli
 void beliefMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_5_7(beliefMPC_FLOAT *L, beliefMPC_FLOAT *B, beliefMPC_FLOAT *A)
 {
 	int j;
-    for( j=0; j<7; j++ ){
+    for( j=0; j<7; j++ ){   
 		A[j] = B[j]/L[j];
      }
 }
 
 
 /**
- * Compute C = A*B' where
+ * Compute C = A*B' where 
  *
  *	size(A) = [5 x 7]
  *  size(B) = [5 x 7] in diagzero format
- *
+ * 
  * A and C matrices are stored in column major format.
- *
- *
+ * 
+ * 
  */
 void beliefMPC_LA_DENSE_DIAGZERO_MMTM_5_7_5(beliefMPC_FLOAT *A, beliefMPC_FLOAT *B, beliefMPC_FLOAT *C)
 {
     int i, j;
-
+	
 	for( i=0; i<5; i++ ){
 		for( j=0; j<5; j++){
 			C[j*5+i] = B[i*5+j]*A[i];
@@ -701,7 +701,7 @@ void beliefMPC_LA_DENSE_DIAGZERO_MMTM_5_7_5(beliefMPC_FLOAT *A, beliefMPC_FLOAT 
 
 
 /*
- * Special function to compute the diagonal cholesky factorization of the
+ * Special function to compute the diagonal cholesky factorization of the 
  * positive definite augmented Hessian for block size 5.
  *
  * Inputs: - H = diagonal cost Hessian in diagonal storage format
@@ -716,7 +716,7 @@ void beliefMPC_LA_DIAG_CHOL_ONELOOP_LBUB_5_5_5(beliefMPC_FLOAT *H, beliefMPC_FLO
 
 {
 	int i;
-
+	
 	/* compute cholesky */
 	for( i=0; i<5; i++ ){
 		Phi[i] = H[i] + llbysl[i] + lubysu[i];
@@ -735,7 +735,7 @@ void beliefMPC_LA_DIAG_CHOL_ONELOOP_LBUB_5_5_5(beliefMPC_FLOAT *H, beliefMPC_FLO
 		Phi[i] = Phi[i] < 1.0000000000000000E-013 ? 2.0000000000000000E-002 : sqrt(Phi[i]);
 #endif
 	}
-
+	
 }
 
 
@@ -743,7 +743,7 @@ void beliefMPC_LA_DIAG_CHOL_ONELOOP_LBUB_5_5_5(beliefMPC_FLOAT *H, beliefMPC_FLO
  * Forward substitution for the matrix equation A*L' = B
  * where A is to be computed and is of size [5 x 5],
  * B is given and of size [5 x 5], L is a diagonal
- *  matrix of size 5 stored in diagonal
+ *  matrix of size 5 stored in diagonal 
  * storage format. Note the transpose of L!
  *
  * Result: A in diagonalzero storage format.
@@ -752,7 +752,7 @@ void beliefMPC_LA_DIAG_CHOL_ONELOOP_LBUB_5_5_5(beliefMPC_FLOAT *H, beliefMPC_FLO
 void beliefMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_5_5(beliefMPC_FLOAT *L, beliefMPC_FLOAT *B, beliefMPC_FLOAT *A)
 {
 	int j;
-    for( j=0; j<5; j++ ){
+    for( j=0; j<5; j++ ){   
 		A[j] = B[j]/L[j];
      }
 }
@@ -761,7 +761,7 @@ void beliefMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_5_5(beliefMPC_FLOAT *L, belief
 /**
  * Forward substitution to solve L*y = b where L is a
  * diagonal matrix in vector storage format.
- *
+ * 
  * The dimensions involved are 5.
  */
 void beliefMPC_LA_DIAG_FORWARDSUB_5(beliefMPC_FLOAT *L, beliefMPC_FLOAT *b, beliefMPC_FLOAT *y)
@@ -779,23 +779,23 @@ void beliefMPC_LA_DIAG_FORWARDSUB_5(beliefMPC_FLOAT *L, beliefMPC_FLOAT *b, beli
  * and A is a dense matrix of size [10 x 7] in column
  * storage format, and B is of size [10 x 7] also in column
  * storage format.
- *
- * THIS ONE HAS THE WORST ACCES PATTERN POSSIBLE.
+ * 
+ * THIS ONE HAS THE WORST ACCES PATTERN POSSIBLE. 
  * POSSIBKE FIX: PUT A AND B INTO ROW MAJOR FORMAT FIRST.
- *
+ * 
  */
 void beliefMPC_LA_DENSE_MMT2_10_7_7(beliefMPC_FLOAT *A, beliefMPC_FLOAT *B, beliefMPC_FLOAT *L)
 {
     int i, j, k, ii, di;
     beliefMPC_FLOAT ltemp;
-
+    
     ii = 0; di = 0;
-    for( i=0; i<10; i++ ){
+    for( i=0; i<10; i++ ){        
         for( j=0; j<=i; j++ ){
-            ltemp = 0;
+            ltemp = 0; 
             for( k=0; k<7; k++ ){
                 ltemp += A[k*10+i]*A[k*10+j];
-            }
+            }			
 			for( k=0; k<7; k++ ){
                 ltemp += B[k*10+i]*B[k*10+j];
             }
@@ -806,7 +806,7 @@ void beliefMPC_LA_DENSE_MMT2_10_7_7(beliefMPC_FLOAT *A, beliefMPC_FLOAT *B, beli
 }
 
 
-/*
+/* 
  * Computes r = b - A*x - B*u
  * where A an B are stored in column major format
  */
@@ -820,17 +820,17 @@ void beliefMPC_LA_DENSE_MVMSUB2_10_7_7(beliefMPC_FLOAT *A, beliefMPC_FLOAT *x, b
 
 	for( i=0; i<10; i++ ){
 		r[i] = b[i] - A[k++]*x[0] - B[m++]*u[0];
-	}
-	for( j=1; j<7; j++ ){
+	}	
+	for( j=1; j<7; j++ ){		
 		for( i=0; i<10; i++ ){
 			r[i] -= A[k++]*x[j];
 		}
 	}
-
+	
 	for( n=1; n<7; n++ ){
 		for( i=0; i<10; i++ ){
 			r[i] -= B[m++]*u[n];
-		}
+		}		
 	}
 }
 
@@ -840,23 +840,23 @@ void beliefMPC_LA_DENSE_MVMSUB2_10_7_7(beliefMPC_FLOAT *A, beliefMPC_FLOAT *x, b
  * and A is a dense matrix of size [5 x 7] in column
  * storage format, and B is of size [5 x 7] diagonalzero
  * storage format.
- *
- * THIS ONE HAS THE WORST ACCES PATTERN POSSIBLE.
+ * 
+ * THIS ONE HAS THE WORST ACCES PATTERN POSSIBLE. 
  * POSSIBKE FIX: PUT A AND B INTO ROW MAJOR FORMAT FIRST.
- *
+ * 
  */
 void beliefMPC_LA_DENSE_DIAGZERO_MMT2_5_7_7(beliefMPC_FLOAT *A, beliefMPC_FLOAT *B, beliefMPC_FLOAT *L)
 {
     int i, j, k, ii, di;
     beliefMPC_FLOAT ltemp;
-
+    
     ii = 0; di = 0;
-    for( i=0; i<5; i++ ){
+    for( i=0; i<5; i++ ){        
         for( j=0; j<=i; j++ ){
-            ltemp = 0;
+            ltemp = 0; 
             for( k=0; k<7; k++ ){
                 ltemp += A[k*5+i]*A[k*5+j];
-            }
+            }		
             L[ii+j] = ltemp;
         }
 		/* work on the diagonal
@@ -867,7 +867,7 @@ void beliefMPC_LA_DENSE_DIAGZERO_MMT2_5_7_7(beliefMPC_FLOAT *A, beliefMPC_FLOAT 
 }
 
 
-/*
+/* 
  * Computes r = b - A*x - B*u
  * where A is stored in column major format
  * and B is stored in diagzero format
@@ -880,14 +880,14 @@ void beliefMPC_LA_DENSE_DIAGZERO_2MVMSUB2_5_7_7(beliefMPC_FLOAT *A, beliefMPC_FL
 
 	for( i=0; i<5; i++ ){
 		r[i] = b[i] - A[k++]*x[0] - B[i]*u[i];
-	}
+	}	
 
-	for( j=1; j<7; j++ ){
+	for( j=1; j<7; j++ ){		
 		for( i=0; i<5; i++ ){
 			r[i] -= A[k++]*x[j];
 		}
 	}
-
+	
 }
 
 
@@ -896,23 +896,23 @@ void beliefMPC_LA_DENSE_DIAGZERO_2MVMSUB2_5_7_7(beliefMPC_FLOAT *A, beliefMPC_FL
  * and A is a dense matrix of size [5 x 7] in column
  * storage format, and B is of size [5 x 5] diagonalzero
  * storage format.
- *
- * THIS ONE HAS THE WORST ACCES PATTERN POSSIBLE.
+ * 
+ * THIS ONE HAS THE WORST ACCES PATTERN POSSIBLE. 
  * POSSIBKE FIX: PUT A AND B INTO ROW MAJOR FORMAT FIRST.
- *
+ * 
  */
 void beliefMPC_LA_DENSE_DIAGZERO_MMT2_5_7_5(beliefMPC_FLOAT *A, beliefMPC_FLOAT *B, beliefMPC_FLOAT *L)
 {
     int i, j, k, ii, di;
     beliefMPC_FLOAT ltemp;
-
+    
     ii = 0; di = 0;
-    for( i=0; i<5; i++ ){
+    for( i=0; i<5; i++ ){        
         for( j=0; j<=i; j++ ){
-            ltemp = 0;
+            ltemp = 0; 
             for( k=0; k<7; k++ ){
                 ltemp += A[k*5+i]*A[k*5+j];
-            }
+            }		
             L[ii+j] = ltemp;
         }
 		/* work on the diagonal
@@ -923,7 +923,7 @@ void beliefMPC_LA_DENSE_DIAGZERO_MMT2_5_7_5(beliefMPC_FLOAT *A, beliefMPC_FLOAT 
 }
 
 
-/*
+/* 
  * Computes r = b - A*x - B*u
  * where A is stored in column major format
  * and B is stored in diagzero format
@@ -936,19 +936,19 @@ void beliefMPC_LA_DENSE_DIAGZERO_2MVMSUB2_5_7_5(beliefMPC_FLOAT *A, beliefMPC_FL
 
 	for( i=0; i<5; i++ ){
 		r[i] = b[i] - A[k++]*x[0] - B[i]*u[i];
-	}
+	}	
 
-	for( j=1; j<7; j++ ){
+	for( j=1; j<7; j++ ){		
 		for( i=0; i<5; i++ ){
 			r[i] -= A[k++]*x[j];
 		}
 	}
-
+	
 }
 
 
 /**
- * Cholesky factorization as above, but working on a matrix in
+ * Cholesky factorization as above, but working on a matrix in 
  * lower triangular storage format of size 10 and outputting
  * the Cholesky factor to matrix L in lower triangular format.
  */
@@ -968,18 +968,18 @@ void beliefMPC_LA_DENSE_CHOL_10(beliefMPC_FLOAT *A, beliefMPC_FLOAT *L)
 			L[ii+j] = A[ii+j];
 		}
 		ii += ++di;
-	}
-
+	}    
+	
 	/* factor L */
 	ii=0; di=0;
     for( i=0; i<10; i++ ){
         l = 0;
         for( k=0; k<i; k++ ){
             l += L[ii+k]*L[ii+k];
-        }
-
+        }        
+        
         Mii = L[ii+i] - l;
-
+        
 #if beliefMPC_SET_PRINTLEVEL > 0 && defined PRINTNUMERICALWARNINGS
         if( Mii < 1.0000000000000000E-013 ){
              PRINTTEXT("WARNING (CHOL): small %d-th pivot in Cholesky fact. (=%3.1e < eps=%3.1e), regularizing to %3.1e\n",i,Mii,1.0000000000000000E-013,4.0000000000000002E-004);
@@ -994,7 +994,7 @@ void beliefMPC_LA_DENSE_CHOL_10(beliefMPC_FLOAT *A, beliefMPC_FLOAT *L)
 
 		jj = ((i+1)*(i+2))/2; dj = i+1;
         for( j=i+1; j<10; j++ ){
-            l = 0;
+            l = 0;            
             for( k=0; k<i; k++ ){
                 l += L[jj+k]*L[ii+k];
             }
@@ -1003,28 +1003,28 @@ void beliefMPC_LA_DENSE_CHOL_10(beliefMPC_FLOAT *A, beliefMPC_FLOAT *L)
 			l = MIN(l,  BIGMM);
 			l = MAX(l, -BIGMM);
 
-            L[jj+i] = (L[jj+i] - l)/L[ii+i];
+            L[jj+i] = (L[jj+i] - l)/L[ii+i];            
 			jj += ++dj;
         }
 		ii += ++di;
-    }
+    }	
 }
 
 
 /**
  * Forward substitution to solve L*y = b where L is a
  * lower triangular matrix in triangular storage format.
- *
+ * 
  * The dimensions involved are 10.
  */
 void beliefMPC_LA_DENSE_FORWARDSUB_10(beliefMPC_FLOAT *L, beliefMPC_FLOAT *b, beliefMPC_FLOAT *y)
 {
     int i,j,ii,di;
     beliefMPC_FLOAT yel;
-
+            
     ii = 0; di = 0;
     for( i=0; i<10; i++ ){
-        yel = b[i];
+        yel = b[i];        
         for( j=0; j<i; j++ ){
             yel -= y[j]*L[ii+j];
         }
@@ -1039,11 +1039,11 @@ void beliefMPC_LA_DENSE_FORWARDSUB_10(beliefMPC_FLOAT *L, beliefMPC_FLOAT *b, be
 }
 
 
-/**
+/** 
  * Forward substitution for the matrix equation A*L' = B'
  * where A is to be computed and is of size [5 x 10],
  * B is given and of size [5 x 10], L is a lower tri-
- * angular matrix of size 10 stored in lower triangular
+ * angular matrix of size 10 stored in lower triangular 
  * storage format. Note the transpose of L AND B!
  *
  * Result: A in column major storage format.
@@ -1053,20 +1053,20 @@ void beliefMPC_LA_DENSE_MATRIXTFORWARDSUB_5_10(beliefMPC_FLOAT *L, beliefMPC_FLO
 {
     int i,j,k,ii,di;
     beliefMPC_FLOAT a;
-
+    
     ii=0; di=0;
-    for( j=0; j<10; j++ ){
+    for( j=0; j<10; j++ ){        
         for( i=0; i<5; i++ ){
             a = B[i*10+j];
             for( k=0; k<j; k++ ){
                 a -= A[k*5+i]*L[ii+k];
-            }
+            }    
 
 			/* saturate for numerical stability */
 			a = MIN(a, BIGM);
-			a = MAX(a, -BIGM);
+			a = MAX(a, -BIGM); 
 
-			A[j*5+i] = a/L[ii+j];
+			A[j*5+i] = a/L[ii+j];			
         }
         ii += ++di;
     }
@@ -1077,23 +1077,23 @@ void beliefMPC_LA_DENSE_MATRIXTFORWARDSUB_5_10(beliefMPC_FLOAT *L, beliefMPC_FLO
  * Compute L = L - A*A', where L is lower triangular of size 5
  * and A is a dense matrix of size [5 x 10] in column
  * storage format.
- *
- * THIS ONE HAS THE WORST ACCES PATTERN POSSIBLE.
+ * 
+ * THIS ONE HAS THE WORST ACCES PATTERN POSSIBLE. 
  * POSSIBKE FIX: PUT A INTO ROW MAJOR FORMAT FIRST.
- *
+ * 
  */
 void beliefMPC_LA_DENSE_MMTSUB_5_10(beliefMPC_FLOAT *A, beliefMPC_FLOAT *L)
 {
     int i, j, k, ii, di;
     beliefMPC_FLOAT ltemp;
-
+    
     ii = 0; di = 0;
-    for( i=0; i<5; i++ ){
+    for( i=0; i<5; i++ ){        
         for( j=0; j<=i; j++ ){
-            ltemp = 0;
+            ltemp = 0; 
             for( k=0; k<10; k++ ){
                 ltemp += A[k*5+i]*A[k*5+j];
-            }
+            }						
             L[ii+j] -= ltemp;
         }
         ii += ++di;
@@ -1102,7 +1102,7 @@ void beliefMPC_LA_DENSE_MMTSUB_5_10(beliefMPC_FLOAT *A, beliefMPC_FLOAT *L)
 
 
 /**
- * Cholesky factorization as above, but working on a matrix in
+ * Cholesky factorization as above, but working on a matrix in 
  * lower triangular storage format of size 5 and outputting
  * the Cholesky factor to matrix L in lower triangular format.
  */
@@ -1122,18 +1122,18 @@ void beliefMPC_LA_DENSE_CHOL_5(beliefMPC_FLOAT *A, beliefMPC_FLOAT *L)
 			L[ii+j] = A[ii+j];
 		}
 		ii += ++di;
-	}
-
+	}    
+	
 	/* factor L */
 	ii=0; di=0;
     for( i=0; i<5; i++ ){
         l = 0;
         for( k=0; k<i; k++ ){
             l += L[ii+k]*L[ii+k];
-        }
-
+        }        
+        
         Mii = L[ii+i] - l;
-
+        
 #if beliefMPC_SET_PRINTLEVEL > 0 && defined PRINTNUMERICALWARNINGS
         if( Mii < 1.0000000000000000E-013 ){
              PRINTTEXT("WARNING (CHOL): small %d-th pivot in Cholesky fact. (=%3.1e < eps=%3.1e), regularizing to %3.1e\n",i,Mii,1.0000000000000000E-013,4.0000000000000002E-004);
@@ -1148,7 +1148,7 @@ void beliefMPC_LA_DENSE_CHOL_5(beliefMPC_FLOAT *A, beliefMPC_FLOAT *L)
 
 		jj = ((i+1)*(i+2))/2; dj = i+1;
         for( j=i+1; j<5; j++ ){
-            l = 0;
+            l = 0;            
             for( k=0; k<i; k++ ){
                 l += L[jj+k]*L[ii+k];
             }
@@ -1157,15 +1157,15 @@ void beliefMPC_LA_DENSE_CHOL_5(beliefMPC_FLOAT *A, beliefMPC_FLOAT *L)
 			l = MIN(l,  BIGMM);
 			l = MAX(l, -BIGMM);
 
-            L[jj+i] = (L[jj+i] - l)/L[ii+i];
+            L[jj+i] = (L[jj+i] - l)/L[ii+i];            
 			jj += ++dj;
         }
 		ii += ++di;
-    }
+    }	
 }
 
 
-/*
+/* 
  * Computes r = b - A*x
  * where A is stored in column major format
  */
@@ -1177,8 +1177,8 @@ void beliefMPC_LA_DENSE_MVMSUB1_5_10(beliefMPC_FLOAT *A, beliefMPC_FLOAT *x, bel
 
 	for( i=0; i<5; i++ ){
 		r[i] = b[i] - A[k++]*x[0];
-	}
-	for( j=1; j<10; j++ ){
+	}	
+	for( j=1; j<10; j++ ){		
 		for( i=0; i<5; i++ ){
 			r[i] -= A[k++]*x[j];
 		}
@@ -1189,17 +1189,17 @@ void beliefMPC_LA_DENSE_MVMSUB1_5_10(beliefMPC_FLOAT *A, beliefMPC_FLOAT *x, bel
 /**
  * Forward substitution to solve L*y = b where L is a
  * lower triangular matrix in triangular storage format.
- *
+ * 
  * The dimensions involved are 5.
  */
 void beliefMPC_LA_DENSE_FORWARDSUB_5(beliefMPC_FLOAT *L, beliefMPC_FLOAT *b, beliefMPC_FLOAT *y)
 {
     int i,j,ii,di;
     beliefMPC_FLOAT yel;
-
+            
     ii = 0; di = 0;
     for( i=0; i<5; i++ ){
-        yel = b[i];
+        yel = b[i];        
         for( j=0; j<i; j++ ){
             yel -= y[j]*L[ii+j];
         }
@@ -1214,11 +1214,11 @@ void beliefMPC_LA_DENSE_FORWARDSUB_5(beliefMPC_FLOAT *L, beliefMPC_FLOAT *b, bel
 }
 
 
-/**
+/** 
  * Forward substitution for the matrix equation A*L' = B'
  * where A is to be computed and is of size [5 x 5],
  * B is given and of size [5 x 5], L is a lower tri-
- * angular matrix of size 5 stored in lower triangular
+ * angular matrix of size 5 stored in lower triangular 
  * storage format. Note the transpose of L AND B!
  *
  * Result: A in column major storage format.
@@ -1228,20 +1228,20 @@ void beliefMPC_LA_DENSE_MATRIXTFORWARDSUB_5_5(beliefMPC_FLOAT *L, beliefMPC_FLOA
 {
     int i,j,k,ii,di;
     beliefMPC_FLOAT a;
-
+    
     ii=0; di=0;
-    for( j=0; j<5; j++ ){
+    for( j=0; j<5; j++ ){        
         for( i=0; i<5; i++ ){
             a = B[i*5+j];
             for( k=0; k<j; k++ ){
                 a -= A[k*5+i]*L[ii+k];
-            }
+            }    
 
 			/* saturate for numerical stability */
 			a = MIN(a, BIGM);
-			a = MAX(a, -BIGM);
+			a = MAX(a, -BIGM); 
 
-			A[j*5+i] = a/L[ii+j];
+			A[j*5+i] = a/L[ii+j];			
         }
         ii += ++di;
     }
@@ -1252,23 +1252,23 @@ void beliefMPC_LA_DENSE_MATRIXTFORWARDSUB_5_5(beliefMPC_FLOAT *L, beliefMPC_FLOA
  * Compute L = L - A*A', where L is lower triangular of size 5
  * and A is a dense matrix of size [5 x 5] in column
  * storage format.
- *
- * THIS ONE HAS THE WORST ACCES PATTERN POSSIBLE.
+ * 
+ * THIS ONE HAS THE WORST ACCES PATTERN POSSIBLE. 
  * POSSIBKE FIX: PUT A INTO ROW MAJOR FORMAT FIRST.
- *
+ * 
  */
 void beliefMPC_LA_DENSE_MMTSUB_5_5(beliefMPC_FLOAT *A, beliefMPC_FLOAT *L)
 {
     int i, j, k, ii, di;
     beliefMPC_FLOAT ltemp;
-
+    
     ii = 0; di = 0;
-    for( i=0; i<5; i++ ){
+    for( i=0; i<5; i++ ){        
         for( j=0; j<=i; j++ ){
-            ltemp = 0;
+            ltemp = 0; 
             for( k=0; k<5; k++ ){
                 ltemp += A[k*5+i]*A[k*5+j];
-            }
+            }						
             L[ii+j] -= ltemp;
         }
         ii += ++di;
@@ -1276,7 +1276,7 @@ void beliefMPC_LA_DENSE_MMTSUB_5_5(beliefMPC_FLOAT *A, beliefMPC_FLOAT *L)
 }
 
 
-/*
+/* 
  * Computes r = b - A*x
  * where A is stored in column major format
  */
@@ -1288,8 +1288,8 @@ void beliefMPC_LA_DENSE_MVMSUB1_5_5(beliefMPC_FLOAT *A, beliefMPC_FLOAT *x, beli
 
 	for( i=0; i<5; i++ ){
 		r[i] = b[i] - A[k++]*x[0];
-	}
-	for( j=1; j<5; j++ ){
+	}	
+	for( j=1; j<5; j++ ){		
 		for( i=0; i<5; i++ ){
 			r[i] -= A[k++]*x[j];
 		}
@@ -1300,19 +1300,19 @@ void beliefMPC_LA_DENSE_MVMSUB1_5_5(beliefMPC_FLOAT *A, beliefMPC_FLOAT *x, beli
 /**
  * Backward Substitution to solve L^T*x = y where L is a
  * lower triangular matrix in triangular storage format.
- *
+ * 
  * All involved dimensions are 5.
  */
 void beliefMPC_LA_DENSE_BACKWARDSUB_5(beliefMPC_FLOAT *L, beliefMPC_FLOAT *y, beliefMPC_FLOAT *x)
 {
     int i, ii, di, j, jj, dj;
-    beliefMPC_FLOAT xel;
+    beliefMPC_FLOAT xel;    
 	int start = 10;
-
+    
     /* now solve L^T*x = y by backward substitution */
     ii = start; di = 4;
-    for( i=4; i>=0; i-- ){
-        xel = y[i];
+    for( i=4; i>=0; i-- ){        
+        xel = y[i];        
         jj = start; dj = 4;
         for( j=4; j>i; j-- ){
             xel -= x[j]*L[jj+i];
@@ -1321,7 +1321,7 @@ void beliefMPC_LA_DENSE_BACKWARDSUB_5(beliefMPC_FLOAT *L, beliefMPC_FLOAT *y, be
 
 		/* saturate for numerical stability */
 		xel = MIN(xel, BIGM);
-		xel = MAX(xel, -BIGM);
+		xel = MAX(xel, -BIGM); 
 
         x[i] = xel / L[ii+i];
         ii -= di--;
@@ -1337,7 +1337,7 @@ void beliefMPC_LA_DENSE_MTVMSUB_5_5(beliefMPC_FLOAT *A, beliefMPC_FLOAT *x, beli
 {
 	int i;
 	int j;
-	int k = 0;
+	int k = 0; 
 	for( i=0; i<5; i++ ){
 		r[i] = b[i];
 		for( j=0; j<5; j++ ){
@@ -1355,7 +1355,7 @@ void beliefMPC_LA_DENSE_MTVMSUB_5_10(beliefMPC_FLOAT *A, beliefMPC_FLOAT *x, bel
 {
 	int i;
 	int j;
-	int k = 0;
+	int k = 0; 
 	for( i=0; i<10; i++ ){
 		r[i] = b[i];
 		for( j=0; j<5; j++ ){
@@ -1368,19 +1368,19 @@ void beliefMPC_LA_DENSE_MTVMSUB_5_10(beliefMPC_FLOAT *A, beliefMPC_FLOAT *x, bel
 /**
  * Backward Substitution to solve L^T*x = y where L is a
  * lower triangular matrix in triangular storage format.
- *
+ * 
  * All involved dimensions are 10.
  */
 void beliefMPC_LA_DENSE_BACKWARDSUB_10(beliefMPC_FLOAT *L, beliefMPC_FLOAT *y, beliefMPC_FLOAT *x)
 {
     int i, ii, di, j, jj, dj;
-    beliefMPC_FLOAT xel;
+    beliefMPC_FLOAT xel;    
 	int start = 45;
-
+    
     /* now solve L^T*x = y by backward substitution */
     ii = start; di = 9;
-    for( i=9; i>=0; i-- ){
-        xel = y[i];
+    for( i=9; i>=0; i-- ){        
+        xel = y[i];        
         jj = start; dj = 9;
         for( j=9; j>i; j-- ){
             xel -= x[j]*L[jj+i];
@@ -1389,7 +1389,7 @@ void beliefMPC_LA_DENSE_BACKWARDSUB_10(beliefMPC_FLOAT *L, beliefMPC_FLOAT *y, b
 
 		/* saturate for numerical stability */
 		xel = MIN(xel, BIGM);
-		xel = MAX(xel, -BIGM);
+		xel = MAX(xel, -BIGM); 
 
         x[i] = xel / L[ii+i];
         ii -= di--;
@@ -1417,12 +1417,12 @@ void beliefMPC_LA_VSUB2_103(beliefMPC_FLOAT *x, beliefMPC_FLOAT *y, beliefMPC_FL
 void beliefMPC_LA_DIAG_FORWARDBACKWARDSUB_7(beliefMPC_FLOAT *L, beliefMPC_FLOAT *b, beliefMPC_FLOAT *x)
 {
     int i;
-
+            
     /* solve Ly = b by forward and backward substitution */
     for( i=0; i<7; i++ ){
 		x[i] = b[i]/(L[i]*L[i]);
     }
-
+    
 }
 
 
@@ -1434,12 +1434,12 @@ void beliefMPC_LA_DIAG_FORWARDBACKWARDSUB_7(beliefMPC_FLOAT *L, beliefMPC_FLOAT 
 void beliefMPC_LA_DIAG_FORWARDBACKWARDSUB_5(beliefMPC_FLOAT *L, beliefMPC_FLOAT *b, beliefMPC_FLOAT *x)
 {
     int i;
-
+            
     /* solve Ly = b by forward and backward substitution */
     for( i=0; i<5; i++ ){
 		x[i] = b[i]/(L[i]*L[i]);
     }
-
+    
 }
 
 
@@ -1521,7 +1521,7 @@ void beliefMPC_LA_VSUB2_INDEXED_5(beliefMPC_FLOAT *x, beliefMPC_FLOAT *y, int* y
 
 /**
  * Backtracking line search.
- *
+ * 
  * First determine the maximum line length by a feasibility line
  * search, i.e. a ~= argmax{ a \in [0...1] s.t. l+a*dl >= 0 and s+a*ds >= 0}.
  *
@@ -1531,15 +1531,15 @@ void beliefMPC_LA_VSUB2_INDEXED_5(beliefMPC_FLOAT *x, beliefMPC_FLOAT *y, int* y
 int beliefMPC_LINESEARCH_BACKTRACKING_AFFINE(beliefMPC_FLOAT *l, beliefMPC_FLOAT *s, beliefMPC_FLOAT *dl, beliefMPC_FLOAT *ds, beliefMPC_FLOAT *a, beliefMPC_FLOAT *mu_aff)
 {
     int i;
-	int lsIt=1;
+	int lsIt=1;    
     beliefMPC_FLOAT dltemp;
     beliefMPC_FLOAT dstemp;
     beliefMPC_FLOAT mya = 1.0;
     beliefMPC_FLOAT mymu;
+        
+    while( 1 ){                        
 
-    while( 1 ){
-
-        /*
+        /* 
          * Compute both snew and wnew together.
          * We compute also mu_affine along the way here, as the
          * values might be in registers, so it should be cheaper.
@@ -1551,12 +1551,12 @@ int beliefMPC_LINESEARCH_BACKTRACKING_AFFINE(beliefMPC_FLOAT *l, beliefMPC_FLOAT
             if( dltemp < 0 || dstemp < 0 ){
                 lsIt++;
                 break;
-            } else {
+            } else {                
                 mymu += dstemp*dltemp;
             }
         }
-
-        /*
+        
+        /* 
          * If no early termination of the for-loop above occurred, we
          * found the required value of a and we can quit the while loop.
          */
@@ -1569,7 +1569,7 @@ int beliefMPC_LINESEARCH_BACKTRACKING_AFFINE(beliefMPC_FLOAT *l, beliefMPC_FLOAT
             }
         }
     }
-
+    
     /* return new values and iteration counter */
     *a = mya;
     *mu_aff = mymu / (beliefMPC_FLOAT)206;
@@ -1609,7 +1609,7 @@ void beliefMPC_LA_VSUB6_INDEXED_7_7_7(beliefMPC_FLOAT *u, beliefMPC_FLOAT *su, i
 }
 
 
-/*
+/* 
  * Computes r = A*x + B*u
  * where A an B are stored in column major format
  */
@@ -1623,23 +1623,23 @@ void beliefMPC_LA_DENSE_2MVMADD_10_7_7(beliefMPC_FLOAT *A, beliefMPC_FLOAT *x, b
 
 	for( i=0; i<10; i++ ){
 		r[i] = A[k++]*x[0] + B[m++]*u[0];
-	}
+	}	
 
-	for( j=1; j<7; j++ ){
+	for( j=1; j<7; j++ ){		
 		for( i=0; i<10; i++ ){
 			r[i] += A[k++]*x[j];
 		}
 	}
-
+	
 	for( n=1; n<7; n++ ){
 		for( i=0; i<10; i++ ){
 			r[i] += B[m++]*u[n];
-		}
+		}		
 	}
 }
 
 
-/*
+/* 
  * Computes r = A*x + B*u
  * where A is stored in column major format
  * and B is stored in diagzero format
@@ -1652,14 +1652,14 @@ void beliefMPC_LA_DENSE_DIAGZERO_2MVMADD_5_7_7(beliefMPC_FLOAT *A, beliefMPC_FLO
 
 	for( i=0; i<5; i++ ){
 		r[i] = A[k++]*x[0] + B[i]*u[i];
-	}
+	}	
 
-	for( j=1; j<7; j++ ){
+	for( j=1; j<7; j++ ){		
 		for( i=0; i<5; i++ ){
 			r[i] += A[k++]*x[j];
 		}
 	}
-
+	
 }
 
 
@@ -1682,7 +1682,7 @@ void beliefMPC_LA_VSUB6_INDEXED_5_5_5(beliefMPC_FLOAT *u, beliefMPC_FLOAT *su, i
 }
 
 
-/*
+/* 
  * Computes r = A*x + B*u
  * where A is stored in column major format
  * and B is stored in diagzero format
@@ -1695,14 +1695,14 @@ void beliefMPC_LA_DENSE_DIAGZERO_2MVMADD_5_7_5(beliefMPC_FLOAT *A, beliefMPC_FLO
 
 	for( i=0; i<5; i++ ){
 		r[i] = A[k++]*x[0] + B[i]*u[i];
-	}
+	}	
 
-	for( j=1; j<7; j++ ){
+	for( j=1; j<7; j++ ){		
 		for( i=0; i<5; i++ ){
 			r[i] += A[k++]*x[j];
 		}
 	}
-
+	
 }
 
 
@@ -1718,7 +1718,7 @@ void beliefMPC_LA_VSUB_103(beliefMPC_FLOAT *x, beliefMPC_FLOAT *y, beliefMPC_FLO
 }
 
 
-/**
+/** 
  * Computes z = -r./s - u.*y(y)
  * where all vectors except of y are of length 7 (length of y >= 7).
  */
@@ -1731,7 +1731,7 @@ void beliefMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_7(beliefMPC_FLOAT *r, beliefMPC_FLO
 }
 
 
-/**
+/** 
  * Computes z = -r./s + u.*y(y)
  * where all vectors except of y are of length 7 (length of y >= 7).
  */
@@ -1744,7 +1744,7 @@ void beliefMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_7(beliefMPC_FLOAT *r, beliefMPC_FLO
 }
 
 
-/**
+/** 
  * Computes z = -r./s - u.*y(y)
  * where all vectors except of y are of length 5 (length of y >= 5).
  */
@@ -1757,7 +1757,7 @@ void beliefMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_5(beliefMPC_FLOAT *r, beliefMPC_FLO
 }
 
 
-/**
+/** 
  * Computes z = -r./s + u.*y(y)
  * where all vectors except of y are of length 5 (length of y >= 5).
  */
@@ -1825,13 +1825,13 @@ void beliefMPC_LA_VADD_206(beliefMPC_FLOAT *x, beliefMPC_FLOAT *y)
  */
 int beliefMPC_LINESEARCH_BACKTRACKING_COMBINED(beliefMPC_FLOAT *z, beliefMPC_FLOAT *v, beliefMPC_FLOAT *l, beliefMPC_FLOAT *s, beliefMPC_FLOAT *dz, beliefMPC_FLOAT *dv, beliefMPC_FLOAT *dl, beliefMPC_FLOAT *ds, beliefMPC_FLOAT *a, beliefMPC_FLOAT *mu)
 {
-    int i, lsIt=1;
+    int i, lsIt=1;       
     beliefMPC_FLOAT dltemp;
-    beliefMPC_FLOAT dstemp;
+    beliefMPC_FLOAT dstemp;    
     beliefMPC_FLOAT a_gamma;
-
+            
     *a = 1.0;
-    while( 1 ){
+    while( 1 ){                        
 
         /* check whether search criterion is fulfilled */
         for( i=0; i<206; i++ ){
@@ -1842,8 +1842,8 @@ int beliefMPC_LINESEARCH_BACKTRACKING_COMBINED(beliefMPC_FLOAT *z, beliefMPC_FLO
                 break;
             }
         }
-
-        /*
+        
+        /* 
          * If no early termination of the for-loop above occurred, we
          * found the required value of a and we can quit the while loop.
          */
@@ -1856,20 +1856,20 @@ int beliefMPC_LINESEARCH_BACKTRACKING_COMBINED(beliefMPC_FLOAT *z, beliefMPC_FLO
             }
         }
     }
-
+    
     /* update variables with safety margin */
     a_gamma = (*a)*beliefMPC_SET_LS_MAXSTEP;
-
+    
     /* primal variables */
     for( i=0; i<103; i++ ){
         z[i] += a_gamma*dz[i];
     }
-
+    
     /* equality constraint multipliers */
     for( i=0; i<75; i++ ){
         v[i] += a_gamma*dv[i];
     }
-
+    
     /* inequality constraint multipliers & slacks, also update mu */
     *mu = 0;
     for( i=0; i<206; i++ ){
@@ -1877,7 +1877,7 @@ int beliefMPC_LINESEARCH_BACKTRACKING_COMBINED(beliefMPC_FLOAT *z, beliefMPC_FLO
         dstemp = s[i] + a_gamma*ds[i]; s[i] = dstemp;
         *mu += dltemp*dstemp;
     }
-
+    
     *a = a_gamma;
     *mu /= (beliefMPC_FLOAT)206;
     return lsIt;
@@ -1990,12 +1990,12 @@ beliefMPC_FLOAT* beliefMPC_dlubcc01 = beliefMPC_dl_cc + 21;
 beliefMPC_FLOAT* beliefMPC_dsubcc01 = beliefMPC_ds_cc + 21;
 beliefMPC_FLOAT* beliefMPC_ccrhsub01 = beliefMPC_ccrhs + 21;
 beliefMPC_FLOAT beliefMPC_Phi01[7];
-beliefMPC_FLOAT beliefMPC_D01[70] = {0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, -1.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000,
-0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, -1.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000,
-0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, -1.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000,
-0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, -1.0000000000000000E+000, 0.0000000000000000E+000,
-0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, -1.0000000000000000E+000,
-0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000,
+beliefMPC_FLOAT beliefMPC_D01[70] = {0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, -1.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 
+0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, -1.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 
+0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, -1.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 
+0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, -1.0000000000000000E+000, 0.0000000000000000E+000, 
+0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, -1.0000000000000000E+000, 
+0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 
 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000};
 beliefMPC_FLOAT beliefMPC_W01[70];
 beliefMPC_FLOAT beliefMPC_Ysd01[50];
@@ -2042,10 +2042,10 @@ beliefMPC_FLOAT* beliefMPC_dlubcc02 = beliefMPC_dl_cc + 35;
 beliefMPC_FLOAT* beliefMPC_dsubcc02 = beliefMPC_ds_cc + 35;
 beliefMPC_FLOAT* beliefMPC_ccrhsub02 = beliefMPC_ccrhs + 35;
 beliefMPC_FLOAT beliefMPC_Phi02[7];
-beliefMPC_FLOAT beliefMPC_D02[7] = {-1.0000000000000000E+000,
--1.0000000000000000E+000,
--1.0000000000000000E+000,
--1.0000000000000000E+000,
+beliefMPC_FLOAT beliefMPC_D02[7] = {-1.0000000000000000E+000, 
+-1.0000000000000000E+000, 
+-1.0000000000000000E+000, 
+-1.0000000000000000E+000, 
 -1.0000000000000000E+000};
 beliefMPC_FLOAT beliefMPC_W02[7];
 beliefMPC_FLOAT beliefMPC_Ysd02[25];
@@ -2577,10 +2577,10 @@ beliefMPC_FLOAT* beliefMPC_dlubcc14 = beliefMPC_dl_cc + 201;
 beliefMPC_FLOAT* beliefMPC_dsubcc14 = beliefMPC_ds_cc + 201;
 beliefMPC_FLOAT* beliefMPC_ccrhsub14 = beliefMPC_ccrhs + 201;
 beliefMPC_FLOAT beliefMPC_Phi14[5];
-beliefMPC_FLOAT beliefMPC_D14[5] = {-1.0000000000000000E+000,
--1.0000000000000000E+000,
--1.0000000000000000E+000,
--1.0000000000000000E+000,
+beliefMPC_FLOAT beliefMPC_D14[5] = {-1.0000000000000000E+000, 
+-1.0000000000000000E+000, 
+-1.0000000000000000E+000, 
+-1.0000000000000000E+000, 
 -1.0000000000000000E+000};
 beliefMPC_FLOAT beliefMPC_W14[5];
 beliefMPC_FLOAT musigma;
@@ -2594,7 +2594,7 @@ beliefMPC_FLOAT beliefMPC_L_0[21];
 
 /* SOLVER CODE --------------------------------------------------------- */
 int beliefMPC_solve(beliefMPC_params* params, beliefMPC_output* output, beliefMPC_info* info)
-{
+{	
 int exitcode;
 
 #if beliefMPC_SET_TIMING == 1
@@ -2629,29 +2629,29 @@ beliefMPC_LA_DIAG_QUADFCN_7(beliefMPC_H00, beliefMPC_f13, beliefMPC_z13, beliefM
 beliefMPC_LA_DIAG_QUADFCN_5(beliefMPC_H14, beliefMPC_f14, beliefMPC_z14, beliefMPC_grad_cost14, &info->pobj);
 info->res_eq = 0;
 info->dgap = 0;
-beliefMPC_LA_DENSE_MVMSUB3_10_7_7(params->C1, beliefMPC_z00, beliefMPC_D01, beliefMPC_z01, params->e1, beliefMPC_v00, beliefMPC_re00, &info->dgap, &info->res_eq);
-beliefMPC_LA_DENSE_DIAGZERO_MVMSUB3_5_7_7(params->C2, beliefMPC_z01, beliefMPC_D02, beliefMPC_z02, params->e2, beliefMPC_v01, beliefMPC_re01, &info->dgap, &info->res_eq);
-beliefMPC_LA_DENSE_DIAGZERO_MVMSUB3_5_7_7(params->C3, beliefMPC_z02, beliefMPC_D02, beliefMPC_z03, params->e3, beliefMPC_v02, beliefMPC_re02, &info->dgap, &info->res_eq);
-beliefMPC_LA_DENSE_DIAGZERO_MVMSUB3_5_7_7(params->C4, beliefMPC_z03, beliefMPC_D02, beliefMPC_z04, params->e4, beliefMPC_v03, beliefMPC_re03, &info->dgap, &info->res_eq);
-beliefMPC_LA_DENSE_DIAGZERO_MVMSUB3_5_7_7(params->C5, beliefMPC_z04, beliefMPC_D02, beliefMPC_z05, params->e5, beliefMPC_v04, beliefMPC_re04, &info->dgap, &info->res_eq);
-beliefMPC_LA_DENSE_DIAGZERO_MVMSUB3_5_7_7(params->C6, beliefMPC_z05, beliefMPC_D02, beliefMPC_z06, params->e6, beliefMPC_v05, beliefMPC_re05, &info->dgap, &info->res_eq);
-beliefMPC_LA_DENSE_DIAGZERO_MVMSUB3_5_7_7(params->C7, beliefMPC_z06, beliefMPC_D02, beliefMPC_z07, params->e7, beliefMPC_v06, beliefMPC_re06, &info->dgap, &info->res_eq);
-beliefMPC_LA_DENSE_DIAGZERO_MVMSUB3_5_7_7(params->C8, beliefMPC_z07, beliefMPC_D02, beliefMPC_z08, params->e8, beliefMPC_v07, beliefMPC_re07, &info->dgap, &info->res_eq);
-beliefMPC_LA_DENSE_DIAGZERO_MVMSUB3_5_7_7(params->C9, beliefMPC_z08, beliefMPC_D02, beliefMPC_z09, params->e9, beliefMPC_v08, beliefMPC_re08, &info->dgap, &info->res_eq);
+beliefMPC_LA_DENSE_MVMSUB3_10_7_7(params->C01, beliefMPC_z00, beliefMPC_D01, beliefMPC_z01, params->e01, beliefMPC_v00, beliefMPC_re00, &info->dgap, &info->res_eq);
+beliefMPC_LA_DENSE_DIAGZERO_MVMSUB3_5_7_7(params->C02, beliefMPC_z01, beliefMPC_D02, beliefMPC_z02, params->e02, beliefMPC_v01, beliefMPC_re01, &info->dgap, &info->res_eq);
+beliefMPC_LA_DENSE_DIAGZERO_MVMSUB3_5_7_7(params->C03, beliefMPC_z02, beliefMPC_D02, beliefMPC_z03, params->e03, beliefMPC_v02, beliefMPC_re02, &info->dgap, &info->res_eq);
+beliefMPC_LA_DENSE_DIAGZERO_MVMSUB3_5_7_7(params->C04, beliefMPC_z03, beliefMPC_D02, beliefMPC_z04, params->e04, beliefMPC_v03, beliefMPC_re03, &info->dgap, &info->res_eq);
+beliefMPC_LA_DENSE_DIAGZERO_MVMSUB3_5_7_7(params->C05, beliefMPC_z04, beliefMPC_D02, beliefMPC_z05, params->e05, beliefMPC_v04, beliefMPC_re04, &info->dgap, &info->res_eq);
+beliefMPC_LA_DENSE_DIAGZERO_MVMSUB3_5_7_7(params->C06, beliefMPC_z05, beliefMPC_D02, beliefMPC_z06, params->e06, beliefMPC_v05, beliefMPC_re05, &info->dgap, &info->res_eq);
+beliefMPC_LA_DENSE_DIAGZERO_MVMSUB3_5_7_7(params->C07, beliefMPC_z06, beliefMPC_D02, beliefMPC_z07, params->e07, beliefMPC_v06, beliefMPC_re06, &info->dgap, &info->res_eq);
+beliefMPC_LA_DENSE_DIAGZERO_MVMSUB3_5_7_7(params->C08, beliefMPC_z07, beliefMPC_D02, beliefMPC_z08, params->e08, beliefMPC_v07, beliefMPC_re07, &info->dgap, &info->res_eq);
+beliefMPC_LA_DENSE_DIAGZERO_MVMSUB3_5_7_7(params->C09, beliefMPC_z08, beliefMPC_D02, beliefMPC_z09, params->e09, beliefMPC_v08, beliefMPC_re08, &info->dgap, &info->res_eq);
 beliefMPC_LA_DENSE_DIAGZERO_MVMSUB3_5_7_7(params->C10, beliefMPC_z09, beliefMPC_D02, beliefMPC_z10, params->e10, beliefMPC_v09, beliefMPC_re09, &info->dgap, &info->res_eq);
 beliefMPC_LA_DENSE_DIAGZERO_MVMSUB3_5_7_7(params->C11, beliefMPC_z10, beliefMPC_D02, beliefMPC_z11, params->e11, beliefMPC_v10, beliefMPC_re10, &info->dgap, &info->res_eq);
 beliefMPC_LA_DENSE_DIAGZERO_MVMSUB3_5_7_7(params->C12, beliefMPC_z11, beliefMPC_D02, beliefMPC_z12, params->e12, beliefMPC_v11, beliefMPC_re11, &info->dgap, &info->res_eq);
 beliefMPC_LA_DENSE_DIAGZERO_MVMSUB3_5_7_7(params->C13, beliefMPC_z12, beliefMPC_D02, beliefMPC_z13, params->e13, beliefMPC_v12, beliefMPC_re12, &info->dgap, &info->res_eq);
 beliefMPC_LA_DENSE_DIAGZERO_MVMSUB3_5_7_5(params->C14, beliefMPC_z13, beliefMPC_D14, beliefMPC_z14, params->e14, beliefMPC_v13, beliefMPC_re13, &info->dgap, &info->res_eq);
-beliefMPC_LA_DENSE_MTVM_10_7(params->C1, beliefMPC_v00, beliefMPC_grad_eq00);
-beliefMPC_LA_DENSE_MTVM2_5_7_10(params->C2, beliefMPC_v01, beliefMPC_D01, beliefMPC_v00, beliefMPC_grad_eq01);
-beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C3, beliefMPC_v02, beliefMPC_D02, beliefMPC_v01, beliefMPC_grad_eq02);
-beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C4, beliefMPC_v03, beliefMPC_D02, beliefMPC_v02, beliefMPC_grad_eq03);
-beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C5, beliefMPC_v04, beliefMPC_D02, beliefMPC_v03, beliefMPC_grad_eq04);
-beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C6, beliefMPC_v05, beliefMPC_D02, beliefMPC_v04, beliefMPC_grad_eq05);
-beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C7, beliefMPC_v06, beliefMPC_D02, beliefMPC_v05, beliefMPC_grad_eq06);
-beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C8, beliefMPC_v07, beliefMPC_D02, beliefMPC_v06, beliefMPC_grad_eq07);
-beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C9, beliefMPC_v08, beliefMPC_D02, beliefMPC_v07, beliefMPC_grad_eq08);
+beliefMPC_LA_DENSE_MTVM_10_7(params->C01, beliefMPC_v00, beliefMPC_grad_eq00);
+beliefMPC_LA_DENSE_MTVM2_5_7_10(params->C02, beliefMPC_v01, beliefMPC_D01, beliefMPC_v00, beliefMPC_grad_eq01);
+beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C03, beliefMPC_v02, beliefMPC_D02, beliefMPC_v01, beliefMPC_grad_eq02);
+beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C04, beliefMPC_v03, beliefMPC_D02, beliefMPC_v02, beliefMPC_grad_eq03);
+beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C05, beliefMPC_v04, beliefMPC_D02, beliefMPC_v03, beliefMPC_grad_eq04);
+beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C06, beliefMPC_v05, beliefMPC_D02, beliefMPC_v04, beliefMPC_grad_eq05);
+beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C07, beliefMPC_v06, beliefMPC_D02, beliefMPC_v05, beliefMPC_grad_eq06);
+beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C08, beliefMPC_v07, beliefMPC_D02, beliefMPC_v06, beliefMPC_grad_eq07);
+beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C09, beliefMPC_v08, beliefMPC_D02, beliefMPC_v07, beliefMPC_grad_eq08);
 beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C10, beliefMPC_v09, beliefMPC_D02, beliefMPC_v08, beliefMPC_grad_eq09);
 beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C11, beliefMPC_v10, beliefMPC_D02, beliefMPC_v09, beliefMPC_grad_eq10);
 beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C12, beliefMPC_v11, beliefMPC_D02, beliefMPC_v10, beliefMPC_grad_eq11);
@@ -2659,24 +2659,24 @@ beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C13, beliefMPC_v12, beliefMPC_D0
 beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C14, beliefMPC_v13, beliefMPC_D02, beliefMPC_v12, beliefMPC_grad_eq13);
 beliefMPC_LA_DIAGZERO_MTVM_5_5(beliefMPC_D14, beliefMPC_v13, beliefMPC_grad_eq14);
 info->res_ineq = 0;
-beliefMPC_LA_VSUBADD3_7(params->lb1, beliefMPC_z00, beliefMPC_lbIdx00, beliefMPC_llb00, beliefMPC_slb00, beliefMPC_rilb00, &info->dgap, &info->res_ineq);
-beliefMPC_LA_VSUBADD2_7(beliefMPC_z00, beliefMPC_ubIdx00, params->ub1, beliefMPC_lub00, beliefMPC_sub00, beliefMPC_riub00, &info->dgap, &info->res_ineq);
-beliefMPC_LA_VSUBADD3_7(params->lb2, beliefMPC_z01, beliefMPC_lbIdx01, beliefMPC_llb01, beliefMPC_slb01, beliefMPC_rilb01, &info->dgap, &info->res_ineq);
-beliefMPC_LA_VSUBADD2_7(beliefMPC_z01, beliefMPC_ubIdx01, params->ub2, beliefMPC_lub01, beliefMPC_sub01, beliefMPC_riub01, &info->dgap, &info->res_ineq);
-beliefMPC_LA_VSUBADD3_7(params->lb3, beliefMPC_z02, beliefMPC_lbIdx02, beliefMPC_llb02, beliefMPC_slb02, beliefMPC_rilb02, &info->dgap, &info->res_ineq);
-beliefMPC_LA_VSUBADD2_7(beliefMPC_z02, beliefMPC_ubIdx02, params->ub3, beliefMPC_lub02, beliefMPC_sub02, beliefMPC_riub02, &info->dgap, &info->res_ineq);
-beliefMPC_LA_VSUBADD3_7(params->lb4, beliefMPC_z03, beliefMPC_lbIdx03, beliefMPC_llb03, beliefMPC_slb03, beliefMPC_rilb03, &info->dgap, &info->res_ineq);
-beliefMPC_LA_VSUBADD2_7(beliefMPC_z03, beliefMPC_ubIdx03, params->ub4, beliefMPC_lub03, beliefMPC_sub03, beliefMPC_riub03, &info->dgap, &info->res_ineq);
-beliefMPC_LA_VSUBADD3_7(params->lb5, beliefMPC_z04, beliefMPC_lbIdx04, beliefMPC_llb04, beliefMPC_slb04, beliefMPC_rilb04, &info->dgap, &info->res_ineq);
-beliefMPC_LA_VSUBADD2_7(beliefMPC_z04, beliefMPC_ubIdx04, params->ub5, beliefMPC_lub04, beliefMPC_sub04, beliefMPC_riub04, &info->dgap, &info->res_ineq);
-beliefMPC_LA_VSUBADD3_7(params->lb6, beliefMPC_z05, beliefMPC_lbIdx05, beliefMPC_llb05, beliefMPC_slb05, beliefMPC_rilb05, &info->dgap, &info->res_ineq);
-beliefMPC_LA_VSUBADD2_7(beliefMPC_z05, beliefMPC_ubIdx05, params->ub6, beliefMPC_lub05, beliefMPC_sub05, beliefMPC_riub05, &info->dgap, &info->res_ineq);
-beliefMPC_LA_VSUBADD3_7(params->lb7, beliefMPC_z06, beliefMPC_lbIdx06, beliefMPC_llb06, beliefMPC_slb06, beliefMPC_rilb06, &info->dgap, &info->res_ineq);
-beliefMPC_LA_VSUBADD2_7(beliefMPC_z06, beliefMPC_ubIdx06, params->ub7, beliefMPC_lub06, beliefMPC_sub06, beliefMPC_riub06, &info->dgap, &info->res_ineq);
-beliefMPC_LA_VSUBADD3_7(params->lb8, beliefMPC_z07, beliefMPC_lbIdx07, beliefMPC_llb07, beliefMPC_slb07, beliefMPC_rilb07, &info->dgap, &info->res_ineq);
-beliefMPC_LA_VSUBADD2_7(beliefMPC_z07, beliefMPC_ubIdx07, params->ub8, beliefMPC_lub07, beliefMPC_sub07, beliefMPC_riub07, &info->dgap, &info->res_ineq);
-beliefMPC_LA_VSUBADD3_7(params->lb9, beliefMPC_z08, beliefMPC_lbIdx08, beliefMPC_llb08, beliefMPC_slb08, beliefMPC_rilb08, &info->dgap, &info->res_ineq);
-beliefMPC_LA_VSUBADD2_7(beliefMPC_z08, beliefMPC_ubIdx08, params->ub9, beliefMPC_lub08, beliefMPC_sub08, beliefMPC_riub08, &info->dgap, &info->res_ineq);
+beliefMPC_LA_VSUBADD3_7(params->lb01, beliefMPC_z00, beliefMPC_lbIdx00, beliefMPC_llb00, beliefMPC_slb00, beliefMPC_rilb00, &info->dgap, &info->res_ineq);
+beliefMPC_LA_VSUBADD2_7(beliefMPC_z00, beliefMPC_ubIdx00, params->ub01, beliefMPC_lub00, beliefMPC_sub00, beliefMPC_riub00, &info->dgap, &info->res_ineq);
+beliefMPC_LA_VSUBADD3_7(params->lb02, beliefMPC_z01, beliefMPC_lbIdx01, beliefMPC_llb01, beliefMPC_slb01, beliefMPC_rilb01, &info->dgap, &info->res_ineq);
+beliefMPC_LA_VSUBADD2_7(beliefMPC_z01, beliefMPC_ubIdx01, params->ub02, beliefMPC_lub01, beliefMPC_sub01, beliefMPC_riub01, &info->dgap, &info->res_ineq);
+beliefMPC_LA_VSUBADD3_7(params->lb03, beliefMPC_z02, beliefMPC_lbIdx02, beliefMPC_llb02, beliefMPC_slb02, beliefMPC_rilb02, &info->dgap, &info->res_ineq);
+beliefMPC_LA_VSUBADD2_7(beliefMPC_z02, beliefMPC_ubIdx02, params->ub03, beliefMPC_lub02, beliefMPC_sub02, beliefMPC_riub02, &info->dgap, &info->res_ineq);
+beliefMPC_LA_VSUBADD3_7(params->lb04, beliefMPC_z03, beliefMPC_lbIdx03, beliefMPC_llb03, beliefMPC_slb03, beliefMPC_rilb03, &info->dgap, &info->res_ineq);
+beliefMPC_LA_VSUBADD2_7(beliefMPC_z03, beliefMPC_ubIdx03, params->ub04, beliefMPC_lub03, beliefMPC_sub03, beliefMPC_riub03, &info->dgap, &info->res_ineq);
+beliefMPC_LA_VSUBADD3_7(params->lb05, beliefMPC_z04, beliefMPC_lbIdx04, beliefMPC_llb04, beliefMPC_slb04, beliefMPC_rilb04, &info->dgap, &info->res_ineq);
+beliefMPC_LA_VSUBADD2_7(beliefMPC_z04, beliefMPC_ubIdx04, params->ub05, beliefMPC_lub04, beliefMPC_sub04, beliefMPC_riub04, &info->dgap, &info->res_ineq);
+beliefMPC_LA_VSUBADD3_7(params->lb06, beliefMPC_z05, beliefMPC_lbIdx05, beliefMPC_llb05, beliefMPC_slb05, beliefMPC_rilb05, &info->dgap, &info->res_ineq);
+beliefMPC_LA_VSUBADD2_7(beliefMPC_z05, beliefMPC_ubIdx05, params->ub06, beliefMPC_lub05, beliefMPC_sub05, beliefMPC_riub05, &info->dgap, &info->res_ineq);
+beliefMPC_LA_VSUBADD3_7(params->lb07, beliefMPC_z06, beliefMPC_lbIdx06, beliefMPC_llb06, beliefMPC_slb06, beliefMPC_rilb06, &info->dgap, &info->res_ineq);
+beliefMPC_LA_VSUBADD2_7(beliefMPC_z06, beliefMPC_ubIdx06, params->ub07, beliefMPC_lub06, beliefMPC_sub06, beliefMPC_riub06, &info->dgap, &info->res_ineq);
+beliefMPC_LA_VSUBADD3_7(params->lb08, beliefMPC_z07, beliefMPC_lbIdx07, beliefMPC_llb07, beliefMPC_slb07, beliefMPC_rilb07, &info->dgap, &info->res_ineq);
+beliefMPC_LA_VSUBADD2_7(beliefMPC_z07, beliefMPC_ubIdx07, params->ub08, beliefMPC_lub07, beliefMPC_sub07, beliefMPC_riub07, &info->dgap, &info->res_ineq);
+beliefMPC_LA_VSUBADD3_7(params->lb09, beliefMPC_z08, beliefMPC_lbIdx08, beliefMPC_llb08, beliefMPC_slb08, beliefMPC_rilb08, &info->dgap, &info->res_ineq);
+beliefMPC_LA_VSUBADD2_7(beliefMPC_z08, beliefMPC_ubIdx08, params->ub09, beliefMPC_lub08, beliefMPC_sub08, beliefMPC_riub08, &info->dgap, &info->res_ineq);
 beliefMPC_LA_VSUBADD3_7(params->lb10, beliefMPC_z09, beliefMPC_lbIdx09, beliefMPC_llb09, beliefMPC_slb09, beliefMPC_rilb09, &info->dgap, &info->res_ineq);
 beliefMPC_LA_VSUBADD2_7(beliefMPC_z09, beliefMPC_ubIdx09, params->ub10, beliefMPC_lub09, beliefMPC_sub09, beliefMPC_riub09, &info->dgap, &info->res_ineq);
 beliefMPC_LA_VSUBADD3_7(params->lb11, beliefMPC_z10, beliefMPC_lbIdx10, beliefMPC_llb10, beliefMPC_slb10, beliefMPC_rilb10, &info->dgap, &info->res_ineq);
@@ -2716,45 +2716,45 @@ if( info->it == beliefMPC_SET_MAXIT ){
 exitcode = beliefMPC_MAXITREACHED; break; }
 beliefMPC_LA_VVADD3_103(beliefMPC_grad_cost, beliefMPC_grad_eq, beliefMPC_grad_ineq, beliefMPC_rd);
 beliefMPC_LA_DIAG_CHOL_ONELOOP_LBUB_7_7_7(beliefMPC_H00, beliefMPC_llbbyslb00, beliefMPC_lbIdx00, beliefMPC_lubbysub00, beliefMPC_ubIdx00, beliefMPC_Phi00);
-beliefMPC_LA_DIAG_MATRIXFORWARDSUB_10_7(beliefMPC_Phi00, params->C1, beliefMPC_V00);
+beliefMPC_LA_DIAG_MATRIXFORWARDSUB_10_7(beliefMPC_Phi00, params->C01, beliefMPC_V00);
 beliefMPC_LA_DIAG_FORWARDSUB_7(beliefMPC_Phi00, beliefMPC_rd00, beliefMPC_Lbyrd00);
 beliefMPC_LA_DIAG_CHOL_ONELOOP_LBUB_7_7_7(beliefMPC_H00, beliefMPC_llbbyslb01, beliefMPC_lbIdx01, beliefMPC_lubbysub01, beliefMPC_ubIdx01, beliefMPC_Phi01);
-beliefMPC_LA_DIAG_MATRIXFORWARDSUB_5_7(beliefMPC_Phi01, params->C2, beliefMPC_V01);
+beliefMPC_LA_DIAG_MATRIXFORWARDSUB_5_7(beliefMPC_Phi01, params->C02, beliefMPC_V01);
 beliefMPC_LA_DIAG_MATRIXFORWARDSUB_10_7(beliefMPC_Phi01, beliefMPC_D01, beliefMPC_W01);
 beliefMPC_LA_DENSE_MMTM_10_7_5(beliefMPC_W01, beliefMPC_V01, beliefMPC_Ysd01);
 beliefMPC_LA_DIAG_FORWARDSUB_7(beliefMPC_Phi01, beliefMPC_rd01, beliefMPC_Lbyrd01);
 beliefMPC_LA_DIAG_CHOL_ONELOOP_LBUB_7_7_7(beliefMPC_H00, beliefMPC_llbbyslb02, beliefMPC_lbIdx02, beliefMPC_lubbysub02, beliefMPC_ubIdx02, beliefMPC_Phi02);
-beliefMPC_LA_DIAG_MATRIXFORWARDSUB_5_7(beliefMPC_Phi02, params->C3, beliefMPC_V02);
+beliefMPC_LA_DIAG_MATRIXFORWARDSUB_5_7(beliefMPC_Phi02, params->C03, beliefMPC_V02);
 beliefMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_5_7(beliefMPC_Phi02, beliefMPC_D02, beliefMPC_W02);
 beliefMPC_LA_DENSE_DIAGZERO_MMTM_5_7_5(beliefMPC_W02, beliefMPC_V02, beliefMPC_Ysd02);
 beliefMPC_LA_DIAG_FORWARDSUB_7(beliefMPC_Phi02, beliefMPC_rd02, beliefMPC_Lbyrd02);
 beliefMPC_LA_DIAG_CHOL_ONELOOP_LBUB_7_7_7(beliefMPC_H00, beliefMPC_llbbyslb03, beliefMPC_lbIdx03, beliefMPC_lubbysub03, beliefMPC_ubIdx03, beliefMPC_Phi03);
-beliefMPC_LA_DIAG_MATRIXFORWARDSUB_5_7(beliefMPC_Phi03, params->C4, beliefMPC_V03);
+beliefMPC_LA_DIAG_MATRIXFORWARDSUB_5_7(beliefMPC_Phi03, params->C04, beliefMPC_V03);
 beliefMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_5_7(beliefMPC_Phi03, beliefMPC_D02, beliefMPC_W03);
 beliefMPC_LA_DENSE_DIAGZERO_MMTM_5_7_5(beliefMPC_W03, beliefMPC_V03, beliefMPC_Ysd03);
 beliefMPC_LA_DIAG_FORWARDSUB_7(beliefMPC_Phi03, beliefMPC_rd03, beliefMPC_Lbyrd03);
 beliefMPC_LA_DIAG_CHOL_ONELOOP_LBUB_7_7_7(beliefMPC_H00, beliefMPC_llbbyslb04, beliefMPC_lbIdx04, beliefMPC_lubbysub04, beliefMPC_ubIdx04, beliefMPC_Phi04);
-beliefMPC_LA_DIAG_MATRIXFORWARDSUB_5_7(beliefMPC_Phi04, params->C5, beliefMPC_V04);
+beliefMPC_LA_DIAG_MATRIXFORWARDSUB_5_7(beliefMPC_Phi04, params->C05, beliefMPC_V04);
 beliefMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_5_7(beliefMPC_Phi04, beliefMPC_D02, beliefMPC_W04);
 beliefMPC_LA_DENSE_DIAGZERO_MMTM_5_7_5(beliefMPC_W04, beliefMPC_V04, beliefMPC_Ysd04);
 beliefMPC_LA_DIAG_FORWARDSUB_7(beliefMPC_Phi04, beliefMPC_rd04, beliefMPC_Lbyrd04);
 beliefMPC_LA_DIAG_CHOL_ONELOOP_LBUB_7_7_7(beliefMPC_H00, beliefMPC_llbbyslb05, beliefMPC_lbIdx05, beliefMPC_lubbysub05, beliefMPC_ubIdx05, beliefMPC_Phi05);
-beliefMPC_LA_DIAG_MATRIXFORWARDSUB_5_7(beliefMPC_Phi05, params->C6, beliefMPC_V05);
+beliefMPC_LA_DIAG_MATRIXFORWARDSUB_5_7(beliefMPC_Phi05, params->C06, beliefMPC_V05);
 beliefMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_5_7(beliefMPC_Phi05, beliefMPC_D02, beliefMPC_W05);
 beliefMPC_LA_DENSE_DIAGZERO_MMTM_5_7_5(beliefMPC_W05, beliefMPC_V05, beliefMPC_Ysd05);
 beliefMPC_LA_DIAG_FORWARDSUB_7(beliefMPC_Phi05, beliefMPC_rd05, beliefMPC_Lbyrd05);
 beliefMPC_LA_DIAG_CHOL_ONELOOP_LBUB_7_7_7(beliefMPC_H00, beliefMPC_llbbyslb06, beliefMPC_lbIdx06, beliefMPC_lubbysub06, beliefMPC_ubIdx06, beliefMPC_Phi06);
-beliefMPC_LA_DIAG_MATRIXFORWARDSUB_5_7(beliefMPC_Phi06, params->C7, beliefMPC_V06);
+beliefMPC_LA_DIAG_MATRIXFORWARDSUB_5_7(beliefMPC_Phi06, params->C07, beliefMPC_V06);
 beliefMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_5_7(beliefMPC_Phi06, beliefMPC_D02, beliefMPC_W06);
 beliefMPC_LA_DENSE_DIAGZERO_MMTM_5_7_5(beliefMPC_W06, beliefMPC_V06, beliefMPC_Ysd06);
 beliefMPC_LA_DIAG_FORWARDSUB_7(beliefMPC_Phi06, beliefMPC_rd06, beliefMPC_Lbyrd06);
 beliefMPC_LA_DIAG_CHOL_ONELOOP_LBUB_7_7_7(beliefMPC_H00, beliefMPC_llbbyslb07, beliefMPC_lbIdx07, beliefMPC_lubbysub07, beliefMPC_ubIdx07, beliefMPC_Phi07);
-beliefMPC_LA_DIAG_MATRIXFORWARDSUB_5_7(beliefMPC_Phi07, params->C8, beliefMPC_V07);
+beliefMPC_LA_DIAG_MATRIXFORWARDSUB_5_7(beliefMPC_Phi07, params->C08, beliefMPC_V07);
 beliefMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_5_7(beliefMPC_Phi07, beliefMPC_D02, beliefMPC_W07);
 beliefMPC_LA_DENSE_DIAGZERO_MMTM_5_7_5(beliefMPC_W07, beliefMPC_V07, beliefMPC_Ysd07);
 beliefMPC_LA_DIAG_FORWARDSUB_7(beliefMPC_Phi07, beliefMPC_rd07, beliefMPC_Lbyrd07);
 beliefMPC_LA_DIAG_CHOL_ONELOOP_LBUB_7_7_7(beliefMPC_H00, beliefMPC_llbbyslb08, beliefMPC_lbIdx08, beliefMPC_lubbysub08, beliefMPC_ubIdx08, beliefMPC_Phi08);
-beliefMPC_LA_DIAG_MATRIXFORWARDSUB_5_7(beliefMPC_Phi08, params->C9, beliefMPC_V08);
+beliefMPC_LA_DIAG_MATRIXFORWARDSUB_5_7(beliefMPC_Phi08, params->C09, beliefMPC_V08);
 beliefMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_5_7(beliefMPC_Phi08, beliefMPC_D02, beliefMPC_W08);
 beliefMPC_LA_DENSE_DIAGZERO_MMTM_5_7_5(beliefMPC_W08, beliefMPC_V08, beliefMPC_Ysd08);
 beliefMPC_LA_DIAG_FORWARDSUB_7(beliefMPC_Phi08, beliefMPC_rd08, beliefMPC_Lbyrd08);
@@ -2908,15 +2908,15 @@ beliefMPC_LA_DENSE_MTVMSUB_5_5(beliefMPC_Lsd02, beliefMPC_dvaff02, beliefMPC_yy0
 beliefMPC_LA_DENSE_BACKWARDSUB_5(beliefMPC_Ld01, beliefMPC_bmy01, beliefMPC_dvaff01);
 beliefMPC_LA_DENSE_MTVMSUB_5_10(beliefMPC_Lsd01, beliefMPC_dvaff01, beliefMPC_yy00, beliefMPC_bmy00);
 beliefMPC_LA_DENSE_BACKWARDSUB_10(beliefMPC_Ld00, beliefMPC_bmy00, beliefMPC_dvaff00);
-beliefMPC_LA_DENSE_MTVM_10_7(params->C1, beliefMPC_dvaff00, beliefMPC_grad_eq00);
-beliefMPC_LA_DENSE_MTVM2_5_7_10(params->C2, beliefMPC_dvaff01, beliefMPC_D01, beliefMPC_dvaff00, beliefMPC_grad_eq01);
-beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C3, beliefMPC_dvaff02, beliefMPC_D02, beliefMPC_dvaff01, beliefMPC_grad_eq02);
-beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C4, beliefMPC_dvaff03, beliefMPC_D02, beliefMPC_dvaff02, beliefMPC_grad_eq03);
-beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C5, beliefMPC_dvaff04, beliefMPC_D02, beliefMPC_dvaff03, beliefMPC_grad_eq04);
-beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C6, beliefMPC_dvaff05, beliefMPC_D02, beliefMPC_dvaff04, beliefMPC_grad_eq05);
-beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C7, beliefMPC_dvaff06, beliefMPC_D02, beliefMPC_dvaff05, beliefMPC_grad_eq06);
-beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C8, beliefMPC_dvaff07, beliefMPC_D02, beliefMPC_dvaff06, beliefMPC_grad_eq07);
-beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C9, beliefMPC_dvaff08, beliefMPC_D02, beliefMPC_dvaff07, beliefMPC_grad_eq08);
+beliefMPC_LA_DENSE_MTVM_10_7(params->C01, beliefMPC_dvaff00, beliefMPC_grad_eq00);
+beliefMPC_LA_DENSE_MTVM2_5_7_10(params->C02, beliefMPC_dvaff01, beliefMPC_D01, beliefMPC_dvaff00, beliefMPC_grad_eq01);
+beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C03, beliefMPC_dvaff02, beliefMPC_D02, beliefMPC_dvaff01, beliefMPC_grad_eq02);
+beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C04, beliefMPC_dvaff03, beliefMPC_D02, beliefMPC_dvaff02, beliefMPC_grad_eq03);
+beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C05, beliefMPC_dvaff04, beliefMPC_D02, beliefMPC_dvaff03, beliefMPC_grad_eq04);
+beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C06, beliefMPC_dvaff05, beliefMPC_D02, beliefMPC_dvaff04, beliefMPC_grad_eq05);
+beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C07, beliefMPC_dvaff06, beliefMPC_D02, beliefMPC_dvaff05, beliefMPC_grad_eq06);
+beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C08, beliefMPC_dvaff07, beliefMPC_D02, beliefMPC_dvaff06, beliefMPC_grad_eq07);
+beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C09, beliefMPC_dvaff08, beliefMPC_D02, beliefMPC_dvaff07, beliefMPC_grad_eq08);
 beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C10, beliefMPC_dvaff09, beliefMPC_D02, beliefMPC_dvaff08, beliefMPC_grad_eq09);
 beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C11, beliefMPC_dvaff10, beliefMPC_D02, beliefMPC_dvaff09, beliefMPC_grad_eq10);
 beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C12, beliefMPC_dvaff11, beliefMPC_D02, beliefMPC_dvaff10, beliefMPC_grad_eq11);
@@ -3105,15 +3105,15 @@ beliefMPC_LA_DENSE_MTVMSUB_5_5(beliefMPC_Lsd02, beliefMPC_dvcc02, beliefMPC_yy01
 beliefMPC_LA_DENSE_BACKWARDSUB_5(beliefMPC_Ld01, beliefMPC_bmy01, beliefMPC_dvcc01);
 beliefMPC_LA_DENSE_MTVMSUB_5_10(beliefMPC_Lsd01, beliefMPC_dvcc01, beliefMPC_yy00, beliefMPC_bmy00);
 beliefMPC_LA_DENSE_BACKWARDSUB_10(beliefMPC_Ld00, beliefMPC_bmy00, beliefMPC_dvcc00);
-beliefMPC_LA_DENSE_MTVM_10_7(params->C1, beliefMPC_dvcc00, beliefMPC_grad_eq00);
-beliefMPC_LA_DENSE_MTVM2_5_7_10(params->C2, beliefMPC_dvcc01, beliefMPC_D01, beliefMPC_dvcc00, beliefMPC_grad_eq01);
-beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C3, beliefMPC_dvcc02, beliefMPC_D02, beliefMPC_dvcc01, beliefMPC_grad_eq02);
-beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C4, beliefMPC_dvcc03, beliefMPC_D02, beliefMPC_dvcc02, beliefMPC_grad_eq03);
-beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C5, beliefMPC_dvcc04, beliefMPC_D02, beliefMPC_dvcc03, beliefMPC_grad_eq04);
-beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C6, beliefMPC_dvcc05, beliefMPC_D02, beliefMPC_dvcc04, beliefMPC_grad_eq05);
-beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C7, beliefMPC_dvcc06, beliefMPC_D02, beliefMPC_dvcc05, beliefMPC_grad_eq06);
-beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C8, beliefMPC_dvcc07, beliefMPC_D02, beliefMPC_dvcc06, beliefMPC_grad_eq07);
-beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C9, beliefMPC_dvcc08, beliefMPC_D02, beliefMPC_dvcc07, beliefMPC_grad_eq08);
+beliefMPC_LA_DENSE_MTVM_10_7(params->C01, beliefMPC_dvcc00, beliefMPC_grad_eq00);
+beliefMPC_LA_DENSE_MTVM2_5_7_10(params->C02, beliefMPC_dvcc01, beliefMPC_D01, beliefMPC_dvcc00, beliefMPC_grad_eq01);
+beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C03, beliefMPC_dvcc02, beliefMPC_D02, beliefMPC_dvcc01, beliefMPC_grad_eq02);
+beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C04, beliefMPC_dvcc03, beliefMPC_D02, beliefMPC_dvcc02, beliefMPC_grad_eq03);
+beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C05, beliefMPC_dvcc04, beliefMPC_D02, beliefMPC_dvcc03, beliefMPC_grad_eq04);
+beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C06, beliefMPC_dvcc05, beliefMPC_D02, beliefMPC_dvcc04, beliefMPC_grad_eq05);
+beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C07, beliefMPC_dvcc06, beliefMPC_D02, beliefMPC_dvcc05, beliefMPC_grad_eq06);
+beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C08, beliefMPC_dvcc07, beliefMPC_D02, beliefMPC_dvcc06, beliefMPC_grad_eq07);
+beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C09, beliefMPC_dvcc08, beliefMPC_D02, beliefMPC_dvcc07, beliefMPC_grad_eq08);
 beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C10, beliefMPC_dvcc09, beliefMPC_D02, beliefMPC_dvcc08, beliefMPC_grad_eq09);
 beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C11, beliefMPC_dvcc10, beliefMPC_D02, beliefMPC_dvcc09, beliefMPC_grad_eq10);
 beliefMPC_LA_DENSE_DIAGZERO_MTVM2_5_7_5(params->C12, beliefMPC_dvcc11, beliefMPC_D02, beliefMPC_dvcc10, beliefMPC_grad_eq11);

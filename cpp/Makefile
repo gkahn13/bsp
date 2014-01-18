@@ -34,14 +34,11 @@ $(OBJ_DIR)/logging.o : util/logging.cpp
 # symeval	
 PT_SYM_DIR = point/sym
 
-$(OBJ_DIR)/pt_symeval.o : $(PT_SYM_DIR)/symeval.c
-	gcc -c $(C_FLAGS) $(BFLAGS) -o $(OBJ_DIR)/pt_symeval.o $(PT_SYM_DIR)/symeval.c
-	
 $(OBJ_DIR)/state_symeval.o : $(PT_SYM_DIR)/state-symeval.c
-	gcc -c $(C_FLAGS) $(BFLAGS) -o $(OBJ_DIR)/state_symeval.o $(PT_SYM_DIR)/state-symeval.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
 
 $(OBJ_DIR)/control_symeval.o : $(PT_SYM_DIR)/control-symeval.c
-	gcc -c $(C_FLAGS) $(BFLAGS) -o $(OBJ_DIR)/control_symeval.o $(PT_SYM_DIR)/control-symeval.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
 	
 
 # make point-belief
@@ -78,7 +75,7 @@ $(OBJ_DIR)/point-state.o : $(PT_STATE_DIR)/point-state.cpp
 	
 # make point-state-finitediff
 PT_STATE_FD_DIR = $(PT_STATE_DIR)
-PT_STATE_FD_FILES = stateMPC pt_symeval point-state-finitediff logging
+PT_STATE_FD_FILES = stateMPC state_symeval point-state-finitediff logging
 PT_STATE_FD_OBJS = $(PT_STATE_FD_FILES:%=$(OBJ_DIR)/%.o)
 
 state-finitediff: $(PT_STATE_FD_OBJS)

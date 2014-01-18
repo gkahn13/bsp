@@ -542,10 +542,9 @@ void pythonDisplayTrajectory(std::vector< Matrix<U_DIM> >& U)
 		py::exec("from bsp_light_dark import LightDarkModel", main_namespace);
 		py::object model = py::eval("LightDarkModel()", main_namespace);
 		py::object plot_mod = py::import("plot");
-		py::object plot_traj = plot_mod.attr("plot_belief_trajectory");
+		py::object plot_traj = plot_mod.attr("plot_belief_trajectory_cpp");
 
-		plot_traj(Bvec, Uvec, model, x0_list, xGoal_list);
-	}
+		plot_traj(Bvec, Uvec, model, x0_list, xGoal_list, T);	}
 	catch(py::error_already_set const &)
 	{
 		PyErr_Print();

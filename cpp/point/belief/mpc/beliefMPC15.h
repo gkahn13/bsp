@@ -85,112 +85,112 @@ typedef double beliefMPC_FLOAT;
 typedef struct beliefMPC_params
 {
     /* vector of size 7 */
-    beliefMPC_FLOAT lb01[7];
+    beliefMPC_FLOAT lb1[7];
 
     /* vector of size 7 */
-    beliefMPC_FLOAT ub01[7];
+    beliefMPC_FLOAT ub1[7];
 
     /* matrix of size [10 x 7] (column major format) */
-    beliefMPC_FLOAT C01[70];
+    beliefMPC_FLOAT C1[70];
 
     /* vector of size 10 */
-    beliefMPC_FLOAT e01[10];
+    beliefMPC_FLOAT e1[10];
 
     /* vector of size 7 */
-    beliefMPC_FLOAT lb02[7];
+    beliefMPC_FLOAT lb2[7];
 
     /* vector of size 7 */
-    beliefMPC_FLOAT ub02[7];
+    beliefMPC_FLOAT ub2[7];
 
     /* matrix of size [5 x 7] (column major format) */
-    beliefMPC_FLOAT C02[35];
+    beliefMPC_FLOAT C2[35];
 
     /* vector of size 5 */
-    beliefMPC_FLOAT e02[5];
+    beliefMPC_FLOAT e2[5];
 
     /* vector of size 7 */
-    beliefMPC_FLOAT lb03[7];
+    beliefMPC_FLOAT lb3[7];
 
     /* vector of size 7 */
-    beliefMPC_FLOAT ub03[7];
+    beliefMPC_FLOAT ub3[7];
 
     /* matrix of size [5 x 7] (column major format) */
-    beliefMPC_FLOAT C03[35];
+    beliefMPC_FLOAT C3[35];
 
     /* vector of size 5 */
-    beliefMPC_FLOAT e03[5];
+    beliefMPC_FLOAT e3[5];
 
     /* vector of size 7 */
-    beliefMPC_FLOAT lb04[7];
+    beliefMPC_FLOAT lb4[7];
 
     /* vector of size 7 */
-    beliefMPC_FLOAT ub04[7];
+    beliefMPC_FLOAT ub4[7];
 
     /* matrix of size [5 x 7] (column major format) */
-    beliefMPC_FLOAT C04[35];
+    beliefMPC_FLOAT C4[35];
 
     /* vector of size 5 */
-    beliefMPC_FLOAT e04[5];
+    beliefMPC_FLOAT e4[5];
 
     /* vector of size 7 */
-    beliefMPC_FLOAT lb05[7];
+    beliefMPC_FLOAT lb5[7];
 
     /* vector of size 7 */
-    beliefMPC_FLOAT ub05[7];
+    beliefMPC_FLOAT ub5[7];
 
     /* matrix of size [5 x 7] (column major format) */
-    beliefMPC_FLOAT C05[35];
+    beliefMPC_FLOAT C5[35];
 
     /* vector of size 5 */
-    beliefMPC_FLOAT e05[5];
+    beliefMPC_FLOAT e5[5];
 
     /* vector of size 7 */
-    beliefMPC_FLOAT lb06[7];
+    beliefMPC_FLOAT lb6[7];
 
     /* vector of size 7 */
-    beliefMPC_FLOAT ub06[7];
+    beliefMPC_FLOAT ub6[7];
 
     /* matrix of size [5 x 7] (column major format) */
-    beliefMPC_FLOAT C06[35];
+    beliefMPC_FLOAT C6[35];
 
     /* vector of size 5 */
-    beliefMPC_FLOAT e06[5];
+    beliefMPC_FLOAT e6[5];
 
     /* vector of size 7 */
-    beliefMPC_FLOAT lb07[7];
+    beliefMPC_FLOAT lb7[7];
 
     /* vector of size 7 */
-    beliefMPC_FLOAT ub07[7];
+    beliefMPC_FLOAT ub7[7];
 
     /* matrix of size [5 x 7] (column major format) */
-    beliefMPC_FLOAT C07[35];
+    beliefMPC_FLOAT C7[35];
 
     /* vector of size 5 */
-    beliefMPC_FLOAT e07[5];
+    beliefMPC_FLOAT e7[5];
 
     /* vector of size 7 */
-    beliefMPC_FLOAT lb08[7];
+    beliefMPC_FLOAT lb8[7];
 
     /* vector of size 7 */
-    beliefMPC_FLOAT ub08[7];
+    beliefMPC_FLOAT ub8[7];
 
     /* matrix of size [5 x 7] (column major format) */
-    beliefMPC_FLOAT C08[35];
+    beliefMPC_FLOAT C8[35];
 
     /* vector of size 5 */
-    beliefMPC_FLOAT e08[5];
+    beliefMPC_FLOAT e8[5];
 
     /* vector of size 7 */
-    beliefMPC_FLOAT lb09[7];
+    beliefMPC_FLOAT lb9[7];
 
     /* vector of size 7 */
-    beliefMPC_FLOAT ub09[7];
+    beliefMPC_FLOAT ub9[7];
 
     /* matrix of size [5 x 7] (column major format) */
-    beliefMPC_FLOAT C09[35];
+    beliefMPC_FLOAT C9[35];
 
     /* vector of size 5 */
-    beliefMPC_FLOAT e09[5];
+    beliefMPC_FLOAT e9[5];
 
     /* vector of size 7 */
     beliefMPC_FLOAT lb10[7];

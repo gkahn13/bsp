@@ -12,3 +12,4 @@ forces/lpMPC
 forces/*.zip
 forces/*.mexa64
 forces/beliefPenaltyMPC
+forces/controlMPC

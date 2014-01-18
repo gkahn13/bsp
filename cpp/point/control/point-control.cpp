@@ -45,7 +45,7 @@ Matrix<U_DIM> uMin, uMax;
 
 const int T = TIMESTEPS;
 const double INFTY = 1e10;
-const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 1, alpha_goal_state = 10;
+const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 1, alpha_goal_state = 1;
 
 namespace cfg {
 const double improve_ratio_threshold = .1;
@@ -507,7 +507,9 @@ void pythonDisplayTrajectory(std::vector< Matrix<U_DIM> >& U)
 	vec(x0, SqrtSigma0, B[0]);
 	for (size_t t = 0; t < T-1; ++t) {
 		B[t+1] = beliefDynamics(B[t], U[t]);
+		std::cout << ~B[t+1];
 	}
+	return;
 
 	py::list Bvec;
 	for(int j=0; j < B_DIM; j++) {
@@ -521,6 +523,12 @@ void pythonDisplayTrajectory(std::vector< Matrix<U_DIM> >& U)
 		for(int i=0; i < T-1; i++) {
 			Uvec.append(U[i][j]);
 		}
+	}
+
+	py::list x0_list, xGoal_list;
+	for(int i=0; i < X_DIM; i++) {
+		x0_list.append(x0[0,i]);
+		xGoal_list.append(xGoal[0,i]);
 	}
 
 	std::string workingDir = boost::filesystem::current_path().normalize().string();
@@ -538,7 +546,7 @@ void pythonDisplayTrajectory(std::vector< Matrix<U_DIM> >& U)
 		py::object plot_mod = py::import("plot");
 		py::object plot_traj = plot_mod.attr("plot_belief_trajectory");
 
-		plot_traj(Bvec, Uvec, model);
+		plot_traj(Bvec, Uvec, model, x0_list, xGoal_list);
 	}
 	catch(py::error_already_set const &)
 	{

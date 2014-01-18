@@ -16,7 +16,7 @@
 namespace py = boost::python;
 
 extern "C" {
-#include "../sym/symeval.h"
+#include "../sym/state-symeval.h"
 #include "lpMPC.h"
 }
 
@@ -214,7 +214,7 @@ void setupDstarInterface()
 
 	inputVars = new double[nvars];
 
-	std::ifstream fptr("point/masks.txt");
+	std::ifstream fptr("point/state-masks.txt");
 	int val;
 	for(int i = 0; i < nvars; ++i) {
 		fptr >> val;
@@ -559,9 +559,9 @@ void pythonDisplayTrajectory(std::vector< Matrix<X_DIM> >& X, std::vector< Matri
 		py::exec("from bsp_light_dark import LightDarkModel", main_namespace);
 		py::object model = py::eval("LightDarkModel()", main_namespace);
 		py::object plot_mod = py::import("plot");
-		py::object plot_traj = plot_mod.attr("plot_belief_trajectory");
+		py::object plot_traj = plot_mod.attr("plot_belief_trajectory_cpp");
 
-		plot_traj(Bvec, Uvec, model, x0_list, xGoal_list);
+		plot_traj(Bvec, Uvec, model, x0_list, xGoal_list, T);
 	}
 	catch(py::error_already_set const &)
 	{

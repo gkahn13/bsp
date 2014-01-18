@@ -20,24 +20,14 @@ def plot_belief_trajectory(B, U, model, start=None, goal=None):
     goal = model.goal if goal is None else goal
     T = model.T
 
-    if type(B) == list:
-	B = np.matrix(B)
-    if type(U) == list:
-	U = np.matrix(U)
-
-    if B.shape == (bDim*T, 1) or B.shape == (1, bDim*T):
-    	B = np.matrix(B.reshape(bDim, T))
-    if U.shape == (uDim*(T-1), 1) or B.shape == (1, uDim*(T-1)):
-        U = np.matrix(U.reshape(uDim, T-1))
-
     plt.axis([-5,3,-3,3])
 
     model.plot_domain(B)
 
     if start is not None:
-        plt.plot(start[0],start[1],'go',markersize=20.0)
+        plt.plot(start[0,0],start[1,0],'go',markersize=20.0)
     if goal is not None:
-        plt.plot(goal[0],goal[1],'go',markersize=20.0)
+        plt.plot(goal[0,0],goal[1,0],'go',markersize=20.0)
 
     plot_mean(B[0:2,:])
 
@@ -56,6 +46,22 @@ def plot_belief_trajectory(B, U, model, start=None, goal=None):
 
     plt.show(block=False)
     plt.pause(.05)
+    
+def plot_belief_trajectory_cpp(B, U, model, start, goal, T):
+    bDim = model.bDim
+    uDim = model.uDim
+    
+    B = np.matrix(B)
+    B = np.matrix(B.reshape(bDim, T))
+    
+    U = np.matrix(U)
+    U = np.matrix(U.reshape(uDim, T-1))
+    
+    model.T = T
+    model.setStartState(ml.matrix(start).T)
+    model.setGoalState(ml.matrix(goal).T)
+
+    plot_belief_trajectory(B, U, model)
 
     
 def plot_mean(X):

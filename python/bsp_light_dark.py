@@ -26,7 +26,7 @@ class LightDarkModel(model.Model):
         self.bDim = int(self.xDim + self.xDim*((self.xDim+1)/2.))
 
         self.dT = 1. # time step for dynamics function
-        self.T = 10 # number of time steps in trajectory
+        self.T = 15 # number of time steps in trajectory
 
         self.alpha_belief = 10. # weighting factor for penalizing uncertainty at intermediate time steps
         self.alpha_final_belief = 10. # weighting factor for penalizing uncertainty at final time step

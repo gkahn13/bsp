@@ -1,17 +1,20 @@
-function beliefmpcgen()
+function point_belief_mpc_gen(timesteps)
 
 % FORCES - Fast interior point code generation for multistage problems.
 % Copyright (C) 2011-12 Alexander Domahidi [domahidi@control.ee.ethz.ch],
 % Automatic Control Laboratory, ETH Zurich.
 
-rootDir = pwd(1:strfind(pwd,'bsp')-1);
-addpath strcat(rootDir,'/forces');
-
-close all;
-clear all;
+currDir = pwd;
+disp('currDir');
+disp(currDir);
+endPwdIndex = strfind(currDir,'bsp') - 1;
+rootDir = currDir(1:endPwdIndex);
+forcesDir = strcat(rootDir,'bsp/forces');
+addpath(forcesDir);
+disp(strcat(rootDir,'bsp/forces'));
 
 % problem setup
-N = 14;
+N = timesteps - 1;
 nx = 2;
 ns = 3;
 nb = 5;
@@ -24,7 +27,7 @@ R = 1*eye(nu);
 
 % first stage
 i=1;
-istr = sprintf('%02d',i);
+istr = sprintf('%d',i);
 
 % dimensions
 stages(i).dims.n = nb+nu;           % number of stage variables
@@ -50,7 +53,7 @@ params(end+1) = newParam(['C',istr], i, 'eq.C');
 params(end+1) = newParam(['e',istr], i, 'eq.c');
 
 for i = 2:N
-    istr = sprintf('%02d',i);
+    istr = sprintf('%d',i);
     
     % dimension
     stages(i).dims.n = nb+nu;    % number of stage variables
@@ -85,7 +88,7 @@ end
 
 % final stage
 i = N+1;
-istr = sprintf('%02d',i);
+istr = sprintf('%d',i);
 
 % dimension
 stages(i).dims.n = nb;    % number of stage variables
@@ -123,11 +126,33 @@ var = sprintf('z%d',i);
 outputs(i) = newOutput(var,i,1:nb);
 
 % solver settings
-codeoptions = getOptions('beliefMPC');
+mpcname = 'beliefMPC';
+codeoptions = getOptions(mpcname);
 codeoptions.printlevel = 0;
 codeoptions.timing=0;
 
 % generate code
 generateCode(stages,params,codeoptions,outputs);
+
+
+% unzip -p beliefMPC.zip include/beliefMPC.h > mpc/beliefMPC$(timesteps).h
+disp('Unzipping into mpc...');
+outdir = 'mpc/';
+system(['mkdir -p ',outdir]);
+header_file = [mpcname,num2str(timesteps),'.h'];
+src_file = [mpcname,num2str(timesteps),'.c'];
+system(['unzip -p ',mpcname,'.zip include/',mpcname,'.h > ',outdir,header_file]);
+system(['unzip -p ',mpcname,'.zip src/',mpcname,'.c > ',outdir,src_file]);
+system(['rm -rf ',mpcname,'.zip @CodeGen']);
+
+disp('Replacing incorrect #include in .c file...');
+str_to_delete = ['#include "../include/',mpcname,'.h"'];
+str_to_insert = ['#include "',mpcname,'.h"'];
+mpc_src = fileread([outdir,src_file]);
+mpc_src_new = strrep(mpc_src,str_to_delete,str_to_insert);
+
+fid = fopen([outdir,src_file],'w');
+fwrite(fid,mpc_src_new);
+fclose(fid);
 
 end

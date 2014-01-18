@@ -90,36 +90,35 @@ else                                    % ask to overwrite
    overwrite = 2;    
 end
 
-
 % unzip
-dcontent = dir(outdir);
-if( size(dcontent,1) > 0 )
-    if(overwrite == 1)
-        rmdir(outdir,'s');
-        unzip(filename,file);
-        disp('Code successfully unzipped. MEXing your solver...');
-    elseif(overwrite == 2)
-        confirm = input(['Directory ''',outdir,''' will be overwritten. Proceed? [y]/n '],'s');
-        if( strcmp(confirm,'y') || isempty(confirm) )
-            rmdir(outdir,'s');
-            unzip(filename,file);
-            disp('Code successfully unzipped. MEXing your solver...');
-        end
-    end
-else
-    unzip(filename,file);
-    disp('Code successfully unzipped. MEXing your solver...');
-end
+% dcontent = dir(outdir);
+% if( size(dcontent,1) > 0 )
+%     if(overwrite == 1)
+%         rmdir(outdir,'s');
+%         unzip(filename,file);
+%         disp('Code successfully unzipped. MEXing your solver...');
+%     elseif(overwrite == 2)
+%         confirm = input(['Directory ''',outdir,''' will be overwritten. Proceed? [y]/n '],'s');
+%         if( strcmp(confirm,'y') || isempty(confirm) )
+%             rmdir(outdir,'s');
+%             unzip(filename,file);
+%             disp('Code successfully unzipped. MEXing your solver...');
+%         end
+%     end
+% else
+%     unzip(filename,file);
+%     disp('Code successfully unzipped. MEXing your solver...');
+% end
 
 % make mex file
-clear(file);
-cd([file,'/interface']);
-makemex;
-cd ..
-cd ..
-disp(' ');
-disp('Code generation and MEXing successfully completed.');
-disp(['Type ''help ',file,''' for more documentation. Happy solving!']);
+% clear(file);
+% cd([file,'/interface']);
+% makemex;
+% cd ..
+% cd ..
+% disp(' ');
+% disp('Code generation and MEXing successfully completed.');
+% disp(['Type ''help ',file,''' for more documentation. Happy solving!']);
 
 % return success
 success = 1;

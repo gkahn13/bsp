@@ -1,14 +1,20 @@
-function lpbspgen()
+function point_state_mpc_gen(timesteps)
 
 % FORCES - Fast interior point code generation for multistage problems.
 % Copyright (C) 2011-12 Alexander Domahidi [domahidi@control.ee.ethz.ch],
 % Automatic Control Laboratory, ETH Zurich.
 
-close all;
-clear all;
+currDir = pwd;
+disp('currDir');
+disp(currDir);
+endPwdIndex = strfind(currDir,'bsp') - 1;
+rootDir = currDir(1:endPwdIndex);
+forcesDir = strcat(rootDir,'bsp/forces');
+addpath(forcesDir);
+disp(strcat(rootDir,'bsp/forces'));
 
 % problem setup
-N = 14;
+N = timesteps - 1;
 nx = 2;
 nu = 2;
 stages = MultistageProblem(N+1);
@@ -26,8 +32,8 @@ stages(i).dims.p = 0;               % number of affine constraints
 stages(i).dims.q = 0;               % number of quadratic constraints
 
 % cost
-stages(i).cost.H = zeros(nx+nu,nx+nu);
-params(1) = newParam(['f',istr], i, 'cost.f'); % gradient
+params(1) = newParam(['H',istr], i, 'cost.H', 'diag'); % diagonal hessian
+params(end+1) = newParam(['f',istr], i, 'cost.f'); % gradient
 
 % lower bounds
 stages(i).ineq.b.lbidx = 1:stages(i).dims.n; % lower bound acts on these indices
@@ -53,7 +59,7 @@ for i = 2:N
     stages(i).dims.q = 0;        % number of quadratic constraints
     
     % cost
-    stages(i).cost.H = zeros(nx+nu,nx+nu);
+    params(end+1) = newParam(['H',istr], i, 'cost.H', 'diag'); % diagonal Hessian
     params(end+1) = newParam(['f',istr], i, 'cost.f'); % gradient
     
     % lower bounds
@@ -83,7 +89,7 @@ stages(i).dims.p = 0;     % number of polytopic constraints
 stages(i).dims.q = 0;     % number of quadratic constraints
 
 % cost
-stages(i).cost.H = zeros(nx+nu,nx+nu);
+params(end+1) = newParam(['H',istr], i, 'cost.H', 'diag'); % diagonal Hessian
 params(end+1) = newParam(['f',istr], i, 'cost.f'); % gradient
 
 % lower bounds
@@ -109,11 +115,32 @@ var = sprintf('z%d',i);
 outputs(i) = newOutput(var,i,1:nx);
 
 % solver settings
-codeoptions = getOptions('lpMPC');
+mpcname = 'stateMPC';
+codeoptions = getOptions(mpcname);
 codeoptions.printlevel = 0;
-codeoptions.timing = 0;
+codeoptions.timing=0;
 
 % generate code
 generateCode(stages,params,codeoptions,outputs);
+
+
+disp('Unzipping into mpc...');
+outdir = 'mpc/';
+system(['mkdir -p ',outdir]);
+header_file = [mpcname,num2str(timesteps),'.h'];
+src_file = [mpcname,num2str(timesteps),'.c'];
+system(['unzip -p ',mpcname,'.zip include/',mpcname,'.h > ',outdir,header_file]);
+system(['unzip -p ',mpcname,'.zip src/',mpcname,'.c > ',outdir,src_file]);
+system(['rm -rf ',mpcname,'.zip @CodeGen']);
+
+disp('Replacing incorrect #include in .c file...');
+str_to_delete = ['#include "../include/',mpcname,'.h"'];
+str_to_insert = ['#include "',mpcname,'.h"'];
+mpc_src = fileread([outdir,src_file]);
+mpc_src_new = strrep(mpc_src,str_to_delete,str_to_insert);
+
+fid = fopen([outdir,src_file],'w');
+fwrite(fid,mpc_src_new);
+fclose(fid);
 
 end

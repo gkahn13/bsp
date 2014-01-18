@@ -507,9 +507,7 @@ void pythonDisplayTrajectory(std::vector< Matrix<U_DIM> >& U)
 	vec(x0, SqrtSigma0, B[0]);
 	for (size_t t = 0; t < T-1; ++t) {
 		B[t+1] = beliefDynamics(B[t], U[t]);
-		std::cout << ~B[t+1];
 	}
-	return;
 
 	py::list Bvec;
 	for(int j=0; j < B_DIM; j++) {

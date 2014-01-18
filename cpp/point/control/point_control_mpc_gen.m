@@ -1,14 +1,19 @@
-function controlbspgen()
+function point_control_mpc_gen(timesteps)
 
 % FORCES - Fast interior point code generation for multistage problems.
 % Copyright (C) 2011-12 Alexander Domahidi [domahidi@control.ee.ethz.ch],
 % Automatic Control Laboratory, ETH Zurich.
 
-close all;
-clear all;
-
+currDir = pwd;
+disp('currDir');
+disp(currDir);
+endPwdIndex = strfind(currDir,'bsp') - 1;
+rootDir = currDir(1:endPwdIndex);
+forcesDir = strcat(rootDir,'bsp/forces');
+addpath(forcesDir);
+disp(strcat(rootDir,'bsp/forces'));
 % problem setup
-N = 39;
+N = timesteps - 1;
 nu = 2;
 stages = MultistageProblem(N);
 
@@ -75,11 +80,32 @@ for i=1:N
 end
 
 % solver settings
-codeoptions = getOptions('controlMPC');
+mpcname = 'controlMPC';
+codeoptions = getOptions(mpcname);
 codeoptions.printlevel = 0;
-codeoptions.timing = 0;
+codeoptions.timing=0;
 
 % generate code
 generateCode(stages,params,codeoptions,outputs);
+
+
+disp('Unzipping into mpc...');
+outdir = 'mpc/';
+system(['mkdir -p ',outdir]);
+header_file = [mpcname,num2str(timesteps),'.h'];
+src_file = [mpcname,num2str(timesteps),'.c'];
+system(['unzip -p ',mpcname,'.zip include/',mpcname,'.h > ',outdir,header_file]);
+system(['unzip -p ',mpcname,'.zip src/',mpcname,'.c > ',outdir,src_file]);
+system(['rm -rf ',mpcname,'.zip @CodeGen']);
+
+disp('Replacing incorrect #include in .c file...');
+str_to_delete = ['#include "../include/',mpcname,'.h"'];
+str_to_insert = ['#include "',mpcname,'.h"'];
+mpc_src = fileread([outdir,src_file]);
+mpc_src_new = strrep(mpc_src,str_to_delete,str_to_insert);
+
+fid = fopen([outdir,src_file],'w');
+fwrite(fid,mpc_src_new);
+fclose(fid);
 
 end

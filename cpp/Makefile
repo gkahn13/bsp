@@ -17,8 +17,8 @@ BFLAGS := $(BFLAGS.$(BUILD))
 OBJ_DIR = build/$(BUILD)
 BIN_DIR = bin/$(BUILD)
 
-# default to 15 timesteps
-TIMESTEPS = 15
+# default to 15 T
+T = 15
 
 ###### DIRECTORY CREATION ###########
 dir:
@@ -42,8 +42,8 @@ PT_DIR = point
 PT_FILES = point logging
 PT_OBJS = $(PT_FILES:%=$(OBJ_DIR)/%.o)
 
-$(OBJ_DIR)/point.o : point/point.cpp point/point.h
-	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(BOOST_FLAGS) $(PYTHON_FLAGS) -c -o $@ $<
+$(OBJ_DIR)/point.o : point/point.cpp
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(BOOST_FLAGS) $(PYTHON_FLAGS) -c -o $@ $^
 
 # symeval	
 PT_SYM_DIR = point/sym
@@ -57,11 +57,11 @@ $(OBJ_DIR)/control_symeval.o : $(PT_SYM_DIR)/control-symeval.c
 
 # make point-belief
 PT_BELIEF_DIR = point/belief
-PT_BELIEF_FILES = point beliefMPC beliefPenaltyMPC point-belief logging
+PT_BELIEF_FILES = beliefMPC beliefPenaltyMPC point-belief logging
 PT_BELIEF_OBJS = $(PT_BELIEF_FILES:%=$(OBJ_DIR)/%.o)
 
 belief-setup:
-	bash $(POINT_SETUP_FILE) belief $(TIMESTEPS)
+	bash $(POINT_SETUP_FILE) belief $(T)
 
 belief: | belief-setup $(PT_BELIEF_OBJS) 
 	$(CXX) $(BFLAGS) $(PT_BELIEF_OBJS) -o $(BIN_DIR)/point-belief $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
@@ -82,7 +82,7 @@ PT_STATE_FILES = point stateMPC state_symeval point-state logging
 PT_STATE_OBJS = $(PT_STATE_FILES:%=$(OBJ_DIR)/%.o)
 
 state-setup:
-	bash $(POINT_SETUP_FILE) state $(TIMESTEPS)
+	bash $(POINT_SETUP_FILE) state $(T)
 
 state: | state-setup $(PT_STATE_OBJS) 
 	$(CXX) $(BFLAGS) $(PT_STATE_OBJS) -o $(BIN_DIR)/point-state $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
@@ -110,7 +110,7 @@ PT_LP_FILES = point lpMPC state_symeval point-lp logging
 PT_LP_OBJS = $(PT_LP_FILES:%=$(OBJ_DIR)/%.o)
 
 lp-setup:
-	bash $(POINT_SETUP_FILE) lp $(TIMESTEPS)
+	bash $(POINT_SETUP_FILE) lp $(T)
 
 lp: | lp-setup $(PT_LP_OBJS)
 	$(CXX) $(BFLAGS) $(PT_LP_OBJS) -o $(BIN_DIR)/point-lp $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
@@ -127,7 +127,7 @@ PT_CONTROL_FILES = point controlMPC control_symeval point-control logging
 PT_CONTROL_OBJS = $(PT_CONTROL_FILES:%=$(OBJ_DIR)/%.o)
 
 control-setup:
-	bash $(POINT_SETUP_FILE) control $(TIMESTEPS)
+	bash $(POINT_SETUP_FILE) control $(T)
 
 control: | control-setup $(PT_CONTROL_OBJS) 
 	$(CXX) $(BFLAGS) $(PT_CONTROL_OBJS) -o $(BIN_DIR)/point-control $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)

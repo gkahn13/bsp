@@ -17,7 +17,7 @@
 
 namespace py = boost::python;
 
-#define TIMESTEPS 10
+#define TIMESTEPS 15
 #define DT 1.0
 #define X_DIM 2
 #define U_DIM 2
@@ -209,8 +209,8 @@ void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matri
 
 	py::list x0_list, xGoal_list;
 	for(int i=0; i < X_DIM; i++) {
-		x0_list.append(x0[0,i]);
-		xGoal_list.append(xGoal[0,i]);
+		x0_list.append(x0[i]);
+		xGoal_list.append(xGoal[i]);
 	}
 
 	std::string workingDir = boost::filesystem::current_path().normalize().string();

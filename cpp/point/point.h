@@ -15,7 +15,7 @@
 
 namespace py = boost::python;
 
-#define TIMESTEPS 15
+#define TIMESTEPS 10
 #define DT 1.0
 #define X_DIM 2
 #define U_DIM 2
@@ -40,6 +40,8 @@ const double INFTY = 1e10;
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
+
+const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 1, alpha_goal_state = 1;
 
 double *inputVars, *vars;
 std::vector<int> maskIndices;

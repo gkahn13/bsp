@@ -6,9 +6,7 @@
 #include "util/matrix.h"
 #include "util/Timer.h"
 #include "util/logging.h"
-//extern "C" {
 //#include "util/utils.h"
-//}
 
 #include <Python.h>
 #include <boost/python.hpp>
@@ -30,8 +28,6 @@ beliefPenaltyMPC_FLOAT **f, **lb, **ub, **C, **e, **z;
 beliefMPC_FLOAT **lb, **ub, **C, **e, **z;
 #endif
 }
-
-const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 1;
 
 namespace cfg {
 const double improve_ratio_threshold = .1;

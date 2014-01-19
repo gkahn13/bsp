@@ -38,12 +38,7 @@ $(OBJ_DIR)/logging.o : util/logging.cpp
 POINT_SETUP_FILE = point/setupFiles.sh
 
 # share point functions
-PT_DIR = point
-PT_FILES = point logging
-PT_OBJS = $(PT_FILES:%=$(OBJ_DIR)/%.o)
-
-$(OBJ_DIR)/point.o : point/point.cpp
-	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(BOOST_FLAGS) $(PYTHON_FLAGS) -c -o $@ $^
+PT_HEADERS = point/point.h
 
 # symeval	
 PT_SYM_DIR = point/sym
@@ -54,7 +49,6 @@ $(OBJ_DIR)/state_symeval.o : $(PT_SYM_DIR)/state-symeval.c
 $(OBJ_DIR)/control_symeval.o : $(PT_SYM_DIR)/control-symeval.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
 	
-
 # make point-belief
 PT_BELIEF_DIR = point/belief
 PT_BELIEF_FILES = beliefMPC beliefPenaltyMPC point-belief logging
@@ -63,7 +57,7 @@ PT_BELIEF_OBJS = $(PT_BELIEF_FILES:%=$(OBJ_DIR)/%.o)
 belief-setup:
 	bash $(POINT_SETUP_FILE) belief $(T)
 
-belief: | belief-setup $(PT_BELIEF_OBJS) 
+belief: | belief-setup $(PT_BELIEF_OBJS)
 	$(CXX) $(BFLAGS) $(PT_BELIEF_OBJS) -o $(BIN_DIR)/point-belief $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
 	
 $(OBJ_DIR)/beliefMPC.o : $(PT_BELIEF_DIR)/beliefMPC.c
@@ -72,41 +66,41 @@ $(OBJ_DIR)/beliefMPC.o : $(PT_BELIEF_DIR)/beliefMPC.c
 $(OBJ_DIR)/beliefPenaltyMPC.o : $(PT_BELIEF_DIR)/beliefPenaltyMPC.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
 	
-$(OBJ_DIR)/point-belief.o : $(PT_BELIEF_DIR)/point-belief.cpp
-	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $^
+$(OBJ_DIR)/point-belief.o : $(PT_BELIEF_DIR)/point-belief.cpp $(POINT_HEADERS)
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
 	
 	
 # make point-state
 PT_STATE_DIR = point/state
-PT_STATE_FILES = point stateMPC state_symeval point-state logging
+PT_STATE_FILES = stateMPC state_symeval point-state logging
 PT_STATE_OBJS = $(PT_STATE_FILES:%=$(OBJ_DIR)/%.o)
 
 state-setup:
 	bash $(POINT_SETUP_FILE) state $(T)
 
-state: | state-setup $(PT_STATE_OBJS) 
+state: | state-setup $(PT_STATE_OBJS)
 	$(CXX) $(BFLAGS) $(PT_STATE_OBJS) -o $(BIN_DIR)/point-state $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
 
 $(OBJ_DIR)/stateMPC.o : $(PT_STATE_DIR)/stateMPC.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
 	
-$(OBJ_DIR)/point-state.o : $(PT_STATE_DIR)/point-state.cpp
-	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $^
+$(OBJ_DIR)/point-state.o : $(PT_STATE_DIR)/point-state.cpp $(PT_HEADERS)
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
 	
 # make point-state-finitediff
 PT_STATE_FD_DIR = $(PT_STATE_DIR)
-PT_STATE_FD_FILES = point stateMPC state_symeval point-state-finitediff logging
+PT_STATE_FD_FILES = stateMPC state_symeval point-state-finitediff logging
 PT_STATE_FD_OBJS = $(PT_STATE_FD_FILES:%=$(OBJ_DIR)/%.o)
 
 state-finitediff: | state-setup $(PT_STATE_FD_OBJS) 
 	$(CXX) $(BFLAGS) $(PT_STATE_FD_OBJS) -o $(BIN_DIR)/point-state-finitediff $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
 	
-$(OBJ_DIR)/point-state-finitediff.o : $(PT_STATE_FD_DIR)/point-state-finitediff.cpp
-	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $^
+$(OBJ_DIR)/point-state-finitediff.o : $(PT_STATE_FD_DIR)/point-state-finitediff.cpp $(POINT_HEADERS)
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
 
 # make point-lp
 PT_LP_DIR = point/lp
-PT_LP_FILES = point lpMPC state_symeval point-lp logging
+PT_LP_FILES = lpMPC state_symeval point-lp logging
 PT_LP_OBJS = $(PT_LP_FILES:%=$(OBJ_DIR)/%.o)
 
 lp-setup:
@@ -118,12 +112,12 @@ lp: | lp-setup $(PT_LP_OBJS)
 $(OBJ_DIR)/lpMPC.o : $(PT_LP_DIR)/lpMPC.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
 	
-$(OBJ_DIR)/point-lp.o : $(PT_LP_DIR)/point-lp.cpp
-	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $^
+$(OBJ_DIR)/point-lp.o : $(PT_LP_DIR)/point-lp.cpp $(POINT_HEADERS)
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
 
 # make point-control
 PT_CONTROL_DIR = point/control
-PT_CONTROL_FILES = point controlMPC control_symeval point-control logging
+PT_CONTROL_FILES = controlMPC control_symeval point-control logging
 PT_CONTROL_OBJS = $(PT_CONTROL_FILES:%=$(OBJ_DIR)/%.o)
 
 control-setup:
@@ -135,8 +129,8 @@ control: | control-setup $(PT_CONTROL_OBJS)
 $(OBJ_DIR)/controlMPC.o : $(PT_CONTROL_DIR)/controlMPC.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
 	
-$(OBJ_DIR)/point-control.o : $(PT_CONTROL_DIR)/point-control.cpp
-	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $^
+$(OBJ_DIR)/point-control.o : $(PT_CONTROL_DIR)/point-control.cpp $(PT_HEADERS)
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
 
 ###### CLEAN ########
 

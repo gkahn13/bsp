@@ -4,8 +4,10 @@
 #include <cstdlib>
 #include <iomanip>
 
+#include "../point.h"
+
 #include "util/matrix.h"
-#include "util/utils.h"
+//#include "util/utils.h"
 #include "util/Timer.h"
 #include "util/logging.h"
 
@@ -24,29 +26,6 @@ extern "C" {
 #include "controlMPC.h"
 }
 
-#define TIMESTEPS 15
-#define DT 1.0
-#define X_DIM 2
-#define U_DIM 2
-#define Z_DIM 2
-#define Q_DIM 2
-#define R_DIM 2
-
-#define S_DIM (((X_DIM+1)*X_DIM)/2)
-#define B_DIM (X_DIM+S_DIM)
-
-const double step = 0.0078125*0.0078125;
-
-Matrix<X_DIM> x0;
-Matrix<X_DIM,X_DIM> SqrtSigma0;
-Matrix<X_DIM> xGoal;
-Matrix<X_DIM> xMin, xMax;
-Matrix<U_DIM> uMin, uMax;
-
-const int T = TIMESTEPS;
-const double INFTY = 1e10;
-const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 1, alpha_goal_state = 1;
-
 namespace cfg {
 const double improve_ratio_threshold = .1;
 const double min_approx_improve = 1e-2;
@@ -58,120 +37,7 @@ const double trust_expand_ratio = 1.5;
 // controlMPC vars
 controlMPC_FLOAT **H, **f, **lb, **ub, **z;
 
-#define MIN(a,b) (((a)<(b))?(a):(b))
-#define MAX(a,b) (((a)>(b))?(a):(b))
 
-double *inputVars, *vars;
-std::vector<int> maskIndices;
-
-inline Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<U_DIM>& q)
-{
-	Matrix<X_DIM> xNew = x + u*DT + 0.01*q;
-	return xNew;
-}
-
-// Observation model
-inline Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r)
-{
-	double intensity = sqrt(sqr(0.5*x[0]) + 1e-6);
-	Matrix<Z_DIM> z = x + intensity*r;
-	return z;
-}
-
-// Jacobians: df(x,u,q)/dx, df(x,u,q)/dq
-inline void linearizeDynamics(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<Q_DIM>& q, Matrix<X_DIM,X_DIM>& A, Matrix<X_DIM,Q_DIM>& M)
-{
-	A.reset();
-	Matrix<X_DIM> xr(x), xl(x);
-	for (size_t i = 0; i < X_DIM; ++i) {
-		xr[i] += step; xl[i] -= step;
-		A.insert(0,i, (dynfunc(xr, u, q) - dynfunc(xl, u, q)) / (xr[i] - xl[i]));
-		xr[i] = x[i]; xl[i] = x[i];
-	}
-
-	M.reset();
-	Matrix<Q_DIM> qr(q), ql(q);
-	for (size_t i = 0; i < Q_DIM; ++i) {
-		qr[i] += step; ql[i] -= step;
-		M.insert(0,i, (dynfunc(x, u, qr) - dynfunc(x, u, ql)) / (qr[i] - ql[i]));
-		qr[i] = q[i]; ql[i] = q[i];
-	}
-}
-
-// Jacobians: dh(x,r)/dx, dh(x,r)/dr
-inline void linearizeObservation(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r, Matrix<Z_DIM,X_DIM>& H, Matrix<Z_DIM,R_DIM>& N)
-{
-	H.reset();
-	Matrix<X_DIM> xr(x), xl(x);
-	for (size_t i = 0; i < X_DIM; ++i) {
-		xr[i] += step; xl[i] -= step;
-		H.insert(0,i, (obsfunc(xr, r) - obsfunc(xl, r)) / (xr[i] - xl[i]));
-		xr[i] = x[i]; xl[i] = x[i];
-	}
-
-	N.reset();
-	Matrix<R_DIM> rr(r), rl(r);
-	for (size_t i = 0; i < R_DIM; ++i) {
-		rr[i] += step; rl[i] -= step;
-		N.insert(0,i, (obsfunc(x, rr) - obsfunc(x, rl)) / (rr[i] - rl[i]));
-		rr[i] = r[i]; rl[i] = r[i];
-	}
-}
-
-// Switch between belief vector and matrices
-inline void unVec(const Matrix<B_DIM>& b, Matrix<X_DIM>& x, Matrix<X_DIM,X_DIM>& SqrtSigma) {
-	x = b.subMatrix<X_DIM,1>(0,0);
-	size_t idx = X_DIM;
-	for (size_t j = 0; j < X_DIM; ++j) {
-		for (size_t i = j; i < X_DIM; ++i) {
-			SqrtSigma(i,j) = b[idx];
-			SqrtSigma(j,i) = b[idx];
-			++idx;
-		}
-	}
-}
-
-inline void vec(const Matrix<X_DIM>& x, const Matrix<X_DIM,X_DIM>& SqrtSigma, Matrix<B_DIM>& b) {
-	b.insert(0,0,x);
-	size_t idx = X_DIM;
-	for (size_t j = 0; j < X_DIM; ++j) {
-		for (size_t i = j; i < X_DIM; ++i) {
-			b[idx] = 0.5 * (SqrtSigma(i,j) + SqrtSigma(j,i));
-			++idx;
-		}
-	}
-}
-
-// Belief dynamics
-inline Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
-	Matrix<X_DIM> x;
-	Matrix<X_DIM,X_DIM> SqrtSigma;
-	unVec(b, x, SqrtSigma);
-
-	Matrix<X_DIM,X_DIM> Sigma = SqrtSigma*SqrtSigma;
-
-	Matrix<X_DIM,X_DIM> A;
-	Matrix<X_DIM,Q_DIM> M;
-	linearizeDynamics(x, u, zeros<Q_DIM,1>(), A, M);
-
-	x = dynfunc(x, u, zeros<Q_DIM,1>());
-	Sigma = A*Sigma*~A + M*~M;
-
-	Matrix<Z_DIM,X_DIM> H;
-	Matrix<Z_DIM,R_DIM> N;
-	linearizeObservation(x, zeros<R_DIM,1>(), H, N);
-
-	Matrix<X_DIM,Z_DIM> K = Sigma*~H/(H*Sigma*~H + N*~N);
-
-	Sigma = (identity<X_DIM>() - K*H)*Sigma;
-
-	Matrix<B_DIM> g;
-	vec(x, sqrt(Sigma), g);
-
-	return g;
-}
-
-// TODO: Find better way to do this using macro expansions?
 void setupcontrolMPCVars(controlMPC_params& problem, controlMPC_output& output)
 {
 	// inputs
@@ -193,27 +59,6 @@ void setupcontrolMPCVars(controlMPC_params& problem, controlMPC_output& output)
 #define BOOST_PP_LOCAL_MACRO(n) SET_VARS(n)
 #define BOOST_PP_LOCAL_LIMITS (1, TIMESTEPS-1)
 #include BOOST_PP_LOCAL_ITERATE()
-
-/*
-	H[0] = problem.H1; f[0] = problem.f1; lb[0] = problem.lb1; ub[0] = problem.ub1;
-	H[1] = problem.H2; f[1] = problem.f2; lb[1] = problem.lb2; ub[1] = problem.ub2;
-	H[2] = problem.H3; f[2] = problem.f3; lb[2] = problem.lb3; ub[2] = problem.ub3;
-	H[3] = problem.H4; f[3] = problem.f4; lb[3] = problem.lb4; ub[3] = problem.ub4;
-	H[4] = problem.H5; f[4] = problem.f5; lb[4] = problem.lb5; ub[4] = problem.ub5;
-	H[5] = problem.H6; f[5] = problem.f6; lb[5] = problem.lb6; ub[5] = problem.ub6;
-	H[6] = problem.H7; f[6] = problem.f7; lb[6] = problem.lb7; ub[6] = problem.ub7;
-	H[7] = problem.H8; f[7] = problem.f8; lb[7] = problem.lb8; ub[7] = problem.ub8;
-	H[8] = problem.H9; f[8] = problem.f9; lb[8] = problem.lb9; ub[8] = problem.ub9;
-	H[9] = problem.H10; f[9] = problem.f10; lb[9] = problem.lb10; ub[9] = problem.ub10;
-	H[10] = problem.H11; f[10] = problem.f11; lb[10] = problem.lb11; ub[10] = problem.ub11;
-	H[11] = problem.H12; f[11] = problem.f12; lb[11] = problem.lb12; ub[11] = problem.ub12;
-	H[12] = problem.H13; f[12] = problem.f13; lb[12] = problem.lb13; ub[12] = problem.ub13;
-	H[13] = problem.H14; f[13] = problem.f14; lb[13] = problem.lb14; ub[13] = problem.ub14;
-
-	z[0] = output.z1; z[1] = output.z2; z[2] = output.z3; z[3] = output.z4; z[4] = output.z5;
-	z[5] = output.z6; z[6] = output.z7; z[7] = output.z8; z[8] = output.z9; z[9] = output.z10;
-	z[10] = output.z11; z[11] = output.z12; z[12] = output.z13; z[13] = output.z14;
-	*/
 }
 
 void setupDstarInterface()
@@ -500,58 +345,6 @@ double controlCollocation(std::vector< Matrix<U_DIM> >& U, controlMPC_params& pr
 }
 
 
-void pythonDisplayTrajectory(std::vector< Matrix<U_DIM> >& U)
-{
-	Matrix<B_DIM> binit = zeros<B_DIM>();
-	std::vector<Matrix<B_DIM> > B(T, binit);
-
-	vec(x0, SqrtSigma0, B[0]);
-	for (size_t t = 0; t < T-1; ++t) {
-		B[t+1] = beliefDynamics(B[t], U[t]);
-	}
-
-	py::list Bvec;
-	for(int j=0; j < B_DIM; j++) {
-		for(int i=0; i < T; i++) {
-			Bvec.append(B[i][j]);
-		}
-	}
-
-	py::list Uvec;
-	for(int j=0; j < U_DIM; j++) {
-		for(int i=0; i < T-1; i++) {
-			Uvec.append(U[i][j]);
-		}
-	}
-
-	py::list x0_list, xGoal_list;
-	for(int i=0; i < X_DIM; i++) {
-		x0_list.append(x0[0,i]);
-		xGoal_list.append(xGoal[0,i]);
-	}
-
-	std::string workingDir = boost::filesystem::current_path().normalize().string();
-	std::string bspDir = workingDir.substr(0,workingDir.find("bsp"));
-
-	try
-	{
-		Py_Initialize();
-		py::object main_module = py::import("__main__");
-		py::object main_namespace = main_module.attr("__dict__");
-		py::exec("import sys, os", main_namespace);
-		py::exec(py::str("sys.path.append('"+bspDir+"bsp/python')"), main_namespace);
-		py::exec("from bsp_light_dark import LightDarkModel", main_namespace);
-		py::object model = py::eval("LightDarkModel()", main_namespace);
-		py::object plot_mod = py::import("plot");
-		py::object plot_traj = plot_mod.attr("plot_belief_trajectory_cpp");
-
-		plot_traj(Bvec, Uvec, model, x0_list, xGoal_list, T);	}
-	catch(py::error_already_set const &)
-	{
-		PyErr_Print();
-	}
-}
-
 int main(int argc, char* argv[])
 {
 	x0[0] = -3.5; x0[1] = 2;
@@ -592,7 +385,15 @@ int main(int argc, char* argv[])
 	LOG_INFO("Cost: %4.10f", cost);
 	LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 
-	pythonDisplayTrajectory(U);
+	Matrix<B_DIM> binit = zeros<B_DIM>();
+	std::vector<Matrix<B_DIM> > B(T, binit);
+
+	vec(x0, SqrtSigma0, B[0]);
+	for (size_t t = 0; t < T-1; ++t) {
+		B[t+1] = beliefDynamics(B[t], U[t]);
+	}
+
+	pythonDisplayTrajectory(B, U);
 
 	cleanup();
 

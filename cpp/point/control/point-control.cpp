@@ -1,6 +1,5 @@
 #include <vector>
 #include <iostream>
-#include <fstream>
 #include <cstdlib>
 #include <iomanip>
 
@@ -61,32 +60,6 @@ void setupcontrolMPCVars(controlMPC_params& problem, controlMPC_output& output)
 #include BOOST_PP_LOCAL_ITERATE()
 }
 
-void setupDstarInterface()
-{
-	// instantiations
-	// alpha_belief, alpha_control, alpha_final_belief
-	int nparams = 4;
-	// (T-1)*U_DIM + zeros for Q_DIM,R_DIM + x_0 + x_Goal + SqrtSigma0 (X_DIM*X_DIM) + nparams
-	int nvars = (T - 1) * U_DIM + Q_DIM + R_DIM + X_DIM + X_DIM + (X_DIM * X_DIM) + nparams;
-
-	inputVars = new double[nvars];
-
-	std::stringstream file;
-	file << "point/masks/control-masks-" << TIMESTEPS << ".txt";
-	std::ifstream fptr(file.str());
-	if(!fptr.is_open()) {
-		LOG_FATAL("Mask file handle not opened, check!, exiting");
-		std::exit(-1);
-	}
-	int val;
-	for(int i = 0; i < nvars; ++i) {
-		fptr >> val;
-		if (val == 1) {
-			maskIndices.push_back(i);
-		}
-	}
-	fptr.close();
-}
 
 void cleanup()
 {
@@ -368,7 +341,11 @@ int main(int argc, char* argv[])
 		X[t+1] = dynfunc(X[t], U[t], zeros<Q_DIM,1>());
 	}
 
-	setupDstarInterface();
+	int nparams = 4;
+	int nvars = (T - 1) * U_DIM + Q_DIM + R_DIM + X_DIM + X_DIM + (X_DIM * X_DIM) + nparams;
+	std::stringstream fileName;
+	fileName << "control-masks-" << TIMESTEPS << ".txt";
+	setupDstarInterface(fileName.str(), nparams, nvars);
 
 	controlMPC_params problem;
 	controlMPC_output output;

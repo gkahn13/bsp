@@ -1,6 +1,5 @@
 #include <vector>
 #include <iostream>
-#include <fstream>
 #include <cstdlib>
 #include <iomanip>
 
@@ -70,29 +69,6 @@ void setupLpMPCVars(lpMPC_params& problem, lpMPC_output& output)
 #define BOOST_PP_LOCAL_LIMITS (TIMESTEPS, TIMESTEPS)
 #include BOOST_PP_LOCAL_ITERATE()
 
-}
-
-void setupDstarInterface() 
-{
-	// instantiations
-	// alpha_belief, alpha_control, alpha_final_belief
-	int nparams = 3;
-	// T*X_DIM + (T-1)*U_DIM + zeros for Q_DIM,R_DIM + SqrtSigma0 (X_DIM*X_DIM) + nparams
-	int nvars = T * X_DIM + (T - 1) * U_DIM + Q_DIM + R_DIM + (X_DIM * X_DIM) + nparams;
-
-	inputVars = new double[nvars];
-
-	std::stringstream file;
-	file << "point/masks/state-masks-" << TIMESTEPS << ".txt";
-	std::ifstream fptr(file.str());int val;
-	for(int i = 0; i < nvars; ++i) {
-		fptr >> val;
-		if (val == 1) {
-			maskIndices.push_back(i);
-		}
-	}
-	// Read in Jacobian and Hessian masks here
-	fptr.close();
 }
 
 void cleanup()
@@ -400,7 +376,11 @@ int main(int argc, char* argv[])
 		X[t+1] = dynfunc(X[t], U[t], zeros<Q_DIM,1>());
 	}
 
-	setupDstarInterface();
+	int nparams = 3;
+	int nvars = T * X_DIM + (T - 1) * U_DIM + Q_DIM + R_DIM + (X_DIM * X_DIM) + nparams;
+	std::stringstream fileName;
+	fileName << "point/masks/state-masks-" << TIMESTEPS << ".txt";
+	setupDstarInterface(fileName.str(), nparams, nvars);
 
 	lpMPC_params problem;
 	lpMPC_output output;

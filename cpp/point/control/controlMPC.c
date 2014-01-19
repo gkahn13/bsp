@@ -40,12 +40,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 /* LINEAR ALGEBRA LIBRARY ---------------------------------------------- */
 /*
- * Initializes a vector of length 18 with a value.
+ * Initializes a vector of length 28 with a value.
  */
-void controlMPC_LA_INITIALIZEVECTOR_18(controlMPC_FLOAT* vec, controlMPC_FLOAT value)
+void controlMPC_LA_INITIALIZEVECTOR_28(controlMPC_FLOAT* vec, controlMPC_FLOAT value)
 {
 	int i;
-	for( i=0; i<18; i++ )
+	for( i=0; i<28; i++ )
 	{
 		vec[i] = value;
 	}
@@ -53,12 +53,12 @@ void controlMPC_LA_INITIALIZEVECTOR_18(controlMPC_FLOAT* vec, controlMPC_FLOAT v
 
 
 /*
- * Initializes a vector of length 16 with a value.
+ * Initializes a vector of length 26 with a value.
  */
-void controlMPC_LA_INITIALIZEVECTOR_16(controlMPC_FLOAT* vec, controlMPC_FLOAT value)
+void controlMPC_LA_INITIALIZEVECTOR_26(controlMPC_FLOAT* vec, controlMPC_FLOAT value)
 {
 	int i;
-	for( i=0; i<16; i++ )
+	for( i=0; i<26; i++ )
 	{
 		vec[i] = value;
 	}
@@ -66,12 +66,12 @@ void controlMPC_LA_INITIALIZEVECTOR_16(controlMPC_FLOAT* vec, controlMPC_FLOAT v
 
 
 /*
- * Initializes a vector of length 36 with a value.
+ * Initializes a vector of length 56 with a value.
  */
-void controlMPC_LA_INITIALIZEVECTOR_36(controlMPC_FLOAT* vec, controlMPC_FLOAT value)
+void controlMPC_LA_INITIALIZEVECTOR_56(controlMPC_FLOAT* vec, controlMPC_FLOAT value)
 {
 	int i;
-	for( i=0; i<36; i++ )
+	for( i=0; i<56; i++ )
 	{
 		vec[i] = value;
 	}
@@ -80,12 +80,12 @@ void controlMPC_LA_INITIALIZEVECTOR_36(controlMPC_FLOAT* vec, controlMPC_FLOAT v
 
 /* 
  * Calculates a dot product and adds it to a variable: z += x'*y; 
- * This function is for vectors of length 36.
+ * This function is for vectors of length 56.
  */
-void controlMPC_LA_DOTACC_36(controlMPC_FLOAT *x, controlMPC_FLOAT *y, controlMPC_FLOAT *z)
+void controlMPC_LA_DOTACC_56(controlMPC_FLOAT *x, controlMPC_FLOAT *y, controlMPC_FLOAT *z)
 {
 	int i;
-	for( i=0; i<36; i++ ){
+	for( i=0; i<56; i++ ){
 		*z += x[i]*y[i];
 	}
 }
@@ -296,12 +296,12 @@ void controlMPC_LA_INEQ_B_GRAD_2_2_2(controlMPC_FLOAT *lu, controlMPC_FLOAT *su,
 
 /*
  * Addition of three vectors  z = u + w + v
- * of length 18.
+ * of length 28.
  */
-void controlMPC_LA_VVADD3_18(controlMPC_FLOAT *u, controlMPC_FLOAT *v, controlMPC_FLOAT *w, controlMPC_FLOAT *z)
+void controlMPC_LA_VVADD3_28(controlMPC_FLOAT *u, controlMPC_FLOAT *v, controlMPC_FLOAT *w, controlMPC_FLOAT *z)
 {
 	int i;
-	for( i=0; i<18; i++ ){
+	for( i=0; i<28; i++ ){
 		z[i] = u[i] + v[i] + w[i];
 	}
 }
@@ -711,12 +711,12 @@ void controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_FLOAT *A, controlMPC_FLOAT *x, c
 
 
 /*
- * Vector subtraction z = -x - y for vectors of length 18.
+ * Vector subtraction z = -x - y for vectors of length 28.
  */
-void controlMPC_LA_VSUB2_18(controlMPC_FLOAT *x, controlMPC_FLOAT *y, controlMPC_FLOAT *z)
+void controlMPC_LA_VSUB2_28(controlMPC_FLOAT *x, controlMPC_FLOAT *y, controlMPC_FLOAT *z)
 {
 	int i;
-	for( i=0; i<18; i++){
+	for( i=0; i<28; i++){
 		z[i] = -x[i] - y[i];
 	}
 }
@@ -803,7 +803,7 @@ int controlMPC_LINESEARCH_BACKTRACKING_AFFINE(controlMPC_FLOAT *l, controlMPC_FL
          * values might be in registers, so it should be cheaper.
          */
         mymu = 0;
-        for( i=0; i<36; i++ ){
+        for( i=0; i<56; i++ ){
             dltemp = l[i] + mya*dl[i];
             dstemp = s[i] + mya*ds[i];
             if( dltemp < 0 || dstemp < 0 ){
@@ -818,7 +818,7 @@ int controlMPC_LINESEARCH_BACKTRACKING_AFFINE(controlMPC_FLOAT *l, controlMPC_FL
          * If no early termination of the for-loop above occurred, we
          * found the required value of a and we can quit the while loop.
          */
-        if( i == 36 ){
+        if( i == 56 ){
             break;
         } else {
             mya *= controlMPC_SET_LS_SCALE_AFF;
@@ -830,19 +830,19 @@ int controlMPC_LINESEARCH_BACKTRACKING_AFFINE(controlMPC_FLOAT *l, controlMPC_FL
     
     /* return new values and iteration counter */
     *a = mya;
-    *mu_aff = mymu / (controlMPC_FLOAT)36;
+    *mu_aff = mymu / (controlMPC_FLOAT)56;
     return lsIt;
 }
 
 
 /*
  * Vector subtraction x = u.*v - a where a is a scalar
-*  and x,u,v are vectors of length 36.
+*  and x,u,v are vectors of length 56.
  */
-void controlMPC_LA_VSUB5_36(controlMPC_FLOAT *u, controlMPC_FLOAT *v, controlMPC_FLOAT a, controlMPC_FLOAT *x)
+void controlMPC_LA_VSUB5_56(controlMPC_FLOAT *u, controlMPC_FLOAT *v, controlMPC_FLOAT a, controlMPC_FLOAT *x)
 {
 	int i;
-	for( i=0; i<36; i++){
+	for( i=0; i<56; i++){
 		x[i] = u[i]*v[i] - a;
 	}
 }
@@ -892,12 +892,12 @@ void controlMPC_LA_DENSE_DIAGZERO_2MVMADD_2_2_2(controlMPC_FLOAT *A, controlMPC_
 
 
 /*
- * Vector subtraction z = x - y for vectors of length 18.
+ * Vector subtraction z = x - y for vectors of length 28.
  */
-void controlMPC_LA_VSUB_18(controlMPC_FLOAT *x, controlMPC_FLOAT *y, controlMPC_FLOAT *z)
+void controlMPC_LA_VSUB_28(controlMPC_FLOAT *x, controlMPC_FLOAT *y, controlMPC_FLOAT *z)
 {
 	int i;
-	for( i=0; i<18; i++){
+	for( i=0; i<28; i++){
 		z[i] = x[i] - y[i];
 	}
 }
@@ -930,48 +930,48 @@ void controlMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_2(controlMPC_FLOAT *r, controlMPC_
 
 
 /*
- * Computes ds = -l.\(r + s.*dl) for vectors of length 36.
+ * Computes ds = -l.\(r + s.*dl) for vectors of length 56.
  */
-void controlMPC_LA_VSUB7_36(controlMPC_FLOAT *l, controlMPC_FLOAT *r, controlMPC_FLOAT *s, controlMPC_FLOAT *dl, controlMPC_FLOAT *ds)
+void controlMPC_LA_VSUB7_56(controlMPC_FLOAT *l, controlMPC_FLOAT *r, controlMPC_FLOAT *s, controlMPC_FLOAT *dl, controlMPC_FLOAT *ds)
 {
 	int i;
-	for( i=0; i<36; i++){
+	for( i=0; i<56; i++){
 		ds[i] = -(r[i] + s[i]*dl[i])/l[i];
 	}
 }
 
 
 /*
- * Vector addition x = x + y for vectors of length 18.
+ * Vector addition x = x + y for vectors of length 28.
  */
-void controlMPC_LA_VADD_18(controlMPC_FLOAT *x, controlMPC_FLOAT *y)
+void controlMPC_LA_VADD_28(controlMPC_FLOAT *x, controlMPC_FLOAT *y)
 {
 	int i;
-	for( i=0; i<18; i++){
+	for( i=0; i<28; i++){
 		x[i] += y[i];
 	}
 }
 
 
 /*
- * Vector addition x = x + y for vectors of length 16.
+ * Vector addition x = x + y for vectors of length 26.
  */
-void controlMPC_LA_VADD_16(controlMPC_FLOAT *x, controlMPC_FLOAT *y)
+void controlMPC_LA_VADD_26(controlMPC_FLOAT *x, controlMPC_FLOAT *y)
 {
 	int i;
-	for( i=0; i<16; i++){
+	for( i=0; i<26; i++){
 		x[i] += y[i];
 	}
 }
 
 
 /*
- * Vector addition x = x + y for vectors of length 36.
+ * Vector addition x = x + y for vectors of length 56.
  */
-void controlMPC_LA_VADD_36(controlMPC_FLOAT *x, controlMPC_FLOAT *y)
+void controlMPC_LA_VADD_56(controlMPC_FLOAT *x, controlMPC_FLOAT *y)
 {
 	int i;
-	for( i=0; i<36; i++){
+	for( i=0; i<56; i++){
 		x[i] += y[i];
 	}
 }
@@ -993,7 +993,7 @@ int controlMPC_LINESEARCH_BACKTRACKING_COMBINED(controlMPC_FLOAT *z, controlMPC_
     while( 1 ){                        
 
         /* check whether search criterion is fulfilled */
-        for( i=0; i<36; i++ ){
+        for( i=0; i<56; i++ ){
             dltemp = l[i] + (*a)*dl[i];
             dstemp = s[i] + (*a)*ds[i];
             if( dltemp < 0 || dstemp < 0 ){
@@ -1006,7 +1006,7 @@ int controlMPC_LINESEARCH_BACKTRACKING_COMBINED(controlMPC_FLOAT *z, controlMPC_
          * If no early termination of the for-loop above occurred, we
          * found the required value of a and we can quit the while loop.
          */
-        if( i == 36 ){
+        if( i == 56 ){
             break;
         } else {
             *a *= controlMPC_SET_LS_SCALE;
@@ -1020,25 +1020,25 @@ int controlMPC_LINESEARCH_BACKTRACKING_COMBINED(controlMPC_FLOAT *z, controlMPC_
     a_gamma = (*a)*controlMPC_SET_LS_MAXSTEP;
     
     /* primal variables */
-    for( i=0; i<18; i++ ){
+    for( i=0; i<28; i++ ){
         z[i] += a_gamma*dz[i];
     }
     
     /* equality constraint multipliers */
-    for( i=0; i<16; i++ ){
+    for( i=0; i<26; i++ ){
         v[i] += a_gamma*dv[i];
     }
     
     /* inequality constraint multipliers & slacks, also update mu */
     *mu = 0;
-    for( i=0; i<36; i++ ){
+    for( i=0; i<56; i++ ){
         dltemp = l[i] + a_gamma*dl[i]; l[i] = dltemp;
         dstemp = s[i] + a_gamma*ds[i]; s[i] = dstemp;
         *mu += dltemp*dstemp;
     }
     
     *a = a_gamma;
-    *mu /= (controlMPC_FLOAT)36;
+    *mu /= (controlMPC_FLOAT)56;
     return lsIt;
 }
 
@@ -1046,416 +1046,641 @@ int controlMPC_LINESEARCH_BACKTRACKING_COMBINED(controlMPC_FLOAT *z, controlMPC_
 
 
 /* VARIABLE DEFINITIONS ------------------------------------------------ */
-controlMPC_FLOAT controlMPC_z[18];
-controlMPC_FLOAT controlMPC_v[16];
-controlMPC_FLOAT controlMPC_dz_aff[18];
-controlMPC_FLOAT controlMPC_dv_aff[16];
-controlMPC_FLOAT controlMPC_grad_cost[18];
-controlMPC_FLOAT controlMPC_grad_eq[18];
-controlMPC_FLOAT controlMPC_rd[18];
-controlMPC_FLOAT controlMPC_l[36];
-controlMPC_FLOAT controlMPC_s[36];
-controlMPC_FLOAT controlMPC_lbys[36];
-controlMPC_FLOAT controlMPC_dl_aff[36];
-controlMPC_FLOAT controlMPC_ds_aff[36];
-controlMPC_FLOAT controlMPC_dz_cc[18];
-controlMPC_FLOAT controlMPC_dv_cc[16];
-controlMPC_FLOAT controlMPC_dl_cc[36];
-controlMPC_FLOAT controlMPC_ds_cc[36];
-controlMPC_FLOAT controlMPC_ccrhs[36];
-controlMPC_FLOAT controlMPC_grad_ineq[18];
-controlMPC_FLOAT* controlMPC_z0 = controlMPC_z + 0;
-controlMPC_FLOAT* controlMPC_dzaff0 = controlMPC_dz_aff + 0;
-controlMPC_FLOAT* controlMPC_dzcc0 = controlMPC_dz_cc + 0;
-controlMPC_FLOAT* controlMPC_rd0 = controlMPC_rd + 0;
-controlMPC_FLOAT controlMPC_Lbyrd0[2];
-controlMPC_FLOAT* controlMPC_grad_cost0 = controlMPC_grad_cost + 0;
-controlMPC_FLOAT* controlMPC_grad_eq0 = controlMPC_grad_eq + 0;
-controlMPC_FLOAT* controlMPC_grad_ineq0 = controlMPC_grad_ineq + 0;
-controlMPC_FLOAT controlMPC_ctv0[2];
-controlMPC_FLOAT controlMPC_C0[4] = {0.0000000000000000E+000, 0.0000000000000000E+000, 
+controlMPC_FLOAT controlMPC_z[28];
+controlMPC_FLOAT controlMPC_v[26];
+controlMPC_FLOAT controlMPC_dz_aff[28];
+controlMPC_FLOAT controlMPC_dv_aff[26];
+controlMPC_FLOAT controlMPC_grad_cost[28];
+controlMPC_FLOAT controlMPC_grad_eq[28];
+controlMPC_FLOAT controlMPC_rd[28];
+controlMPC_FLOAT controlMPC_l[56];
+controlMPC_FLOAT controlMPC_s[56];
+controlMPC_FLOAT controlMPC_lbys[56];
+controlMPC_FLOAT controlMPC_dl_aff[56];
+controlMPC_FLOAT controlMPC_ds_aff[56];
+controlMPC_FLOAT controlMPC_dz_cc[28];
+controlMPC_FLOAT controlMPC_dv_cc[26];
+controlMPC_FLOAT controlMPC_dl_cc[56];
+controlMPC_FLOAT controlMPC_ds_cc[56];
+controlMPC_FLOAT controlMPC_ccrhs[56];
+controlMPC_FLOAT controlMPC_grad_ineq[28];
+controlMPC_FLOAT* controlMPC_z00 = controlMPC_z + 0;
+controlMPC_FLOAT* controlMPC_dzaff00 = controlMPC_dz_aff + 0;
+controlMPC_FLOAT* controlMPC_dzcc00 = controlMPC_dz_cc + 0;
+controlMPC_FLOAT* controlMPC_rd00 = controlMPC_rd + 0;
+controlMPC_FLOAT controlMPC_Lbyrd00[2];
+controlMPC_FLOAT* controlMPC_grad_cost00 = controlMPC_grad_cost + 0;
+controlMPC_FLOAT* controlMPC_grad_eq00 = controlMPC_grad_eq + 0;
+controlMPC_FLOAT* controlMPC_grad_ineq00 = controlMPC_grad_ineq + 0;
+controlMPC_FLOAT controlMPC_ctv00[2];
+controlMPC_FLOAT controlMPC_C00[4] = {0.0000000000000000E+000, 0.0000000000000000E+000, 
 0.0000000000000000E+000, 0.0000000000000000E+000};
-controlMPC_FLOAT* controlMPC_v0 = controlMPC_v + 0;
-controlMPC_FLOAT controlMPC_re0[2];
-controlMPC_FLOAT controlMPC_beta0[2];
-controlMPC_FLOAT controlMPC_betacc0[2];
-controlMPC_FLOAT* controlMPC_dvaff0 = controlMPC_dv_aff + 0;
-controlMPC_FLOAT* controlMPC_dvcc0 = controlMPC_dv_cc + 0;
-controlMPC_FLOAT controlMPC_V0[4];
-controlMPC_FLOAT controlMPC_Yd0[3];
-controlMPC_FLOAT controlMPC_Ld0[3];
-controlMPC_FLOAT controlMPC_yy0[2];
-controlMPC_FLOAT controlMPC_bmy0[2];
-controlMPC_FLOAT controlMPC_c0[2] = {0.0000000000000000E+000, 0.0000000000000000E+000};
-int controlMPC_lbIdx0[2] = {0, 1};
-controlMPC_FLOAT* controlMPC_llb0 = controlMPC_l + 0;
-controlMPC_FLOAT* controlMPC_slb0 = controlMPC_s + 0;
-controlMPC_FLOAT* controlMPC_llbbyslb0 = controlMPC_lbys + 0;
-controlMPC_FLOAT controlMPC_rilb0[2];
-controlMPC_FLOAT* controlMPC_dllbaff0 = controlMPC_dl_aff + 0;
-controlMPC_FLOAT* controlMPC_dslbaff0 = controlMPC_ds_aff + 0;
-controlMPC_FLOAT* controlMPC_dllbcc0 = controlMPC_dl_cc + 0;
-controlMPC_FLOAT* controlMPC_dslbcc0 = controlMPC_ds_cc + 0;
-controlMPC_FLOAT* controlMPC_ccrhsl0 = controlMPC_ccrhs + 0;
-int controlMPC_ubIdx0[2] = {0, 1};
-controlMPC_FLOAT* controlMPC_lub0 = controlMPC_l + 2;
-controlMPC_FLOAT* controlMPC_sub0 = controlMPC_s + 2;
-controlMPC_FLOAT* controlMPC_lubbysub0 = controlMPC_lbys + 2;
-controlMPC_FLOAT controlMPC_riub0[2];
-controlMPC_FLOAT* controlMPC_dlubaff0 = controlMPC_dl_aff + 2;
-controlMPC_FLOAT* controlMPC_dsubaff0 = controlMPC_ds_aff + 2;
-controlMPC_FLOAT* controlMPC_dlubcc0 = controlMPC_dl_cc + 2;
-controlMPC_FLOAT* controlMPC_dsubcc0 = controlMPC_ds_cc + 2;
-controlMPC_FLOAT* controlMPC_ccrhsub0 = controlMPC_ccrhs + 2;
-controlMPC_FLOAT controlMPC_Phi0[2];
-controlMPC_FLOAT* controlMPC_z1 = controlMPC_z + 2;
-controlMPC_FLOAT* controlMPC_dzaff1 = controlMPC_dz_aff + 2;
-controlMPC_FLOAT* controlMPC_dzcc1 = controlMPC_dz_cc + 2;
-controlMPC_FLOAT* controlMPC_rd1 = controlMPC_rd + 2;
-controlMPC_FLOAT controlMPC_Lbyrd1[2];
-controlMPC_FLOAT* controlMPC_grad_cost1 = controlMPC_grad_cost + 2;
-controlMPC_FLOAT* controlMPC_grad_eq1 = controlMPC_grad_eq + 2;
-controlMPC_FLOAT* controlMPC_grad_ineq1 = controlMPC_grad_ineq + 2;
-controlMPC_FLOAT controlMPC_ctv1[2];
-controlMPC_FLOAT* controlMPC_v1 = controlMPC_v + 2;
-controlMPC_FLOAT controlMPC_re1[2];
-controlMPC_FLOAT controlMPC_beta1[2];
-controlMPC_FLOAT controlMPC_betacc1[2];
-controlMPC_FLOAT* controlMPC_dvaff1 = controlMPC_dv_aff + 2;
-controlMPC_FLOAT* controlMPC_dvcc1 = controlMPC_dv_cc + 2;
-controlMPC_FLOAT controlMPC_V1[4];
-controlMPC_FLOAT controlMPC_Yd1[3];
-controlMPC_FLOAT controlMPC_Ld1[3];
-controlMPC_FLOAT controlMPC_yy1[2];
-controlMPC_FLOAT controlMPC_bmy1[2];
-controlMPC_FLOAT controlMPC_c1[2] = {0.0000000000000000E+000, 0.0000000000000000E+000};
-int controlMPC_lbIdx1[2] = {0, 1};
-controlMPC_FLOAT* controlMPC_llb1 = controlMPC_l + 4;
-controlMPC_FLOAT* controlMPC_slb1 = controlMPC_s + 4;
-controlMPC_FLOAT* controlMPC_llbbyslb1 = controlMPC_lbys + 4;
-controlMPC_FLOAT controlMPC_rilb1[2];
-controlMPC_FLOAT* controlMPC_dllbaff1 = controlMPC_dl_aff + 4;
-controlMPC_FLOAT* controlMPC_dslbaff1 = controlMPC_ds_aff + 4;
-controlMPC_FLOAT* controlMPC_dllbcc1 = controlMPC_dl_cc + 4;
-controlMPC_FLOAT* controlMPC_dslbcc1 = controlMPC_ds_cc + 4;
-controlMPC_FLOAT* controlMPC_ccrhsl1 = controlMPC_ccrhs + 4;
-int controlMPC_ubIdx1[2] = {0, 1};
-controlMPC_FLOAT* controlMPC_lub1 = controlMPC_l + 6;
-controlMPC_FLOAT* controlMPC_sub1 = controlMPC_s + 6;
-controlMPC_FLOAT* controlMPC_lubbysub1 = controlMPC_lbys + 6;
-controlMPC_FLOAT controlMPC_riub1[2];
-controlMPC_FLOAT* controlMPC_dlubaff1 = controlMPC_dl_aff + 6;
-controlMPC_FLOAT* controlMPC_dsubaff1 = controlMPC_ds_aff + 6;
-controlMPC_FLOAT* controlMPC_dlubcc1 = controlMPC_dl_cc + 6;
-controlMPC_FLOAT* controlMPC_dsubcc1 = controlMPC_ds_cc + 6;
-controlMPC_FLOAT* controlMPC_ccrhsub1 = controlMPC_ccrhs + 6;
-controlMPC_FLOAT controlMPC_Phi1[2];
-controlMPC_FLOAT controlMPC_D1[2] = {0.0000000000000000E+000, 
+controlMPC_FLOAT* controlMPC_v00 = controlMPC_v + 0;
+controlMPC_FLOAT controlMPC_re00[2];
+controlMPC_FLOAT controlMPC_beta00[2];
+controlMPC_FLOAT controlMPC_betacc00[2];
+controlMPC_FLOAT* controlMPC_dvaff00 = controlMPC_dv_aff + 0;
+controlMPC_FLOAT* controlMPC_dvcc00 = controlMPC_dv_cc + 0;
+controlMPC_FLOAT controlMPC_V00[4];
+controlMPC_FLOAT controlMPC_Yd00[3];
+controlMPC_FLOAT controlMPC_Ld00[3];
+controlMPC_FLOAT controlMPC_yy00[2];
+controlMPC_FLOAT controlMPC_bmy00[2];
+controlMPC_FLOAT controlMPC_c00[2] = {0.0000000000000000E+000, 0.0000000000000000E+000};
+int controlMPC_lbIdx00[2] = {0, 1};
+controlMPC_FLOAT* controlMPC_llb00 = controlMPC_l + 0;
+controlMPC_FLOAT* controlMPC_slb00 = controlMPC_s + 0;
+controlMPC_FLOAT* controlMPC_llbbyslb00 = controlMPC_lbys + 0;
+controlMPC_FLOAT controlMPC_rilb00[2];
+controlMPC_FLOAT* controlMPC_dllbaff00 = controlMPC_dl_aff + 0;
+controlMPC_FLOAT* controlMPC_dslbaff00 = controlMPC_ds_aff + 0;
+controlMPC_FLOAT* controlMPC_dllbcc00 = controlMPC_dl_cc + 0;
+controlMPC_FLOAT* controlMPC_dslbcc00 = controlMPC_ds_cc + 0;
+controlMPC_FLOAT* controlMPC_ccrhsl00 = controlMPC_ccrhs + 0;
+int controlMPC_ubIdx00[2] = {0, 1};
+controlMPC_FLOAT* controlMPC_lub00 = controlMPC_l + 2;
+controlMPC_FLOAT* controlMPC_sub00 = controlMPC_s + 2;
+controlMPC_FLOAT* controlMPC_lubbysub00 = controlMPC_lbys + 2;
+controlMPC_FLOAT controlMPC_riub00[2];
+controlMPC_FLOAT* controlMPC_dlubaff00 = controlMPC_dl_aff + 2;
+controlMPC_FLOAT* controlMPC_dsubaff00 = controlMPC_ds_aff + 2;
+controlMPC_FLOAT* controlMPC_dlubcc00 = controlMPC_dl_cc + 2;
+controlMPC_FLOAT* controlMPC_dsubcc00 = controlMPC_ds_cc + 2;
+controlMPC_FLOAT* controlMPC_ccrhsub00 = controlMPC_ccrhs + 2;
+controlMPC_FLOAT controlMPC_Phi00[2];
+controlMPC_FLOAT* controlMPC_z01 = controlMPC_z + 2;
+controlMPC_FLOAT* controlMPC_dzaff01 = controlMPC_dz_aff + 2;
+controlMPC_FLOAT* controlMPC_dzcc01 = controlMPC_dz_cc + 2;
+controlMPC_FLOAT* controlMPC_rd01 = controlMPC_rd + 2;
+controlMPC_FLOAT controlMPC_Lbyrd01[2];
+controlMPC_FLOAT* controlMPC_grad_cost01 = controlMPC_grad_cost + 2;
+controlMPC_FLOAT* controlMPC_grad_eq01 = controlMPC_grad_eq + 2;
+controlMPC_FLOAT* controlMPC_grad_ineq01 = controlMPC_grad_ineq + 2;
+controlMPC_FLOAT controlMPC_ctv01[2];
+controlMPC_FLOAT* controlMPC_v01 = controlMPC_v + 2;
+controlMPC_FLOAT controlMPC_re01[2];
+controlMPC_FLOAT controlMPC_beta01[2];
+controlMPC_FLOAT controlMPC_betacc01[2];
+controlMPC_FLOAT* controlMPC_dvaff01 = controlMPC_dv_aff + 2;
+controlMPC_FLOAT* controlMPC_dvcc01 = controlMPC_dv_cc + 2;
+controlMPC_FLOAT controlMPC_V01[4];
+controlMPC_FLOAT controlMPC_Yd01[3];
+controlMPC_FLOAT controlMPC_Ld01[3];
+controlMPC_FLOAT controlMPC_yy01[2];
+controlMPC_FLOAT controlMPC_bmy01[2];
+controlMPC_FLOAT controlMPC_c01[2] = {0.0000000000000000E+000, 0.0000000000000000E+000};
+int controlMPC_lbIdx01[2] = {0, 1};
+controlMPC_FLOAT* controlMPC_llb01 = controlMPC_l + 4;
+controlMPC_FLOAT* controlMPC_slb01 = controlMPC_s + 4;
+controlMPC_FLOAT* controlMPC_llbbyslb01 = controlMPC_lbys + 4;
+controlMPC_FLOAT controlMPC_rilb01[2];
+controlMPC_FLOAT* controlMPC_dllbaff01 = controlMPC_dl_aff + 4;
+controlMPC_FLOAT* controlMPC_dslbaff01 = controlMPC_ds_aff + 4;
+controlMPC_FLOAT* controlMPC_dllbcc01 = controlMPC_dl_cc + 4;
+controlMPC_FLOAT* controlMPC_dslbcc01 = controlMPC_ds_cc + 4;
+controlMPC_FLOAT* controlMPC_ccrhsl01 = controlMPC_ccrhs + 4;
+int controlMPC_ubIdx01[2] = {0, 1};
+controlMPC_FLOAT* controlMPC_lub01 = controlMPC_l + 6;
+controlMPC_FLOAT* controlMPC_sub01 = controlMPC_s + 6;
+controlMPC_FLOAT* controlMPC_lubbysub01 = controlMPC_lbys + 6;
+controlMPC_FLOAT controlMPC_riub01[2];
+controlMPC_FLOAT* controlMPC_dlubaff01 = controlMPC_dl_aff + 6;
+controlMPC_FLOAT* controlMPC_dsubaff01 = controlMPC_ds_aff + 6;
+controlMPC_FLOAT* controlMPC_dlubcc01 = controlMPC_dl_cc + 6;
+controlMPC_FLOAT* controlMPC_dsubcc01 = controlMPC_ds_cc + 6;
+controlMPC_FLOAT* controlMPC_ccrhsub01 = controlMPC_ccrhs + 6;
+controlMPC_FLOAT controlMPC_Phi01[2];
+controlMPC_FLOAT controlMPC_D01[2] = {0.0000000000000000E+000, 
 0.0000000000000000E+000};
-controlMPC_FLOAT controlMPC_W1[2];
-controlMPC_FLOAT controlMPC_Ysd1[4];
-controlMPC_FLOAT controlMPC_Lsd1[4];
-controlMPC_FLOAT* controlMPC_z2 = controlMPC_z + 4;
-controlMPC_FLOAT* controlMPC_dzaff2 = controlMPC_dz_aff + 4;
-controlMPC_FLOAT* controlMPC_dzcc2 = controlMPC_dz_cc + 4;
-controlMPC_FLOAT* controlMPC_rd2 = controlMPC_rd + 4;
-controlMPC_FLOAT controlMPC_Lbyrd2[2];
-controlMPC_FLOAT* controlMPC_grad_cost2 = controlMPC_grad_cost + 4;
-controlMPC_FLOAT* controlMPC_grad_eq2 = controlMPC_grad_eq + 4;
-controlMPC_FLOAT* controlMPC_grad_ineq2 = controlMPC_grad_ineq + 4;
-controlMPC_FLOAT controlMPC_ctv2[2];
-controlMPC_FLOAT* controlMPC_v2 = controlMPC_v + 4;
-controlMPC_FLOAT controlMPC_re2[2];
-controlMPC_FLOAT controlMPC_beta2[2];
-controlMPC_FLOAT controlMPC_betacc2[2];
-controlMPC_FLOAT* controlMPC_dvaff2 = controlMPC_dv_aff + 4;
-controlMPC_FLOAT* controlMPC_dvcc2 = controlMPC_dv_cc + 4;
-controlMPC_FLOAT controlMPC_V2[4];
-controlMPC_FLOAT controlMPC_Yd2[3];
-controlMPC_FLOAT controlMPC_Ld2[3];
-controlMPC_FLOAT controlMPC_yy2[2];
-controlMPC_FLOAT controlMPC_bmy2[2];
-controlMPC_FLOAT controlMPC_c2[2] = {0.0000000000000000E+000, 0.0000000000000000E+000};
-int controlMPC_lbIdx2[2] = {0, 1};
-controlMPC_FLOAT* controlMPC_llb2 = controlMPC_l + 8;
-controlMPC_FLOAT* controlMPC_slb2 = controlMPC_s + 8;
-controlMPC_FLOAT* controlMPC_llbbyslb2 = controlMPC_lbys + 8;
-controlMPC_FLOAT controlMPC_rilb2[2];
-controlMPC_FLOAT* controlMPC_dllbaff2 = controlMPC_dl_aff + 8;
-controlMPC_FLOAT* controlMPC_dslbaff2 = controlMPC_ds_aff + 8;
-controlMPC_FLOAT* controlMPC_dllbcc2 = controlMPC_dl_cc + 8;
-controlMPC_FLOAT* controlMPC_dslbcc2 = controlMPC_ds_cc + 8;
-controlMPC_FLOAT* controlMPC_ccrhsl2 = controlMPC_ccrhs + 8;
-int controlMPC_ubIdx2[2] = {0, 1};
-controlMPC_FLOAT* controlMPC_lub2 = controlMPC_l + 10;
-controlMPC_FLOAT* controlMPC_sub2 = controlMPC_s + 10;
-controlMPC_FLOAT* controlMPC_lubbysub2 = controlMPC_lbys + 10;
-controlMPC_FLOAT controlMPC_riub2[2];
-controlMPC_FLOAT* controlMPC_dlubaff2 = controlMPC_dl_aff + 10;
-controlMPC_FLOAT* controlMPC_dsubaff2 = controlMPC_ds_aff + 10;
-controlMPC_FLOAT* controlMPC_dlubcc2 = controlMPC_dl_cc + 10;
-controlMPC_FLOAT* controlMPC_dsubcc2 = controlMPC_ds_cc + 10;
-controlMPC_FLOAT* controlMPC_ccrhsub2 = controlMPC_ccrhs + 10;
-controlMPC_FLOAT controlMPC_Phi2[2];
-controlMPC_FLOAT controlMPC_W2[2];
-controlMPC_FLOAT controlMPC_Ysd2[4];
-controlMPC_FLOAT controlMPC_Lsd2[4];
-controlMPC_FLOAT* controlMPC_z3 = controlMPC_z + 6;
-controlMPC_FLOAT* controlMPC_dzaff3 = controlMPC_dz_aff + 6;
-controlMPC_FLOAT* controlMPC_dzcc3 = controlMPC_dz_cc + 6;
-controlMPC_FLOAT* controlMPC_rd3 = controlMPC_rd + 6;
-controlMPC_FLOAT controlMPC_Lbyrd3[2];
-controlMPC_FLOAT* controlMPC_grad_cost3 = controlMPC_grad_cost + 6;
-controlMPC_FLOAT* controlMPC_grad_eq3 = controlMPC_grad_eq + 6;
-controlMPC_FLOAT* controlMPC_grad_ineq3 = controlMPC_grad_ineq + 6;
-controlMPC_FLOAT controlMPC_ctv3[2];
-controlMPC_FLOAT* controlMPC_v3 = controlMPC_v + 6;
-controlMPC_FLOAT controlMPC_re3[2];
-controlMPC_FLOAT controlMPC_beta3[2];
-controlMPC_FLOAT controlMPC_betacc3[2];
-controlMPC_FLOAT* controlMPC_dvaff3 = controlMPC_dv_aff + 6;
-controlMPC_FLOAT* controlMPC_dvcc3 = controlMPC_dv_cc + 6;
-controlMPC_FLOAT controlMPC_V3[4];
-controlMPC_FLOAT controlMPC_Yd3[3];
-controlMPC_FLOAT controlMPC_Ld3[3];
-controlMPC_FLOAT controlMPC_yy3[2];
-controlMPC_FLOAT controlMPC_bmy3[2];
-controlMPC_FLOAT controlMPC_c3[2] = {0.0000000000000000E+000, 0.0000000000000000E+000};
-int controlMPC_lbIdx3[2] = {0, 1};
-controlMPC_FLOAT* controlMPC_llb3 = controlMPC_l + 12;
-controlMPC_FLOAT* controlMPC_slb3 = controlMPC_s + 12;
-controlMPC_FLOAT* controlMPC_llbbyslb3 = controlMPC_lbys + 12;
-controlMPC_FLOAT controlMPC_rilb3[2];
-controlMPC_FLOAT* controlMPC_dllbaff3 = controlMPC_dl_aff + 12;
-controlMPC_FLOAT* controlMPC_dslbaff3 = controlMPC_ds_aff + 12;
-controlMPC_FLOAT* controlMPC_dllbcc3 = controlMPC_dl_cc + 12;
-controlMPC_FLOAT* controlMPC_dslbcc3 = controlMPC_ds_cc + 12;
-controlMPC_FLOAT* controlMPC_ccrhsl3 = controlMPC_ccrhs + 12;
-int controlMPC_ubIdx3[2] = {0, 1};
-controlMPC_FLOAT* controlMPC_lub3 = controlMPC_l + 14;
-controlMPC_FLOAT* controlMPC_sub3 = controlMPC_s + 14;
-controlMPC_FLOAT* controlMPC_lubbysub3 = controlMPC_lbys + 14;
-controlMPC_FLOAT controlMPC_riub3[2];
-controlMPC_FLOAT* controlMPC_dlubaff3 = controlMPC_dl_aff + 14;
-controlMPC_FLOAT* controlMPC_dsubaff3 = controlMPC_ds_aff + 14;
-controlMPC_FLOAT* controlMPC_dlubcc3 = controlMPC_dl_cc + 14;
-controlMPC_FLOAT* controlMPC_dsubcc3 = controlMPC_ds_cc + 14;
-controlMPC_FLOAT* controlMPC_ccrhsub3 = controlMPC_ccrhs + 14;
-controlMPC_FLOAT controlMPC_Phi3[2];
-controlMPC_FLOAT controlMPC_W3[2];
-controlMPC_FLOAT controlMPC_Ysd3[4];
-controlMPC_FLOAT controlMPC_Lsd3[4];
-controlMPC_FLOAT* controlMPC_z4 = controlMPC_z + 8;
-controlMPC_FLOAT* controlMPC_dzaff4 = controlMPC_dz_aff + 8;
-controlMPC_FLOAT* controlMPC_dzcc4 = controlMPC_dz_cc + 8;
-controlMPC_FLOAT* controlMPC_rd4 = controlMPC_rd + 8;
-controlMPC_FLOAT controlMPC_Lbyrd4[2];
-controlMPC_FLOAT* controlMPC_grad_cost4 = controlMPC_grad_cost + 8;
-controlMPC_FLOAT* controlMPC_grad_eq4 = controlMPC_grad_eq + 8;
-controlMPC_FLOAT* controlMPC_grad_ineq4 = controlMPC_grad_ineq + 8;
-controlMPC_FLOAT controlMPC_ctv4[2];
-controlMPC_FLOAT* controlMPC_v4 = controlMPC_v + 8;
-controlMPC_FLOAT controlMPC_re4[2];
-controlMPC_FLOAT controlMPC_beta4[2];
-controlMPC_FLOAT controlMPC_betacc4[2];
-controlMPC_FLOAT* controlMPC_dvaff4 = controlMPC_dv_aff + 8;
-controlMPC_FLOAT* controlMPC_dvcc4 = controlMPC_dv_cc + 8;
-controlMPC_FLOAT controlMPC_V4[4];
-controlMPC_FLOAT controlMPC_Yd4[3];
-controlMPC_FLOAT controlMPC_Ld4[3];
-controlMPC_FLOAT controlMPC_yy4[2];
-controlMPC_FLOAT controlMPC_bmy4[2];
-controlMPC_FLOAT controlMPC_c4[2] = {0.0000000000000000E+000, 0.0000000000000000E+000};
-int controlMPC_lbIdx4[2] = {0, 1};
-controlMPC_FLOAT* controlMPC_llb4 = controlMPC_l + 16;
-controlMPC_FLOAT* controlMPC_slb4 = controlMPC_s + 16;
-controlMPC_FLOAT* controlMPC_llbbyslb4 = controlMPC_lbys + 16;
-controlMPC_FLOAT controlMPC_rilb4[2];
-controlMPC_FLOAT* controlMPC_dllbaff4 = controlMPC_dl_aff + 16;
-controlMPC_FLOAT* controlMPC_dslbaff4 = controlMPC_ds_aff + 16;
-controlMPC_FLOAT* controlMPC_dllbcc4 = controlMPC_dl_cc + 16;
-controlMPC_FLOAT* controlMPC_dslbcc4 = controlMPC_ds_cc + 16;
-controlMPC_FLOAT* controlMPC_ccrhsl4 = controlMPC_ccrhs + 16;
-int controlMPC_ubIdx4[2] = {0, 1};
-controlMPC_FLOAT* controlMPC_lub4 = controlMPC_l + 18;
-controlMPC_FLOAT* controlMPC_sub4 = controlMPC_s + 18;
-controlMPC_FLOAT* controlMPC_lubbysub4 = controlMPC_lbys + 18;
-controlMPC_FLOAT controlMPC_riub4[2];
-controlMPC_FLOAT* controlMPC_dlubaff4 = controlMPC_dl_aff + 18;
-controlMPC_FLOAT* controlMPC_dsubaff4 = controlMPC_ds_aff + 18;
-controlMPC_FLOAT* controlMPC_dlubcc4 = controlMPC_dl_cc + 18;
-controlMPC_FLOAT* controlMPC_dsubcc4 = controlMPC_ds_cc + 18;
-controlMPC_FLOAT* controlMPC_ccrhsub4 = controlMPC_ccrhs + 18;
-controlMPC_FLOAT controlMPC_Phi4[2];
-controlMPC_FLOAT controlMPC_W4[2];
-controlMPC_FLOAT controlMPC_Ysd4[4];
-controlMPC_FLOAT controlMPC_Lsd4[4];
-controlMPC_FLOAT* controlMPC_z5 = controlMPC_z + 10;
-controlMPC_FLOAT* controlMPC_dzaff5 = controlMPC_dz_aff + 10;
-controlMPC_FLOAT* controlMPC_dzcc5 = controlMPC_dz_cc + 10;
-controlMPC_FLOAT* controlMPC_rd5 = controlMPC_rd + 10;
-controlMPC_FLOAT controlMPC_Lbyrd5[2];
-controlMPC_FLOAT* controlMPC_grad_cost5 = controlMPC_grad_cost + 10;
-controlMPC_FLOAT* controlMPC_grad_eq5 = controlMPC_grad_eq + 10;
-controlMPC_FLOAT* controlMPC_grad_ineq5 = controlMPC_grad_ineq + 10;
-controlMPC_FLOAT controlMPC_ctv5[2];
-controlMPC_FLOAT* controlMPC_v5 = controlMPC_v + 10;
-controlMPC_FLOAT controlMPC_re5[2];
-controlMPC_FLOAT controlMPC_beta5[2];
-controlMPC_FLOAT controlMPC_betacc5[2];
-controlMPC_FLOAT* controlMPC_dvaff5 = controlMPC_dv_aff + 10;
-controlMPC_FLOAT* controlMPC_dvcc5 = controlMPC_dv_cc + 10;
-controlMPC_FLOAT controlMPC_V5[4];
-controlMPC_FLOAT controlMPC_Yd5[3];
-controlMPC_FLOAT controlMPC_Ld5[3];
-controlMPC_FLOAT controlMPC_yy5[2];
-controlMPC_FLOAT controlMPC_bmy5[2];
-controlMPC_FLOAT controlMPC_c5[2] = {0.0000000000000000E+000, 0.0000000000000000E+000};
-int controlMPC_lbIdx5[2] = {0, 1};
-controlMPC_FLOAT* controlMPC_llb5 = controlMPC_l + 20;
-controlMPC_FLOAT* controlMPC_slb5 = controlMPC_s + 20;
-controlMPC_FLOAT* controlMPC_llbbyslb5 = controlMPC_lbys + 20;
-controlMPC_FLOAT controlMPC_rilb5[2];
-controlMPC_FLOAT* controlMPC_dllbaff5 = controlMPC_dl_aff + 20;
-controlMPC_FLOAT* controlMPC_dslbaff5 = controlMPC_ds_aff + 20;
-controlMPC_FLOAT* controlMPC_dllbcc5 = controlMPC_dl_cc + 20;
-controlMPC_FLOAT* controlMPC_dslbcc5 = controlMPC_ds_cc + 20;
-controlMPC_FLOAT* controlMPC_ccrhsl5 = controlMPC_ccrhs + 20;
-int controlMPC_ubIdx5[2] = {0, 1};
-controlMPC_FLOAT* controlMPC_lub5 = controlMPC_l + 22;
-controlMPC_FLOAT* controlMPC_sub5 = controlMPC_s + 22;
-controlMPC_FLOAT* controlMPC_lubbysub5 = controlMPC_lbys + 22;
-controlMPC_FLOAT controlMPC_riub5[2];
-controlMPC_FLOAT* controlMPC_dlubaff5 = controlMPC_dl_aff + 22;
-controlMPC_FLOAT* controlMPC_dsubaff5 = controlMPC_ds_aff + 22;
-controlMPC_FLOAT* controlMPC_dlubcc5 = controlMPC_dl_cc + 22;
-controlMPC_FLOAT* controlMPC_dsubcc5 = controlMPC_ds_cc + 22;
-controlMPC_FLOAT* controlMPC_ccrhsub5 = controlMPC_ccrhs + 22;
-controlMPC_FLOAT controlMPC_Phi5[2];
-controlMPC_FLOAT controlMPC_W5[2];
-controlMPC_FLOAT controlMPC_Ysd5[4];
-controlMPC_FLOAT controlMPC_Lsd5[4];
-controlMPC_FLOAT* controlMPC_z6 = controlMPC_z + 12;
-controlMPC_FLOAT* controlMPC_dzaff6 = controlMPC_dz_aff + 12;
-controlMPC_FLOAT* controlMPC_dzcc6 = controlMPC_dz_cc + 12;
-controlMPC_FLOAT* controlMPC_rd6 = controlMPC_rd + 12;
-controlMPC_FLOAT controlMPC_Lbyrd6[2];
-controlMPC_FLOAT* controlMPC_grad_cost6 = controlMPC_grad_cost + 12;
-controlMPC_FLOAT* controlMPC_grad_eq6 = controlMPC_grad_eq + 12;
-controlMPC_FLOAT* controlMPC_grad_ineq6 = controlMPC_grad_ineq + 12;
-controlMPC_FLOAT controlMPC_ctv6[2];
-controlMPC_FLOAT* controlMPC_v6 = controlMPC_v + 12;
-controlMPC_FLOAT controlMPC_re6[2];
-controlMPC_FLOAT controlMPC_beta6[2];
-controlMPC_FLOAT controlMPC_betacc6[2];
-controlMPC_FLOAT* controlMPC_dvaff6 = controlMPC_dv_aff + 12;
-controlMPC_FLOAT* controlMPC_dvcc6 = controlMPC_dv_cc + 12;
-controlMPC_FLOAT controlMPC_V6[4];
-controlMPC_FLOAT controlMPC_Yd6[3];
-controlMPC_FLOAT controlMPC_Ld6[3];
-controlMPC_FLOAT controlMPC_yy6[2];
-controlMPC_FLOAT controlMPC_bmy6[2];
-controlMPC_FLOAT controlMPC_c6[2] = {0.0000000000000000E+000, 0.0000000000000000E+000};
-int controlMPC_lbIdx6[2] = {0, 1};
-controlMPC_FLOAT* controlMPC_llb6 = controlMPC_l + 24;
-controlMPC_FLOAT* controlMPC_slb6 = controlMPC_s + 24;
-controlMPC_FLOAT* controlMPC_llbbyslb6 = controlMPC_lbys + 24;
-controlMPC_FLOAT controlMPC_rilb6[2];
-controlMPC_FLOAT* controlMPC_dllbaff6 = controlMPC_dl_aff + 24;
-controlMPC_FLOAT* controlMPC_dslbaff6 = controlMPC_ds_aff + 24;
-controlMPC_FLOAT* controlMPC_dllbcc6 = controlMPC_dl_cc + 24;
-controlMPC_FLOAT* controlMPC_dslbcc6 = controlMPC_ds_cc + 24;
-controlMPC_FLOAT* controlMPC_ccrhsl6 = controlMPC_ccrhs + 24;
-int controlMPC_ubIdx6[2] = {0, 1};
-controlMPC_FLOAT* controlMPC_lub6 = controlMPC_l + 26;
-controlMPC_FLOAT* controlMPC_sub6 = controlMPC_s + 26;
-controlMPC_FLOAT* controlMPC_lubbysub6 = controlMPC_lbys + 26;
-controlMPC_FLOAT controlMPC_riub6[2];
-controlMPC_FLOAT* controlMPC_dlubaff6 = controlMPC_dl_aff + 26;
-controlMPC_FLOAT* controlMPC_dsubaff6 = controlMPC_ds_aff + 26;
-controlMPC_FLOAT* controlMPC_dlubcc6 = controlMPC_dl_cc + 26;
-controlMPC_FLOAT* controlMPC_dsubcc6 = controlMPC_ds_cc + 26;
-controlMPC_FLOAT* controlMPC_ccrhsub6 = controlMPC_ccrhs + 26;
-controlMPC_FLOAT controlMPC_Phi6[2];
-controlMPC_FLOAT controlMPC_W6[2];
-controlMPC_FLOAT controlMPC_Ysd6[4];
-controlMPC_FLOAT controlMPC_Lsd6[4];
-controlMPC_FLOAT* controlMPC_z7 = controlMPC_z + 14;
-controlMPC_FLOAT* controlMPC_dzaff7 = controlMPC_dz_aff + 14;
-controlMPC_FLOAT* controlMPC_dzcc7 = controlMPC_dz_cc + 14;
-controlMPC_FLOAT* controlMPC_rd7 = controlMPC_rd + 14;
-controlMPC_FLOAT controlMPC_Lbyrd7[2];
-controlMPC_FLOAT* controlMPC_grad_cost7 = controlMPC_grad_cost + 14;
-controlMPC_FLOAT* controlMPC_grad_eq7 = controlMPC_grad_eq + 14;
-controlMPC_FLOAT* controlMPC_grad_ineq7 = controlMPC_grad_ineq + 14;
-controlMPC_FLOAT controlMPC_ctv7[2];
-controlMPC_FLOAT* controlMPC_v7 = controlMPC_v + 14;
-controlMPC_FLOAT controlMPC_re7[2];
-controlMPC_FLOAT controlMPC_beta7[2];
-controlMPC_FLOAT controlMPC_betacc7[2];
-controlMPC_FLOAT* controlMPC_dvaff7 = controlMPC_dv_aff + 14;
-controlMPC_FLOAT* controlMPC_dvcc7 = controlMPC_dv_cc + 14;
-controlMPC_FLOAT controlMPC_V7[4];
-controlMPC_FLOAT controlMPC_Yd7[3];
-controlMPC_FLOAT controlMPC_Ld7[3];
-controlMPC_FLOAT controlMPC_yy7[2];
-controlMPC_FLOAT controlMPC_bmy7[2];
-controlMPC_FLOAT controlMPC_c7[2] = {0.0000000000000000E+000, 0.0000000000000000E+000};
-int controlMPC_lbIdx7[2] = {0, 1};
-controlMPC_FLOAT* controlMPC_llb7 = controlMPC_l + 28;
-controlMPC_FLOAT* controlMPC_slb7 = controlMPC_s + 28;
-controlMPC_FLOAT* controlMPC_llbbyslb7 = controlMPC_lbys + 28;
-controlMPC_FLOAT controlMPC_rilb7[2];
-controlMPC_FLOAT* controlMPC_dllbaff7 = controlMPC_dl_aff + 28;
-controlMPC_FLOAT* controlMPC_dslbaff7 = controlMPC_ds_aff + 28;
-controlMPC_FLOAT* controlMPC_dllbcc7 = controlMPC_dl_cc + 28;
-controlMPC_FLOAT* controlMPC_dslbcc7 = controlMPC_ds_cc + 28;
-controlMPC_FLOAT* controlMPC_ccrhsl7 = controlMPC_ccrhs + 28;
-int controlMPC_ubIdx7[2] = {0, 1};
-controlMPC_FLOAT* controlMPC_lub7 = controlMPC_l + 30;
-controlMPC_FLOAT* controlMPC_sub7 = controlMPC_s + 30;
-controlMPC_FLOAT* controlMPC_lubbysub7 = controlMPC_lbys + 30;
-controlMPC_FLOAT controlMPC_riub7[2];
-controlMPC_FLOAT* controlMPC_dlubaff7 = controlMPC_dl_aff + 30;
-controlMPC_FLOAT* controlMPC_dsubaff7 = controlMPC_ds_aff + 30;
-controlMPC_FLOAT* controlMPC_dlubcc7 = controlMPC_dl_cc + 30;
-controlMPC_FLOAT* controlMPC_dsubcc7 = controlMPC_ds_cc + 30;
-controlMPC_FLOAT* controlMPC_ccrhsub7 = controlMPC_ccrhs + 30;
-controlMPC_FLOAT controlMPC_Phi7[2];
-controlMPC_FLOAT controlMPC_W7[2];
-controlMPC_FLOAT controlMPC_Ysd7[4];
-controlMPC_FLOAT controlMPC_Lsd7[4];
-controlMPC_FLOAT* controlMPC_z8 = controlMPC_z + 16;
-controlMPC_FLOAT* controlMPC_dzaff8 = controlMPC_dz_aff + 16;
-controlMPC_FLOAT* controlMPC_dzcc8 = controlMPC_dz_cc + 16;
-controlMPC_FLOAT* controlMPC_rd8 = controlMPC_rd + 16;
-controlMPC_FLOAT controlMPC_Lbyrd8[2];
-controlMPC_FLOAT* controlMPC_grad_cost8 = controlMPC_grad_cost + 16;
-controlMPC_FLOAT* controlMPC_grad_eq8 = controlMPC_grad_eq + 16;
-controlMPC_FLOAT* controlMPC_grad_ineq8 = controlMPC_grad_ineq + 16;
-controlMPC_FLOAT controlMPC_ctv8[2];
-int controlMPC_lbIdx8[2] = {0, 1};
-controlMPC_FLOAT* controlMPC_llb8 = controlMPC_l + 32;
-controlMPC_FLOAT* controlMPC_slb8 = controlMPC_s + 32;
-controlMPC_FLOAT* controlMPC_llbbyslb8 = controlMPC_lbys + 32;
-controlMPC_FLOAT controlMPC_rilb8[2];
-controlMPC_FLOAT* controlMPC_dllbaff8 = controlMPC_dl_aff + 32;
-controlMPC_FLOAT* controlMPC_dslbaff8 = controlMPC_ds_aff + 32;
-controlMPC_FLOAT* controlMPC_dllbcc8 = controlMPC_dl_cc + 32;
-controlMPC_FLOAT* controlMPC_dslbcc8 = controlMPC_ds_cc + 32;
-controlMPC_FLOAT* controlMPC_ccrhsl8 = controlMPC_ccrhs + 32;
-int controlMPC_ubIdx8[2] = {0, 1};
-controlMPC_FLOAT* controlMPC_lub8 = controlMPC_l + 34;
-controlMPC_FLOAT* controlMPC_sub8 = controlMPC_s + 34;
-controlMPC_FLOAT* controlMPC_lubbysub8 = controlMPC_lbys + 34;
-controlMPC_FLOAT controlMPC_riub8[2];
-controlMPC_FLOAT* controlMPC_dlubaff8 = controlMPC_dl_aff + 34;
-controlMPC_FLOAT* controlMPC_dsubaff8 = controlMPC_ds_aff + 34;
-controlMPC_FLOAT* controlMPC_dlubcc8 = controlMPC_dl_cc + 34;
-controlMPC_FLOAT* controlMPC_dsubcc8 = controlMPC_ds_cc + 34;
-controlMPC_FLOAT* controlMPC_ccrhsub8 = controlMPC_ccrhs + 34;
-controlMPC_FLOAT controlMPC_Phi8[2];
-controlMPC_FLOAT controlMPC_W8[2];
+controlMPC_FLOAT controlMPC_W01[2];
+controlMPC_FLOAT controlMPC_Ysd01[4];
+controlMPC_FLOAT controlMPC_Lsd01[4];
+controlMPC_FLOAT* controlMPC_z02 = controlMPC_z + 4;
+controlMPC_FLOAT* controlMPC_dzaff02 = controlMPC_dz_aff + 4;
+controlMPC_FLOAT* controlMPC_dzcc02 = controlMPC_dz_cc + 4;
+controlMPC_FLOAT* controlMPC_rd02 = controlMPC_rd + 4;
+controlMPC_FLOAT controlMPC_Lbyrd02[2];
+controlMPC_FLOAT* controlMPC_grad_cost02 = controlMPC_grad_cost + 4;
+controlMPC_FLOAT* controlMPC_grad_eq02 = controlMPC_grad_eq + 4;
+controlMPC_FLOAT* controlMPC_grad_ineq02 = controlMPC_grad_ineq + 4;
+controlMPC_FLOAT controlMPC_ctv02[2];
+controlMPC_FLOAT* controlMPC_v02 = controlMPC_v + 4;
+controlMPC_FLOAT controlMPC_re02[2];
+controlMPC_FLOAT controlMPC_beta02[2];
+controlMPC_FLOAT controlMPC_betacc02[2];
+controlMPC_FLOAT* controlMPC_dvaff02 = controlMPC_dv_aff + 4;
+controlMPC_FLOAT* controlMPC_dvcc02 = controlMPC_dv_cc + 4;
+controlMPC_FLOAT controlMPC_V02[4];
+controlMPC_FLOAT controlMPC_Yd02[3];
+controlMPC_FLOAT controlMPC_Ld02[3];
+controlMPC_FLOAT controlMPC_yy02[2];
+controlMPC_FLOAT controlMPC_bmy02[2];
+controlMPC_FLOAT controlMPC_c02[2] = {0.0000000000000000E+000, 0.0000000000000000E+000};
+int controlMPC_lbIdx02[2] = {0, 1};
+controlMPC_FLOAT* controlMPC_llb02 = controlMPC_l + 8;
+controlMPC_FLOAT* controlMPC_slb02 = controlMPC_s + 8;
+controlMPC_FLOAT* controlMPC_llbbyslb02 = controlMPC_lbys + 8;
+controlMPC_FLOAT controlMPC_rilb02[2];
+controlMPC_FLOAT* controlMPC_dllbaff02 = controlMPC_dl_aff + 8;
+controlMPC_FLOAT* controlMPC_dslbaff02 = controlMPC_ds_aff + 8;
+controlMPC_FLOAT* controlMPC_dllbcc02 = controlMPC_dl_cc + 8;
+controlMPC_FLOAT* controlMPC_dslbcc02 = controlMPC_ds_cc + 8;
+controlMPC_FLOAT* controlMPC_ccrhsl02 = controlMPC_ccrhs + 8;
+int controlMPC_ubIdx02[2] = {0, 1};
+controlMPC_FLOAT* controlMPC_lub02 = controlMPC_l + 10;
+controlMPC_FLOAT* controlMPC_sub02 = controlMPC_s + 10;
+controlMPC_FLOAT* controlMPC_lubbysub02 = controlMPC_lbys + 10;
+controlMPC_FLOAT controlMPC_riub02[2];
+controlMPC_FLOAT* controlMPC_dlubaff02 = controlMPC_dl_aff + 10;
+controlMPC_FLOAT* controlMPC_dsubaff02 = controlMPC_ds_aff + 10;
+controlMPC_FLOAT* controlMPC_dlubcc02 = controlMPC_dl_cc + 10;
+controlMPC_FLOAT* controlMPC_dsubcc02 = controlMPC_ds_cc + 10;
+controlMPC_FLOAT* controlMPC_ccrhsub02 = controlMPC_ccrhs + 10;
+controlMPC_FLOAT controlMPC_Phi02[2];
+controlMPC_FLOAT controlMPC_W02[2];
+controlMPC_FLOAT controlMPC_Ysd02[4];
+controlMPC_FLOAT controlMPC_Lsd02[4];
+controlMPC_FLOAT* controlMPC_z03 = controlMPC_z + 6;
+controlMPC_FLOAT* controlMPC_dzaff03 = controlMPC_dz_aff + 6;
+controlMPC_FLOAT* controlMPC_dzcc03 = controlMPC_dz_cc + 6;
+controlMPC_FLOAT* controlMPC_rd03 = controlMPC_rd + 6;
+controlMPC_FLOAT controlMPC_Lbyrd03[2];
+controlMPC_FLOAT* controlMPC_grad_cost03 = controlMPC_grad_cost + 6;
+controlMPC_FLOAT* controlMPC_grad_eq03 = controlMPC_grad_eq + 6;
+controlMPC_FLOAT* controlMPC_grad_ineq03 = controlMPC_grad_ineq + 6;
+controlMPC_FLOAT controlMPC_ctv03[2];
+controlMPC_FLOAT* controlMPC_v03 = controlMPC_v + 6;
+controlMPC_FLOAT controlMPC_re03[2];
+controlMPC_FLOAT controlMPC_beta03[2];
+controlMPC_FLOAT controlMPC_betacc03[2];
+controlMPC_FLOAT* controlMPC_dvaff03 = controlMPC_dv_aff + 6;
+controlMPC_FLOAT* controlMPC_dvcc03 = controlMPC_dv_cc + 6;
+controlMPC_FLOAT controlMPC_V03[4];
+controlMPC_FLOAT controlMPC_Yd03[3];
+controlMPC_FLOAT controlMPC_Ld03[3];
+controlMPC_FLOAT controlMPC_yy03[2];
+controlMPC_FLOAT controlMPC_bmy03[2];
+controlMPC_FLOAT controlMPC_c03[2] = {0.0000000000000000E+000, 0.0000000000000000E+000};
+int controlMPC_lbIdx03[2] = {0, 1};
+controlMPC_FLOAT* controlMPC_llb03 = controlMPC_l + 12;
+controlMPC_FLOAT* controlMPC_slb03 = controlMPC_s + 12;
+controlMPC_FLOAT* controlMPC_llbbyslb03 = controlMPC_lbys + 12;
+controlMPC_FLOAT controlMPC_rilb03[2];
+controlMPC_FLOAT* controlMPC_dllbaff03 = controlMPC_dl_aff + 12;
+controlMPC_FLOAT* controlMPC_dslbaff03 = controlMPC_ds_aff + 12;
+controlMPC_FLOAT* controlMPC_dllbcc03 = controlMPC_dl_cc + 12;
+controlMPC_FLOAT* controlMPC_dslbcc03 = controlMPC_ds_cc + 12;
+controlMPC_FLOAT* controlMPC_ccrhsl03 = controlMPC_ccrhs + 12;
+int controlMPC_ubIdx03[2] = {0, 1};
+controlMPC_FLOAT* controlMPC_lub03 = controlMPC_l + 14;
+controlMPC_FLOAT* controlMPC_sub03 = controlMPC_s + 14;
+controlMPC_FLOAT* controlMPC_lubbysub03 = controlMPC_lbys + 14;
+controlMPC_FLOAT controlMPC_riub03[2];
+controlMPC_FLOAT* controlMPC_dlubaff03 = controlMPC_dl_aff + 14;
+controlMPC_FLOAT* controlMPC_dsubaff03 = controlMPC_ds_aff + 14;
+controlMPC_FLOAT* controlMPC_dlubcc03 = controlMPC_dl_cc + 14;
+controlMPC_FLOAT* controlMPC_dsubcc03 = controlMPC_ds_cc + 14;
+controlMPC_FLOAT* controlMPC_ccrhsub03 = controlMPC_ccrhs + 14;
+controlMPC_FLOAT controlMPC_Phi03[2];
+controlMPC_FLOAT controlMPC_W03[2];
+controlMPC_FLOAT controlMPC_Ysd03[4];
+controlMPC_FLOAT controlMPC_Lsd03[4];
+controlMPC_FLOAT* controlMPC_z04 = controlMPC_z + 8;
+controlMPC_FLOAT* controlMPC_dzaff04 = controlMPC_dz_aff + 8;
+controlMPC_FLOAT* controlMPC_dzcc04 = controlMPC_dz_cc + 8;
+controlMPC_FLOAT* controlMPC_rd04 = controlMPC_rd + 8;
+controlMPC_FLOAT controlMPC_Lbyrd04[2];
+controlMPC_FLOAT* controlMPC_grad_cost04 = controlMPC_grad_cost + 8;
+controlMPC_FLOAT* controlMPC_grad_eq04 = controlMPC_grad_eq + 8;
+controlMPC_FLOAT* controlMPC_grad_ineq04 = controlMPC_grad_ineq + 8;
+controlMPC_FLOAT controlMPC_ctv04[2];
+controlMPC_FLOAT* controlMPC_v04 = controlMPC_v + 8;
+controlMPC_FLOAT controlMPC_re04[2];
+controlMPC_FLOAT controlMPC_beta04[2];
+controlMPC_FLOAT controlMPC_betacc04[2];
+controlMPC_FLOAT* controlMPC_dvaff04 = controlMPC_dv_aff + 8;
+controlMPC_FLOAT* controlMPC_dvcc04 = controlMPC_dv_cc + 8;
+controlMPC_FLOAT controlMPC_V04[4];
+controlMPC_FLOAT controlMPC_Yd04[3];
+controlMPC_FLOAT controlMPC_Ld04[3];
+controlMPC_FLOAT controlMPC_yy04[2];
+controlMPC_FLOAT controlMPC_bmy04[2];
+controlMPC_FLOAT controlMPC_c04[2] = {0.0000000000000000E+000, 0.0000000000000000E+000};
+int controlMPC_lbIdx04[2] = {0, 1};
+controlMPC_FLOAT* controlMPC_llb04 = controlMPC_l + 16;
+controlMPC_FLOAT* controlMPC_slb04 = controlMPC_s + 16;
+controlMPC_FLOAT* controlMPC_llbbyslb04 = controlMPC_lbys + 16;
+controlMPC_FLOAT controlMPC_rilb04[2];
+controlMPC_FLOAT* controlMPC_dllbaff04 = controlMPC_dl_aff + 16;
+controlMPC_FLOAT* controlMPC_dslbaff04 = controlMPC_ds_aff + 16;
+controlMPC_FLOAT* controlMPC_dllbcc04 = controlMPC_dl_cc + 16;
+controlMPC_FLOAT* controlMPC_dslbcc04 = controlMPC_ds_cc + 16;
+controlMPC_FLOAT* controlMPC_ccrhsl04 = controlMPC_ccrhs + 16;
+int controlMPC_ubIdx04[2] = {0, 1};
+controlMPC_FLOAT* controlMPC_lub04 = controlMPC_l + 18;
+controlMPC_FLOAT* controlMPC_sub04 = controlMPC_s + 18;
+controlMPC_FLOAT* controlMPC_lubbysub04 = controlMPC_lbys + 18;
+controlMPC_FLOAT controlMPC_riub04[2];
+controlMPC_FLOAT* controlMPC_dlubaff04 = controlMPC_dl_aff + 18;
+controlMPC_FLOAT* controlMPC_dsubaff04 = controlMPC_ds_aff + 18;
+controlMPC_FLOAT* controlMPC_dlubcc04 = controlMPC_dl_cc + 18;
+controlMPC_FLOAT* controlMPC_dsubcc04 = controlMPC_ds_cc + 18;
+controlMPC_FLOAT* controlMPC_ccrhsub04 = controlMPC_ccrhs + 18;
+controlMPC_FLOAT controlMPC_Phi04[2];
+controlMPC_FLOAT controlMPC_W04[2];
+controlMPC_FLOAT controlMPC_Ysd04[4];
+controlMPC_FLOAT controlMPC_Lsd04[4];
+controlMPC_FLOAT* controlMPC_z05 = controlMPC_z + 10;
+controlMPC_FLOAT* controlMPC_dzaff05 = controlMPC_dz_aff + 10;
+controlMPC_FLOAT* controlMPC_dzcc05 = controlMPC_dz_cc + 10;
+controlMPC_FLOAT* controlMPC_rd05 = controlMPC_rd + 10;
+controlMPC_FLOAT controlMPC_Lbyrd05[2];
+controlMPC_FLOAT* controlMPC_grad_cost05 = controlMPC_grad_cost + 10;
+controlMPC_FLOAT* controlMPC_grad_eq05 = controlMPC_grad_eq + 10;
+controlMPC_FLOAT* controlMPC_grad_ineq05 = controlMPC_grad_ineq + 10;
+controlMPC_FLOAT controlMPC_ctv05[2];
+controlMPC_FLOAT* controlMPC_v05 = controlMPC_v + 10;
+controlMPC_FLOAT controlMPC_re05[2];
+controlMPC_FLOAT controlMPC_beta05[2];
+controlMPC_FLOAT controlMPC_betacc05[2];
+controlMPC_FLOAT* controlMPC_dvaff05 = controlMPC_dv_aff + 10;
+controlMPC_FLOAT* controlMPC_dvcc05 = controlMPC_dv_cc + 10;
+controlMPC_FLOAT controlMPC_V05[4];
+controlMPC_FLOAT controlMPC_Yd05[3];
+controlMPC_FLOAT controlMPC_Ld05[3];
+controlMPC_FLOAT controlMPC_yy05[2];
+controlMPC_FLOAT controlMPC_bmy05[2];
+controlMPC_FLOAT controlMPC_c05[2] = {0.0000000000000000E+000, 0.0000000000000000E+000};
+int controlMPC_lbIdx05[2] = {0, 1};
+controlMPC_FLOAT* controlMPC_llb05 = controlMPC_l + 20;
+controlMPC_FLOAT* controlMPC_slb05 = controlMPC_s + 20;
+controlMPC_FLOAT* controlMPC_llbbyslb05 = controlMPC_lbys + 20;
+controlMPC_FLOAT controlMPC_rilb05[2];
+controlMPC_FLOAT* controlMPC_dllbaff05 = controlMPC_dl_aff + 20;
+controlMPC_FLOAT* controlMPC_dslbaff05 = controlMPC_ds_aff + 20;
+controlMPC_FLOAT* controlMPC_dllbcc05 = controlMPC_dl_cc + 20;
+controlMPC_FLOAT* controlMPC_dslbcc05 = controlMPC_ds_cc + 20;
+controlMPC_FLOAT* controlMPC_ccrhsl05 = controlMPC_ccrhs + 20;
+int controlMPC_ubIdx05[2] = {0, 1};
+controlMPC_FLOAT* controlMPC_lub05 = controlMPC_l + 22;
+controlMPC_FLOAT* controlMPC_sub05 = controlMPC_s + 22;
+controlMPC_FLOAT* controlMPC_lubbysub05 = controlMPC_lbys + 22;
+controlMPC_FLOAT controlMPC_riub05[2];
+controlMPC_FLOAT* controlMPC_dlubaff05 = controlMPC_dl_aff + 22;
+controlMPC_FLOAT* controlMPC_dsubaff05 = controlMPC_ds_aff + 22;
+controlMPC_FLOAT* controlMPC_dlubcc05 = controlMPC_dl_cc + 22;
+controlMPC_FLOAT* controlMPC_dsubcc05 = controlMPC_ds_cc + 22;
+controlMPC_FLOAT* controlMPC_ccrhsub05 = controlMPC_ccrhs + 22;
+controlMPC_FLOAT controlMPC_Phi05[2];
+controlMPC_FLOAT controlMPC_W05[2];
+controlMPC_FLOAT controlMPC_Ysd05[4];
+controlMPC_FLOAT controlMPC_Lsd05[4];
+controlMPC_FLOAT* controlMPC_z06 = controlMPC_z + 12;
+controlMPC_FLOAT* controlMPC_dzaff06 = controlMPC_dz_aff + 12;
+controlMPC_FLOAT* controlMPC_dzcc06 = controlMPC_dz_cc + 12;
+controlMPC_FLOAT* controlMPC_rd06 = controlMPC_rd + 12;
+controlMPC_FLOAT controlMPC_Lbyrd06[2];
+controlMPC_FLOAT* controlMPC_grad_cost06 = controlMPC_grad_cost + 12;
+controlMPC_FLOAT* controlMPC_grad_eq06 = controlMPC_grad_eq + 12;
+controlMPC_FLOAT* controlMPC_grad_ineq06 = controlMPC_grad_ineq + 12;
+controlMPC_FLOAT controlMPC_ctv06[2];
+controlMPC_FLOAT* controlMPC_v06 = controlMPC_v + 12;
+controlMPC_FLOAT controlMPC_re06[2];
+controlMPC_FLOAT controlMPC_beta06[2];
+controlMPC_FLOAT controlMPC_betacc06[2];
+controlMPC_FLOAT* controlMPC_dvaff06 = controlMPC_dv_aff + 12;
+controlMPC_FLOAT* controlMPC_dvcc06 = controlMPC_dv_cc + 12;
+controlMPC_FLOAT controlMPC_V06[4];
+controlMPC_FLOAT controlMPC_Yd06[3];
+controlMPC_FLOAT controlMPC_Ld06[3];
+controlMPC_FLOAT controlMPC_yy06[2];
+controlMPC_FLOAT controlMPC_bmy06[2];
+controlMPC_FLOAT controlMPC_c06[2] = {0.0000000000000000E+000, 0.0000000000000000E+000};
+int controlMPC_lbIdx06[2] = {0, 1};
+controlMPC_FLOAT* controlMPC_llb06 = controlMPC_l + 24;
+controlMPC_FLOAT* controlMPC_slb06 = controlMPC_s + 24;
+controlMPC_FLOAT* controlMPC_llbbyslb06 = controlMPC_lbys + 24;
+controlMPC_FLOAT controlMPC_rilb06[2];
+controlMPC_FLOAT* controlMPC_dllbaff06 = controlMPC_dl_aff + 24;
+controlMPC_FLOAT* controlMPC_dslbaff06 = controlMPC_ds_aff + 24;
+controlMPC_FLOAT* controlMPC_dllbcc06 = controlMPC_dl_cc + 24;
+controlMPC_FLOAT* controlMPC_dslbcc06 = controlMPC_ds_cc + 24;
+controlMPC_FLOAT* controlMPC_ccrhsl06 = controlMPC_ccrhs + 24;
+int controlMPC_ubIdx06[2] = {0, 1};
+controlMPC_FLOAT* controlMPC_lub06 = controlMPC_l + 26;
+controlMPC_FLOAT* controlMPC_sub06 = controlMPC_s + 26;
+controlMPC_FLOAT* controlMPC_lubbysub06 = controlMPC_lbys + 26;
+controlMPC_FLOAT controlMPC_riub06[2];
+controlMPC_FLOAT* controlMPC_dlubaff06 = controlMPC_dl_aff + 26;
+controlMPC_FLOAT* controlMPC_dsubaff06 = controlMPC_ds_aff + 26;
+controlMPC_FLOAT* controlMPC_dlubcc06 = controlMPC_dl_cc + 26;
+controlMPC_FLOAT* controlMPC_dsubcc06 = controlMPC_ds_cc + 26;
+controlMPC_FLOAT* controlMPC_ccrhsub06 = controlMPC_ccrhs + 26;
+controlMPC_FLOAT controlMPC_Phi06[2];
+controlMPC_FLOAT controlMPC_W06[2];
+controlMPC_FLOAT controlMPC_Ysd06[4];
+controlMPC_FLOAT controlMPC_Lsd06[4];
+controlMPC_FLOAT* controlMPC_z07 = controlMPC_z + 14;
+controlMPC_FLOAT* controlMPC_dzaff07 = controlMPC_dz_aff + 14;
+controlMPC_FLOAT* controlMPC_dzcc07 = controlMPC_dz_cc + 14;
+controlMPC_FLOAT* controlMPC_rd07 = controlMPC_rd + 14;
+controlMPC_FLOAT controlMPC_Lbyrd07[2];
+controlMPC_FLOAT* controlMPC_grad_cost07 = controlMPC_grad_cost + 14;
+controlMPC_FLOAT* controlMPC_grad_eq07 = controlMPC_grad_eq + 14;
+controlMPC_FLOAT* controlMPC_grad_ineq07 = controlMPC_grad_ineq + 14;
+controlMPC_FLOAT controlMPC_ctv07[2];
+controlMPC_FLOAT* controlMPC_v07 = controlMPC_v + 14;
+controlMPC_FLOAT controlMPC_re07[2];
+controlMPC_FLOAT controlMPC_beta07[2];
+controlMPC_FLOAT controlMPC_betacc07[2];
+controlMPC_FLOAT* controlMPC_dvaff07 = controlMPC_dv_aff + 14;
+controlMPC_FLOAT* controlMPC_dvcc07 = controlMPC_dv_cc + 14;
+controlMPC_FLOAT controlMPC_V07[4];
+controlMPC_FLOAT controlMPC_Yd07[3];
+controlMPC_FLOAT controlMPC_Ld07[3];
+controlMPC_FLOAT controlMPC_yy07[2];
+controlMPC_FLOAT controlMPC_bmy07[2];
+controlMPC_FLOAT controlMPC_c07[2] = {0.0000000000000000E+000, 0.0000000000000000E+000};
+int controlMPC_lbIdx07[2] = {0, 1};
+controlMPC_FLOAT* controlMPC_llb07 = controlMPC_l + 28;
+controlMPC_FLOAT* controlMPC_slb07 = controlMPC_s + 28;
+controlMPC_FLOAT* controlMPC_llbbyslb07 = controlMPC_lbys + 28;
+controlMPC_FLOAT controlMPC_rilb07[2];
+controlMPC_FLOAT* controlMPC_dllbaff07 = controlMPC_dl_aff + 28;
+controlMPC_FLOAT* controlMPC_dslbaff07 = controlMPC_ds_aff + 28;
+controlMPC_FLOAT* controlMPC_dllbcc07 = controlMPC_dl_cc + 28;
+controlMPC_FLOAT* controlMPC_dslbcc07 = controlMPC_ds_cc + 28;
+controlMPC_FLOAT* controlMPC_ccrhsl07 = controlMPC_ccrhs + 28;
+int controlMPC_ubIdx07[2] = {0, 1};
+controlMPC_FLOAT* controlMPC_lub07 = controlMPC_l + 30;
+controlMPC_FLOAT* controlMPC_sub07 = controlMPC_s + 30;
+controlMPC_FLOAT* controlMPC_lubbysub07 = controlMPC_lbys + 30;
+controlMPC_FLOAT controlMPC_riub07[2];
+controlMPC_FLOAT* controlMPC_dlubaff07 = controlMPC_dl_aff + 30;
+controlMPC_FLOAT* controlMPC_dsubaff07 = controlMPC_ds_aff + 30;
+controlMPC_FLOAT* controlMPC_dlubcc07 = controlMPC_dl_cc + 30;
+controlMPC_FLOAT* controlMPC_dsubcc07 = controlMPC_ds_cc + 30;
+controlMPC_FLOAT* controlMPC_ccrhsub07 = controlMPC_ccrhs + 30;
+controlMPC_FLOAT controlMPC_Phi07[2];
+controlMPC_FLOAT controlMPC_W07[2];
+controlMPC_FLOAT controlMPC_Ysd07[4];
+controlMPC_FLOAT controlMPC_Lsd07[4];
+controlMPC_FLOAT* controlMPC_z08 = controlMPC_z + 16;
+controlMPC_FLOAT* controlMPC_dzaff08 = controlMPC_dz_aff + 16;
+controlMPC_FLOAT* controlMPC_dzcc08 = controlMPC_dz_cc + 16;
+controlMPC_FLOAT* controlMPC_rd08 = controlMPC_rd + 16;
+controlMPC_FLOAT controlMPC_Lbyrd08[2];
+controlMPC_FLOAT* controlMPC_grad_cost08 = controlMPC_grad_cost + 16;
+controlMPC_FLOAT* controlMPC_grad_eq08 = controlMPC_grad_eq + 16;
+controlMPC_FLOAT* controlMPC_grad_ineq08 = controlMPC_grad_ineq + 16;
+controlMPC_FLOAT controlMPC_ctv08[2];
+controlMPC_FLOAT* controlMPC_v08 = controlMPC_v + 16;
+controlMPC_FLOAT controlMPC_re08[2];
+controlMPC_FLOAT controlMPC_beta08[2];
+controlMPC_FLOAT controlMPC_betacc08[2];
+controlMPC_FLOAT* controlMPC_dvaff08 = controlMPC_dv_aff + 16;
+controlMPC_FLOAT* controlMPC_dvcc08 = controlMPC_dv_cc + 16;
+controlMPC_FLOAT controlMPC_V08[4];
+controlMPC_FLOAT controlMPC_Yd08[3];
+controlMPC_FLOAT controlMPC_Ld08[3];
+controlMPC_FLOAT controlMPC_yy08[2];
+controlMPC_FLOAT controlMPC_bmy08[2];
+controlMPC_FLOAT controlMPC_c08[2] = {0.0000000000000000E+000, 0.0000000000000000E+000};
+int controlMPC_lbIdx08[2] = {0, 1};
+controlMPC_FLOAT* controlMPC_llb08 = controlMPC_l + 32;
+controlMPC_FLOAT* controlMPC_slb08 = controlMPC_s + 32;
+controlMPC_FLOAT* controlMPC_llbbyslb08 = controlMPC_lbys + 32;
+controlMPC_FLOAT controlMPC_rilb08[2];
+controlMPC_FLOAT* controlMPC_dllbaff08 = controlMPC_dl_aff + 32;
+controlMPC_FLOAT* controlMPC_dslbaff08 = controlMPC_ds_aff + 32;
+controlMPC_FLOAT* controlMPC_dllbcc08 = controlMPC_dl_cc + 32;
+controlMPC_FLOAT* controlMPC_dslbcc08 = controlMPC_ds_cc + 32;
+controlMPC_FLOAT* controlMPC_ccrhsl08 = controlMPC_ccrhs + 32;
+int controlMPC_ubIdx08[2] = {0, 1};
+controlMPC_FLOAT* controlMPC_lub08 = controlMPC_l + 34;
+controlMPC_FLOAT* controlMPC_sub08 = controlMPC_s + 34;
+controlMPC_FLOAT* controlMPC_lubbysub08 = controlMPC_lbys + 34;
+controlMPC_FLOAT controlMPC_riub08[2];
+controlMPC_FLOAT* controlMPC_dlubaff08 = controlMPC_dl_aff + 34;
+controlMPC_FLOAT* controlMPC_dsubaff08 = controlMPC_ds_aff + 34;
+controlMPC_FLOAT* controlMPC_dlubcc08 = controlMPC_dl_cc + 34;
+controlMPC_FLOAT* controlMPC_dsubcc08 = controlMPC_ds_cc + 34;
+controlMPC_FLOAT* controlMPC_ccrhsub08 = controlMPC_ccrhs + 34;
+controlMPC_FLOAT controlMPC_Phi08[2];
+controlMPC_FLOAT controlMPC_W08[2];
+controlMPC_FLOAT controlMPC_Ysd08[4];
+controlMPC_FLOAT controlMPC_Lsd08[4];
+controlMPC_FLOAT* controlMPC_z09 = controlMPC_z + 18;
+controlMPC_FLOAT* controlMPC_dzaff09 = controlMPC_dz_aff + 18;
+controlMPC_FLOAT* controlMPC_dzcc09 = controlMPC_dz_cc + 18;
+controlMPC_FLOAT* controlMPC_rd09 = controlMPC_rd + 18;
+controlMPC_FLOAT controlMPC_Lbyrd09[2];
+controlMPC_FLOAT* controlMPC_grad_cost09 = controlMPC_grad_cost + 18;
+controlMPC_FLOAT* controlMPC_grad_eq09 = controlMPC_grad_eq + 18;
+controlMPC_FLOAT* controlMPC_grad_ineq09 = controlMPC_grad_ineq + 18;
+controlMPC_FLOAT controlMPC_ctv09[2];
+controlMPC_FLOAT* controlMPC_v09 = controlMPC_v + 18;
+controlMPC_FLOAT controlMPC_re09[2];
+controlMPC_FLOAT controlMPC_beta09[2];
+controlMPC_FLOAT controlMPC_betacc09[2];
+controlMPC_FLOAT* controlMPC_dvaff09 = controlMPC_dv_aff + 18;
+controlMPC_FLOAT* controlMPC_dvcc09 = controlMPC_dv_cc + 18;
+controlMPC_FLOAT controlMPC_V09[4];
+controlMPC_FLOAT controlMPC_Yd09[3];
+controlMPC_FLOAT controlMPC_Ld09[3];
+controlMPC_FLOAT controlMPC_yy09[2];
+controlMPC_FLOAT controlMPC_bmy09[2];
+controlMPC_FLOAT controlMPC_c09[2] = {0.0000000000000000E+000, 0.0000000000000000E+000};
+int controlMPC_lbIdx09[2] = {0, 1};
+controlMPC_FLOAT* controlMPC_llb09 = controlMPC_l + 36;
+controlMPC_FLOAT* controlMPC_slb09 = controlMPC_s + 36;
+controlMPC_FLOAT* controlMPC_llbbyslb09 = controlMPC_lbys + 36;
+controlMPC_FLOAT controlMPC_rilb09[2];
+controlMPC_FLOAT* controlMPC_dllbaff09 = controlMPC_dl_aff + 36;
+controlMPC_FLOAT* controlMPC_dslbaff09 = controlMPC_ds_aff + 36;
+controlMPC_FLOAT* controlMPC_dllbcc09 = controlMPC_dl_cc + 36;
+controlMPC_FLOAT* controlMPC_dslbcc09 = controlMPC_ds_cc + 36;
+controlMPC_FLOAT* controlMPC_ccrhsl09 = controlMPC_ccrhs + 36;
+int controlMPC_ubIdx09[2] = {0, 1};
+controlMPC_FLOAT* controlMPC_lub09 = controlMPC_l + 38;
+controlMPC_FLOAT* controlMPC_sub09 = controlMPC_s + 38;
+controlMPC_FLOAT* controlMPC_lubbysub09 = controlMPC_lbys + 38;
+controlMPC_FLOAT controlMPC_riub09[2];
+controlMPC_FLOAT* controlMPC_dlubaff09 = controlMPC_dl_aff + 38;
+controlMPC_FLOAT* controlMPC_dsubaff09 = controlMPC_ds_aff + 38;
+controlMPC_FLOAT* controlMPC_dlubcc09 = controlMPC_dl_cc + 38;
+controlMPC_FLOAT* controlMPC_dsubcc09 = controlMPC_ds_cc + 38;
+controlMPC_FLOAT* controlMPC_ccrhsub09 = controlMPC_ccrhs + 38;
+controlMPC_FLOAT controlMPC_Phi09[2];
+controlMPC_FLOAT controlMPC_W09[2];
+controlMPC_FLOAT controlMPC_Ysd09[4];
+controlMPC_FLOAT controlMPC_Lsd09[4];
+controlMPC_FLOAT* controlMPC_z10 = controlMPC_z + 20;
+controlMPC_FLOAT* controlMPC_dzaff10 = controlMPC_dz_aff + 20;
+controlMPC_FLOAT* controlMPC_dzcc10 = controlMPC_dz_cc + 20;
+controlMPC_FLOAT* controlMPC_rd10 = controlMPC_rd + 20;
+controlMPC_FLOAT controlMPC_Lbyrd10[2];
+controlMPC_FLOAT* controlMPC_grad_cost10 = controlMPC_grad_cost + 20;
+controlMPC_FLOAT* controlMPC_grad_eq10 = controlMPC_grad_eq + 20;
+controlMPC_FLOAT* controlMPC_grad_ineq10 = controlMPC_grad_ineq + 20;
+controlMPC_FLOAT controlMPC_ctv10[2];
+controlMPC_FLOAT* controlMPC_v10 = controlMPC_v + 20;
+controlMPC_FLOAT controlMPC_re10[2];
+controlMPC_FLOAT controlMPC_beta10[2];
+controlMPC_FLOAT controlMPC_betacc10[2];
+controlMPC_FLOAT* controlMPC_dvaff10 = controlMPC_dv_aff + 20;
+controlMPC_FLOAT* controlMPC_dvcc10 = controlMPC_dv_cc + 20;
+controlMPC_FLOAT controlMPC_V10[4];
+controlMPC_FLOAT controlMPC_Yd10[3];
+controlMPC_FLOAT controlMPC_Ld10[3];
+controlMPC_FLOAT controlMPC_yy10[2];
+controlMPC_FLOAT controlMPC_bmy10[2];
+controlMPC_FLOAT controlMPC_c10[2] = {0.0000000000000000E+000, 0.0000000000000000E+000};
+int controlMPC_lbIdx10[2] = {0, 1};
+controlMPC_FLOAT* controlMPC_llb10 = controlMPC_l + 40;
+controlMPC_FLOAT* controlMPC_slb10 = controlMPC_s + 40;
+controlMPC_FLOAT* controlMPC_llbbyslb10 = controlMPC_lbys + 40;
+controlMPC_FLOAT controlMPC_rilb10[2];
+controlMPC_FLOAT* controlMPC_dllbaff10 = controlMPC_dl_aff + 40;
+controlMPC_FLOAT* controlMPC_dslbaff10 = controlMPC_ds_aff + 40;
+controlMPC_FLOAT* controlMPC_dllbcc10 = controlMPC_dl_cc + 40;
+controlMPC_FLOAT* controlMPC_dslbcc10 = controlMPC_ds_cc + 40;
+controlMPC_FLOAT* controlMPC_ccrhsl10 = controlMPC_ccrhs + 40;
+int controlMPC_ubIdx10[2] = {0, 1};
+controlMPC_FLOAT* controlMPC_lub10 = controlMPC_l + 42;
+controlMPC_FLOAT* controlMPC_sub10 = controlMPC_s + 42;
+controlMPC_FLOAT* controlMPC_lubbysub10 = controlMPC_lbys + 42;
+controlMPC_FLOAT controlMPC_riub10[2];
+controlMPC_FLOAT* controlMPC_dlubaff10 = controlMPC_dl_aff + 42;
+controlMPC_FLOAT* controlMPC_dsubaff10 = controlMPC_ds_aff + 42;
+controlMPC_FLOAT* controlMPC_dlubcc10 = controlMPC_dl_cc + 42;
+controlMPC_FLOAT* controlMPC_dsubcc10 = controlMPC_ds_cc + 42;
+controlMPC_FLOAT* controlMPC_ccrhsub10 = controlMPC_ccrhs + 42;
+controlMPC_FLOAT controlMPC_Phi10[2];
+controlMPC_FLOAT controlMPC_W10[2];
+controlMPC_FLOAT controlMPC_Ysd10[4];
+controlMPC_FLOAT controlMPC_Lsd10[4];
+controlMPC_FLOAT* controlMPC_z11 = controlMPC_z + 22;
+controlMPC_FLOAT* controlMPC_dzaff11 = controlMPC_dz_aff + 22;
+controlMPC_FLOAT* controlMPC_dzcc11 = controlMPC_dz_cc + 22;
+controlMPC_FLOAT* controlMPC_rd11 = controlMPC_rd + 22;
+controlMPC_FLOAT controlMPC_Lbyrd11[2];
+controlMPC_FLOAT* controlMPC_grad_cost11 = controlMPC_grad_cost + 22;
+controlMPC_FLOAT* controlMPC_grad_eq11 = controlMPC_grad_eq + 22;
+controlMPC_FLOAT* controlMPC_grad_ineq11 = controlMPC_grad_ineq + 22;
+controlMPC_FLOAT controlMPC_ctv11[2];
+controlMPC_FLOAT* controlMPC_v11 = controlMPC_v + 22;
+controlMPC_FLOAT controlMPC_re11[2];
+controlMPC_FLOAT controlMPC_beta11[2];
+controlMPC_FLOAT controlMPC_betacc11[2];
+controlMPC_FLOAT* controlMPC_dvaff11 = controlMPC_dv_aff + 22;
+controlMPC_FLOAT* controlMPC_dvcc11 = controlMPC_dv_cc + 22;
+controlMPC_FLOAT controlMPC_V11[4];
+controlMPC_FLOAT controlMPC_Yd11[3];
+controlMPC_FLOAT controlMPC_Ld11[3];
+controlMPC_FLOAT controlMPC_yy11[2];
+controlMPC_FLOAT controlMPC_bmy11[2];
+controlMPC_FLOAT controlMPC_c11[2] = {0.0000000000000000E+000, 0.0000000000000000E+000};
+int controlMPC_lbIdx11[2] = {0, 1};
+controlMPC_FLOAT* controlMPC_llb11 = controlMPC_l + 44;
+controlMPC_FLOAT* controlMPC_slb11 = controlMPC_s + 44;
+controlMPC_FLOAT* controlMPC_llbbyslb11 = controlMPC_lbys + 44;
+controlMPC_FLOAT controlMPC_rilb11[2];
+controlMPC_FLOAT* controlMPC_dllbaff11 = controlMPC_dl_aff + 44;
+controlMPC_FLOAT* controlMPC_dslbaff11 = controlMPC_ds_aff + 44;
+controlMPC_FLOAT* controlMPC_dllbcc11 = controlMPC_dl_cc + 44;
+controlMPC_FLOAT* controlMPC_dslbcc11 = controlMPC_ds_cc + 44;
+controlMPC_FLOAT* controlMPC_ccrhsl11 = controlMPC_ccrhs + 44;
+int controlMPC_ubIdx11[2] = {0, 1};
+controlMPC_FLOAT* controlMPC_lub11 = controlMPC_l + 46;
+controlMPC_FLOAT* controlMPC_sub11 = controlMPC_s + 46;
+controlMPC_FLOAT* controlMPC_lubbysub11 = controlMPC_lbys + 46;
+controlMPC_FLOAT controlMPC_riub11[2];
+controlMPC_FLOAT* controlMPC_dlubaff11 = controlMPC_dl_aff + 46;
+controlMPC_FLOAT* controlMPC_dsubaff11 = controlMPC_ds_aff + 46;
+controlMPC_FLOAT* controlMPC_dlubcc11 = controlMPC_dl_cc + 46;
+controlMPC_FLOAT* controlMPC_dsubcc11 = controlMPC_ds_cc + 46;
+controlMPC_FLOAT* controlMPC_ccrhsub11 = controlMPC_ccrhs + 46;
+controlMPC_FLOAT controlMPC_Phi11[2];
+controlMPC_FLOAT controlMPC_W11[2];
+controlMPC_FLOAT controlMPC_Ysd11[4];
+controlMPC_FLOAT controlMPC_Lsd11[4];
+controlMPC_FLOAT* controlMPC_z12 = controlMPC_z + 24;
+controlMPC_FLOAT* controlMPC_dzaff12 = controlMPC_dz_aff + 24;
+controlMPC_FLOAT* controlMPC_dzcc12 = controlMPC_dz_cc + 24;
+controlMPC_FLOAT* controlMPC_rd12 = controlMPC_rd + 24;
+controlMPC_FLOAT controlMPC_Lbyrd12[2];
+controlMPC_FLOAT* controlMPC_grad_cost12 = controlMPC_grad_cost + 24;
+controlMPC_FLOAT* controlMPC_grad_eq12 = controlMPC_grad_eq + 24;
+controlMPC_FLOAT* controlMPC_grad_ineq12 = controlMPC_grad_ineq + 24;
+controlMPC_FLOAT controlMPC_ctv12[2];
+controlMPC_FLOAT* controlMPC_v12 = controlMPC_v + 24;
+controlMPC_FLOAT controlMPC_re12[2];
+controlMPC_FLOAT controlMPC_beta12[2];
+controlMPC_FLOAT controlMPC_betacc12[2];
+controlMPC_FLOAT* controlMPC_dvaff12 = controlMPC_dv_aff + 24;
+controlMPC_FLOAT* controlMPC_dvcc12 = controlMPC_dv_cc + 24;
+controlMPC_FLOAT controlMPC_V12[4];
+controlMPC_FLOAT controlMPC_Yd12[3];
+controlMPC_FLOAT controlMPC_Ld12[3];
+controlMPC_FLOAT controlMPC_yy12[2];
+controlMPC_FLOAT controlMPC_bmy12[2];
+controlMPC_FLOAT controlMPC_c12[2] = {0.0000000000000000E+000, 0.0000000000000000E+000};
+int controlMPC_lbIdx12[2] = {0, 1};
+controlMPC_FLOAT* controlMPC_llb12 = controlMPC_l + 48;
+controlMPC_FLOAT* controlMPC_slb12 = controlMPC_s + 48;
+controlMPC_FLOAT* controlMPC_llbbyslb12 = controlMPC_lbys + 48;
+controlMPC_FLOAT controlMPC_rilb12[2];
+controlMPC_FLOAT* controlMPC_dllbaff12 = controlMPC_dl_aff + 48;
+controlMPC_FLOAT* controlMPC_dslbaff12 = controlMPC_ds_aff + 48;
+controlMPC_FLOAT* controlMPC_dllbcc12 = controlMPC_dl_cc + 48;
+controlMPC_FLOAT* controlMPC_dslbcc12 = controlMPC_ds_cc + 48;
+controlMPC_FLOAT* controlMPC_ccrhsl12 = controlMPC_ccrhs + 48;
+int controlMPC_ubIdx12[2] = {0, 1};
+controlMPC_FLOAT* controlMPC_lub12 = controlMPC_l + 50;
+controlMPC_FLOAT* controlMPC_sub12 = controlMPC_s + 50;
+controlMPC_FLOAT* controlMPC_lubbysub12 = controlMPC_lbys + 50;
+controlMPC_FLOAT controlMPC_riub12[2];
+controlMPC_FLOAT* controlMPC_dlubaff12 = controlMPC_dl_aff + 50;
+controlMPC_FLOAT* controlMPC_dsubaff12 = controlMPC_ds_aff + 50;
+controlMPC_FLOAT* controlMPC_dlubcc12 = controlMPC_dl_cc + 50;
+controlMPC_FLOAT* controlMPC_dsubcc12 = controlMPC_ds_cc + 50;
+controlMPC_FLOAT* controlMPC_ccrhsub12 = controlMPC_ccrhs + 50;
+controlMPC_FLOAT controlMPC_Phi12[2];
+controlMPC_FLOAT controlMPC_W12[2];
+controlMPC_FLOAT controlMPC_Ysd12[4];
+controlMPC_FLOAT controlMPC_Lsd12[4];
+controlMPC_FLOAT* controlMPC_z13 = controlMPC_z + 26;
+controlMPC_FLOAT* controlMPC_dzaff13 = controlMPC_dz_aff + 26;
+controlMPC_FLOAT* controlMPC_dzcc13 = controlMPC_dz_cc + 26;
+controlMPC_FLOAT* controlMPC_rd13 = controlMPC_rd + 26;
+controlMPC_FLOAT controlMPC_Lbyrd13[2];
+controlMPC_FLOAT* controlMPC_grad_cost13 = controlMPC_grad_cost + 26;
+controlMPC_FLOAT* controlMPC_grad_eq13 = controlMPC_grad_eq + 26;
+controlMPC_FLOAT* controlMPC_grad_ineq13 = controlMPC_grad_ineq + 26;
+controlMPC_FLOAT controlMPC_ctv13[2];
+int controlMPC_lbIdx13[2] = {0, 1};
+controlMPC_FLOAT* controlMPC_llb13 = controlMPC_l + 52;
+controlMPC_FLOAT* controlMPC_slb13 = controlMPC_s + 52;
+controlMPC_FLOAT* controlMPC_llbbyslb13 = controlMPC_lbys + 52;
+controlMPC_FLOAT controlMPC_rilb13[2];
+controlMPC_FLOAT* controlMPC_dllbaff13 = controlMPC_dl_aff + 52;
+controlMPC_FLOAT* controlMPC_dslbaff13 = controlMPC_ds_aff + 52;
+controlMPC_FLOAT* controlMPC_dllbcc13 = controlMPC_dl_cc + 52;
+controlMPC_FLOAT* controlMPC_dslbcc13 = controlMPC_ds_cc + 52;
+controlMPC_FLOAT* controlMPC_ccrhsl13 = controlMPC_ccrhs + 52;
+int controlMPC_ubIdx13[2] = {0, 1};
+controlMPC_FLOAT* controlMPC_lub13 = controlMPC_l + 54;
+controlMPC_FLOAT* controlMPC_sub13 = controlMPC_s + 54;
+controlMPC_FLOAT* controlMPC_lubbysub13 = controlMPC_lbys + 54;
+controlMPC_FLOAT controlMPC_riub13[2];
+controlMPC_FLOAT* controlMPC_dlubaff13 = controlMPC_dl_aff + 54;
+controlMPC_FLOAT* controlMPC_dsubaff13 = controlMPC_ds_aff + 54;
+controlMPC_FLOAT* controlMPC_dlubcc13 = controlMPC_dl_cc + 54;
+controlMPC_FLOAT* controlMPC_dsubcc13 = controlMPC_ds_cc + 54;
+controlMPC_FLOAT* controlMPC_ccrhsub13 = controlMPC_ccrhs + 54;
+controlMPC_FLOAT controlMPC_Phi13[2];
+controlMPC_FLOAT controlMPC_W13[2];
 controlMPC_FLOAT musigma;
 controlMPC_FLOAT sigma_3rdroot;
 controlMPC_FLOAT controlMPC_Diag1_0[2];
@@ -1476,71 +1701,101 @@ int exitcode;
 #endif
 /* FUNCTION CALLS INTO LA LIBRARY -------------------------------------- */
 info->it = 0;
-controlMPC_LA_INITIALIZEVECTOR_18(controlMPC_z, 0);
-controlMPC_LA_INITIALIZEVECTOR_16(controlMPC_v, 1);
-controlMPC_LA_INITIALIZEVECTOR_36(controlMPC_l, 1);
-controlMPC_LA_INITIALIZEVECTOR_36(controlMPC_s, 1);
+controlMPC_LA_INITIALIZEVECTOR_28(controlMPC_z, 0);
+controlMPC_LA_INITIALIZEVECTOR_26(controlMPC_v, 1);
+controlMPC_LA_INITIALIZEVECTOR_56(controlMPC_l, 1);
+controlMPC_LA_INITIALIZEVECTOR_56(controlMPC_s, 1);
 info->mu = 0;
-controlMPC_LA_DOTACC_36(controlMPC_l, controlMPC_s, &info->mu);
-info->mu /= 36;
+controlMPC_LA_DOTACC_56(controlMPC_l, controlMPC_s, &info->mu);
+info->mu /= 56;
 while( 1 ){
 info->pobj = 0;
-controlMPC_LA_DIAG_QUADFCN_2(params->H1, params->f1, controlMPC_z0, controlMPC_grad_cost0, &info->pobj);
-controlMPC_LA_DIAG_QUADFCN_2(params->H2, params->f2, controlMPC_z1, controlMPC_grad_cost1, &info->pobj);
-controlMPC_LA_DIAG_QUADFCN_2(params->H3, params->f3, controlMPC_z2, controlMPC_grad_cost2, &info->pobj);
-controlMPC_LA_DIAG_QUADFCN_2(params->H4, params->f4, controlMPC_z3, controlMPC_grad_cost3, &info->pobj);
-controlMPC_LA_DIAG_QUADFCN_2(params->H5, params->f5, controlMPC_z4, controlMPC_grad_cost4, &info->pobj);
-controlMPC_LA_DIAG_QUADFCN_2(params->H6, params->f6, controlMPC_z5, controlMPC_grad_cost5, &info->pobj);
-controlMPC_LA_DIAG_QUADFCN_2(params->H7, params->f7, controlMPC_z6, controlMPC_grad_cost6, &info->pobj);
-controlMPC_LA_DIAG_QUADFCN_2(params->H8, params->f8, controlMPC_z7, controlMPC_grad_cost7, &info->pobj);
-controlMPC_LA_DIAG_QUADFCN_2(params->H9, params->f9, controlMPC_z8, controlMPC_grad_cost8, &info->pobj);
+controlMPC_LA_DIAG_QUADFCN_2(params->H1, params->f1, controlMPC_z00, controlMPC_grad_cost00, &info->pobj);
+controlMPC_LA_DIAG_QUADFCN_2(params->H2, params->f2, controlMPC_z01, controlMPC_grad_cost01, &info->pobj);
+controlMPC_LA_DIAG_QUADFCN_2(params->H3, params->f3, controlMPC_z02, controlMPC_grad_cost02, &info->pobj);
+controlMPC_LA_DIAG_QUADFCN_2(params->H4, params->f4, controlMPC_z03, controlMPC_grad_cost03, &info->pobj);
+controlMPC_LA_DIAG_QUADFCN_2(params->H5, params->f5, controlMPC_z04, controlMPC_grad_cost04, &info->pobj);
+controlMPC_LA_DIAG_QUADFCN_2(params->H6, params->f6, controlMPC_z05, controlMPC_grad_cost05, &info->pobj);
+controlMPC_LA_DIAG_QUADFCN_2(params->H7, params->f7, controlMPC_z06, controlMPC_grad_cost06, &info->pobj);
+controlMPC_LA_DIAG_QUADFCN_2(params->H8, params->f8, controlMPC_z07, controlMPC_grad_cost07, &info->pobj);
+controlMPC_LA_DIAG_QUADFCN_2(params->H9, params->f9, controlMPC_z08, controlMPC_grad_cost08, &info->pobj);
+controlMPC_LA_DIAG_QUADFCN_2(params->H10, params->f10, controlMPC_z09, controlMPC_grad_cost09, &info->pobj);
+controlMPC_LA_DIAG_QUADFCN_2(params->H11, params->f11, controlMPC_z10, controlMPC_grad_cost10, &info->pobj);
+controlMPC_LA_DIAG_QUADFCN_2(params->H12, params->f12, controlMPC_z11, controlMPC_grad_cost11, &info->pobj);
+controlMPC_LA_DIAG_QUADFCN_2(params->H13, params->f13, controlMPC_z12, controlMPC_grad_cost12, &info->pobj);
+controlMPC_LA_DIAG_QUADFCN_2(params->H14, params->f14, controlMPC_z13, controlMPC_grad_cost13, &info->pobj);
 info->res_eq = 0;
 info->dgap = 0;
-controlMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_2_2(controlMPC_C0, controlMPC_z0, controlMPC_D1, controlMPC_z1, controlMPC_c0, controlMPC_v0, controlMPC_re0, &info->dgap, &info->res_eq);
-controlMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_2_2(controlMPC_C0, controlMPC_z1, controlMPC_D1, controlMPC_z2, controlMPC_c1, controlMPC_v1, controlMPC_re1, &info->dgap, &info->res_eq);
-controlMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_2_2(controlMPC_C0, controlMPC_z2, controlMPC_D1, controlMPC_z3, controlMPC_c2, controlMPC_v2, controlMPC_re2, &info->dgap, &info->res_eq);
-controlMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_2_2(controlMPC_C0, controlMPC_z3, controlMPC_D1, controlMPC_z4, controlMPC_c3, controlMPC_v3, controlMPC_re3, &info->dgap, &info->res_eq);
-controlMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_2_2(controlMPC_C0, controlMPC_z4, controlMPC_D1, controlMPC_z5, controlMPC_c4, controlMPC_v4, controlMPC_re4, &info->dgap, &info->res_eq);
-controlMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_2_2(controlMPC_C0, controlMPC_z5, controlMPC_D1, controlMPC_z6, controlMPC_c5, controlMPC_v5, controlMPC_re5, &info->dgap, &info->res_eq);
-controlMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_2_2(controlMPC_C0, controlMPC_z6, controlMPC_D1, controlMPC_z7, controlMPC_c6, controlMPC_v6, controlMPC_re6, &info->dgap, &info->res_eq);
-controlMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_2_2(controlMPC_C0, controlMPC_z7, controlMPC_D1, controlMPC_z8, controlMPC_c7, controlMPC_v7, controlMPC_re7, &info->dgap, &info->res_eq);
-controlMPC_LA_DENSE_MTVM_2_2(controlMPC_C0, controlMPC_v0, controlMPC_grad_eq0);
-controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C0, controlMPC_v1, controlMPC_D1, controlMPC_v0, controlMPC_grad_eq1);
-controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C0, controlMPC_v2, controlMPC_D1, controlMPC_v1, controlMPC_grad_eq2);
-controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C0, controlMPC_v3, controlMPC_D1, controlMPC_v2, controlMPC_grad_eq3);
-controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C0, controlMPC_v4, controlMPC_D1, controlMPC_v3, controlMPC_grad_eq4);
-controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C0, controlMPC_v5, controlMPC_D1, controlMPC_v4, controlMPC_grad_eq5);
-controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C0, controlMPC_v6, controlMPC_D1, controlMPC_v5, controlMPC_grad_eq6);
-controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C0, controlMPC_v7, controlMPC_D1, controlMPC_v6, controlMPC_grad_eq7);
-controlMPC_LA_DIAGZERO_MTVM_2_2(controlMPC_D1, controlMPC_v7, controlMPC_grad_eq8);
+controlMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_2_2(controlMPC_C00, controlMPC_z00, controlMPC_D01, controlMPC_z01, controlMPC_c00, controlMPC_v00, controlMPC_re00, &info->dgap, &info->res_eq);
+controlMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_2_2(controlMPC_C00, controlMPC_z01, controlMPC_D01, controlMPC_z02, controlMPC_c01, controlMPC_v01, controlMPC_re01, &info->dgap, &info->res_eq);
+controlMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_2_2(controlMPC_C00, controlMPC_z02, controlMPC_D01, controlMPC_z03, controlMPC_c02, controlMPC_v02, controlMPC_re02, &info->dgap, &info->res_eq);
+controlMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_2_2(controlMPC_C00, controlMPC_z03, controlMPC_D01, controlMPC_z04, controlMPC_c03, controlMPC_v03, controlMPC_re03, &info->dgap, &info->res_eq);
+controlMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_2_2(controlMPC_C00, controlMPC_z04, controlMPC_D01, controlMPC_z05, controlMPC_c04, controlMPC_v04, controlMPC_re04, &info->dgap, &info->res_eq);
+controlMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_2_2(controlMPC_C00, controlMPC_z05, controlMPC_D01, controlMPC_z06, controlMPC_c05, controlMPC_v05, controlMPC_re05, &info->dgap, &info->res_eq);
+controlMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_2_2(controlMPC_C00, controlMPC_z06, controlMPC_D01, controlMPC_z07, controlMPC_c06, controlMPC_v06, controlMPC_re06, &info->dgap, &info->res_eq);
+controlMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_2_2(controlMPC_C00, controlMPC_z07, controlMPC_D01, controlMPC_z08, controlMPC_c07, controlMPC_v07, controlMPC_re07, &info->dgap, &info->res_eq);
+controlMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_2_2(controlMPC_C00, controlMPC_z08, controlMPC_D01, controlMPC_z09, controlMPC_c08, controlMPC_v08, controlMPC_re08, &info->dgap, &info->res_eq);
+controlMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_2_2(controlMPC_C00, controlMPC_z09, controlMPC_D01, controlMPC_z10, controlMPC_c09, controlMPC_v09, controlMPC_re09, &info->dgap, &info->res_eq);
+controlMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_2_2(controlMPC_C00, controlMPC_z10, controlMPC_D01, controlMPC_z11, controlMPC_c10, controlMPC_v10, controlMPC_re10, &info->dgap, &info->res_eq);
+controlMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_2_2(controlMPC_C00, controlMPC_z11, controlMPC_D01, controlMPC_z12, controlMPC_c11, controlMPC_v11, controlMPC_re11, &info->dgap, &info->res_eq);
+controlMPC_LA_DENSE_DIAGZERO_MVMSUB3_2_2_2(controlMPC_C00, controlMPC_z12, controlMPC_D01, controlMPC_z13, controlMPC_c12, controlMPC_v12, controlMPC_re12, &info->dgap, &info->res_eq);
+controlMPC_LA_DENSE_MTVM_2_2(controlMPC_C00, controlMPC_v00, controlMPC_grad_eq00);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_v01, controlMPC_D01, controlMPC_v00, controlMPC_grad_eq01);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_v02, controlMPC_D01, controlMPC_v01, controlMPC_grad_eq02);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_v03, controlMPC_D01, controlMPC_v02, controlMPC_grad_eq03);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_v04, controlMPC_D01, controlMPC_v03, controlMPC_grad_eq04);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_v05, controlMPC_D01, controlMPC_v04, controlMPC_grad_eq05);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_v06, controlMPC_D01, controlMPC_v05, controlMPC_grad_eq06);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_v07, controlMPC_D01, controlMPC_v06, controlMPC_grad_eq07);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_v08, controlMPC_D01, controlMPC_v07, controlMPC_grad_eq08);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_v09, controlMPC_D01, controlMPC_v08, controlMPC_grad_eq09);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_v10, controlMPC_D01, controlMPC_v09, controlMPC_grad_eq10);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_v11, controlMPC_D01, controlMPC_v10, controlMPC_grad_eq11);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_v12, controlMPC_D01, controlMPC_v11, controlMPC_grad_eq12);
+controlMPC_LA_DIAGZERO_MTVM_2_2(controlMPC_D01, controlMPC_v12, controlMPC_grad_eq13);
 info->res_ineq = 0;
-controlMPC_LA_VSUBADD3_2(params->lb1, controlMPC_z0, controlMPC_lbIdx0, controlMPC_llb0, controlMPC_slb0, controlMPC_rilb0, &info->dgap, &info->res_ineq);
-controlMPC_LA_VSUBADD2_2(controlMPC_z0, controlMPC_ubIdx0, params->ub1, controlMPC_lub0, controlMPC_sub0, controlMPC_riub0, &info->dgap, &info->res_ineq);
-controlMPC_LA_VSUBADD3_2(params->lb2, controlMPC_z1, controlMPC_lbIdx1, controlMPC_llb1, controlMPC_slb1, controlMPC_rilb1, &info->dgap, &info->res_ineq);
-controlMPC_LA_VSUBADD2_2(controlMPC_z1, controlMPC_ubIdx1, params->ub2, controlMPC_lub1, controlMPC_sub1, controlMPC_riub1, &info->dgap, &info->res_ineq);
-controlMPC_LA_VSUBADD3_2(params->lb3, controlMPC_z2, controlMPC_lbIdx2, controlMPC_llb2, controlMPC_slb2, controlMPC_rilb2, &info->dgap, &info->res_ineq);
-controlMPC_LA_VSUBADD2_2(controlMPC_z2, controlMPC_ubIdx2, params->ub3, controlMPC_lub2, controlMPC_sub2, controlMPC_riub2, &info->dgap, &info->res_ineq);
-controlMPC_LA_VSUBADD3_2(params->lb4, controlMPC_z3, controlMPC_lbIdx3, controlMPC_llb3, controlMPC_slb3, controlMPC_rilb3, &info->dgap, &info->res_ineq);
-controlMPC_LA_VSUBADD2_2(controlMPC_z3, controlMPC_ubIdx3, params->ub4, controlMPC_lub3, controlMPC_sub3, controlMPC_riub3, &info->dgap, &info->res_ineq);
-controlMPC_LA_VSUBADD3_2(params->lb5, controlMPC_z4, controlMPC_lbIdx4, controlMPC_llb4, controlMPC_slb4, controlMPC_rilb4, &info->dgap, &info->res_ineq);
-controlMPC_LA_VSUBADD2_2(controlMPC_z4, controlMPC_ubIdx4, params->ub5, controlMPC_lub4, controlMPC_sub4, controlMPC_riub4, &info->dgap, &info->res_ineq);
-controlMPC_LA_VSUBADD3_2(params->lb6, controlMPC_z5, controlMPC_lbIdx5, controlMPC_llb5, controlMPC_slb5, controlMPC_rilb5, &info->dgap, &info->res_ineq);
-controlMPC_LA_VSUBADD2_2(controlMPC_z5, controlMPC_ubIdx5, params->ub6, controlMPC_lub5, controlMPC_sub5, controlMPC_riub5, &info->dgap, &info->res_ineq);
-controlMPC_LA_VSUBADD3_2(params->lb7, controlMPC_z6, controlMPC_lbIdx6, controlMPC_llb6, controlMPC_slb6, controlMPC_rilb6, &info->dgap, &info->res_ineq);
-controlMPC_LA_VSUBADD2_2(controlMPC_z6, controlMPC_ubIdx6, params->ub7, controlMPC_lub6, controlMPC_sub6, controlMPC_riub6, &info->dgap, &info->res_ineq);
-controlMPC_LA_VSUBADD3_2(params->lb8, controlMPC_z7, controlMPC_lbIdx7, controlMPC_llb7, controlMPC_slb7, controlMPC_rilb7, &info->dgap, &info->res_ineq);
-controlMPC_LA_VSUBADD2_2(controlMPC_z7, controlMPC_ubIdx7, params->ub8, controlMPC_lub7, controlMPC_sub7, controlMPC_riub7, &info->dgap, &info->res_ineq);
-controlMPC_LA_VSUBADD3_2(params->lb9, controlMPC_z8, controlMPC_lbIdx8, controlMPC_llb8, controlMPC_slb8, controlMPC_rilb8, &info->dgap, &info->res_ineq);
-controlMPC_LA_VSUBADD2_2(controlMPC_z8, controlMPC_ubIdx8, params->ub9, controlMPC_lub8, controlMPC_sub8, controlMPC_riub8, &info->dgap, &info->res_ineq);
-controlMPC_LA_INEQ_B_GRAD_2_2_2(controlMPC_lub0, controlMPC_sub0, controlMPC_riub0, controlMPC_llb0, controlMPC_slb0, controlMPC_rilb0, controlMPC_lbIdx0, controlMPC_ubIdx0, controlMPC_grad_ineq0, controlMPC_lubbysub0, controlMPC_llbbyslb0);
-controlMPC_LA_INEQ_B_GRAD_2_2_2(controlMPC_lub1, controlMPC_sub1, controlMPC_riub1, controlMPC_llb1, controlMPC_slb1, controlMPC_rilb1, controlMPC_lbIdx1, controlMPC_ubIdx1, controlMPC_grad_ineq1, controlMPC_lubbysub1, controlMPC_llbbyslb1);
-controlMPC_LA_INEQ_B_GRAD_2_2_2(controlMPC_lub2, controlMPC_sub2, controlMPC_riub2, controlMPC_llb2, controlMPC_slb2, controlMPC_rilb2, controlMPC_lbIdx2, controlMPC_ubIdx2, controlMPC_grad_ineq2, controlMPC_lubbysub2, controlMPC_llbbyslb2);
-controlMPC_LA_INEQ_B_GRAD_2_2_2(controlMPC_lub3, controlMPC_sub3, controlMPC_riub3, controlMPC_llb3, controlMPC_slb3, controlMPC_rilb3, controlMPC_lbIdx3, controlMPC_ubIdx3, controlMPC_grad_ineq3, controlMPC_lubbysub3, controlMPC_llbbyslb3);
-controlMPC_LA_INEQ_B_GRAD_2_2_2(controlMPC_lub4, controlMPC_sub4, controlMPC_riub4, controlMPC_llb4, controlMPC_slb4, controlMPC_rilb4, controlMPC_lbIdx4, controlMPC_ubIdx4, controlMPC_grad_ineq4, controlMPC_lubbysub4, controlMPC_llbbyslb4);
-controlMPC_LA_INEQ_B_GRAD_2_2_2(controlMPC_lub5, controlMPC_sub5, controlMPC_riub5, controlMPC_llb5, controlMPC_slb5, controlMPC_rilb5, controlMPC_lbIdx5, controlMPC_ubIdx5, controlMPC_grad_ineq5, controlMPC_lubbysub5, controlMPC_llbbyslb5);
-controlMPC_LA_INEQ_B_GRAD_2_2_2(controlMPC_lub6, controlMPC_sub6, controlMPC_riub6, controlMPC_llb6, controlMPC_slb6, controlMPC_rilb6, controlMPC_lbIdx6, controlMPC_ubIdx6, controlMPC_grad_ineq6, controlMPC_lubbysub6, controlMPC_llbbyslb6);
-controlMPC_LA_INEQ_B_GRAD_2_2_2(controlMPC_lub7, controlMPC_sub7, controlMPC_riub7, controlMPC_llb7, controlMPC_slb7, controlMPC_rilb7, controlMPC_lbIdx7, controlMPC_ubIdx7, controlMPC_grad_ineq7, controlMPC_lubbysub7, controlMPC_llbbyslb7);
-controlMPC_LA_INEQ_B_GRAD_2_2_2(controlMPC_lub8, controlMPC_sub8, controlMPC_riub8, controlMPC_llb8, controlMPC_slb8, controlMPC_rilb8, controlMPC_lbIdx8, controlMPC_ubIdx8, controlMPC_grad_ineq8, controlMPC_lubbysub8, controlMPC_llbbyslb8);
+controlMPC_LA_VSUBADD3_2(params->lb1, controlMPC_z00, controlMPC_lbIdx00, controlMPC_llb00, controlMPC_slb00, controlMPC_rilb00, &info->dgap, &info->res_ineq);
+controlMPC_LA_VSUBADD2_2(controlMPC_z00, controlMPC_ubIdx00, params->ub1, controlMPC_lub00, controlMPC_sub00, controlMPC_riub00, &info->dgap, &info->res_ineq);
+controlMPC_LA_VSUBADD3_2(params->lb2, controlMPC_z01, controlMPC_lbIdx01, controlMPC_llb01, controlMPC_slb01, controlMPC_rilb01, &info->dgap, &info->res_ineq);
+controlMPC_LA_VSUBADD2_2(controlMPC_z01, controlMPC_ubIdx01, params->ub2, controlMPC_lub01, controlMPC_sub01, controlMPC_riub01, &info->dgap, &info->res_ineq);
+controlMPC_LA_VSUBADD3_2(params->lb3, controlMPC_z02, controlMPC_lbIdx02, controlMPC_llb02, controlMPC_slb02, controlMPC_rilb02, &info->dgap, &info->res_ineq);
+controlMPC_LA_VSUBADD2_2(controlMPC_z02, controlMPC_ubIdx02, params->ub3, controlMPC_lub02, controlMPC_sub02, controlMPC_riub02, &info->dgap, &info->res_ineq);
+controlMPC_LA_VSUBADD3_2(params->lb4, controlMPC_z03, controlMPC_lbIdx03, controlMPC_llb03, controlMPC_slb03, controlMPC_rilb03, &info->dgap, &info->res_ineq);
+controlMPC_LA_VSUBADD2_2(controlMPC_z03, controlMPC_ubIdx03, params->ub4, controlMPC_lub03, controlMPC_sub03, controlMPC_riub03, &info->dgap, &info->res_ineq);
+controlMPC_LA_VSUBADD3_2(params->lb5, controlMPC_z04, controlMPC_lbIdx04, controlMPC_llb04, controlMPC_slb04, controlMPC_rilb04, &info->dgap, &info->res_ineq);
+controlMPC_LA_VSUBADD2_2(controlMPC_z04, controlMPC_ubIdx04, params->ub5, controlMPC_lub04, controlMPC_sub04, controlMPC_riub04, &info->dgap, &info->res_ineq);
+controlMPC_LA_VSUBADD3_2(params->lb6, controlMPC_z05, controlMPC_lbIdx05, controlMPC_llb05, controlMPC_slb05, controlMPC_rilb05, &info->dgap, &info->res_ineq);
+controlMPC_LA_VSUBADD2_2(controlMPC_z05, controlMPC_ubIdx05, params->ub6, controlMPC_lub05, controlMPC_sub05, controlMPC_riub05, &info->dgap, &info->res_ineq);
+controlMPC_LA_VSUBADD3_2(params->lb7, controlMPC_z06, controlMPC_lbIdx06, controlMPC_llb06, controlMPC_slb06, controlMPC_rilb06, &info->dgap, &info->res_ineq);
+controlMPC_LA_VSUBADD2_2(controlMPC_z06, controlMPC_ubIdx06, params->ub7, controlMPC_lub06, controlMPC_sub06, controlMPC_riub06, &info->dgap, &info->res_ineq);
+controlMPC_LA_VSUBADD3_2(params->lb8, controlMPC_z07, controlMPC_lbIdx07, controlMPC_llb07, controlMPC_slb07, controlMPC_rilb07, &info->dgap, &info->res_ineq);
+controlMPC_LA_VSUBADD2_2(controlMPC_z07, controlMPC_ubIdx07, params->ub8, controlMPC_lub07, controlMPC_sub07, controlMPC_riub07, &info->dgap, &info->res_ineq);
+controlMPC_LA_VSUBADD3_2(params->lb9, controlMPC_z08, controlMPC_lbIdx08, controlMPC_llb08, controlMPC_slb08, controlMPC_rilb08, &info->dgap, &info->res_ineq);
+controlMPC_LA_VSUBADD2_2(controlMPC_z08, controlMPC_ubIdx08, params->ub9, controlMPC_lub08, controlMPC_sub08, controlMPC_riub08, &info->dgap, &info->res_ineq);
+controlMPC_LA_VSUBADD3_2(params->lb10, controlMPC_z09, controlMPC_lbIdx09, controlMPC_llb09, controlMPC_slb09, controlMPC_rilb09, &info->dgap, &info->res_ineq);
+controlMPC_LA_VSUBADD2_2(controlMPC_z09, controlMPC_ubIdx09, params->ub10, controlMPC_lub09, controlMPC_sub09, controlMPC_riub09, &info->dgap, &info->res_ineq);
+controlMPC_LA_VSUBADD3_2(params->lb11, controlMPC_z10, controlMPC_lbIdx10, controlMPC_llb10, controlMPC_slb10, controlMPC_rilb10, &info->dgap, &info->res_ineq);
+controlMPC_LA_VSUBADD2_2(controlMPC_z10, controlMPC_ubIdx10, params->ub11, controlMPC_lub10, controlMPC_sub10, controlMPC_riub10, &info->dgap, &info->res_ineq);
+controlMPC_LA_VSUBADD3_2(params->lb12, controlMPC_z11, controlMPC_lbIdx11, controlMPC_llb11, controlMPC_slb11, controlMPC_rilb11, &info->dgap, &info->res_ineq);
+controlMPC_LA_VSUBADD2_2(controlMPC_z11, controlMPC_ubIdx11, params->ub12, controlMPC_lub11, controlMPC_sub11, controlMPC_riub11, &info->dgap, &info->res_ineq);
+controlMPC_LA_VSUBADD3_2(params->lb13, controlMPC_z12, controlMPC_lbIdx12, controlMPC_llb12, controlMPC_slb12, controlMPC_rilb12, &info->dgap, &info->res_ineq);
+controlMPC_LA_VSUBADD2_2(controlMPC_z12, controlMPC_ubIdx12, params->ub13, controlMPC_lub12, controlMPC_sub12, controlMPC_riub12, &info->dgap, &info->res_ineq);
+controlMPC_LA_VSUBADD3_2(params->lb14, controlMPC_z13, controlMPC_lbIdx13, controlMPC_llb13, controlMPC_slb13, controlMPC_rilb13, &info->dgap, &info->res_ineq);
+controlMPC_LA_VSUBADD2_2(controlMPC_z13, controlMPC_ubIdx13, params->ub14, controlMPC_lub13, controlMPC_sub13, controlMPC_riub13, &info->dgap, &info->res_ineq);
+controlMPC_LA_INEQ_B_GRAD_2_2_2(controlMPC_lub00, controlMPC_sub00, controlMPC_riub00, controlMPC_llb00, controlMPC_slb00, controlMPC_rilb00, controlMPC_lbIdx00, controlMPC_ubIdx00, controlMPC_grad_ineq00, controlMPC_lubbysub00, controlMPC_llbbyslb00);
+controlMPC_LA_INEQ_B_GRAD_2_2_2(controlMPC_lub01, controlMPC_sub01, controlMPC_riub01, controlMPC_llb01, controlMPC_slb01, controlMPC_rilb01, controlMPC_lbIdx01, controlMPC_ubIdx01, controlMPC_grad_ineq01, controlMPC_lubbysub01, controlMPC_llbbyslb01);
+controlMPC_LA_INEQ_B_GRAD_2_2_2(controlMPC_lub02, controlMPC_sub02, controlMPC_riub02, controlMPC_llb02, controlMPC_slb02, controlMPC_rilb02, controlMPC_lbIdx02, controlMPC_ubIdx02, controlMPC_grad_ineq02, controlMPC_lubbysub02, controlMPC_llbbyslb02);
+controlMPC_LA_INEQ_B_GRAD_2_2_2(controlMPC_lub03, controlMPC_sub03, controlMPC_riub03, controlMPC_llb03, controlMPC_slb03, controlMPC_rilb03, controlMPC_lbIdx03, controlMPC_ubIdx03, controlMPC_grad_ineq03, controlMPC_lubbysub03, controlMPC_llbbyslb03);
+controlMPC_LA_INEQ_B_GRAD_2_2_2(controlMPC_lub04, controlMPC_sub04, controlMPC_riub04, controlMPC_llb04, controlMPC_slb04, controlMPC_rilb04, controlMPC_lbIdx04, controlMPC_ubIdx04, controlMPC_grad_ineq04, controlMPC_lubbysub04, controlMPC_llbbyslb04);
+controlMPC_LA_INEQ_B_GRAD_2_2_2(controlMPC_lub05, controlMPC_sub05, controlMPC_riub05, controlMPC_llb05, controlMPC_slb05, controlMPC_rilb05, controlMPC_lbIdx05, controlMPC_ubIdx05, controlMPC_grad_ineq05, controlMPC_lubbysub05, controlMPC_llbbyslb05);
+controlMPC_LA_INEQ_B_GRAD_2_2_2(controlMPC_lub06, controlMPC_sub06, controlMPC_riub06, controlMPC_llb06, controlMPC_slb06, controlMPC_rilb06, controlMPC_lbIdx06, controlMPC_ubIdx06, controlMPC_grad_ineq06, controlMPC_lubbysub06, controlMPC_llbbyslb06);
+controlMPC_LA_INEQ_B_GRAD_2_2_2(controlMPC_lub07, controlMPC_sub07, controlMPC_riub07, controlMPC_llb07, controlMPC_slb07, controlMPC_rilb07, controlMPC_lbIdx07, controlMPC_ubIdx07, controlMPC_grad_ineq07, controlMPC_lubbysub07, controlMPC_llbbyslb07);
+controlMPC_LA_INEQ_B_GRAD_2_2_2(controlMPC_lub08, controlMPC_sub08, controlMPC_riub08, controlMPC_llb08, controlMPC_slb08, controlMPC_rilb08, controlMPC_lbIdx08, controlMPC_ubIdx08, controlMPC_grad_ineq08, controlMPC_lubbysub08, controlMPC_llbbyslb08);
+controlMPC_LA_INEQ_B_GRAD_2_2_2(controlMPC_lub09, controlMPC_sub09, controlMPC_riub09, controlMPC_llb09, controlMPC_slb09, controlMPC_rilb09, controlMPC_lbIdx09, controlMPC_ubIdx09, controlMPC_grad_ineq09, controlMPC_lubbysub09, controlMPC_llbbyslb09);
+controlMPC_LA_INEQ_B_GRAD_2_2_2(controlMPC_lub10, controlMPC_sub10, controlMPC_riub10, controlMPC_llb10, controlMPC_slb10, controlMPC_rilb10, controlMPC_lbIdx10, controlMPC_ubIdx10, controlMPC_grad_ineq10, controlMPC_lubbysub10, controlMPC_llbbyslb10);
+controlMPC_LA_INEQ_B_GRAD_2_2_2(controlMPC_lub11, controlMPC_sub11, controlMPC_riub11, controlMPC_llb11, controlMPC_slb11, controlMPC_rilb11, controlMPC_lbIdx11, controlMPC_ubIdx11, controlMPC_grad_ineq11, controlMPC_lubbysub11, controlMPC_llbbyslb11);
+controlMPC_LA_INEQ_B_GRAD_2_2_2(controlMPC_lub12, controlMPC_sub12, controlMPC_riub12, controlMPC_llb12, controlMPC_slb12, controlMPC_rilb12, controlMPC_lbIdx12, controlMPC_ubIdx12, controlMPC_grad_ineq12, controlMPC_lubbysub12, controlMPC_llbbyslb12);
+controlMPC_LA_INEQ_B_GRAD_2_2_2(controlMPC_lub13, controlMPC_sub13, controlMPC_riub13, controlMPC_llb13, controlMPC_slb13, controlMPC_rilb13, controlMPC_lbIdx13, controlMPC_ubIdx13, controlMPC_grad_ineq13, controlMPC_lubbysub13, controlMPC_llbbyslb13);
 info->dobj = info->pobj - info->dgap;
 info->rdgap = info->pobj ? info->dgap / info->pobj : 1e6;
 if( info->rdgap < 0 ) info->rdgap = -info->rdgap;
@@ -1551,171 +1806,271 @@ if( info->mu < controlMPC_SET_ACC_KKTCOMPL
 exitcode = controlMPC_OPTIMAL; break; }
 if( info->it == controlMPC_SET_MAXIT ){
 exitcode = controlMPC_MAXITREACHED; break; }
-controlMPC_LA_VVADD3_18(controlMPC_grad_cost, controlMPC_grad_eq, controlMPC_grad_ineq, controlMPC_rd);
-controlMPC_LA_DIAG_CHOL_ONELOOP_LBUB_2_2_2(params->H1, controlMPC_llbbyslb0, controlMPC_lbIdx0, controlMPC_lubbysub0, controlMPC_ubIdx0, controlMPC_Phi0);
-controlMPC_LA_DIAG_MATRIXFORWARDSUB_2_2(controlMPC_Phi0, controlMPC_C0, controlMPC_V0);
-controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi0, controlMPC_rd0, controlMPC_Lbyrd0);
-controlMPC_LA_DIAG_CHOL_ONELOOP_LBUB_2_2_2(params->H2, controlMPC_llbbyslb1, controlMPC_lbIdx1, controlMPC_lubbysub1, controlMPC_ubIdx1, controlMPC_Phi1);
-controlMPC_LA_DIAG_MATRIXFORWARDSUB_2_2(controlMPC_Phi1, controlMPC_C0, controlMPC_V1);
-controlMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_2(controlMPC_Phi1, controlMPC_D1, controlMPC_W1);
-controlMPC_LA_DENSE_DIAGZERO_MMTM_2_2_2(controlMPC_W1, controlMPC_V1, controlMPC_Ysd1);
-controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi1, controlMPC_rd1, controlMPC_Lbyrd1);
-controlMPC_LA_DIAG_CHOL_ONELOOP_LBUB_2_2_2(params->H3, controlMPC_llbbyslb2, controlMPC_lbIdx2, controlMPC_lubbysub2, controlMPC_ubIdx2, controlMPC_Phi2);
-controlMPC_LA_DIAG_MATRIXFORWARDSUB_2_2(controlMPC_Phi2, controlMPC_C0, controlMPC_V2);
-controlMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_2(controlMPC_Phi2, controlMPC_D1, controlMPC_W2);
-controlMPC_LA_DENSE_DIAGZERO_MMTM_2_2_2(controlMPC_W2, controlMPC_V2, controlMPC_Ysd2);
-controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi2, controlMPC_rd2, controlMPC_Lbyrd2);
-controlMPC_LA_DIAG_CHOL_ONELOOP_LBUB_2_2_2(params->H4, controlMPC_llbbyslb3, controlMPC_lbIdx3, controlMPC_lubbysub3, controlMPC_ubIdx3, controlMPC_Phi3);
-controlMPC_LA_DIAG_MATRIXFORWARDSUB_2_2(controlMPC_Phi3, controlMPC_C0, controlMPC_V3);
-controlMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_2(controlMPC_Phi3, controlMPC_D1, controlMPC_W3);
-controlMPC_LA_DENSE_DIAGZERO_MMTM_2_2_2(controlMPC_W3, controlMPC_V3, controlMPC_Ysd3);
-controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi3, controlMPC_rd3, controlMPC_Lbyrd3);
-controlMPC_LA_DIAG_CHOL_ONELOOP_LBUB_2_2_2(params->H5, controlMPC_llbbyslb4, controlMPC_lbIdx4, controlMPC_lubbysub4, controlMPC_ubIdx4, controlMPC_Phi4);
-controlMPC_LA_DIAG_MATRIXFORWARDSUB_2_2(controlMPC_Phi4, controlMPC_C0, controlMPC_V4);
-controlMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_2(controlMPC_Phi4, controlMPC_D1, controlMPC_W4);
-controlMPC_LA_DENSE_DIAGZERO_MMTM_2_2_2(controlMPC_W4, controlMPC_V4, controlMPC_Ysd4);
-controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi4, controlMPC_rd4, controlMPC_Lbyrd4);
-controlMPC_LA_DIAG_CHOL_ONELOOP_LBUB_2_2_2(params->H6, controlMPC_llbbyslb5, controlMPC_lbIdx5, controlMPC_lubbysub5, controlMPC_ubIdx5, controlMPC_Phi5);
-controlMPC_LA_DIAG_MATRIXFORWARDSUB_2_2(controlMPC_Phi5, controlMPC_C0, controlMPC_V5);
-controlMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_2(controlMPC_Phi5, controlMPC_D1, controlMPC_W5);
-controlMPC_LA_DENSE_DIAGZERO_MMTM_2_2_2(controlMPC_W5, controlMPC_V5, controlMPC_Ysd5);
-controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi5, controlMPC_rd5, controlMPC_Lbyrd5);
-controlMPC_LA_DIAG_CHOL_ONELOOP_LBUB_2_2_2(params->H7, controlMPC_llbbyslb6, controlMPC_lbIdx6, controlMPC_lubbysub6, controlMPC_ubIdx6, controlMPC_Phi6);
-controlMPC_LA_DIAG_MATRIXFORWARDSUB_2_2(controlMPC_Phi6, controlMPC_C0, controlMPC_V6);
-controlMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_2(controlMPC_Phi6, controlMPC_D1, controlMPC_W6);
-controlMPC_LA_DENSE_DIAGZERO_MMTM_2_2_2(controlMPC_W6, controlMPC_V6, controlMPC_Ysd6);
-controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi6, controlMPC_rd6, controlMPC_Lbyrd6);
-controlMPC_LA_DIAG_CHOL_ONELOOP_LBUB_2_2_2(params->H8, controlMPC_llbbyslb7, controlMPC_lbIdx7, controlMPC_lubbysub7, controlMPC_ubIdx7, controlMPC_Phi7);
-controlMPC_LA_DIAG_MATRIXFORWARDSUB_2_2(controlMPC_Phi7, controlMPC_C0, controlMPC_V7);
-controlMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_2(controlMPC_Phi7, controlMPC_D1, controlMPC_W7);
-controlMPC_LA_DENSE_DIAGZERO_MMTM_2_2_2(controlMPC_W7, controlMPC_V7, controlMPC_Ysd7);
-controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi7, controlMPC_rd7, controlMPC_Lbyrd7);
-controlMPC_LA_DIAG_CHOL_ONELOOP_LBUB_2_2_2(params->H9, controlMPC_llbbyslb8, controlMPC_lbIdx8, controlMPC_lubbysub8, controlMPC_ubIdx8, controlMPC_Phi8);
-controlMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_2(controlMPC_Phi8, controlMPC_D1, controlMPC_W8);
-controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi8, controlMPC_rd8, controlMPC_Lbyrd8);
-controlMPC_LA_DENSE_DIAGZERO_MMT2_2_2_2(controlMPC_V0, controlMPC_W1, controlMPC_Yd0);
-controlMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_2_2(controlMPC_V0, controlMPC_Lbyrd0, controlMPC_W1, controlMPC_Lbyrd1, controlMPC_re0, controlMPC_beta0);
-controlMPC_LA_DENSE_DIAGZERO_MMT2_2_2_2(controlMPC_V1, controlMPC_W2, controlMPC_Yd1);
-controlMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_2_2(controlMPC_V1, controlMPC_Lbyrd1, controlMPC_W2, controlMPC_Lbyrd2, controlMPC_re1, controlMPC_beta1);
-controlMPC_LA_DENSE_DIAGZERO_MMT2_2_2_2(controlMPC_V2, controlMPC_W3, controlMPC_Yd2);
-controlMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_2_2(controlMPC_V2, controlMPC_Lbyrd2, controlMPC_W3, controlMPC_Lbyrd3, controlMPC_re2, controlMPC_beta2);
-controlMPC_LA_DENSE_DIAGZERO_MMT2_2_2_2(controlMPC_V3, controlMPC_W4, controlMPC_Yd3);
-controlMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_2_2(controlMPC_V3, controlMPC_Lbyrd3, controlMPC_W4, controlMPC_Lbyrd4, controlMPC_re3, controlMPC_beta3);
-controlMPC_LA_DENSE_DIAGZERO_MMT2_2_2_2(controlMPC_V4, controlMPC_W5, controlMPC_Yd4);
-controlMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_2_2(controlMPC_V4, controlMPC_Lbyrd4, controlMPC_W5, controlMPC_Lbyrd5, controlMPC_re4, controlMPC_beta4);
-controlMPC_LA_DENSE_DIAGZERO_MMT2_2_2_2(controlMPC_V5, controlMPC_W6, controlMPC_Yd5);
-controlMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_2_2(controlMPC_V5, controlMPC_Lbyrd5, controlMPC_W6, controlMPC_Lbyrd6, controlMPC_re5, controlMPC_beta5);
-controlMPC_LA_DENSE_DIAGZERO_MMT2_2_2_2(controlMPC_V6, controlMPC_W7, controlMPC_Yd6);
-controlMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_2_2(controlMPC_V6, controlMPC_Lbyrd6, controlMPC_W7, controlMPC_Lbyrd7, controlMPC_re6, controlMPC_beta6);
-controlMPC_LA_DENSE_DIAGZERO_MMT2_2_2_2(controlMPC_V7, controlMPC_W8, controlMPC_Yd7);
-controlMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_2_2(controlMPC_V7, controlMPC_Lbyrd7, controlMPC_W8, controlMPC_Lbyrd8, controlMPC_re7, controlMPC_beta7);
-controlMPC_LA_DENSE_CHOL_2(controlMPC_Yd0, controlMPC_Ld0);
-controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld0, controlMPC_beta0, controlMPC_yy0);
-controlMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(controlMPC_Ld0, controlMPC_Ysd1, controlMPC_Lsd1);
-controlMPC_LA_DENSE_MMTSUB_2_2(controlMPC_Lsd1, controlMPC_Yd1);
-controlMPC_LA_DENSE_CHOL_2(controlMPC_Yd1, controlMPC_Ld1);
-controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd1, controlMPC_yy0, controlMPC_beta1, controlMPC_bmy1);
-controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld1, controlMPC_bmy1, controlMPC_yy1);
-controlMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(controlMPC_Ld1, controlMPC_Ysd2, controlMPC_Lsd2);
-controlMPC_LA_DENSE_MMTSUB_2_2(controlMPC_Lsd2, controlMPC_Yd2);
-controlMPC_LA_DENSE_CHOL_2(controlMPC_Yd2, controlMPC_Ld2);
-controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd2, controlMPC_yy1, controlMPC_beta2, controlMPC_bmy2);
-controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld2, controlMPC_bmy2, controlMPC_yy2);
-controlMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(controlMPC_Ld2, controlMPC_Ysd3, controlMPC_Lsd3);
-controlMPC_LA_DENSE_MMTSUB_2_2(controlMPC_Lsd3, controlMPC_Yd3);
-controlMPC_LA_DENSE_CHOL_2(controlMPC_Yd3, controlMPC_Ld3);
-controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd3, controlMPC_yy2, controlMPC_beta3, controlMPC_bmy3);
-controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld3, controlMPC_bmy3, controlMPC_yy3);
-controlMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(controlMPC_Ld3, controlMPC_Ysd4, controlMPC_Lsd4);
-controlMPC_LA_DENSE_MMTSUB_2_2(controlMPC_Lsd4, controlMPC_Yd4);
-controlMPC_LA_DENSE_CHOL_2(controlMPC_Yd4, controlMPC_Ld4);
-controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd4, controlMPC_yy3, controlMPC_beta4, controlMPC_bmy4);
-controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld4, controlMPC_bmy4, controlMPC_yy4);
-controlMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(controlMPC_Ld4, controlMPC_Ysd5, controlMPC_Lsd5);
-controlMPC_LA_DENSE_MMTSUB_2_2(controlMPC_Lsd5, controlMPC_Yd5);
-controlMPC_LA_DENSE_CHOL_2(controlMPC_Yd5, controlMPC_Ld5);
-controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd5, controlMPC_yy4, controlMPC_beta5, controlMPC_bmy5);
-controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld5, controlMPC_bmy5, controlMPC_yy5);
-controlMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(controlMPC_Ld5, controlMPC_Ysd6, controlMPC_Lsd6);
-controlMPC_LA_DENSE_MMTSUB_2_2(controlMPC_Lsd6, controlMPC_Yd6);
-controlMPC_LA_DENSE_CHOL_2(controlMPC_Yd6, controlMPC_Ld6);
-controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd6, controlMPC_yy5, controlMPC_beta6, controlMPC_bmy6);
-controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld6, controlMPC_bmy6, controlMPC_yy6);
-controlMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(controlMPC_Ld6, controlMPC_Ysd7, controlMPC_Lsd7);
-controlMPC_LA_DENSE_MMTSUB_2_2(controlMPC_Lsd7, controlMPC_Yd7);
-controlMPC_LA_DENSE_CHOL_2(controlMPC_Yd7, controlMPC_Ld7);
-controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd7, controlMPC_yy6, controlMPC_beta7, controlMPC_bmy7);
-controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld7, controlMPC_bmy7, controlMPC_yy7);
-controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld7, controlMPC_yy7, controlMPC_dvaff7);
-controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd7, controlMPC_dvaff7, controlMPC_yy6, controlMPC_bmy6);
-controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld6, controlMPC_bmy6, controlMPC_dvaff6);
-controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd6, controlMPC_dvaff6, controlMPC_yy5, controlMPC_bmy5);
-controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld5, controlMPC_bmy5, controlMPC_dvaff5);
-controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd5, controlMPC_dvaff5, controlMPC_yy4, controlMPC_bmy4);
-controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld4, controlMPC_bmy4, controlMPC_dvaff4);
-controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd4, controlMPC_dvaff4, controlMPC_yy3, controlMPC_bmy3);
-controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld3, controlMPC_bmy3, controlMPC_dvaff3);
-controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd3, controlMPC_dvaff3, controlMPC_yy2, controlMPC_bmy2);
-controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld2, controlMPC_bmy2, controlMPC_dvaff2);
-controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd2, controlMPC_dvaff2, controlMPC_yy1, controlMPC_bmy1);
-controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld1, controlMPC_bmy1, controlMPC_dvaff1);
-controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd1, controlMPC_dvaff1, controlMPC_yy0, controlMPC_bmy0);
-controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld0, controlMPC_bmy0, controlMPC_dvaff0);
-controlMPC_LA_DENSE_MTVM_2_2(controlMPC_C0, controlMPC_dvaff0, controlMPC_grad_eq0);
-controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C0, controlMPC_dvaff1, controlMPC_D1, controlMPC_dvaff0, controlMPC_grad_eq1);
-controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C0, controlMPC_dvaff2, controlMPC_D1, controlMPC_dvaff1, controlMPC_grad_eq2);
-controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C0, controlMPC_dvaff3, controlMPC_D1, controlMPC_dvaff2, controlMPC_grad_eq3);
-controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C0, controlMPC_dvaff4, controlMPC_D1, controlMPC_dvaff3, controlMPC_grad_eq4);
-controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C0, controlMPC_dvaff5, controlMPC_D1, controlMPC_dvaff4, controlMPC_grad_eq5);
-controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C0, controlMPC_dvaff6, controlMPC_D1, controlMPC_dvaff5, controlMPC_grad_eq6);
-controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C0, controlMPC_dvaff7, controlMPC_D1, controlMPC_dvaff6, controlMPC_grad_eq7);
-controlMPC_LA_DIAGZERO_MTVM_2_2(controlMPC_D1, controlMPC_dvaff7, controlMPC_grad_eq8);
-controlMPC_LA_VSUB2_18(controlMPC_rd, controlMPC_grad_eq, controlMPC_rd);
-controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi0, controlMPC_rd0, controlMPC_dzaff0);
-controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi1, controlMPC_rd1, controlMPC_dzaff1);
-controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi2, controlMPC_rd2, controlMPC_dzaff2);
-controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi3, controlMPC_rd3, controlMPC_dzaff3);
-controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi4, controlMPC_rd4, controlMPC_dzaff4);
-controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi5, controlMPC_rd5, controlMPC_dzaff5);
-controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi6, controlMPC_rd6, controlMPC_dzaff6);
-controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi7, controlMPC_rd7, controlMPC_dzaff7);
-controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi8, controlMPC_rd8, controlMPC_dzaff8);
-controlMPC_LA_VSUB_INDEXED_2(controlMPC_dzaff0, controlMPC_lbIdx0, controlMPC_rilb0, controlMPC_dslbaff0);
-controlMPC_LA_VSUB3_2(controlMPC_llbbyslb0, controlMPC_dslbaff0, controlMPC_llb0, controlMPC_dllbaff0);
-controlMPC_LA_VSUB2_INDEXED_2(controlMPC_riub0, controlMPC_dzaff0, controlMPC_ubIdx0, controlMPC_dsubaff0);
-controlMPC_LA_VSUB3_2(controlMPC_lubbysub0, controlMPC_dsubaff0, controlMPC_lub0, controlMPC_dlubaff0);
-controlMPC_LA_VSUB_INDEXED_2(controlMPC_dzaff1, controlMPC_lbIdx1, controlMPC_rilb1, controlMPC_dslbaff1);
-controlMPC_LA_VSUB3_2(controlMPC_llbbyslb1, controlMPC_dslbaff1, controlMPC_llb1, controlMPC_dllbaff1);
-controlMPC_LA_VSUB2_INDEXED_2(controlMPC_riub1, controlMPC_dzaff1, controlMPC_ubIdx1, controlMPC_dsubaff1);
-controlMPC_LA_VSUB3_2(controlMPC_lubbysub1, controlMPC_dsubaff1, controlMPC_lub1, controlMPC_dlubaff1);
-controlMPC_LA_VSUB_INDEXED_2(controlMPC_dzaff2, controlMPC_lbIdx2, controlMPC_rilb2, controlMPC_dslbaff2);
-controlMPC_LA_VSUB3_2(controlMPC_llbbyslb2, controlMPC_dslbaff2, controlMPC_llb2, controlMPC_dllbaff2);
-controlMPC_LA_VSUB2_INDEXED_2(controlMPC_riub2, controlMPC_dzaff2, controlMPC_ubIdx2, controlMPC_dsubaff2);
-controlMPC_LA_VSUB3_2(controlMPC_lubbysub2, controlMPC_dsubaff2, controlMPC_lub2, controlMPC_dlubaff2);
-controlMPC_LA_VSUB_INDEXED_2(controlMPC_dzaff3, controlMPC_lbIdx3, controlMPC_rilb3, controlMPC_dslbaff3);
-controlMPC_LA_VSUB3_2(controlMPC_llbbyslb3, controlMPC_dslbaff3, controlMPC_llb3, controlMPC_dllbaff3);
-controlMPC_LA_VSUB2_INDEXED_2(controlMPC_riub3, controlMPC_dzaff3, controlMPC_ubIdx3, controlMPC_dsubaff3);
-controlMPC_LA_VSUB3_2(controlMPC_lubbysub3, controlMPC_dsubaff3, controlMPC_lub3, controlMPC_dlubaff3);
-controlMPC_LA_VSUB_INDEXED_2(controlMPC_dzaff4, controlMPC_lbIdx4, controlMPC_rilb4, controlMPC_dslbaff4);
-controlMPC_LA_VSUB3_2(controlMPC_llbbyslb4, controlMPC_dslbaff4, controlMPC_llb4, controlMPC_dllbaff4);
-controlMPC_LA_VSUB2_INDEXED_2(controlMPC_riub4, controlMPC_dzaff4, controlMPC_ubIdx4, controlMPC_dsubaff4);
-controlMPC_LA_VSUB3_2(controlMPC_lubbysub4, controlMPC_dsubaff4, controlMPC_lub4, controlMPC_dlubaff4);
-controlMPC_LA_VSUB_INDEXED_2(controlMPC_dzaff5, controlMPC_lbIdx5, controlMPC_rilb5, controlMPC_dslbaff5);
-controlMPC_LA_VSUB3_2(controlMPC_llbbyslb5, controlMPC_dslbaff5, controlMPC_llb5, controlMPC_dllbaff5);
-controlMPC_LA_VSUB2_INDEXED_2(controlMPC_riub5, controlMPC_dzaff5, controlMPC_ubIdx5, controlMPC_dsubaff5);
-controlMPC_LA_VSUB3_2(controlMPC_lubbysub5, controlMPC_dsubaff5, controlMPC_lub5, controlMPC_dlubaff5);
-controlMPC_LA_VSUB_INDEXED_2(controlMPC_dzaff6, controlMPC_lbIdx6, controlMPC_rilb6, controlMPC_dslbaff6);
-controlMPC_LA_VSUB3_2(controlMPC_llbbyslb6, controlMPC_dslbaff6, controlMPC_llb6, controlMPC_dllbaff6);
-controlMPC_LA_VSUB2_INDEXED_2(controlMPC_riub6, controlMPC_dzaff6, controlMPC_ubIdx6, controlMPC_dsubaff6);
-controlMPC_LA_VSUB3_2(controlMPC_lubbysub6, controlMPC_dsubaff6, controlMPC_lub6, controlMPC_dlubaff6);
-controlMPC_LA_VSUB_INDEXED_2(controlMPC_dzaff7, controlMPC_lbIdx7, controlMPC_rilb7, controlMPC_dslbaff7);
-controlMPC_LA_VSUB3_2(controlMPC_llbbyslb7, controlMPC_dslbaff7, controlMPC_llb7, controlMPC_dllbaff7);
-controlMPC_LA_VSUB2_INDEXED_2(controlMPC_riub7, controlMPC_dzaff7, controlMPC_ubIdx7, controlMPC_dsubaff7);
-controlMPC_LA_VSUB3_2(controlMPC_lubbysub7, controlMPC_dsubaff7, controlMPC_lub7, controlMPC_dlubaff7);
-controlMPC_LA_VSUB_INDEXED_2(controlMPC_dzaff8, controlMPC_lbIdx8, controlMPC_rilb8, controlMPC_dslbaff8);
-controlMPC_LA_VSUB3_2(controlMPC_llbbyslb8, controlMPC_dslbaff8, controlMPC_llb8, controlMPC_dllbaff8);
-controlMPC_LA_VSUB2_INDEXED_2(controlMPC_riub8, controlMPC_dzaff8, controlMPC_ubIdx8, controlMPC_dsubaff8);
-controlMPC_LA_VSUB3_2(controlMPC_lubbysub8, controlMPC_dsubaff8, controlMPC_lub8, controlMPC_dlubaff8);
+controlMPC_LA_VVADD3_28(controlMPC_grad_cost, controlMPC_grad_eq, controlMPC_grad_ineq, controlMPC_rd);
+controlMPC_LA_DIAG_CHOL_ONELOOP_LBUB_2_2_2(params->H1, controlMPC_llbbyslb00, controlMPC_lbIdx00, controlMPC_lubbysub00, controlMPC_ubIdx00, controlMPC_Phi00);
+controlMPC_LA_DIAG_MATRIXFORWARDSUB_2_2(controlMPC_Phi00, controlMPC_C00, controlMPC_V00);
+controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi00, controlMPC_rd00, controlMPC_Lbyrd00);
+controlMPC_LA_DIAG_CHOL_ONELOOP_LBUB_2_2_2(params->H2, controlMPC_llbbyslb01, controlMPC_lbIdx01, controlMPC_lubbysub01, controlMPC_ubIdx01, controlMPC_Phi01);
+controlMPC_LA_DIAG_MATRIXFORWARDSUB_2_2(controlMPC_Phi01, controlMPC_C00, controlMPC_V01);
+controlMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_2(controlMPC_Phi01, controlMPC_D01, controlMPC_W01);
+controlMPC_LA_DENSE_DIAGZERO_MMTM_2_2_2(controlMPC_W01, controlMPC_V01, controlMPC_Ysd01);
+controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi01, controlMPC_rd01, controlMPC_Lbyrd01);
+controlMPC_LA_DIAG_CHOL_ONELOOP_LBUB_2_2_2(params->H3, controlMPC_llbbyslb02, controlMPC_lbIdx02, controlMPC_lubbysub02, controlMPC_ubIdx02, controlMPC_Phi02);
+controlMPC_LA_DIAG_MATRIXFORWARDSUB_2_2(controlMPC_Phi02, controlMPC_C00, controlMPC_V02);
+controlMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_2(controlMPC_Phi02, controlMPC_D01, controlMPC_W02);
+controlMPC_LA_DENSE_DIAGZERO_MMTM_2_2_2(controlMPC_W02, controlMPC_V02, controlMPC_Ysd02);
+controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi02, controlMPC_rd02, controlMPC_Lbyrd02);
+controlMPC_LA_DIAG_CHOL_ONELOOP_LBUB_2_2_2(params->H4, controlMPC_llbbyslb03, controlMPC_lbIdx03, controlMPC_lubbysub03, controlMPC_ubIdx03, controlMPC_Phi03);
+controlMPC_LA_DIAG_MATRIXFORWARDSUB_2_2(controlMPC_Phi03, controlMPC_C00, controlMPC_V03);
+controlMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_2(controlMPC_Phi03, controlMPC_D01, controlMPC_W03);
+controlMPC_LA_DENSE_DIAGZERO_MMTM_2_2_2(controlMPC_W03, controlMPC_V03, controlMPC_Ysd03);
+controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi03, controlMPC_rd03, controlMPC_Lbyrd03);
+controlMPC_LA_DIAG_CHOL_ONELOOP_LBUB_2_2_2(params->H5, controlMPC_llbbyslb04, controlMPC_lbIdx04, controlMPC_lubbysub04, controlMPC_ubIdx04, controlMPC_Phi04);
+controlMPC_LA_DIAG_MATRIXFORWARDSUB_2_2(controlMPC_Phi04, controlMPC_C00, controlMPC_V04);
+controlMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_2(controlMPC_Phi04, controlMPC_D01, controlMPC_W04);
+controlMPC_LA_DENSE_DIAGZERO_MMTM_2_2_2(controlMPC_W04, controlMPC_V04, controlMPC_Ysd04);
+controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi04, controlMPC_rd04, controlMPC_Lbyrd04);
+controlMPC_LA_DIAG_CHOL_ONELOOP_LBUB_2_2_2(params->H6, controlMPC_llbbyslb05, controlMPC_lbIdx05, controlMPC_lubbysub05, controlMPC_ubIdx05, controlMPC_Phi05);
+controlMPC_LA_DIAG_MATRIXFORWARDSUB_2_2(controlMPC_Phi05, controlMPC_C00, controlMPC_V05);
+controlMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_2(controlMPC_Phi05, controlMPC_D01, controlMPC_W05);
+controlMPC_LA_DENSE_DIAGZERO_MMTM_2_2_2(controlMPC_W05, controlMPC_V05, controlMPC_Ysd05);
+controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi05, controlMPC_rd05, controlMPC_Lbyrd05);
+controlMPC_LA_DIAG_CHOL_ONELOOP_LBUB_2_2_2(params->H7, controlMPC_llbbyslb06, controlMPC_lbIdx06, controlMPC_lubbysub06, controlMPC_ubIdx06, controlMPC_Phi06);
+controlMPC_LA_DIAG_MATRIXFORWARDSUB_2_2(controlMPC_Phi06, controlMPC_C00, controlMPC_V06);
+controlMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_2(controlMPC_Phi06, controlMPC_D01, controlMPC_W06);
+controlMPC_LA_DENSE_DIAGZERO_MMTM_2_2_2(controlMPC_W06, controlMPC_V06, controlMPC_Ysd06);
+controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi06, controlMPC_rd06, controlMPC_Lbyrd06);
+controlMPC_LA_DIAG_CHOL_ONELOOP_LBUB_2_2_2(params->H8, controlMPC_llbbyslb07, controlMPC_lbIdx07, controlMPC_lubbysub07, controlMPC_ubIdx07, controlMPC_Phi07);
+controlMPC_LA_DIAG_MATRIXFORWARDSUB_2_2(controlMPC_Phi07, controlMPC_C00, controlMPC_V07);
+controlMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_2(controlMPC_Phi07, controlMPC_D01, controlMPC_W07);
+controlMPC_LA_DENSE_DIAGZERO_MMTM_2_2_2(controlMPC_W07, controlMPC_V07, controlMPC_Ysd07);
+controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi07, controlMPC_rd07, controlMPC_Lbyrd07);
+controlMPC_LA_DIAG_CHOL_ONELOOP_LBUB_2_2_2(params->H9, controlMPC_llbbyslb08, controlMPC_lbIdx08, controlMPC_lubbysub08, controlMPC_ubIdx08, controlMPC_Phi08);
+controlMPC_LA_DIAG_MATRIXFORWARDSUB_2_2(controlMPC_Phi08, controlMPC_C00, controlMPC_V08);
+controlMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_2(controlMPC_Phi08, controlMPC_D01, controlMPC_W08);
+controlMPC_LA_DENSE_DIAGZERO_MMTM_2_2_2(controlMPC_W08, controlMPC_V08, controlMPC_Ysd08);
+controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi08, controlMPC_rd08, controlMPC_Lbyrd08);
+controlMPC_LA_DIAG_CHOL_ONELOOP_LBUB_2_2_2(params->H10, controlMPC_llbbyslb09, controlMPC_lbIdx09, controlMPC_lubbysub09, controlMPC_ubIdx09, controlMPC_Phi09);
+controlMPC_LA_DIAG_MATRIXFORWARDSUB_2_2(controlMPC_Phi09, controlMPC_C00, controlMPC_V09);
+controlMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_2(controlMPC_Phi09, controlMPC_D01, controlMPC_W09);
+controlMPC_LA_DENSE_DIAGZERO_MMTM_2_2_2(controlMPC_W09, controlMPC_V09, controlMPC_Ysd09);
+controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi09, controlMPC_rd09, controlMPC_Lbyrd09);
+controlMPC_LA_DIAG_CHOL_ONELOOP_LBUB_2_2_2(params->H11, controlMPC_llbbyslb10, controlMPC_lbIdx10, controlMPC_lubbysub10, controlMPC_ubIdx10, controlMPC_Phi10);
+controlMPC_LA_DIAG_MATRIXFORWARDSUB_2_2(controlMPC_Phi10, controlMPC_C00, controlMPC_V10);
+controlMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_2(controlMPC_Phi10, controlMPC_D01, controlMPC_W10);
+controlMPC_LA_DENSE_DIAGZERO_MMTM_2_2_2(controlMPC_W10, controlMPC_V10, controlMPC_Ysd10);
+controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi10, controlMPC_rd10, controlMPC_Lbyrd10);
+controlMPC_LA_DIAG_CHOL_ONELOOP_LBUB_2_2_2(params->H12, controlMPC_llbbyslb11, controlMPC_lbIdx11, controlMPC_lubbysub11, controlMPC_ubIdx11, controlMPC_Phi11);
+controlMPC_LA_DIAG_MATRIXFORWARDSUB_2_2(controlMPC_Phi11, controlMPC_C00, controlMPC_V11);
+controlMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_2(controlMPC_Phi11, controlMPC_D01, controlMPC_W11);
+controlMPC_LA_DENSE_DIAGZERO_MMTM_2_2_2(controlMPC_W11, controlMPC_V11, controlMPC_Ysd11);
+controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi11, controlMPC_rd11, controlMPC_Lbyrd11);
+controlMPC_LA_DIAG_CHOL_ONELOOP_LBUB_2_2_2(params->H13, controlMPC_llbbyslb12, controlMPC_lbIdx12, controlMPC_lubbysub12, controlMPC_ubIdx12, controlMPC_Phi12);
+controlMPC_LA_DIAG_MATRIXFORWARDSUB_2_2(controlMPC_Phi12, controlMPC_C00, controlMPC_V12);
+controlMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_2(controlMPC_Phi12, controlMPC_D01, controlMPC_W12);
+controlMPC_LA_DENSE_DIAGZERO_MMTM_2_2_2(controlMPC_W12, controlMPC_V12, controlMPC_Ysd12);
+controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi12, controlMPC_rd12, controlMPC_Lbyrd12);
+controlMPC_LA_DIAG_CHOL_ONELOOP_LBUB_2_2_2(params->H14, controlMPC_llbbyslb13, controlMPC_lbIdx13, controlMPC_lubbysub13, controlMPC_ubIdx13, controlMPC_Phi13);
+controlMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_2_2(controlMPC_Phi13, controlMPC_D01, controlMPC_W13);
+controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi13, controlMPC_rd13, controlMPC_Lbyrd13);
+controlMPC_LA_DENSE_DIAGZERO_MMT2_2_2_2(controlMPC_V00, controlMPC_W01, controlMPC_Yd00);
+controlMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_2_2(controlMPC_V00, controlMPC_Lbyrd00, controlMPC_W01, controlMPC_Lbyrd01, controlMPC_re00, controlMPC_beta00);
+controlMPC_LA_DENSE_DIAGZERO_MMT2_2_2_2(controlMPC_V01, controlMPC_W02, controlMPC_Yd01);
+controlMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_2_2(controlMPC_V01, controlMPC_Lbyrd01, controlMPC_W02, controlMPC_Lbyrd02, controlMPC_re01, controlMPC_beta01);
+controlMPC_LA_DENSE_DIAGZERO_MMT2_2_2_2(controlMPC_V02, controlMPC_W03, controlMPC_Yd02);
+controlMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_2_2(controlMPC_V02, controlMPC_Lbyrd02, controlMPC_W03, controlMPC_Lbyrd03, controlMPC_re02, controlMPC_beta02);
+controlMPC_LA_DENSE_DIAGZERO_MMT2_2_2_2(controlMPC_V03, controlMPC_W04, controlMPC_Yd03);
+controlMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_2_2(controlMPC_V03, controlMPC_Lbyrd03, controlMPC_W04, controlMPC_Lbyrd04, controlMPC_re03, controlMPC_beta03);
+controlMPC_LA_DENSE_DIAGZERO_MMT2_2_2_2(controlMPC_V04, controlMPC_W05, controlMPC_Yd04);
+controlMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_2_2(controlMPC_V04, controlMPC_Lbyrd04, controlMPC_W05, controlMPC_Lbyrd05, controlMPC_re04, controlMPC_beta04);
+controlMPC_LA_DENSE_DIAGZERO_MMT2_2_2_2(controlMPC_V05, controlMPC_W06, controlMPC_Yd05);
+controlMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_2_2(controlMPC_V05, controlMPC_Lbyrd05, controlMPC_W06, controlMPC_Lbyrd06, controlMPC_re05, controlMPC_beta05);
+controlMPC_LA_DENSE_DIAGZERO_MMT2_2_2_2(controlMPC_V06, controlMPC_W07, controlMPC_Yd06);
+controlMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_2_2(controlMPC_V06, controlMPC_Lbyrd06, controlMPC_W07, controlMPC_Lbyrd07, controlMPC_re06, controlMPC_beta06);
+controlMPC_LA_DENSE_DIAGZERO_MMT2_2_2_2(controlMPC_V07, controlMPC_W08, controlMPC_Yd07);
+controlMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_2_2(controlMPC_V07, controlMPC_Lbyrd07, controlMPC_W08, controlMPC_Lbyrd08, controlMPC_re07, controlMPC_beta07);
+controlMPC_LA_DENSE_DIAGZERO_MMT2_2_2_2(controlMPC_V08, controlMPC_W09, controlMPC_Yd08);
+controlMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_2_2(controlMPC_V08, controlMPC_Lbyrd08, controlMPC_W09, controlMPC_Lbyrd09, controlMPC_re08, controlMPC_beta08);
+controlMPC_LA_DENSE_DIAGZERO_MMT2_2_2_2(controlMPC_V09, controlMPC_W10, controlMPC_Yd09);
+controlMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_2_2(controlMPC_V09, controlMPC_Lbyrd09, controlMPC_W10, controlMPC_Lbyrd10, controlMPC_re09, controlMPC_beta09);
+controlMPC_LA_DENSE_DIAGZERO_MMT2_2_2_2(controlMPC_V10, controlMPC_W11, controlMPC_Yd10);
+controlMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_2_2(controlMPC_V10, controlMPC_Lbyrd10, controlMPC_W11, controlMPC_Lbyrd11, controlMPC_re10, controlMPC_beta10);
+controlMPC_LA_DENSE_DIAGZERO_MMT2_2_2_2(controlMPC_V11, controlMPC_W12, controlMPC_Yd11);
+controlMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_2_2(controlMPC_V11, controlMPC_Lbyrd11, controlMPC_W12, controlMPC_Lbyrd12, controlMPC_re11, controlMPC_beta11);
+controlMPC_LA_DENSE_DIAGZERO_MMT2_2_2_2(controlMPC_V12, controlMPC_W13, controlMPC_Yd12);
+controlMPC_LA_DENSE_DIAGZERO_2MVMSUB2_2_2_2(controlMPC_V12, controlMPC_Lbyrd12, controlMPC_W13, controlMPC_Lbyrd13, controlMPC_re12, controlMPC_beta12);
+controlMPC_LA_DENSE_CHOL_2(controlMPC_Yd00, controlMPC_Ld00);
+controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld00, controlMPC_beta00, controlMPC_yy00);
+controlMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(controlMPC_Ld00, controlMPC_Ysd01, controlMPC_Lsd01);
+controlMPC_LA_DENSE_MMTSUB_2_2(controlMPC_Lsd01, controlMPC_Yd01);
+controlMPC_LA_DENSE_CHOL_2(controlMPC_Yd01, controlMPC_Ld01);
+controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd01, controlMPC_yy00, controlMPC_beta01, controlMPC_bmy01);
+controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld01, controlMPC_bmy01, controlMPC_yy01);
+controlMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(controlMPC_Ld01, controlMPC_Ysd02, controlMPC_Lsd02);
+controlMPC_LA_DENSE_MMTSUB_2_2(controlMPC_Lsd02, controlMPC_Yd02);
+controlMPC_LA_DENSE_CHOL_2(controlMPC_Yd02, controlMPC_Ld02);
+controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd02, controlMPC_yy01, controlMPC_beta02, controlMPC_bmy02);
+controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld02, controlMPC_bmy02, controlMPC_yy02);
+controlMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(controlMPC_Ld02, controlMPC_Ysd03, controlMPC_Lsd03);
+controlMPC_LA_DENSE_MMTSUB_2_2(controlMPC_Lsd03, controlMPC_Yd03);
+controlMPC_LA_DENSE_CHOL_2(controlMPC_Yd03, controlMPC_Ld03);
+controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd03, controlMPC_yy02, controlMPC_beta03, controlMPC_bmy03);
+controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld03, controlMPC_bmy03, controlMPC_yy03);
+controlMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(controlMPC_Ld03, controlMPC_Ysd04, controlMPC_Lsd04);
+controlMPC_LA_DENSE_MMTSUB_2_2(controlMPC_Lsd04, controlMPC_Yd04);
+controlMPC_LA_DENSE_CHOL_2(controlMPC_Yd04, controlMPC_Ld04);
+controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd04, controlMPC_yy03, controlMPC_beta04, controlMPC_bmy04);
+controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld04, controlMPC_bmy04, controlMPC_yy04);
+controlMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(controlMPC_Ld04, controlMPC_Ysd05, controlMPC_Lsd05);
+controlMPC_LA_DENSE_MMTSUB_2_2(controlMPC_Lsd05, controlMPC_Yd05);
+controlMPC_LA_DENSE_CHOL_2(controlMPC_Yd05, controlMPC_Ld05);
+controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd05, controlMPC_yy04, controlMPC_beta05, controlMPC_bmy05);
+controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld05, controlMPC_bmy05, controlMPC_yy05);
+controlMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(controlMPC_Ld05, controlMPC_Ysd06, controlMPC_Lsd06);
+controlMPC_LA_DENSE_MMTSUB_2_2(controlMPC_Lsd06, controlMPC_Yd06);
+controlMPC_LA_DENSE_CHOL_2(controlMPC_Yd06, controlMPC_Ld06);
+controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd06, controlMPC_yy05, controlMPC_beta06, controlMPC_bmy06);
+controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld06, controlMPC_bmy06, controlMPC_yy06);
+controlMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(controlMPC_Ld06, controlMPC_Ysd07, controlMPC_Lsd07);
+controlMPC_LA_DENSE_MMTSUB_2_2(controlMPC_Lsd07, controlMPC_Yd07);
+controlMPC_LA_DENSE_CHOL_2(controlMPC_Yd07, controlMPC_Ld07);
+controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd07, controlMPC_yy06, controlMPC_beta07, controlMPC_bmy07);
+controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld07, controlMPC_bmy07, controlMPC_yy07);
+controlMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(controlMPC_Ld07, controlMPC_Ysd08, controlMPC_Lsd08);
+controlMPC_LA_DENSE_MMTSUB_2_2(controlMPC_Lsd08, controlMPC_Yd08);
+controlMPC_LA_DENSE_CHOL_2(controlMPC_Yd08, controlMPC_Ld08);
+controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd08, controlMPC_yy07, controlMPC_beta08, controlMPC_bmy08);
+controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld08, controlMPC_bmy08, controlMPC_yy08);
+controlMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(controlMPC_Ld08, controlMPC_Ysd09, controlMPC_Lsd09);
+controlMPC_LA_DENSE_MMTSUB_2_2(controlMPC_Lsd09, controlMPC_Yd09);
+controlMPC_LA_DENSE_CHOL_2(controlMPC_Yd09, controlMPC_Ld09);
+controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd09, controlMPC_yy08, controlMPC_beta09, controlMPC_bmy09);
+controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld09, controlMPC_bmy09, controlMPC_yy09);
+controlMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(controlMPC_Ld09, controlMPC_Ysd10, controlMPC_Lsd10);
+controlMPC_LA_DENSE_MMTSUB_2_2(controlMPC_Lsd10, controlMPC_Yd10);
+controlMPC_LA_DENSE_CHOL_2(controlMPC_Yd10, controlMPC_Ld10);
+controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd10, controlMPC_yy09, controlMPC_beta10, controlMPC_bmy10);
+controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld10, controlMPC_bmy10, controlMPC_yy10);
+controlMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(controlMPC_Ld10, controlMPC_Ysd11, controlMPC_Lsd11);
+controlMPC_LA_DENSE_MMTSUB_2_2(controlMPC_Lsd11, controlMPC_Yd11);
+controlMPC_LA_DENSE_CHOL_2(controlMPC_Yd11, controlMPC_Ld11);
+controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd11, controlMPC_yy10, controlMPC_beta11, controlMPC_bmy11);
+controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld11, controlMPC_bmy11, controlMPC_yy11);
+controlMPC_LA_DENSE_MATRIXTFORWARDSUB_2_2(controlMPC_Ld11, controlMPC_Ysd12, controlMPC_Lsd12);
+controlMPC_LA_DENSE_MMTSUB_2_2(controlMPC_Lsd12, controlMPC_Yd12);
+controlMPC_LA_DENSE_CHOL_2(controlMPC_Yd12, controlMPC_Ld12);
+controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd12, controlMPC_yy11, controlMPC_beta12, controlMPC_bmy12);
+controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld12, controlMPC_bmy12, controlMPC_yy12);
+controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld12, controlMPC_yy12, controlMPC_dvaff12);
+controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd12, controlMPC_dvaff12, controlMPC_yy11, controlMPC_bmy11);
+controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld11, controlMPC_bmy11, controlMPC_dvaff11);
+controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd11, controlMPC_dvaff11, controlMPC_yy10, controlMPC_bmy10);
+controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld10, controlMPC_bmy10, controlMPC_dvaff10);
+controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd10, controlMPC_dvaff10, controlMPC_yy09, controlMPC_bmy09);
+controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld09, controlMPC_bmy09, controlMPC_dvaff09);
+controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd09, controlMPC_dvaff09, controlMPC_yy08, controlMPC_bmy08);
+controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld08, controlMPC_bmy08, controlMPC_dvaff08);
+controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd08, controlMPC_dvaff08, controlMPC_yy07, controlMPC_bmy07);
+controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld07, controlMPC_bmy07, controlMPC_dvaff07);
+controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd07, controlMPC_dvaff07, controlMPC_yy06, controlMPC_bmy06);
+controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld06, controlMPC_bmy06, controlMPC_dvaff06);
+controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd06, controlMPC_dvaff06, controlMPC_yy05, controlMPC_bmy05);
+controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld05, controlMPC_bmy05, controlMPC_dvaff05);
+controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd05, controlMPC_dvaff05, controlMPC_yy04, controlMPC_bmy04);
+controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld04, controlMPC_bmy04, controlMPC_dvaff04);
+controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd04, controlMPC_dvaff04, controlMPC_yy03, controlMPC_bmy03);
+controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld03, controlMPC_bmy03, controlMPC_dvaff03);
+controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd03, controlMPC_dvaff03, controlMPC_yy02, controlMPC_bmy02);
+controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld02, controlMPC_bmy02, controlMPC_dvaff02);
+controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd02, controlMPC_dvaff02, controlMPC_yy01, controlMPC_bmy01);
+controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld01, controlMPC_bmy01, controlMPC_dvaff01);
+controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd01, controlMPC_dvaff01, controlMPC_yy00, controlMPC_bmy00);
+controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld00, controlMPC_bmy00, controlMPC_dvaff00);
+controlMPC_LA_DENSE_MTVM_2_2(controlMPC_C00, controlMPC_dvaff00, controlMPC_grad_eq00);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_dvaff01, controlMPC_D01, controlMPC_dvaff00, controlMPC_grad_eq01);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_dvaff02, controlMPC_D01, controlMPC_dvaff01, controlMPC_grad_eq02);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_dvaff03, controlMPC_D01, controlMPC_dvaff02, controlMPC_grad_eq03);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_dvaff04, controlMPC_D01, controlMPC_dvaff03, controlMPC_grad_eq04);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_dvaff05, controlMPC_D01, controlMPC_dvaff04, controlMPC_grad_eq05);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_dvaff06, controlMPC_D01, controlMPC_dvaff05, controlMPC_grad_eq06);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_dvaff07, controlMPC_D01, controlMPC_dvaff06, controlMPC_grad_eq07);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_dvaff08, controlMPC_D01, controlMPC_dvaff07, controlMPC_grad_eq08);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_dvaff09, controlMPC_D01, controlMPC_dvaff08, controlMPC_grad_eq09);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_dvaff10, controlMPC_D01, controlMPC_dvaff09, controlMPC_grad_eq10);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_dvaff11, controlMPC_D01, controlMPC_dvaff10, controlMPC_grad_eq11);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_dvaff12, controlMPC_D01, controlMPC_dvaff11, controlMPC_grad_eq12);
+controlMPC_LA_DIAGZERO_MTVM_2_2(controlMPC_D01, controlMPC_dvaff12, controlMPC_grad_eq13);
+controlMPC_LA_VSUB2_28(controlMPC_rd, controlMPC_grad_eq, controlMPC_rd);
+controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi00, controlMPC_rd00, controlMPC_dzaff00);
+controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi01, controlMPC_rd01, controlMPC_dzaff01);
+controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi02, controlMPC_rd02, controlMPC_dzaff02);
+controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi03, controlMPC_rd03, controlMPC_dzaff03);
+controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi04, controlMPC_rd04, controlMPC_dzaff04);
+controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi05, controlMPC_rd05, controlMPC_dzaff05);
+controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi06, controlMPC_rd06, controlMPC_dzaff06);
+controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi07, controlMPC_rd07, controlMPC_dzaff07);
+controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi08, controlMPC_rd08, controlMPC_dzaff08);
+controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi09, controlMPC_rd09, controlMPC_dzaff09);
+controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi10, controlMPC_rd10, controlMPC_dzaff10);
+controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi11, controlMPC_rd11, controlMPC_dzaff11);
+controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi12, controlMPC_rd12, controlMPC_dzaff12);
+controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi13, controlMPC_rd13, controlMPC_dzaff13);
+controlMPC_LA_VSUB_INDEXED_2(controlMPC_dzaff00, controlMPC_lbIdx00, controlMPC_rilb00, controlMPC_dslbaff00);
+controlMPC_LA_VSUB3_2(controlMPC_llbbyslb00, controlMPC_dslbaff00, controlMPC_llb00, controlMPC_dllbaff00);
+controlMPC_LA_VSUB2_INDEXED_2(controlMPC_riub00, controlMPC_dzaff00, controlMPC_ubIdx00, controlMPC_dsubaff00);
+controlMPC_LA_VSUB3_2(controlMPC_lubbysub00, controlMPC_dsubaff00, controlMPC_lub00, controlMPC_dlubaff00);
+controlMPC_LA_VSUB_INDEXED_2(controlMPC_dzaff01, controlMPC_lbIdx01, controlMPC_rilb01, controlMPC_dslbaff01);
+controlMPC_LA_VSUB3_2(controlMPC_llbbyslb01, controlMPC_dslbaff01, controlMPC_llb01, controlMPC_dllbaff01);
+controlMPC_LA_VSUB2_INDEXED_2(controlMPC_riub01, controlMPC_dzaff01, controlMPC_ubIdx01, controlMPC_dsubaff01);
+controlMPC_LA_VSUB3_2(controlMPC_lubbysub01, controlMPC_dsubaff01, controlMPC_lub01, controlMPC_dlubaff01);
+controlMPC_LA_VSUB_INDEXED_2(controlMPC_dzaff02, controlMPC_lbIdx02, controlMPC_rilb02, controlMPC_dslbaff02);
+controlMPC_LA_VSUB3_2(controlMPC_llbbyslb02, controlMPC_dslbaff02, controlMPC_llb02, controlMPC_dllbaff02);
+controlMPC_LA_VSUB2_INDEXED_2(controlMPC_riub02, controlMPC_dzaff02, controlMPC_ubIdx02, controlMPC_dsubaff02);
+controlMPC_LA_VSUB3_2(controlMPC_lubbysub02, controlMPC_dsubaff02, controlMPC_lub02, controlMPC_dlubaff02);
+controlMPC_LA_VSUB_INDEXED_2(controlMPC_dzaff03, controlMPC_lbIdx03, controlMPC_rilb03, controlMPC_dslbaff03);
+controlMPC_LA_VSUB3_2(controlMPC_llbbyslb03, controlMPC_dslbaff03, controlMPC_llb03, controlMPC_dllbaff03);
+controlMPC_LA_VSUB2_INDEXED_2(controlMPC_riub03, controlMPC_dzaff03, controlMPC_ubIdx03, controlMPC_dsubaff03);
+controlMPC_LA_VSUB3_2(controlMPC_lubbysub03, controlMPC_dsubaff03, controlMPC_lub03, controlMPC_dlubaff03);
+controlMPC_LA_VSUB_INDEXED_2(controlMPC_dzaff04, controlMPC_lbIdx04, controlMPC_rilb04, controlMPC_dslbaff04);
+controlMPC_LA_VSUB3_2(controlMPC_llbbyslb04, controlMPC_dslbaff04, controlMPC_llb04, controlMPC_dllbaff04);
+controlMPC_LA_VSUB2_INDEXED_2(controlMPC_riub04, controlMPC_dzaff04, controlMPC_ubIdx04, controlMPC_dsubaff04);
+controlMPC_LA_VSUB3_2(controlMPC_lubbysub04, controlMPC_dsubaff04, controlMPC_lub04, controlMPC_dlubaff04);
+controlMPC_LA_VSUB_INDEXED_2(controlMPC_dzaff05, controlMPC_lbIdx05, controlMPC_rilb05, controlMPC_dslbaff05);
+controlMPC_LA_VSUB3_2(controlMPC_llbbyslb05, controlMPC_dslbaff05, controlMPC_llb05, controlMPC_dllbaff05);
+controlMPC_LA_VSUB2_INDEXED_2(controlMPC_riub05, controlMPC_dzaff05, controlMPC_ubIdx05, controlMPC_dsubaff05);
+controlMPC_LA_VSUB3_2(controlMPC_lubbysub05, controlMPC_dsubaff05, controlMPC_lub05, controlMPC_dlubaff05);
+controlMPC_LA_VSUB_INDEXED_2(controlMPC_dzaff06, controlMPC_lbIdx06, controlMPC_rilb06, controlMPC_dslbaff06);
+controlMPC_LA_VSUB3_2(controlMPC_llbbyslb06, controlMPC_dslbaff06, controlMPC_llb06, controlMPC_dllbaff06);
+controlMPC_LA_VSUB2_INDEXED_2(controlMPC_riub06, controlMPC_dzaff06, controlMPC_ubIdx06, controlMPC_dsubaff06);
+controlMPC_LA_VSUB3_2(controlMPC_lubbysub06, controlMPC_dsubaff06, controlMPC_lub06, controlMPC_dlubaff06);
+controlMPC_LA_VSUB_INDEXED_2(controlMPC_dzaff07, controlMPC_lbIdx07, controlMPC_rilb07, controlMPC_dslbaff07);
+controlMPC_LA_VSUB3_2(controlMPC_llbbyslb07, controlMPC_dslbaff07, controlMPC_llb07, controlMPC_dllbaff07);
+controlMPC_LA_VSUB2_INDEXED_2(controlMPC_riub07, controlMPC_dzaff07, controlMPC_ubIdx07, controlMPC_dsubaff07);
+controlMPC_LA_VSUB3_2(controlMPC_lubbysub07, controlMPC_dsubaff07, controlMPC_lub07, controlMPC_dlubaff07);
+controlMPC_LA_VSUB_INDEXED_2(controlMPC_dzaff08, controlMPC_lbIdx08, controlMPC_rilb08, controlMPC_dslbaff08);
+controlMPC_LA_VSUB3_2(controlMPC_llbbyslb08, controlMPC_dslbaff08, controlMPC_llb08, controlMPC_dllbaff08);
+controlMPC_LA_VSUB2_INDEXED_2(controlMPC_riub08, controlMPC_dzaff08, controlMPC_ubIdx08, controlMPC_dsubaff08);
+controlMPC_LA_VSUB3_2(controlMPC_lubbysub08, controlMPC_dsubaff08, controlMPC_lub08, controlMPC_dlubaff08);
+controlMPC_LA_VSUB_INDEXED_2(controlMPC_dzaff09, controlMPC_lbIdx09, controlMPC_rilb09, controlMPC_dslbaff09);
+controlMPC_LA_VSUB3_2(controlMPC_llbbyslb09, controlMPC_dslbaff09, controlMPC_llb09, controlMPC_dllbaff09);
+controlMPC_LA_VSUB2_INDEXED_2(controlMPC_riub09, controlMPC_dzaff09, controlMPC_ubIdx09, controlMPC_dsubaff09);
+controlMPC_LA_VSUB3_2(controlMPC_lubbysub09, controlMPC_dsubaff09, controlMPC_lub09, controlMPC_dlubaff09);
+controlMPC_LA_VSUB_INDEXED_2(controlMPC_dzaff10, controlMPC_lbIdx10, controlMPC_rilb10, controlMPC_dslbaff10);
+controlMPC_LA_VSUB3_2(controlMPC_llbbyslb10, controlMPC_dslbaff10, controlMPC_llb10, controlMPC_dllbaff10);
+controlMPC_LA_VSUB2_INDEXED_2(controlMPC_riub10, controlMPC_dzaff10, controlMPC_ubIdx10, controlMPC_dsubaff10);
+controlMPC_LA_VSUB3_2(controlMPC_lubbysub10, controlMPC_dsubaff10, controlMPC_lub10, controlMPC_dlubaff10);
+controlMPC_LA_VSUB_INDEXED_2(controlMPC_dzaff11, controlMPC_lbIdx11, controlMPC_rilb11, controlMPC_dslbaff11);
+controlMPC_LA_VSUB3_2(controlMPC_llbbyslb11, controlMPC_dslbaff11, controlMPC_llb11, controlMPC_dllbaff11);
+controlMPC_LA_VSUB2_INDEXED_2(controlMPC_riub11, controlMPC_dzaff11, controlMPC_ubIdx11, controlMPC_dsubaff11);
+controlMPC_LA_VSUB3_2(controlMPC_lubbysub11, controlMPC_dsubaff11, controlMPC_lub11, controlMPC_dlubaff11);
+controlMPC_LA_VSUB_INDEXED_2(controlMPC_dzaff12, controlMPC_lbIdx12, controlMPC_rilb12, controlMPC_dslbaff12);
+controlMPC_LA_VSUB3_2(controlMPC_llbbyslb12, controlMPC_dslbaff12, controlMPC_llb12, controlMPC_dllbaff12);
+controlMPC_LA_VSUB2_INDEXED_2(controlMPC_riub12, controlMPC_dzaff12, controlMPC_ubIdx12, controlMPC_dsubaff12);
+controlMPC_LA_VSUB3_2(controlMPC_lubbysub12, controlMPC_dsubaff12, controlMPC_lub12, controlMPC_dlubaff12);
+controlMPC_LA_VSUB_INDEXED_2(controlMPC_dzaff13, controlMPC_lbIdx13, controlMPC_rilb13, controlMPC_dslbaff13);
+controlMPC_LA_VSUB3_2(controlMPC_llbbyslb13, controlMPC_dslbaff13, controlMPC_llb13, controlMPC_dllbaff13);
+controlMPC_LA_VSUB2_INDEXED_2(controlMPC_riub13, controlMPC_dzaff13, controlMPC_ubIdx13, controlMPC_dsubaff13);
+controlMPC_LA_VSUB3_2(controlMPC_lubbysub13, controlMPC_dsubaff13, controlMPC_lub13, controlMPC_dlubaff13);
 info->lsit_aff = controlMPC_LINESEARCH_BACKTRACKING_AFFINE(controlMPC_l, controlMPC_s, controlMPC_dl_aff, controlMPC_ds_aff, &info->step_aff, &info->mu_aff);
 if( info->lsit_aff == controlMPC_NOPROGRESS ){
 exitcode = controlMPC_NOPROGRESS; break;
@@ -1723,129 +2078,194 @@ exitcode = controlMPC_NOPROGRESS; break;
 sigma_3rdroot = info->mu_aff / info->mu;
 info->sigma = sigma_3rdroot*sigma_3rdroot*sigma_3rdroot;
 musigma = info->mu * info->sigma;
-controlMPC_LA_VSUB5_36(controlMPC_ds_aff, controlMPC_dl_aff, musigma, controlMPC_ccrhs);
-controlMPC_LA_VSUB6_INDEXED_2_2_2(controlMPC_ccrhsub0, controlMPC_sub0, controlMPC_ubIdx0, controlMPC_ccrhsl0, controlMPC_slb0, controlMPC_lbIdx0, controlMPC_rd0);
-controlMPC_LA_VSUB6_INDEXED_2_2_2(controlMPC_ccrhsub1, controlMPC_sub1, controlMPC_ubIdx1, controlMPC_ccrhsl1, controlMPC_slb1, controlMPC_lbIdx1, controlMPC_rd1);
-controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi0, controlMPC_rd0, controlMPC_Lbyrd0);
-controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi1, controlMPC_rd1, controlMPC_Lbyrd1);
-controlMPC_LA_DENSE_DIAGZERO_2MVMADD_2_2_2(controlMPC_V0, controlMPC_Lbyrd0, controlMPC_W1, controlMPC_Lbyrd1, controlMPC_beta0);
-controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld0, controlMPC_beta0, controlMPC_yy0);
-controlMPC_LA_VSUB6_INDEXED_2_2_2(controlMPC_ccrhsub2, controlMPC_sub2, controlMPC_ubIdx2, controlMPC_ccrhsl2, controlMPC_slb2, controlMPC_lbIdx2, controlMPC_rd2);
-controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi2, controlMPC_rd2, controlMPC_Lbyrd2);
-controlMPC_LA_DENSE_DIAGZERO_2MVMADD_2_2_2(controlMPC_V1, controlMPC_Lbyrd1, controlMPC_W2, controlMPC_Lbyrd2, controlMPC_beta1);
-controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd1, controlMPC_yy0, controlMPC_beta1, controlMPC_bmy1);
-controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld1, controlMPC_bmy1, controlMPC_yy1);
-controlMPC_LA_VSUB6_INDEXED_2_2_2(controlMPC_ccrhsub3, controlMPC_sub3, controlMPC_ubIdx3, controlMPC_ccrhsl3, controlMPC_slb3, controlMPC_lbIdx3, controlMPC_rd3);
-controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi3, controlMPC_rd3, controlMPC_Lbyrd3);
-controlMPC_LA_DENSE_DIAGZERO_2MVMADD_2_2_2(controlMPC_V2, controlMPC_Lbyrd2, controlMPC_W3, controlMPC_Lbyrd3, controlMPC_beta2);
-controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd2, controlMPC_yy1, controlMPC_beta2, controlMPC_bmy2);
-controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld2, controlMPC_bmy2, controlMPC_yy2);
-controlMPC_LA_VSUB6_INDEXED_2_2_2(controlMPC_ccrhsub4, controlMPC_sub4, controlMPC_ubIdx4, controlMPC_ccrhsl4, controlMPC_slb4, controlMPC_lbIdx4, controlMPC_rd4);
-controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi4, controlMPC_rd4, controlMPC_Lbyrd4);
-controlMPC_LA_DENSE_DIAGZERO_2MVMADD_2_2_2(controlMPC_V3, controlMPC_Lbyrd3, controlMPC_W4, controlMPC_Lbyrd4, controlMPC_beta3);
-controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd3, controlMPC_yy2, controlMPC_beta3, controlMPC_bmy3);
-controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld3, controlMPC_bmy3, controlMPC_yy3);
-controlMPC_LA_VSUB6_INDEXED_2_2_2(controlMPC_ccrhsub5, controlMPC_sub5, controlMPC_ubIdx5, controlMPC_ccrhsl5, controlMPC_slb5, controlMPC_lbIdx5, controlMPC_rd5);
-controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi5, controlMPC_rd5, controlMPC_Lbyrd5);
-controlMPC_LA_DENSE_DIAGZERO_2MVMADD_2_2_2(controlMPC_V4, controlMPC_Lbyrd4, controlMPC_W5, controlMPC_Lbyrd5, controlMPC_beta4);
-controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd4, controlMPC_yy3, controlMPC_beta4, controlMPC_bmy4);
-controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld4, controlMPC_bmy4, controlMPC_yy4);
-controlMPC_LA_VSUB6_INDEXED_2_2_2(controlMPC_ccrhsub6, controlMPC_sub6, controlMPC_ubIdx6, controlMPC_ccrhsl6, controlMPC_slb6, controlMPC_lbIdx6, controlMPC_rd6);
-controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi6, controlMPC_rd6, controlMPC_Lbyrd6);
-controlMPC_LA_DENSE_DIAGZERO_2MVMADD_2_2_2(controlMPC_V5, controlMPC_Lbyrd5, controlMPC_W6, controlMPC_Lbyrd6, controlMPC_beta5);
-controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd5, controlMPC_yy4, controlMPC_beta5, controlMPC_bmy5);
-controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld5, controlMPC_bmy5, controlMPC_yy5);
-controlMPC_LA_VSUB6_INDEXED_2_2_2(controlMPC_ccrhsub7, controlMPC_sub7, controlMPC_ubIdx7, controlMPC_ccrhsl7, controlMPC_slb7, controlMPC_lbIdx7, controlMPC_rd7);
-controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi7, controlMPC_rd7, controlMPC_Lbyrd7);
-controlMPC_LA_DENSE_DIAGZERO_2MVMADD_2_2_2(controlMPC_V6, controlMPC_Lbyrd6, controlMPC_W7, controlMPC_Lbyrd7, controlMPC_beta6);
-controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd6, controlMPC_yy5, controlMPC_beta6, controlMPC_bmy6);
-controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld6, controlMPC_bmy6, controlMPC_yy6);
-controlMPC_LA_VSUB6_INDEXED_2_2_2(controlMPC_ccrhsub8, controlMPC_sub8, controlMPC_ubIdx8, controlMPC_ccrhsl8, controlMPC_slb8, controlMPC_lbIdx8, controlMPC_rd8);
-controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi8, controlMPC_rd8, controlMPC_Lbyrd8);
-controlMPC_LA_DENSE_DIAGZERO_2MVMADD_2_2_2(controlMPC_V7, controlMPC_Lbyrd7, controlMPC_W8, controlMPC_Lbyrd8, controlMPC_beta7);
-controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd7, controlMPC_yy6, controlMPC_beta7, controlMPC_bmy7);
-controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld7, controlMPC_bmy7, controlMPC_yy7);
-controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld7, controlMPC_yy7, controlMPC_dvcc7);
-controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd7, controlMPC_dvcc7, controlMPC_yy6, controlMPC_bmy6);
-controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld6, controlMPC_bmy6, controlMPC_dvcc6);
-controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd6, controlMPC_dvcc6, controlMPC_yy5, controlMPC_bmy5);
-controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld5, controlMPC_bmy5, controlMPC_dvcc5);
-controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd5, controlMPC_dvcc5, controlMPC_yy4, controlMPC_bmy4);
-controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld4, controlMPC_bmy4, controlMPC_dvcc4);
-controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd4, controlMPC_dvcc4, controlMPC_yy3, controlMPC_bmy3);
-controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld3, controlMPC_bmy3, controlMPC_dvcc3);
-controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd3, controlMPC_dvcc3, controlMPC_yy2, controlMPC_bmy2);
-controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld2, controlMPC_bmy2, controlMPC_dvcc2);
-controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd2, controlMPC_dvcc2, controlMPC_yy1, controlMPC_bmy1);
-controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld1, controlMPC_bmy1, controlMPC_dvcc1);
-controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd1, controlMPC_dvcc1, controlMPC_yy0, controlMPC_bmy0);
-controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld0, controlMPC_bmy0, controlMPC_dvcc0);
-controlMPC_LA_DENSE_MTVM_2_2(controlMPC_C0, controlMPC_dvcc0, controlMPC_grad_eq0);
-controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C0, controlMPC_dvcc1, controlMPC_D1, controlMPC_dvcc0, controlMPC_grad_eq1);
-controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C0, controlMPC_dvcc2, controlMPC_D1, controlMPC_dvcc1, controlMPC_grad_eq2);
-controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C0, controlMPC_dvcc3, controlMPC_D1, controlMPC_dvcc2, controlMPC_grad_eq3);
-controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C0, controlMPC_dvcc4, controlMPC_D1, controlMPC_dvcc3, controlMPC_grad_eq4);
-controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C0, controlMPC_dvcc5, controlMPC_D1, controlMPC_dvcc4, controlMPC_grad_eq5);
-controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C0, controlMPC_dvcc6, controlMPC_D1, controlMPC_dvcc5, controlMPC_grad_eq6);
-controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C0, controlMPC_dvcc7, controlMPC_D1, controlMPC_dvcc6, controlMPC_grad_eq7);
-controlMPC_LA_DIAGZERO_MTVM_2_2(controlMPC_D1, controlMPC_dvcc7, controlMPC_grad_eq8);
-controlMPC_LA_VSUB_18(controlMPC_rd, controlMPC_grad_eq, controlMPC_rd);
-controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi0, controlMPC_rd0, controlMPC_dzcc0);
-controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi1, controlMPC_rd1, controlMPC_dzcc1);
-controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi2, controlMPC_rd2, controlMPC_dzcc2);
-controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi3, controlMPC_rd3, controlMPC_dzcc3);
-controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi4, controlMPC_rd4, controlMPC_dzcc4);
-controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi5, controlMPC_rd5, controlMPC_dzcc5);
-controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi6, controlMPC_rd6, controlMPC_dzcc6);
-controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi7, controlMPC_rd7, controlMPC_dzcc7);
-controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi8, controlMPC_rd8, controlMPC_dzcc8);
-controlMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_2(controlMPC_ccrhsl0, controlMPC_slb0, controlMPC_llbbyslb0, controlMPC_dzcc0, controlMPC_lbIdx0, controlMPC_dllbcc0);
-controlMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_2(controlMPC_ccrhsub0, controlMPC_sub0, controlMPC_lubbysub0, controlMPC_dzcc0, controlMPC_ubIdx0, controlMPC_dlubcc0);
-controlMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_2(controlMPC_ccrhsl1, controlMPC_slb1, controlMPC_llbbyslb1, controlMPC_dzcc1, controlMPC_lbIdx1, controlMPC_dllbcc1);
-controlMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_2(controlMPC_ccrhsub1, controlMPC_sub1, controlMPC_lubbysub1, controlMPC_dzcc1, controlMPC_ubIdx1, controlMPC_dlubcc1);
-controlMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_2(controlMPC_ccrhsl2, controlMPC_slb2, controlMPC_llbbyslb2, controlMPC_dzcc2, controlMPC_lbIdx2, controlMPC_dllbcc2);
-controlMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_2(controlMPC_ccrhsub2, controlMPC_sub2, controlMPC_lubbysub2, controlMPC_dzcc2, controlMPC_ubIdx2, controlMPC_dlubcc2);
-controlMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_2(controlMPC_ccrhsl3, controlMPC_slb3, controlMPC_llbbyslb3, controlMPC_dzcc3, controlMPC_lbIdx3, controlMPC_dllbcc3);
-controlMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_2(controlMPC_ccrhsub3, controlMPC_sub3, controlMPC_lubbysub3, controlMPC_dzcc3, controlMPC_ubIdx3, controlMPC_dlubcc3);
-controlMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_2(controlMPC_ccrhsl4, controlMPC_slb4, controlMPC_llbbyslb4, controlMPC_dzcc4, controlMPC_lbIdx4, controlMPC_dllbcc4);
-controlMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_2(controlMPC_ccrhsub4, controlMPC_sub4, controlMPC_lubbysub4, controlMPC_dzcc4, controlMPC_ubIdx4, controlMPC_dlubcc4);
-controlMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_2(controlMPC_ccrhsl5, controlMPC_slb5, controlMPC_llbbyslb5, controlMPC_dzcc5, controlMPC_lbIdx5, controlMPC_dllbcc5);
-controlMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_2(controlMPC_ccrhsub5, controlMPC_sub5, controlMPC_lubbysub5, controlMPC_dzcc5, controlMPC_ubIdx5, controlMPC_dlubcc5);
-controlMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_2(controlMPC_ccrhsl6, controlMPC_slb6, controlMPC_llbbyslb6, controlMPC_dzcc6, controlMPC_lbIdx6, controlMPC_dllbcc6);
-controlMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_2(controlMPC_ccrhsub6, controlMPC_sub6, controlMPC_lubbysub6, controlMPC_dzcc6, controlMPC_ubIdx6, controlMPC_dlubcc6);
-controlMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_2(controlMPC_ccrhsl7, controlMPC_slb7, controlMPC_llbbyslb7, controlMPC_dzcc7, controlMPC_lbIdx7, controlMPC_dllbcc7);
-controlMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_2(controlMPC_ccrhsub7, controlMPC_sub7, controlMPC_lubbysub7, controlMPC_dzcc7, controlMPC_ubIdx7, controlMPC_dlubcc7);
-controlMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_2(controlMPC_ccrhsl8, controlMPC_slb8, controlMPC_llbbyslb8, controlMPC_dzcc8, controlMPC_lbIdx8, controlMPC_dllbcc8);
-controlMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_2(controlMPC_ccrhsub8, controlMPC_sub8, controlMPC_lubbysub8, controlMPC_dzcc8, controlMPC_ubIdx8, controlMPC_dlubcc8);
-controlMPC_LA_VSUB7_36(controlMPC_l, controlMPC_ccrhs, controlMPC_s, controlMPC_dl_cc, controlMPC_ds_cc);
-controlMPC_LA_VADD_18(controlMPC_dz_cc, controlMPC_dz_aff);
-controlMPC_LA_VADD_16(controlMPC_dv_cc, controlMPC_dv_aff);
-controlMPC_LA_VADD_36(controlMPC_dl_cc, controlMPC_dl_aff);
-controlMPC_LA_VADD_36(controlMPC_ds_cc, controlMPC_ds_aff);
+controlMPC_LA_VSUB5_56(controlMPC_ds_aff, controlMPC_dl_aff, musigma, controlMPC_ccrhs);
+controlMPC_LA_VSUB6_INDEXED_2_2_2(controlMPC_ccrhsub00, controlMPC_sub00, controlMPC_ubIdx00, controlMPC_ccrhsl00, controlMPC_slb00, controlMPC_lbIdx00, controlMPC_rd00);
+controlMPC_LA_VSUB6_INDEXED_2_2_2(controlMPC_ccrhsub01, controlMPC_sub01, controlMPC_ubIdx01, controlMPC_ccrhsl01, controlMPC_slb01, controlMPC_lbIdx01, controlMPC_rd01);
+controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi00, controlMPC_rd00, controlMPC_Lbyrd00);
+controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi01, controlMPC_rd01, controlMPC_Lbyrd01);
+controlMPC_LA_DENSE_DIAGZERO_2MVMADD_2_2_2(controlMPC_V00, controlMPC_Lbyrd00, controlMPC_W01, controlMPC_Lbyrd01, controlMPC_beta00);
+controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld00, controlMPC_beta00, controlMPC_yy00);
+controlMPC_LA_VSUB6_INDEXED_2_2_2(controlMPC_ccrhsub02, controlMPC_sub02, controlMPC_ubIdx02, controlMPC_ccrhsl02, controlMPC_slb02, controlMPC_lbIdx02, controlMPC_rd02);
+controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi02, controlMPC_rd02, controlMPC_Lbyrd02);
+controlMPC_LA_DENSE_DIAGZERO_2MVMADD_2_2_2(controlMPC_V01, controlMPC_Lbyrd01, controlMPC_W02, controlMPC_Lbyrd02, controlMPC_beta01);
+controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd01, controlMPC_yy00, controlMPC_beta01, controlMPC_bmy01);
+controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld01, controlMPC_bmy01, controlMPC_yy01);
+controlMPC_LA_VSUB6_INDEXED_2_2_2(controlMPC_ccrhsub03, controlMPC_sub03, controlMPC_ubIdx03, controlMPC_ccrhsl03, controlMPC_slb03, controlMPC_lbIdx03, controlMPC_rd03);
+controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi03, controlMPC_rd03, controlMPC_Lbyrd03);
+controlMPC_LA_DENSE_DIAGZERO_2MVMADD_2_2_2(controlMPC_V02, controlMPC_Lbyrd02, controlMPC_W03, controlMPC_Lbyrd03, controlMPC_beta02);
+controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd02, controlMPC_yy01, controlMPC_beta02, controlMPC_bmy02);
+controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld02, controlMPC_bmy02, controlMPC_yy02);
+controlMPC_LA_VSUB6_INDEXED_2_2_2(controlMPC_ccrhsub04, controlMPC_sub04, controlMPC_ubIdx04, controlMPC_ccrhsl04, controlMPC_slb04, controlMPC_lbIdx04, controlMPC_rd04);
+controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi04, controlMPC_rd04, controlMPC_Lbyrd04);
+controlMPC_LA_DENSE_DIAGZERO_2MVMADD_2_2_2(controlMPC_V03, controlMPC_Lbyrd03, controlMPC_W04, controlMPC_Lbyrd04, controlMPC_beta03);
+controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd03, controlMPC_yy02, controlMPC_beta03, controlMPC_bmy03);
+controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld03, controlMPC_bmy03, controlMPC_yy03);
+controlMPC_LA_VSUB6_INDEXED_2_2_2(controlMPC_ccrhsub05, controlMPC_sub05, controlMPC_ubIdx05, controlMPC_ccrhsl05, controlMPC_slb05, controlMPC_lbIdx05, controlMPC_rd05);
+controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi05, controlMPC_rd05, controlMPC_Lbyrd05);
+controlMPC_LA_DENSE_DIAGZERO_2MVMADD_2_2_2(controlMPC_V04, controlMPC_Lbyrd04, controlMPC_W05, controlMPC_Lbyrd05, controlMPC_beta04);
+controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd04, controlMPC_yy03, controlMPC_beta04, controlMPC_bmy04);
+controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld04, controlMPC_bmy04, controlMPC_yy04);
+controlMPC_LA_VSUB6_INDEXED_2_2_2(controlMPC_ccrhsub06, controlMPC_sub06, controlMPC_ubIdx06, controlMPC_ccrhsl06, controlMPC_slb06, controlMPC_lbIdx06, controlMPC_rd06);
+controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi06, controlMPC_rd06, controlMPC_Lbyrd06);
+controlMPC_LA_DENSE_DIAGZERO_2MVMADD_2_2_2(controlMPC_V05, controlMPC_Lbyrd05, controlMPC_W06, controlMPC_Lbyrd06, controlMPC_beta05);
+controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd05, controlMPC_yy04, controlMPC_beta05, controlMPC_bmy05);
+controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld05, controlMPC_bmy05, controlMPC_yy05);
+controlMPC_LA_VSUB6_INDEXED_2_2_2(controlMPC_ccrhsub07, controlMPC_sub07, controlMPC_ubIdx07, controlMPC_ccrhsl07, controlMPC_slb07, controlMPC_lbIdx07, controlMPC_rd07);
+controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi07, controlMPC_rd07, controlMPC_Lbyrd07);
+controlMPC_LA_DENSE_DIAGZERO_2MVMADD_2_2_2(controlMPC_V06, controlMPC_Lbyrd06, controlMPC_W07, controlMPC_Lbyrd07, controlMPC_beta06);
+controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd06, controlMPC_yy05, controlMPC_beta06, controlMPC_bmy06);
+controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld06, controlMPC_bmy06, controlMPC_yy06);
+controlMPC_LA_VSUB6_INDEXED_2_2_2(controlMPC_ccrhsub08, controlMPC_sub08, controlMPC_ubIdx08, controlMPC_ccrhsl08, controlMPC_slb08, controlMPC_lbIdx08, controlMPC_rd08);
+controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi08, controlMPC_rd08, controlMPC_Lbyrd08);
+controlMPC_LA_DENSE_DIAGZERO_2MVMADD_2_2_2(controlMPC_V07, controlMPC_Lbyrd07, controlMPC_W08, controlMPC_Lbyrd08, controlMPC_beta07);
+controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd07, controlMPC_yy06, controlMPC_beta07, controlMPC_bmy07);
+controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld07, controlMPC_bmy07, controlMPC_yy07);
+controlMPC_LA_VSUB6_INDEXED_2_2_2(controlMPC_ccrhsub09, controlMPC_sub09, controlMPC_ubIdx09, controlMPC_ccrhsl09, controlMPC_slb09, controlMPC_lbIdx09, controlMPC_rd09);
+controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi09, controlMPC_rd09, controlMPC_Lbyrd09);
+controlMPC_LA_DENSE_DIAGZERO_2MVMADD_2_2_2(controlMPC_V08, controlMPC_Lbyrd08, controlMPC_W09, controlMPC_Lbyrd09, controlMPC_beta08);
+controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd08, controlMPC_yy07, controlMPC_beta08, controlMPC_bmy08);
+controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld08, controlMPC_bmy08, controlMPC_yy08);
+controlMPC_LA_VSUB6_INDEXED_2_2_2(controlMPC_ccrhsub10, controlMPC_sub10, controlMPC_ubIdx10, controlMPC_ccrhsl10, controlMPC_slb10, controlMPC_lbIdx10, controlMPC_rd10);
+controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi10, controlMPC_rd10, controlMPC_Lbyrd10);
+controlMPC_LA_DENSE_DIAGZERO_2MVMADD_2_2_2(controlMPC_V09, controlMPC_Lbyrd09, controlMPC_W10, controlMPC_Lbyrd10, controlMPC_beta09);
+controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd09, controlMPC_yy08, controlMPC_beta09, controlMPC_bmy09);
+controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld09, controlMPC_bmy09, controlMPC_yy09);
+controlMPC_LA_VSUB6_INDEXED_2_2_2(controlMPC_ccrhsub11, controlMPC_sub11, controlMPC_ubIdx11, controlMPC_ccrhsl11, controlMPC_slb11, controlMPC_lbIdx11, controlMPC_rd11);
+controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi11, controlMPC_rd11, controlMPC_Lbyrd11);
+controlMPC_LA_DENSE_DIAGZERO_2MVMADD_2_2_2(controlMPC_V10, controlMPC_Lbyrd10, controlMPC_W11, controlMPC_Lbyrd11, controlMPC_beta10);
+controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd10, controlMPC_yy09, controlMPC_beta10, controlMPC_bmy10);
+controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld10, controlMPC_bmy10, controlMPC_yy10);
+controlMPC_LA_VSUB6_INDEXED_2_2_2(controlMPC_ccrhsub12, controlMPC_sub12, controlMPC_ubIdx12, controlMPC_ccrhsl12, controlMPC_slb12, controlMPC_lbIdx12, controlMPC_rd12);
+controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi12, controlMPC_rd12, controlMPC_Lbyrd12);
+controlMPC_LA_DENSE_DIAGZERO_2MVMADD_2_2_2(controlMPC_V11, controlMPC_Lbyrd11, controlMPC_W12, controlMPC_Lbyrd12, controlMPC_beta11);
+controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd11, controlMPC_yy10, controlMPC_beta11, controlMPC_bmy11);
+controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld11, controlMPC_bmy11, controlMPC_yy11);
+controlMPC_LA_VSUB6_INDEXED_2_2_2(controlMPC_ccrhsub13, controlMPC_sub13, controlMPC_ubIdx13, controlMPC_ccrhsl13, controlMPC_slb13, controlMPC_lbIdx13, controlMPC_rd13);
+controlMPC_LA_DIAG_FORWARDSUB_2(controlMPC_Phi13, controlMPC_rd13, controlMPC_Lbyrd13);
+controlMPC_LA_DENSE_DIAGZERO_2MVMADD_2_2_2(controlMPC_V12, controlMPC_Lbyrd12, controlMPC_W13, controlMPC_Lbyrd13, controlMPC_beta12);
+controlMPC_LA_DENSE_MVMSUB1_2_2(controlMPC_Lsd12, controlMPC_yy11, controlMPC_beta12, controlMPC_bmy12);
+controlMPC_LA_DENSE_FORWARDSUB_2(controlMPC_Ld12, controlMPC_bmy12, controlMPC_yy12);
+controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld12, controlMPC_yy12, controlMPC_dvcc12);
+controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd12, controlMPC_dvcc12, controlMPC_yy11, controlMPC_bmy11);
+controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld11, controlMPC_bmy11, controlMPC_dvcc11);
+controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd11, controlMPC_dvcc11, controlMPC_yy10, controlMPC_bmy10);
+controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld10, controlMPC_bmy10, controlMPC_dvcc10);
+controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd10, controlMPC_dvcc10, controlMPC_yy09, controlMPC_bmy09);
+controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld09, controlMPC_bmy09, controlMPC_dvcc09);
+controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd09, controlMPC_dvcc09, controlMPC_yy08, controlMPC_bmy08);
+controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld08, controlMPC_bmy08, controlMPC_dvcc08);
+controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd08, controlMPC_dvcc08, controlMPC_yy07, controlMPC_bmy07);
+controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld07, controlMPC_bmy07, controlMPC_dvcc07);
+controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd07, controlMPC_dvcc07, controlMPC_yy06, controlMPC_bmy06);
+controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld06, controlMPC_bmy06, controlMPC_dvcc06);
+controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd06, controlMPC_dvcc06, controlMPC_yy05, controlMPC_bmy05);
+controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld05, controlMPC_bmy05, controlMPC_dvcc05);
+controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd05, controlMPC_dvcc05, controlMPC_yy04, controlMPC_bmy04);
+controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld04, controlMPC_bmy04, controlMPC_dvcc04);
+controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd04, controlMPC_dvcc04, controlMPC_yy03, controlMPC_bmy03);
+controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld03, controlMPC_bmy03, controlMPC_dvcc03);
+controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd03, controlMPC_dvcc03, controlMPC_yy02, controlMPC_bmy02);
+controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld02, controlMPC_bmy02, controlMPC_dvcc02);
+controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd02, controlMPC_dvcc02, controlMPC_yy01, controlMPC_bmy01);
+controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld01, controlMPC_bmy01, controlMPC_dvcc01);
+controlMPC_LA_DENSE_MTVMSUB_2_2(controlMPC_Lsd01, controlMPC_dvcc01, controlMPC_yy00, controlMPC_bmy00);
+controlMPC_LA_DENSE_BACKWARDSUB_2(controlMPC_Ld00, controlMPC_bmy00, controlMPC_dvcc00);
+controlMPC_LA_DENSE_MTVM_2_2(controlMPC_C00, controlMPC_dvcc00, controlMPC_grad_eq00);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_dvcc01, controlMPC_D01, controlMPC_dvcc00, controlMPC_grad_eq01);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_dvcc02, controlMPC_D01, controlMPC_dvcc01, controlMPC_grad_eq02);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_dvcc03, controlMPC_D01, controlMPC_dvcc02, controlMPC_grad_eq03);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_dvcc04, controlMPC_D01, controlMPC_dvcc03, controlMPC_grad_eq04);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_dvcc05, controlMPC_D01, controlMPC_dvcc04, controlMPC_grad_eq05);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_dvcc06, controlMPC_D01, controlMPC_dvcc05, controlMPC_grad_eq06);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_dvcc07, controlMPC_D01, controlMPC_dvcc06, controlMPC_grad_eq07);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_dvcc08, controlMPC_D01, controlMPC_dvcc07, controlMPC_grad_eq08);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_dvcc09, controlMPC_D01, controlMPC_dvcc08, controlMPC_grad_eq09);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_dvcc10, controlMPC_D01, controlMPC_dvcc09, controlMPC_grad_eq10);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_dvcc11, controlMPC_D01, controlMPC_dvcc10, controlMPC_grad_eq11);
+controlMPC_LA_DENSE_DIAGZERO_MTVM2_2_2_2(controlMPC_C00, controlMPC_dvcc12, controlMPC_D01, controlMPC_dvcc11, controlMPC_grad_eq12);
+controlMPC_LA_DIAGZERO_MTVM_2_2(controlMPC_D01, controlMPC_dvcc12, controlMPC_grad_eq13);
+controlMPC_LA_VSUB_28(controlMPC_rd, controlMPC_grad_eq, controlMPC_rd);
+controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi00, controlMPC_rd00, controlMPC_dzcc00);
+controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi01, controlMPC_rd01, controlMPC_dzcc01);
+controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi02, controlMPC_rd02, controlMPC_dzcc02);
+controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi03, controlMPC_rd03, controlMPC_dzcc03);
+controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi04, controlMPC_rd04, controlMPC_dzcc04);
+controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi05, controlMPC_rd05, controlMPC_dzcc05);
+controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi06, controlMPC_rd06, controlMPC_dzcc06);
+controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi07, controlMPC_rd07, controlMPC_dzcc07);
+controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi08, controlMPC_rd08, controlMPC_dzcc08);
+controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi09, controlMPC_rd09, controlMPC_dzcc09);
+controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi10, controlMPC_rd10, controlMPC_dzcc10);
+controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi11, controlMPC_rd11, controlMPC_dzcc11);
+controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi12, controlMPC_rd12, controlMPC_dzcc12);
+controlMPC_LA_DIAG_FORWARDBACKWARDSUB_2(controlMPC_Phi13, controlMPC_rd13, controlMPC_dzcc13);
+controlMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_2(controlMPC_ccrhsl00, controlMPC_slb00, controlMPC_llbbyslb00, controlMPC_dzcc00, controlMPC_lbIdx00, controlMPC_dllbcc00);
+controlMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_2(controlMPC_ccrhsub00, controlMPC_sub00, controlMPC_lubbysub00, controlMPC_dzcc00, controlMPC_ubIdx00, controlMPC_dlubcc00);
+controlMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_2(controlMPC_ccrhsl01, controlMPC_slb01, controlMPC_llbbyslb01, controlMPC_dzcc01, controlMPC_lbIdx01, controlMPC_dllbcc01);
+controlMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_2(controlMPC_ccrhsub01, controlMPC_sub01, controlMPC_lubbysub01, controlMPC_dzcc01, controlMPC_ubIdx01, controlMPC_dlubcc01);
+controlMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_2(controlMPC_ccrhsl02, controlMPC_slb02, controlMPC_llbbyslb02, controlMPC_dzcc02, controlMPC_lbIdx02, controlMPC_dllbcc02);
+controlMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_2(controlMPC_ccrhsub02, controlMPC_sub02, controlMPC_lubbysub02, controlMPC_dzcc02, controlMPC_ubIdx02, controlMPC_dlubcc02);
+controlMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_2(controlMPC_ccrhsl03, controlMPC_slb03, controlMPC_llbbyslb03, controlMPC_dzcc03, controlMPC_lbIdx03, controlMPC_dllbcc03);
+controlMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_2(controlMPC_ccrhsub03, controlMPC_sub03, controlMPC_lubbysub03, controlMPC_dzcc03, controlMPC_ubIdx03, controlMPC_dlubcc03);
+controlMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_2(controlMPC_ccrhsl04, controlMPC_slb04, controlMPC_llbbyslb04, controlMPC_dzcc04, controlMPC_lbIdx04, controlMPC_dllbcc04);
+controlMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_2(controlMPC_ccrhsub04, controlMPC_sub04, controlMPC_lubbysub04, controlMPC_dzcc04, controlMPC_ubIdx04, controlMPC_dlubcc04);
+controlMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_2(controlMPC_ccrhsl05, controlMPC_slb05, controlMPC_llbbyslb05, controlMPC_dzcc05, controlMPC_lbIdx05, controlMPC_dllbcc05);
+controlMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_2(controlMPC_ccrhsub05, controlMPC_sub05, controlMPC_lubbysub05, controlMPC_dzcc05, controlMPC_ubIdx05, controlMPC_dlubcc05);
+controlMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_2(controlMPC_ccrhsl06, controlMPC_slb06, controlMPC_llbbyslb06, controlMPC_dzcc06, controlMPC_lbIdx06, controlMPC_dllbcc06);
+controlMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_2(controlMPC_ccrhsub06, controlMPC_sub06, controlMPC_lubbysub06, controlMPC_dzcc06, controlMPC_ubIdx06, controlMPC_dlubcc06);
+controlMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_2(controlMPC_ccrhsl07, controlMPC_slb07, controlMPC_llbbyslb07, controlMPC_dzcc07, controlMPC_lbIdx07, controlMPC_dllbcc07);
+controlMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_2(controlMPC_ccrhsub07, controlMPC_sub07, controlMPC_lubbysub07, controlMPC_dzcc07, controlMPC_ubIdx07, controlMPC_dlubcc07);
+controlMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_2(controlMPC_ccrhsl08, controlMPC_slb08, controlMPC_llbbyslb08, controlMPC_dzcc08, controlMPC_lbIdx08, controlMPC_dllbcc08);
+controlMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_2(controlMPC_ccrhsub08, controlMPC_sub08, controlMPC_lubbysub08, controlMPC_dzcc08, controlMPC_ubIdx08, controlMPC_dlubcc08);
+controlMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_2(controlMPC_ccrhsl09, controlMPC_slb09, controlMPC_llbbyslb09, controlMPC_dzcc09, controlMPC_lbIdx09, controlMPC_dllbcc09);
+controlMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_2(controlMPC_ccrhsub09, controlMPC_sub09, controlMPC_lubbysub09, controlMPC_dzcc09, controlMPC_ubIdx09, controlMPC_dlubcc09);
+controlMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_2(controlMPC_ccrhsl10, controlMPC_slb10, controlMPC_llbbyslb10, controlMPC_dzcc10, controlMPC_lbIdx10, controlMPC_dllbcc10);
+controlMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_2(controlMPC_ccrhsub10, controlMPC_sub10, controlMPC_lubbysub10, controlMPC_dzcc10, controlMPC_ubIdx10, controlMPC_dlubcc10);
+controlMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_2(controlMPC_ccrhsl11, controlMPC_slb11, controlMPC_llbbyslb11, controlMPC_dzcc11, controlMPC_lbIdx11, controlMPC_dllbcc11);
+controlMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_2(controlMPC_ccrhsub11, controlMPC_sub11, controlMPC_lubbysub11, controlMPC_dzcc11, controlMPC_ubIdx11, controlMPC_dlubcc11);
+controlMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_2(controlMPC_ccrhsl12, controlMPC_slb12, controlMPC_llbbyslb12, controlMPC_dzcc12, controlMPC_lbIdx12, controlMPC_dllbcc12);
+controlMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_2(controlMPC_ccrhsub12, controlMPC_sub12, controlMPC_lubbysub12, controlMPC_dzcc12, controlMPC_ubIdx12, controlMPC_dlubcc12);
+controlMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_2(controlMPC_ccrhsl13, controlMPC_slb13, controlMPC_llbbyslb13, controlMPC_dzcc13, controlMPC_lbIdx13, controlMPC_dllbcc13);
+controlMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_2(controlMPC_ccrhsub13, controlMPC_sub13, controlMPC_lubbysub13, controlMPC_dzcc13, controlMPC_ubIdx13, controlMPC_dlubcc13);
+controlMPC_LA_VSUB7_56(controlMPC_l, controlMPC_ccrhs, controlMPC_s, controlMPC_dl_cc, controlMPC_ds_cc);
+controlMPC_LA_VADD_28(controlMPC_dz_cc, controlMPC_dz_aff);
+controlMPC_LA_VADD_26(controlMPC_dv_cc, controlMPC_dv_aff);
+controlMPC_LA_VADD_56(controlMPC_dl_cc, controlMPC_dl_aff);
+controlMPC_LA_VADD_56(controlMPC_ds_cc, controlMPC_ds_aff);
 info->lsit_cc = controlMPC_LINESEARCH_BACKTRACKING_COMBINED(controlMPC_z, controlMPC_v, controlMPC_l, controlMPC_s, controlMPC_dz_cc, controlMPC_dv_cc, controlMPC_dl_cc, controlMPC_ds_cc, &info->step_cc, &info->mu);
 if( info->lsit_cc == controlMPC_NOPROGRESS ){
 exitcode = controlMPC_NOPROGRESS; break;
 }
 info->it++;
 }
-output->z1[0] = controlMPC_z0[0];
-output->z1[1] = controlMPC_z0[1];
-output->z2[0] = controlMPC_z1[0];
-output->z2[1] = controlMPC_z1[1];
-output->z3[0] = controlMPC_z2[0];
-output->z3[1] = controlMPC_z2[1];
-output->z4[0] = controlMPC_z3[0];
-output->z4[1] = controlMPC_z3[1];
-output->z5[0] = controlMPC_z4[0];
-output->z5[1] = controlMPC_z4[1];
-output->z6[0] = controlMPC_z5[0];
-output->z6[1] = controlMPC_z5[1];
-output->z7[0] = controlMPC_z6[0];
-output->z7[1] = controlMPC_z6[1];
-output->z8[0] = controlMPC_z7[0];
-output->z8[1] = controlMPC_z7[1];
-output->z9[0] = controlMPC_z8[0];
-output->z9[1] = controlMPC_z8[1];
+output->z1[0] = controlMPC_z00[0];
+output->z1[1] = controlMPC_z00[1];
+output->z2[0] = controlMPC_z01[0];
+output->z2[1] = controlMPC_z01[1];
+output->z3[0] = controlMPC_z02[0];
+output->z3[1] = controlMPC_z02[1];
+output->z4[0] = controlMPC_z03[0];
+output->z4[1] = controlMPC_z03[1];
+output->z5[0] = controlMPC_z04[0];
+output->z5[1] = controlMPC_z04[1];
+output->z6[0] = controlMPC_z05[0];
+output->z6[1] = controlMPC_z05[1];
+output->z7[0] = controlMPC_z06[0];
+output->z7[1] = controlMPC_z06[1];
+output->z8[0] = controlMPC_z07[0];
+output->z8[1] = controlMPC_z07[1];
+output->z9[0] = controlMPC_z08[0];
+output->z9[1] = controlMPC_z08[1];
+output->z10[0] = controlMPC_z09[0];
+output->z10[1] = controlMPC_z09[1];
+output->z11[0] = controlMPC_z10[0];
+output->z11[1] = controlMPC_z10[1];
+output->z12[0] = controlMPC_z11[0];
+output->z12[1] = controlMPC_z11[1];
+output->z13[0] = controlMPC_z12[0];
+output->z13[1] = controlMPC_z12[1];
+output->z14[0] = controlMPC_z13[0];
+output->z14[1] = controlMPC_z13[1];
 
 #if controlMPC_SET_TIMING == 1
 info->solvetime = controlMPC_toc(&solvertimer);

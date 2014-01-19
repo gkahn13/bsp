@@ -1,6 +1,8 @@
 #ifndef __POINT_H__
 #define __POINT_H__
 
+#include <fstream>
+
 #include "util/matrix.h"
 //extern "C" {
 #include "util/utils.h"
@@ -152,6 +154,37 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	vec(x, sqrt(Sigma), g);
 
 	return g;
+}
+
+void setupDstarInterface(std::string fileName, int nparams, int nvars)
+{
+	// instantiations
+	// alpha_belief, alpha_control, alpha_final_belief
+	//int nparams = 3;
+	// T*X_DIM + (T-1)*U_DIM + zeros for Q_DIM,R_DIM + SqrtSigma0 (X_DIM*X_DIM) + nparams
+	//int nvars = T * X_DIM + (T - 1) * U_DIM + Q_DIM + R_DIM + (X_DIM * X_DIM) + nparams;
+
+	inputVars = new double[nvars];
+
+	std::string workingDir = boost::filesystem::current_path().normalize().string();
+	std::string bspDir = workingDir.substr(0,workingDir.find("bsp"));
+
+	std::stringstream file;
+	file << bspDir << "bsp/dstar/point/masks/" << fileName;
+	std::ifstream fptr(file.str());
+	if(!fptr.is_open()) {
+		LOG_FATAL("Mask file handle not opened, check!, exiting");
+		std::exit(-1);
+	}
+	int val;
+	for(int i = 0; i < nvars; ++i) {
+		fptr >> val;
+		if (val == 1) {
+			maskIndices.push_back(i);
+		}
+	}
+	// Read in Jacobian and Hessian masks here
+	fptr.close();
 }
 
 void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U)

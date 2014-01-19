@@ -38,7 +38,7 @@ extern "C" {
 const double step = 0.0078125*0.0078125;
 
 Matrix<X_DIM> x0;
-Matrix<X_DIM,X_DIM> Sigma0;
+Matrix<X_DIM,X_DIM> SqrtSigma0;
 Matrix<X_DIM> xGoal;
 Matrix<X_DIM> xMin, xMax;
 Matrix<U_DIM> uMin, uMax;
@@ -221,7 +221,7 @@ void setupDstarInterface()
 	// instantiations
 	// alpha_belief, alpha_control, alpha_final_belief
 	int nparams = 4;
-	// (T-1)*U_DIM + zeros for Q_DIM,R_DIM + x_0 + x_Goal + Sigma0 (X_DIM*X_DIM) + nparams
+	// (T-1)*U_DIM + zeros for Q_DIM,R_DIM + x_0 + x_Goal + SqrtSigma0 (X_DIM*X_DIM) + nparams
 	int nvars = (T - 1) * U_DIM + Q_DIM + R_DIM + X_DIM + X_DIM + (X_DIM * X_DIM) + nparams;
 
 	inputVars = new double[nvars];
@@ -273,7 +273,7 @@ void initVarVals(const std::vector< Matrix<U_DIM> >& U)
 		inputVars[idx++] = xGoal[i];
 	}
 	for (int i = 0; i < (X_DIM+X_DIM); ++i) {
-		inputVars[idx++] = Sigma0[i];
+		inputVars[idx++] = SqrtSigma0[i];
 	}
 	inputVars[idx++] = alpha_belief; inputVars[idx++] = alpha_control; inputVars[idx++] = alpha_final_belief; inputVars[idx++] = alpha_goal_state;
 
@@ -505,7 +505,6 @@ void pythonDisplayTrajectory(std::vector< Matrix<U_DIM> >& U)
 	Matrix<B_DIM> binit = zeros<B_DIM>();
 	std::vector<Matrix<B_DIM> > B(T, binit);
 
-	Matrix<X_DIM, X_DIM> SqrtSigma0 = identity<X_DIM>();
 	vec(x0, SqrtSigma0, B[0]);
 	for (size_t t = 0; t < T-1; ++t) {
 		B[t+1] = beliefDynamics(B[t], U[t]);
@@ -556,7 +555,7 @@ void pythonDisplayTrajectory(std::vector< Matrix<U_DIM> >& U)
 int main(int argc, char* argv[])
 {
 	x0[0] = -3.5; x0[1] = 2;
-	Sigma0 = identity<X_DIM>();
+	SqrtSigma0 = identity<X_DIM>();
 	xGoal[0] = -3.5; xGoal[1] = -2;
 
 	xMin[0] = -5; xMin[1] = -3;

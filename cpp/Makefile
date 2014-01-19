@@ -37,6 +37,14 @@ $(OBJ_DIR)/logging.o : util/logging.cpp
 # setupFiles bash
 POINT_SETUP_FILE = point/setupFiles.sh
 
+# share point functions
+PT_DIR = point
+PT_FILES = point logging
+PT_OBJS = $(PT_FILES:%=$(OBJ_DIR)/%.o)
+
+$(OBJ_DIR)/point.o : point/point.cpp point/point.h
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(BOOST_FLAGS) $(PYTHON_FLAGS) -c -o $@ $<
+
 # symeval	
 PT_SYM_DIR = point/sym
 
@@ -49,7 +57,7 @@ $(OBJ_DIR)/control_symeval.o : $(PT_SYM_DIR)/control-symeval.c
 
 # make point-belief
 PT_BELIEF_DIR = point/belief
-PT_BELIEF_FILES = beliefMPC beliefPenaltyMPC point-belief logging
+PT_BELIEF_FILES = point beliefMPC beliefPenaltyMPC point-belief logging
 PT_BELIEF_OBJS = $(PT_BELIEF_FILES:%=$(OBJ_DIR)/%.o)
 
 belief-setup:
@@ -70,7 +78,7 @@ $(OBJ_DIR)/point-belief.o : $(PT_BELIEF_DIR)/point-belief.cpp
 	
 # make point-state
 PT_STATE_DIR = point/state
-PT_STATE_FILES = stateMPC state_symeval point-state logging
+PT_STATE_FILES = point stateMPC state_symeval point-state logging
 PT_STATE_OBJS = $(PT_STATE_FILES:%=$(OBJ_DIR)/%.o)
 
 state-setup:
@@ -87,7 +95,7 @@ $(OBJ_DIR)/point-state.o : $(PT_STATE_DIR)/point-state.cpp
 	
 # make point-state-finitediff
 PT_STATE_FD_DIR = $(PT_STATE_DIR)
-PT_STATE_FD_FILES = stateMPC state_symeval point-state-finitediff logging
+PT_STATE_FD_FILES = point stateMPC state_symeval point-state-finitediff logging
 PT_STATE_FD_OBJS = $(PT_STATE_FD_FILES:%=$(OBJ_DIR)/%.o)
 
 state-finitediff: | state-setup $(PT_STATE_FD_OBJS) 
@@ -98,7 +106,7 @@ $(OBJ_DIR)/point-state-finitediff.o : $(PT_STATE_FD_DIR)/point-state-finitediff.
 
 # make point-lp
 PT_LP_DIR = point/lp
-PT_LP_FILES = lpMPC state_symeval point-lp logging
+PT_LP_FILES = point lpMPC state_symeval point-lp logging
 PT_LP_OBJS = $(PT_LP_FILES:%=$(OBJ_DIR)/%.o)
 
 lp-setup:
@@ -115,7 +123,7 @@ $(OBJ_DIR)/point-lp.o : $(PT_LP_DIR)/point-lp.cpp
 
 # make point-control
 PT_CONTROL_DIR = point/control
-PT_CONTROL_FILES = controlMPC control_symeval point-control logging
+PT_CONTROL_FILES = point controlMPC control_symeval point-control logging
 PT_CONTROL_OBJS = $(PT_CONTROL_FILES:%=$(OBJ_DIR)/%.o)
 
 control-setup:

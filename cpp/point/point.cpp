@@ -1,5 +1,24 @@
 #include "point.h"
 
+
+const double step = 0.0078125*0.0078125;
+
+
+Matrix<X_DIM> x0;
+Matrix<X_DIM,X_DIM> SqrtSigma0;
+Matrix<X_DIM> xGoal;
+Matrix<X_DIM> xMin, xMax;
+Matrix<U_DIM> uMin, uMax;
+
+
+const int T = TIMESTEPS;
+const double INFTY = 1e10;
+
+double *inputVars, *vars;
+std::vector<int> maskIndices;
+
+
+
 inline Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<U_DIM>& q)
 {
 	Matrix<X_DIM> xNew = x + u*DT + 0.01*q;

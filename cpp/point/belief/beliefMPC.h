@@ -192,11 +192,71 @@ typedef struct beliefMPC_params
     /* vector of size 5 */
     beliefMPC_FLOAT e9[5];
 
-    /* vector of size 5 */
-    beliefMPC_FLOAT lb10[5];
+    /* vector of size 7 */
+    beliefMPC_FLOAT lb10[7];
+
+    /* vector of size 7 */
+    beliefMPC_FLOAT ub10[7];
+
+    /* matrix of size [5 x 7] (column major format) */
+    beliefMPC_FLOAT C10[35];
 
     /* vector of size 5 */
-    beliefMPC_FLOAT ub10[5];
+    beliefMPC_FLOAT e10[5];
+
+    /* vector of size 7 */
+    beliefMPC_FLOAT lb11[7];
+
+    /* vector of size 7 */
+    beliefMPC_FLOAT ub11[7];
+
+    /* matrix of size [5 x 7] (column major format) */
+    beliefMPC_FLOAT C11[35];
+
+    /* vector of size 5 */
+    beliefMPC_FLOAT e11[5];
+
+    /* vector of size 7 */
+    beliefMPC_FLOAT lb12[7];
+
+    /* vector of size 7 */
+    beliefMPC_FLOAT ub12[7];
+
+    /* matrix of size [5 x 7] (column major format) */
+    beliefMPC_FLOAT C12[35];
+
+    /* vector of size 5 */
+    beliefMPC_FLOAT e12[5];
+
+    /* vector of size 7 */
+    beliefMPC_FLOAT lb13[7];
+
+    /* vector of size 7 */
+    beliefMPC_FLOAT ub13[7];
+
+    /* matrix of size [5 x 7] (column major format) */
+    beliefMPC_FLOAT C13[35];
+
+    /* vector of size 5 */
+    beliefMPC_FLOAT e13[5];
+
+    /* vector of size 7 */
+    beliefMPC_FLOAT lb14[7];
+
+    /* vector of size 7 */
+    beliefMPC_FLOAT ub14[7];
+
+    /* matrix of size [5 x 7] (column major format) */
+    beliefMPC_FLOAT C14[35];
+
+    /* vector of size 5 */
+    beliefMPC_FLOAT e14[5];
+
+    /* vector of size 5 */
+    beliefMPC_FLOAT lb15[5];
+
+    /* vector of size 5 */
+    beliefMPC_FLOAT ub15[5];
 
 } beliefMPC_params;
 
@@ -232,8 +292,23 @@ typedef struct beliefMPC_output
     /* vector of size 7 */
     beliefMPC_FLOAT z9[7];
 
+    /* vector of size 7 */
+    beliefMPC_FLOAT z10[7];
+
+    /* vector of size 7 */
+    beliefMPC_FLOAT z11[7];
+
+    /* vector of size 7 */
+    beliefMPC_FLOAT z12[7];
+
+    /* vector of size 7 */
+    beliefMPC_FLOAT z13[7];
+
+    /* vector of size 7 */
+    beliefMPC_FLOAT z14[7];
+
     /* vector of size 5 */
-    beliefMPC_FLOAT z10[5];
+    beliefMPC_FLOAT z15[5];
 
 } beliefMPC_output;
 

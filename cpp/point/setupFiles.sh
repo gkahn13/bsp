@@ -37,9 +37,9 @@ do
     cp ${MPC_H_FILE} ${DIR}/${MPC_FILE_NAME}".h"
 done
 
-echo "replacing TIMESTEPS definition with new TIMESTEPS for point-*cpp in ${POINT_TYPE} dir"
-CPP_WRITE="${DIR}/point-*.cpp"
-sed -i "s/^${CPP_TIMESTEP_DEF}.*/${CPP_TIMESTEP_DEF} ${TIMESTEPS}/" $CPP_WRITE
+echo "replacing TIMESTEPS definition with new TIMESTEPS for point.h in ${POINT_DIR}"
+H_WRITE="${POINT_DIR}/point.h"
+sed -i "s/^${CPP_TIMESTEP_DEF}.*/${CPP_TIMESTEP_DEF} ${TIMESTEPS}/" $H_WRITE
 
 if [ $POINT_TYPE = "state" ] || [ $POINT_TYPE = "lp" ] || [ $POINT_TYPE = "control" ]; then
     # since lp uses same sym-eval and mask as state
@@ -60,6 +60,8 @@ if [ $POINT_TYPE = "state" ] || [ $POINT_TYPE = "lp" ] || [ $POINT_TYPE = "contr
     if [ $(diff $SYM_FILE_TIMESTEP $SYM_FILE | wc -w) -gt 0 ]; then
 	echo "sym_eval file differs, copying over correct file..."
 	cp $SYM_FILE_TIMESTEP $SYM_FILE
+    else
+	echo "sym_eval file is the same. not copying over"
     fi
 
 fi

@@ -22,7 +22,7 @@ extern "C" {
 #include "stateMPC.h"
 }
 
-#define TIMESTEPS 10
+#define TIMESTEPS 15
 #define DT 1.0
 #define X_DIM 2
 #define U_DIM 2
@@ -36,7 +36,7 @@ extern "C" {
 const double step = 1e-06; //0.0078125*0.0078125;
 
 Matrix<X_DIM> x0;
-Matrix<X_DIM,X_DIM> Sigma0;
+Matrix<X_DIM,X_DIM> SqrtSigma0;
 Matrix<X_DIM> xGoal;
 Matrix<X_DIM> xMin, xMax;
 Matrix<U_DIM> uMin, uMax;
@@ -214,7 +214,7 @@ void setupDstarInterface()
 	// instantiations
 	// alpha_belief, alpha_control, alpha_final_belief
 	int nparams = 3;
-	// T*X_DIM + (T-1)*U_DIM + zeros for Q_DIM,R_DIM + Sigma0 (X_DIM*X_DIM) + nparams
+	// T*X_DIM + (T-1)*U_DIM + zeros for Q_DIM,R_DIM + SqrtSigma0 (X_DIM*X_DIM) + nparams
 	int nvars = T * X_DIM + (T - 1) * U_DIM + Q_DIM + R_DIM + (X_DIM * X_DIM) + nparams;
 
 	inputVars = new double[nvars];
@@ -263,7 +263,7 @@ void initVarVals(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matri
 		inputVars[idx++] = 0;
 	}
 	for (int i = 0; i < (X_DIM+X_DIM); ++i) {
-		inputVars[idx++] = Sigma0[i];
+		inputVars[idx++] = SqrtSigma0[i];
 	}
 	inputVars[idx++] = alpha_belief; inputVars[idx++] = alpha_control; inputVars[idx++] = alpha_final_belief;
 
@@ -699,7 +699,6 @@ void pythonDisplayTrajectory(std::vector< Matrix<X_DIM> >& X, std::vector< Matri
 	Matrix<B_DIM> binit = zeros<B_DIM>();
 	std::vector<Matrix<B_DIM> > B(T, binit);
 
-	Matrix<X_DIM, X_DIM> SqrtSigma0 = identity<X_DIM>();
 	vec(X[0], SqrtSigma0, B[0]);
 	for (size_t t = 0; t < T-1; ++t) {
 		B[t+1] = beliefDynamics(B[t], U[t]);
@@ -751,7 +750,7 @@ void pythonDisplayTrajectory(std::vector< Matrix<X_DIM> >& X, std::vector< Matri
 int main(int argc, char* argv[])
 {
 	x0[0] = -3.5; x0[1] = 2;
-	Sigma0 = identity<X_DIM>();
+	SqrtSigma0 = identity<X_DIM>();
 	xGoal[0] = -3.5; xGoal[1] = -2;
 
 	xMin[0] = -5; xMin[1] = -3; 

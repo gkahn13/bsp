@@ -22,7 +22,7 @@ point-state: $(PT_STATE_CS) $(PT_CS)
 	mono $(PT_STATE_EXEC) $(T)
 	mv *.c $(PT_SYM_DIR)/state-symeval-$(T).c
 	mv *.txt $(PT_MASKS_DIR)/state-masks-$(T).txt
-	clean
+	rm -f $(PT_STATE_EXEC)
 	
 # make point-control
 PT_CONTROL_CS = $(PT_DIR)/PointControl.cs
@@ -32,7 +32,7 @@ point-control: $(PT_CONTROL_CS) $(PT_CS)
 	mono $(PT_CONTROL_EXEC) $(T)
 	mv *.c $(PT_SYM_DIR)/control-symeval-$(T).c
 	mv *.txt $(PT_MASKS_DIR)/control-masks-$(T).txt
-	clean
+	rm -f $(PT_CONTROL_EXEC)
 	
 clean:
 	rm -f *.txt

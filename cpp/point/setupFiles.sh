@@ -9,6 +9,7 @@ POINT_TYPE=$1
 TIMESTEPS=$2
 
 
+BSP_DIR=$(sed s:/"bsp"/.*:/"bsp": <<< $(pwd))
 POINT_DIR=" $( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 DIR=$POINT_DIR/$POINT_TYPE
 
@@ -49,7 +50,8 @@ if [ $POINT_TYPE = "state" ] || [ $POINT_TYPE = "lp" ] || [ $POINT_TYPE = "contr
 	SYM_MASK_TYPE="control"
     fi
 
-    SYM_FILE_TIMESTEP="${POINT_DIR}/sym/${SYM_MASK_TYPE}/${SYM_MASK_TYPE}-symeval-${TIMESTEPS}.c"
+    DSTAR_PT_SYM_DIR="${BSP_DIR}/dstar/point/sym"
+    SYM_FILE_TIMESTEP="${DSTAR_PT_SYM_DIR}/${SYM_MASK_TYPE}-symeval-${TIMESTEPS}.c"
     SYM_FILE="${POINT_DIR}/sym/${SYM_MASK_TYPE}-symeval.c"
 
     if [ ! -f $SYM_FILE_TIMESTEP ]; then

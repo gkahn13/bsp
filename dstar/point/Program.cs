@@ -671,10 +671,10 @@ namespace Example_CreatingRuntimeFunction
             }
         }
 
-        void computeCostGradDiagHess()
+        void computeCostGradDiagHess(int T)
         {
             // num timesteps
-            T = 10;
+            //T = 10;
 
             // variable instantiations
             int nparams = 3;
@@ -713,14 +713,14 @@ namespace Example_CreatingRuntimeFunction
             Variable[] costJacDiagHessVars = initializeInputVariables(costJacDiagHess, vars, out inputVarIndices);
             costJacDiagHess.orderVariablesInDomain(costJacDiagHessVars);
 
-            costJacDiagHess.compileCCodeToFile("costStateJacDiagHess10.c");
-            //costJacDiagHess.compileCCodeToFile("costState10.c");
+            costJacDiagHess.compileCCodeToFile("costStateJacDiagHess"+T+".c");
 
-            System.IO.StreamWriter fh = new System.IO.StreamWriter("state-masks-10.txt");
+            string fileName = "state-masks-"+T+".txt";
+            Console.WriteLine("Writing " + fileName);
+            System.IO.StreamWriter fh = new System.IO.StreamWriter(fileName);
             fh.Write(nvars + " ");
             for (int i = 0; i < nvars; ++i)
             {
-                Console.WriteLine(inputVarIndices[i]);
                 if (inputVarIndices[i])
                 {
                     fh.Write("1 ");
@@ -853,10 +853,22 @@ namespace Example_CreatingRuntimeFunction
 
         static void Main(string[] args)
         { 
+            // T = args[0]
+            int T;
+           
+            if (args.Length == 0) {
+                T = 15;
+            } else {
+                T = int.Parse(args[0]);
+            }
+           
+            Console.WriteLine("Creating files for T = "+T);
+           
             Function.newContext();
             Function.printCompilerSource = false;
 
             Program prog = new Program();
+            prog.T = T;
 
             var stopwatch = new Stopwatch();
             stopwatch.Start();
@@ -866,14 +878,14 @@ namespace Example_CreatingRuntimeFunction
 
             //prog.testCostFunc(Program.COMPUTE_COST);
 
-            prog.computeCostGradDiagHess();
+            prog.computeCostGradDiagHess(T);
 
             //prog.computeControlCostGradDiagHess();
 
             stopwatch.Stop();
             
             Console.WriteLine("Finished in " + (stopwatch.ElapsedMilliseconds/1000.0) + " s, Ctrl-C to exit");
-            Console.Read();
+            //Console.Read();
         }
     }
 }

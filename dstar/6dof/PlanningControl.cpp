@@ -358,7 +358,7 @@ void preprocess(const std::vector<PathNode>& path) {
     T[k](2,4) = cos(a0)*(cos(a1)*(cos(a2)*cos(a3)*cos(a4)*l4-sin(a2)*sin(a4)*l4)+sin(a1)*(-cos(a2)*sin(a4)*l4-sin(a2)*cos(a3)*cos(a4)*l4))-sin(a0)*sin(a3)*cos(a4)*l4;
     T[k](2,5) = 0;
     
-    // H = dh/dx
+    // H = dh/dx, jacobian of observation function
     for (int i = 0; i < X_DIM; ++i) {
       /*H[k](0,i) = (T[k](0,i)*(g_path[2] - cam[0][2]) - (g_path[0] - cam[0][0])*T[k](2,i)) / ((g_path[2] - cam[0][2])*(g_path[2] - cam[0][2]));
       H[k](1,i) = (T[k](1,i)*(g_path[2] - cam[0][2]) - (g_path[1] - cam[0][1])*T[k](2,i)) / ((g_path[2] - cam[0][2])*(g_path[2] - cam[0][2]));

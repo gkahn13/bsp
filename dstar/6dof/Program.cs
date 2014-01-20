@@ -10,6 +10,8 @@ using utilities;
 //using lapack;
 using System.IO;
 
+using System.Reflection;
+
 // Figure out how to pass in matrix arguments to a function and evaluate a runtime function -- DONE
 // -- order variables to pass in to function? -- SORT OF
 // test ekf implementation -- DONE
@@ -140,14 +142,23 @@ namespace Example_CreatingRuntimeFunction
             return x_tp1;
         }
         
+        // joint angles -> end effector position
+        double[] g(double[] x)
+        {
+            double a0 = x[0], a1 = x[1], a2 = x[2], a3 = x[3], a4 = x[4], a5 = x[5];
+            
+            double[] p = new double[3];
+            p[0] = Math.Sin(a0)*(Math.Cos(a1)*(Math.Sin(a2)*(Math.Cos(a4)*l4+l3)+Math.Cos(a2)*Math.Cos(a3)*Math.Sin(a4)*l4)+Math.Sin(a1)*(Math.Cos(a2)*(Math.Cos(a4)*l4+l3)-Math.Sin(a2)*Math.Cos(a3)*Math.Sin(a4)*l4+l2))+Math.Cos(a0)*Math.Sin(a3)*Math.Sin(a4)*l4;
+            p[1] = -Math.Sin(a1)*(Math.Sin(a2)*(Math.Cos(a4)*l4+l3)+Math.Cos(a2)*Math.Cos(a3)*Math.Sin(a4)*l4)+Math.Cos(a1)*(Math.Cos(a2)*(Math.Cos(a4)*l4+l3)-Math.Sin(a2)*Math.Cos(a3)*Math.Sin(a4)*l4+l2)+l1;
+            p[2] = Math.Cos(a0)*(Math.Cos(a1)*(Math.Sin(a2)*(Math.Cos(a4)*l4+l3)+Math.Cos(a2)*Math.Cos(a3)*Math.Sin(a4)*l4)+Math.Sin(a1)*(Math.Cos(a2)*(Math.Cos(a4)*l4+l3)-Math.Sin(a2)*Math.Cos(a3)*Math.Sin(a4)*l4+l2))-Math.Sin(a0)*Math.Sin(a3)*Math.Sin(a4)*l4;
+            
+            return p;   
+        }
+        
+        // joint angles -> end effector position
         Function[] g(Function[] x)
         {
-            Function a0 = x[0];
-            Function a1 = x[1];
-            Function a2 = x[2];
-            Function a3 = x[3];
-            Function a4 = x[4];
-            Function a5 = x[5];
+            Function a0 = x[0], a1 = x[1], a2 = x[2], a3 = x[3], a4 = x[4], a5 = x[5];
             
             Function[] p = new Function[3];
             p[0] = Function.sin(a0)*(Function.cos(a1)*(Function.sin(a2)*(Function.cos(a4)*l4+l3)+Function.cos(a2)*Function.cos(a3)*Function.sin(a4)*l4)+Function.sin(a1)*(Function.cos(a2)*(Function.cos(a4)*l4+l3)-Function.sin(a2)*Function.cos(a3)*Function.sin(a4)*l4+l2))+Function.cos(a0)*Function.sin(a3)*Function.sin(a4)*l4;
@@ -156,6 +167,7 @@ namespace Example_CreatingRuntimeFunction
             
             return p;   
         }
+        
         
         void analyticalJacobian(double[] x)
         {
@@ -191,12 +203,30 @@ namespace Example_CreatingRuntimeFunction
             
             for(int i = 0; i < DIM; ++i) {
                 for(int j = 0; j < XDIM; ++j) {
-                    Console.WriteLine(J[i,j]);
+                    //Console.WriteLine(J[i,j]);
                 }
             }
+            
+            
+            double[,] H = new double[ZDIM,XDIM];
+            // H = dh/dx, jacobian of observation function (ZDIM by XDIM)
+		    for (int i = 0; i < XDIM; ++i) {
+		        H[0,i] = (J[0,i]-(x[1] - cam0[1]) - (x[0] - cam0[0])-J[1,i]) / ((x[1] - cam0[1])*(x[1] - cam0[1]));
+		        H[1,i] = (J[2,i]-(x[1] - cam0[1]) - (x[2] - cam0[2])-J[1,i]) / ((x[1] - cam0[1])*(x[1] - cam0[1]));
+		        H[2,i] = (J[0,i]-(x[1] - cam1[1]) - (x[0] - cam1[0])-J[1,i]) / ((x[1] - cam1[1])*(x[1] - cam1[1]));
+		        H[3,i] = (J[2,i]-(x[1] - cam1[1]) - (x[2] - cam1[2])-J[1,i]) / ((x[1] - cam1[1])*(x[1] - cam1[1]));
+		    }
+		    
+            for(int i = 0; i < ZDIM; ++i) {
+                for(int j = 0; j < XDIM; ++j) {
+                    Console.WriteLine(H[i,j]);
+                }
+            }
+		    
         }
         
-        void symbolicJacobian(Function[] x, out Function[,] J)
+        // J = T from the paper
+        void symbolicJacobian(Function[] x, out Function[,] J, out Function[,] H)
         {
             // J = dg/dx
             J = new Function[DIM,XDIM];
@@ -206,6 +236,20 @@ namespace Example_CreatingRuntimeFunction
                 for (int j = 0; j < DIM; ++j)
                 {
                     J[j,i] = Jicol[j];
+                }
+            }
+            
+            
+            // H = d(obsfunc)/dx
+            H = new Function[ZDIM, XDIM];
+            Function[] r = new Function[RDIM];
+            for (int i = 0; i < RDIM; ++i) { r[i] = 0; }
+            for (int i = 0; i < XDIM; ++i)
+            {
+                Function[] Hicol = Function.D(obsfunc(x, r), x[i]);
+                for (int j = 0; j < ZDIM; ++j)
+                {
+                    H[j, i] = Hicol[j];
                 }
             }
         }
@@ -223,11 +267,45 @@ namespace Example_CreatingRuntimeFunction
             Function[] x = new Function[XDIM];
             for (int i = 0; i < nvars; ++i) { vars[i] = new Variable("vars_" + i); x[i] = vars[i];}
             
-            Function[,] J;
-            symbolicJacobian(x, out J);
+            Function[,] J, H;
+            symbolicJacobian(x, out J, out H);
+            
+            Function Hvec = Function.derivative(VM.jaggedToLinear<Function>(VM.toJaggedArray<Function>(H)));
+            //Jvec.printOperatorCounts();
+            
+            
+            bool[] inputVarIndices;
+            vars = initializeInputVariables(Hvec, vars, out inputVarIndices);
+            for (int i = 0; i < nvars; ++i)
+                {
+                    if (inputVarIndices[i])
+                    {
+                        Console.WriteLine("1 ");
+                    }
+                    else
+                    {
+                        Console.WriteLine("0 ");
+                    }
+                }
+            
+              
+            Hvec.orderVariablesInDomain(vars);
+            
+            RuntimeFunction Hrun = Hvec.compile();
+            Console.WriteLine(Hrun.domainDimension + " " + Hrun.rangeDimension);
 
+            double[] result = new double[Hrun.rangeDimension];
+            Hrun.eval(result, xtest);
+            for (int j = 0; j < Hrun.rangeDimension; ++j)
+            {
+                Console.WriteLine(result[j]);
+            }
+            Console.WriteLine();
+
+            /*
             Function Jvec = Function.derivative(VM.jaggedToLinear<Function>(VM.toJaggedArray<Function>(J)));
-            Jvec.printOperatorCounts();
+            //Jvec.printOperatorCounts();
+            
             
             bool[] inputVarIndices;
             vars = initializeInputVariables(Jvec, vars, out inputVarIndices);
@@ -242,6 +320,8 @@ namespace Example_CreatingRuntimeFunction
                         Console.WriteLine("0 ");
                     }
                 }
+            
+              
             Jvec.orderVariablesInDomain(vars);
             
             RuntimeFunction Jrun = Jvec.compile();
@@ -249,44 +329,41 @@ namespace Example_CreatingRuntimeFunction
 
             double[] result = new double[Jrun.rangeDimension];
             Jrun.eval(result, xtest);
-            for (int i = 0; i < Jrun.rangeDimension; ++i)
+            for (int j = 0; j < Jrun.rangeDimension; ++j)
             {
-                Console.WriteLine(result[i]);
+                Console.WriteLine(result[j]);
             }
             Console.WriteLine();
+            */
         }
         
-
+        // observation function (also called h)
+        /*double[] obsfunc(double[] x_t)
+        {
+            double[] ee_pos = g(x_t);
+            
+            double[] obs = new double[ZDIM];
+            obs[0] = (ee_pos[0] - cam0[0])/(ee_pos[2] - cam0[2]);
+            obs[1] = (ee_pos[1] - cam0[1])/(ee_pos[2] - cam0[2]);
+            obs[2] = (ee_pos[0] - cam1[0])/(ee_pos[2] - cam1[2]);
+            obs[3] = (ee_pos[1] - cam1[1])/(ee_pos[2] - cam1[2]);
+            
+            return obs;
+        }*/
+        
+        // observation function (also called h)
         Function[] obsfunc(Function[] x_t, Function[] r_t)
         {
-            Function intensity = Function.sqrt(x_t[0] * x_t[0] * 0.5 * 0.5 + 1e-6);
-            Function[] z_t = VM.plus(x_t, VM.mult(r_t, intensity));
-            return z_t;
-        }
-
-        void computeDynJacobians(Function[] x_t, Function[] u_t, Function[] q_t, out Function[,] A, out Function[,] M)
-        {
-            // A = d(dynfunc)/dx
-            A = new Function[XDIM, XDIM];
-            for (int i = 0; i < XDIM; ++i)
-            {
-                Function[] Aicol = Function.D(dynfunc(x_t, u_t, q_t), x_t[i]);
-                for (int j = 0; j < XDIM; ++j)
-                {
-                    A[i, j] = Aicol[j];
-                }
-            }
-
-            // M = d(dynfunc)/dq
-            M = new Function[XDIM, QDIM];
-            for (int i = 0; i < XDIM; ++i)
-            {
-                Function[] Micol = Function.D(dynfunc(x_t, u_t, q_t), q_t[i]);
-                for (int j = 0; j < QDIM; ++j)
-                {
-                    M[i, j] = Micol[j];
-                }
-            }
+            Function[] ee_pos = g(x_t);
+            
+            Function[] obs = new Function[ZDIM];
+            
+            obs[0] = (ee_pos[0] - cam0[0])/(ee_pos[2] - cam0[2]) + r_t[0];
+            obs[1] = (ee_pos[1] - cam0[1])/(ee_pos[2] - cam0[2]) + r_t[1];
+            obs[2] = (ee_pos[0] - cam1[0])/(ee_pos[2] - cam1[2]) + r_t[2];
+            obs[3] = (ee_pos[1] - cam1[1])/(ee_pos[2] - cam1[2]) + r_t[3];
+            
+            return obs;
         }
 
         void computeObsJacobians(Function[] x_tp1, Function[] r_t, out Function[,] H, out Function[,] N)
@@ -313,10 +390,6 @@ namespace Example_CreatingRuntimeFunction
                 }
             }
 
-            // testing
-            //VM.print<Function>(N);
-            //Function[,] Nd = Function.derivative(N);
-            //VM.print<Function>(Nd);
         }
 
         void EKF(Function[] x_t, Function[] u_t, Function[] q_t, Function[] r_t, Function[,] Sigma_t, out Function[] x_tp1, out Function[,] Sigma_tp1)
@@ -324,7 +397,9 @@ namespace Example_CreatingRuntimeFunction
             VM.checkSize<Function>(Sigma_t, XDIM, XDIM);
 
             Function[,] A, M;
-            computeDynJacobians(x_t, u_t, q_t, out A, out M);
+            //computeDynJacobians(x_t, u_t, q_t, out A, out M);
+            A = VM.identity<Function>(XDIM, 0, 1); // d(dynfunc)/dx
+            M = VM.mult(VM.identity<Function>(UDIM, 0, 1), DT); // d(dynfunc)/dm (noise)
 
             Sigma_tp1 = VM.plus(VM.mult(VM.mult(A, Sigma_t), VM.transpose<Function>(A)), VM.mult(VM.mult(M, Q), VM.transpose<Function>(M)));
             //VM.print<Function>(Sigma_tp1);
@@ -388,17 +463,28 @@ namespace Example_CreatingRuntimeFunction
         // one EKF time step check
         void testEKFStep()
         {
-            int nvars = 12;
+            int nvars = XDIM + UDIM + QDIM + RDIM + XDIM*XDIM;
             Variable[] vars = new Variable[nvars];
             for (int i = 0; i < nvars; ++i) { vars[i] = new Variable("vars_" + i); }
-            Function[] x = new Function[] { vars[0], vars[1] };
-            Function[] u = new Function[] { vars[2], vars[3] };
-
-            Function[] q = new Function[] { vars[4], vars[5] };
-            Function[] r = new Function[] { vars[6], vars[7] };
-
-            Function[,] Sigma = new Function[,] { { vars[8], vars[9] }, { vars[10], vars[11] } };
-
+            Function [] x = new Function[XDIM];
+            Function [] u = new Function[UDIM];
+            Function [] q = new Function[QDIM];
+            Function [] r = new Function[RDIM];
+            Function [,] Sigma = new Function[XDIM,XDIM];
+            
+            int idx = 0;
+            for(int i=0; i < XDIM; ++i) { x[i] = vars[idx++]; }
+            for(int i=0; i < UDIM; ++i) { u[i] = vars[idx++]; }
+            for(int i=0; i < QDIM; ++i) { q[i] = vars[idx++]; }
+            for(int i=0; i < RDIM; ++i) { r[i] = vars[idx++]; }
+            for(int i=0; i < XDIM; ++i)
+            { 
+               for(int j=0; j < XDIM; ++j)
+               {
+                   Sigma[i,j] = vars[idx++];
+               }
+            }
+ 
             Function[] x_tp1;
             Function[,] Sigma_tp1;
 
@@ -445,9 +531,13 @@ namespace Example_CreatingRuntimeFunction
                     U[t][i] = vars[idx++];
                 }
             }
-            q = new Function[] { vars[idx++], vars[idx++] };
-            r = new Function[] { vars[idx++], vars[idx++] };
-
+            
+            Function [] q = new Function[QDIM];
+            for(int i=0; i < QDIM; ++i) { q[i] = vars[idx++]; }
+            
+            Function [] r = new Function[RDIM];
+            for(int i=0; i < RDIM; ++i) { r[i] = vars[idx++]; }
+            
             Sigma_0 = new Function[XDIM, XDIM];
             for (int i = 0; i < XDIM; ++i)
             {
@@ -971,6 +1061,7 @@ namespace Example_CreatingRuntimeFunction
             fh.WriteLine();
             fh.Close();
         }
+        
 
         static void Main(string[] args)
         { 

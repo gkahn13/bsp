@@ -352,11 +352,7 @@ int main(int argc, char* argv[])
 		X[t+1] = dynfunc(X[t], U[t], zeros<Q_DIM,1>());
 	}
 
-	int nparams = 4;
-	int nvars = (T - 1) * U_DIM + Q_DIM + R_DIM + X_DIM + X_DIM + (X_DIM * X_DIM) + nparams;
-	std::stringstream fileName;
-	fileName << "control-masks-" << TIMESTEPS << ".txt";
-	setupDstarInterface(fileName.str(), nparams, nvars);
+	setupDstarInterface(std::string(getMask()));
 
 	controlMPC_params problem;
 	controlMPC_output output;

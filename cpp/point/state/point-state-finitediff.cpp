@@ -561,11 +561,7 @@ int main(int argc, char* argv[])
 		X[t+1] = dynfunc(X[t], U[t], zeros<Q_DIM,1>());
 	}
 
-	int nparams = 3;
-	int nvars = T * X_DIM + (T - 1) * U_DIM + Q_DIM + R_DIM + (X_DIM * X_DIM) + nparams;
-	std::stringstream fileName;
-	fileName << "state-masks-" << TIMESTEPS << ".txt";
-	setupDstarInterface(fileName.str(), nparams, nvars);
+	setupDstarInterface(std::string(getMask()));
 
 	stateMPC_params problem;
 	stateMPC_output output;

@@ -156,6 +156,21 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	return g;
 }
 
+/*
+void setupDstarInterface(std::string mask) {
+	std::stringstream ss(mask);
+	int val, i=0;
+	while (ss >> val) {
+		if (val == 1) {
+			maskIndices.push_back(i);
+		}
+		i++;
+	}
+
+	inputVars = new double[i];
+}*/
+
+
 void setupDstarInterface(std::string fileName, int nparams, int nvars)
 {
 	// instantiations
@@ -186,6 +201,7 @@ void setupDstarInterface(std::string fileName, int nparams, int nvars)
 	// Read in Jacobian and Hessian masks here
 	fptr.close();
 }
+
 
 void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U)
 {

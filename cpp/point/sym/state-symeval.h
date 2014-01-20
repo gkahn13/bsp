@@ -10,4 +10,6 @@ void evalCostGrad(double *result, double *vars);
 
 void evalCostGradDiagHess(double *result, double *vars);
 
+char* getMask();
+
 #endif

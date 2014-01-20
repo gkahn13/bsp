@@ -49,8 +49,13 @@ namespace Point_Dstar
         }
         
 
-        void computeControlCostGradDiagHess()
+        void computeCostGradDiagHess(string eval_name)
         {
+            uint flag = 0;
+            flag |= ((uint)(Convert.ToUInt16(eval_name.Contains("Cost"))) << 0);
+            flag |= ((uint)(Convert.ToUInt16(eval_name.Contains("Grad"))) << 1);
+            flag |= ((uint)(Convert.ToUInt16(eval_name.Contains("DiagHess"))) << 3);
+            
             // variable instantiations
             int nparams = 4;
             int nvars = (T - 1) * UDIM + QDIM + RDIM + XDIM + XDIM + (XDIM * XDIM) + nparams;
@@ -101,7 +106,7 @@ namespace Point_Dstar
 
             Function cost = costFunc(U, q, r, x_0, x_goal, Sigma_0, alpha_belief, alpha_control, alpha_final_belief, alpha_goal_state);
 
-            Function[] costJacDiagHessFunc = new Function[2*Uvec.Length + 1];
+            /*Function[] costJacDiagHessFunc = new Function[2*Uvec.Length + 1];
             costJacDiagHessFunc[0] = cost;
             idx = 1;
             for (int i = 0; i < Uvec.Length; ++i)
@@ -111,8 +116,30 @@ namespace Point_Dstar
             for (int i = 0; i < Uvec.Length; ++i)
             {
                 costJacDiagHessFunc[idx++] = Function.D(cost, Uvec[i], Uvec[i]);
+            }*/
+            List<Function> costJacDiagHessFuncList = new List<Function>();
+            if ((flag & COMPUTE_COST) != 0)
+            {
+                costJacDiagHessFuncList.Add(cost);
             }
-            Function costJacDiagHess = Function.derivative(costJacDiagHessFunc);
+            
+            if ((flag & COMPUTE_JACOBIAN) != 0)
+            {
+	            for (int i = 0; i < Uvec.Length; ++i)
+	            {
+	                costJacDiagHessFuncList.Add(Function.D(cost, Uvec[i]));
+	            }
+            }
+            if ((flag & COMPUTE_DIAGONAL_HESSIAN) != 0)
+            {
+	            for (int i = 0; i < Uvec.Length; ++i)
+	            {
+	                costJacDiagHessFuncList.Add(Function.D(cost, Uvec[i], Uvec[i]));
+	            }
+            }
+            
+            
+            Function costJacDiagHess = Function.derivative(costJacDiagHessFuncList.ToArray());
             costJacDiagHess.printOperatorCounts();
 
             bool[] inputVarIndices;
@@ -121,7 +148,7 @@ namespace Point_Dstar
 
             
 
-            costJacDiagHess.compileCCodeToFile("costControlJacDiagHess"+T+".c");
+            costJacDiagHess.compileCCodeToFile("control-symeval-"+T+".c");
 
             string fileName = "control-masks-"+T+".txt";
             Console.WriteLine("Writing " + fileName);
@@ -144,12 +171,14 @@ namespace Point_Dstar
         static void Main(string[] args)
         { 
             // T = args[0]
-            int T;
+            int T = 15;
+            string eval_name = "CostGradDiagHess"; // default to comput cost, gradient, and diagonal hessian
            
-            if (args.Length == 0) {
-                T = 15;
-            } else {
+            if (args.Length >= 1) {
                 T = int.Parse(args[0]);
+            }
+            if (args.Length >= 2) {
+                eval_name = args[1];
             }
            
             Console.WriteLine("Creating files for T = "+T);
@@ -162,7 +191,7 @@ namespace Point_Dstar
             var stopwatch = new Stopwatch();
             stopwatch.Start();
             
-            pc.computeControlCostGradDiagHess();
+            pc.computeCostGradDiagHess(eval_name);
 
             stopwatch.Stop();
             

@@ -29,6 +29,11 @@ namespace Point_Dstar
         protected Function[][] X, U;
         protected Function[] q, r;
         protected Function[,] Sigma_0;
+        
+        protected const uint COMPUTE_COST = (1 << 0);
+        protected const uint COMPUTE_JACOBIAN = (1 << 1);
+        protected const uint COMPUTE_HESSIAN = (1 << 2);
+        protected const uint COMPUTE_DIAGONAL_HESSIAN = (1 << 3);
 
         public Point() : this(15) {
         }

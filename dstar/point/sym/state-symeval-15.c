@@ -2,13 +2,18 @@
 
 #include <math.h>
 
-double sqr(double x) {
-	return x*x;
+double Square(double x) {
+    return x*x;
+
 }
 
-// input dimension: 51
-// output dimension: 1
-void evalCost(double *result, double *vars)
+
+
+char* getMask() {
+    return "1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0 0 1 1 1 1 1 1 1 1 1 ";
+}
+ 
+    void evalCost(double *result, double *vars)
     {
 
 //  DOMAIN variables
@@ -1346,12 +1351,7 @@ void evalCost(double *result, double *vars)
 
 			result[0] = v3467;
 		}
-
-
-
-//input: 51
-//output: 117
-void evalCostGradDiagHess(double *result, double *vars)
+    void evalCostGradDiagHess(double *result, double *vars)
     {
 
 //  DOMAIN variables
@@ -3757,7 +3757,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v50743 = v50740+v50742;
 			v50744 = v50738*v50743;
 
-			v2676 = sqr(Dv149_Dvars_61);
+			v2676 = Square(Dv149_Dvars_61);
 			v2677 = -0.5/v2676;
 			v2678 = v80*v2677;
 			v2679 = v2678*v2526;
@@ -3765,7 +3765,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v2681 = v2680+v2523;
 			v50745 = v50744*v2681;
 			v50746 =  -(v49823);
-			v50747 = sqr(v49838);
+			v50747 = Square(v49838);
 			v50748 = v50746/v50747;
 			v50749 = 0.5/v49838;
 			v50750 = vars_64*vars_61;
@@ -3800,7 +3800,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v50778 = v50774+v50777;
 			v50779 = v49848*v50778;
 			v50780 =  -(v49842);
-			v50781 = sqr(v49847);
+			v50781 = Square(v49847);
 			v50782 = v50780/v50781;
 			v50783 = 0.5/v49846;
 			v50784 = v49846*v50783;
@@ -3900,7 +3900,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v50935 = v50934*0.5;
 			v50936 = v50935+v50870;
 			v50874 =  -(v50682);
-			v50875 = sqr(v50696);
+			v50875 = Square(v50696);
 			v50876 = v50874/v50875;
 			v50877 = v50872*v50876;
 			v50878 =  -(v50708);
@@ -3924,7 +3924,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v50896 = v50894-v50895;
 			v50897 = v50885+v50896;
 			v50898 =  -(v50700);
-			v50899 = sqr(v50705);
+			v50899 = Square(v50705);
 			v50900 = v50898/v50899;
 			v50901 = v50868*v50900;
 			v50902 =  -(v50722);
@@ -3991,7 +3991,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v51054 = v50979*v2651;
 			v51055 = v51054*0.5;
 			v50980 =  -(v50616);
-			v50981 = sqr(v50630);
+			v50981 = Square(v50630);
 			v50982 = v50980/v50981;
 			v50983 = v50978*v50982;
 			v50984 = v50976*v50631;
@@ -4036,7 +4036,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v51009 = v51008*v50654;
 			v51010 = v51004-v51009;
 			v51011 =  -(v50634);
-			v51012 = sqr(v50639);
+			v51012 = Square(v50639);
 			v51013 = v51011/v51012;
 			v51014 = v50974*v51013;
 			v51015 =  -(v50656);
@@ -4111,7 +4111,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v51178 = v51106*v2641;
 			v51179 = v51178*0.5;
 			v51107 =  -(v50550);
-			v51108 = sqr(v50564);
+			v51108 = Square(v50564);
 			v51109 = v51107/v51108;
 			v51110 = v51105*v51109;
 			v51111 = v51103*v50565;
@@ -4160,7 +4160,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v51134 = v51133*v50588;
 			v51135 = v51129-v51134;
 			v51136 =  -(v50568);
-			v51137 = sqr(v50573);
+			v51137 = Square(v50573);
 			v51138 = v51136/v51137;
 			v51139 = v51101*v51138;
 			v51140 =  -(v50590);
@@ -4235,7 +4235,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v51302 = v51230*v2631;
 			v51303 = v51302*0.5;
 			v51231 =  -(v50484);
-			v51232 = sqr(v50498);
+			v51232 = Square(v50498);
 			v51233 = v51231/v51232;
 			v51234 = v51229*v51233;
 			v51235 = v51227*v50499;
@@ -4283,7 +4283,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v51258 = v51257*v50522;
 			v51259 = v51253-v51258;
 			v51260 =  -(v50502);
-			v51261 = sqr(v50507);
+			v51261 = Square(v50507);
 			v51262 = v51260/v51261;
 			v51263 = v51225*v51262;
 			v51264 =  -(v50524);
@@ -4358,7 +4358,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v51426 = v51354*v2621;
 			v51427 = v51426*0.5;
 			v51355 =  -(v50418);
-			v51356 = sqr(v50432);
+			v51356 = Square(v50432);
 			v51357 = v51355/v51356;
 			v51358 = v51353*v51357;
 			v51359 = v51351*v50433;
@@ -4406,7 +4406,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v51382 = v51381*v50456;
 			v51383 = v51377-v51382;
 			v51384 =  -(v50436);
-			v51385 = sqr(v50441);
+			v51385 = Square(v50441);
 			v51386 = v51384/v51385;
 			v51387 = v51349*v51386;
 			v51388 =  -(v50458);
@@ -4481,7 +4481,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v51550 = v51478*v2611;
 			v51551 = v51550*0.5;
 			v51479 =  -(v50352);
-			v51480 = sqr(v50366);
+			v51480 = Square(v50366);
 			v51481 = v51479/v51480;
 			v51482 = v51477*v51481;
 			v51483 = v51475*v50367;
@@ -4529,7 +4529,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v51506 = v51505*v50390;
 			v51507 = v51501-v51506;
 			v51508 =  -(v50370);
-			v51509 = sqr(v50375);
+			v51509 = Square(v50375);
 			v51510 = v51508/v51509;
 			v51511 = v51473*v51510;
 			v51512 =  -(v50392);
@@ -4604,7 +4604,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v51675 = v51602*v2601;
 			v51676 = v51675*0.5;
 			v51603 =  -(v50286);
-			v51604 = sqr(v50300);
+			v51604 = Square(v50300);
 			v51605 = v51603/v51604;
 			v51606 = v51601*v51605;
 			v51607 = v51599*v50301;
@@ -4652,7 +4652,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v51630 = v51629*v50324;
 			v51631 = v51625-v51630;
 			v51632 =  -(v50304);
-			v51633 = sqr(v50309);
+			v51633 = Square(v50309);
 			v51634 = v51632/v51633;
 			v51635 = v51597*v51634;
 			v51636 =  -(v50326);
@@ -4727,7 +4727,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v51799 = v51727*v2591;
 			v51800 = v51799*0.5;
 			v51728 =  -(v50220);
-			v51729 = sqr(v50234);
+			v51729 = Square(v50234);
 			v51730 = v51728/v51729;
 			v51731 = v51726*v51730;
 			v51732 = v51724*v50235;
@@ -4776,7 +4776,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v51755 = v51754*v50258;
 			v51756 = v51750-v51755;
 			v51757 =  -(v50238);
-			v51758 = sqr(v50243);
+			v51758 = Square(v50243);
 			v51759 = v51757/v51758;
 			v51760 = v51722*v51759;
 			v51761 =  -(v50260);
@@ -4851,7 +4851,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v51924 = v51851*v2581;
 			v51925 = v51924*0.5;
 			v51852 =  -(v50154);
-			v51853 = sqr(v50168);
+			v51853 = Square(v50168);
 			v51854 = v51852/v51853;
 			v51855 = v51850*v51854;
 			v51856 = v51848*v50169;
@@ -4899,7 +4899,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v51879 = v51878*v50192;
 			v51880 = v51874-v51879;
 			v51881 =  -(v50172);
-			v51882 = sqr(v50177);
+			v51882 = Square(v50177);
 			v51883 = v51881/v51882;
 			v51884 = v51846*v51883;
 			v51885 =  -(v50194);
@@ -4974,7 +4974,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v52048 = v51976*v2571;
 			v52049 = v52048*0.5;
 			v51977 =  -(v50088);
-			v51978 = sqr(v50102);
+			v51978 = Square(v50102);
 			v51979 = v51977/v51978;
 			v51980 = v51975*v51979;
 			v51981 = v51973*v50103;
@@ -5023,7 +5023,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v52004 = v52003*v50126;
 			v52005 = v51999-v52004;
 			v52006 =  -(v50106);
-			v52007 = sqr(v50111);
+			v52007 = Square(v50111);
 			v52008 = v52006/v52007;
 			v52009 = v51971*v52008;
 			v52010 =  -(v50128);
@@ -5098,7 +5098,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v52172 = v52100*v2561;
 			v52173 = v52172*0.5;
 			v52101 =  -(v50022);
-			v52102 = sqr(v50036);
+			v52102 = Square(v50036);
 			v52103 = v52101/v52102;
 			v52104 = v52099*v52103;
 			v52105 = v52097*v50037;
@@ -5146,7 +5146,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v52128 = v52127*v50060;
 			v52129 = v52123-v52128;
 			v52130 =  -(v50040);
-			v52131 = sqr(v50045);
+			v52131 = Square(v50045);
 			v52132 = v52130/v52131;
 			v52133 = v52095*v52132;
 			v52134 =  -(v50062);
@@ -5221,7 +5221,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v52296 = v52224*v2551;
 			v52297 = v52296*0.5;
 			v52225 =  -(v49956);
-			v52226 = sqr(v49970);
+			v52226 = Square(v49970);
 			v52227 = v52225/v52226;
 			v52228 = v52223*v52227;
 			v52229 = v52221*v49971;
@@ -5269,7 +5269,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v52252 = v52251*v49994;
 			v52253 = v52247-v52252;
 			v52254 =  -(v49974);
-			v52255 = sqr(v49979);
+			v52255 = Square(v49979);
 			v52256 = v52254/v52255;
 			v52257 = v52219*v52256;
 			v52258 =  -(v49996);
@@ -5342,7 +5342,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v52347 = v52340-v52346;
 			v52348 = v52347*v52339;
 			v52349 =  -(v49890);
-			v52350 = sqr(v49904);
+			v52350 = Square(v49904);
 			v52351 = v52349/v52350;
 			v52352 = v52347*v52351;
 			v52353 = v52345*v49905;
@@ -5390,7 +5390,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v52376 = v52375*v49928;
 			v52377 = v52371-v52376;
 			v52378 =  -(v49908);
-			v52379 = sqr(v49913);
+			v52379 = Square(v49913);
 			v52380 = v52378/v52379;
 			v52381 = v52343*v52380;
 			v52382 =  -(v49930);
@@ -5518,7 +5518,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v52500 = v52499*vars_61;
 			v52501 = v52500*0.5;
 			v52502 = v52490+v52501;
-			v5564 = sqr(Dv314_Dvars_61);
+			v5564 = Square(Dv314_Dvars_61);
 			v5565 = -0.5/v5564;
 			v5566 = v267*v5565;
 			v5567 = v5566*v2536;
@@ -5565,7 +5565,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v52540 = v52539*vars_61;
 			v52541 = v52540*0.5;
 			v52542 = v52530+v52541;
-			v5616 = sqr(Dv479_Dvars_61);
+			v5616 = Square(Dv479_Dvars_61);
 			v5617 = -0.5/v5616;
 			v5618 = v432*v5617;
 			v5619 = v5618*v2546;
@@ -5612,7 +5612,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v52579 = v52578*vars_61;
 			v52580 = v52579*0.5;
 			v52581 = v52569+v52580;
-			v5668 = sqr(Dv644_Dvars_61);
+			v5668 = Square(Dv644_Dvars_61);
 			v5669 = -0.5/v5668;
 			v5670 = v597*v5669;
 			v5671 = v5670*v2556;
@@ -5659,7 +5659,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v52618 = v52617*vars_61;
 			v52619 = v52618*0.5;
 			v52620 = v52608+v52619;
-			v5720 = sqr(Dv809_Dvars_61);
+			v5720 = Square(Dv809_Dvars_61);
 			v5721 = -0.5/v5720;
 			v5722 = v762*v5721;
 			v5723 = v5722*v2566;
@@ -5706,7 +5706,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v52658 = v52657*vars_61;
 			v52659 = v52658*0.5;
 			v52660 = v52648+v52659;
-			v5772 = sqr(Dv974_Dvars_61);
+			v5772 = Square(Dv974_Dvars_61);
 			v5773 = -0.5/v5772;
 			v5774 = v927*v5773;
 			v5775 = v5774*v2576;
@@ -5753,7 +5753,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v52698 = v52697*vars_61;
 			v52699 = v52698*0.5;
 			v52700 = v52688+v52699;
-			v5824 = sqr(Dv1139_Dvars_61);
+			v5824 = Square(Dv1139_Dvars_61);
 			v5825 = -0.5/v5824;
 			v5826 = v1092*v5825;
 			v5827 = v5826*v2586;
@@ -5800,7 +5800,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v52737 = v52736*vars_61;
 			v52738 = v52737*0.5;
 			v52739 = v52727+v52738;
-			v5876 = sqr(Dv1304_Dvars_61);
+			v5876 = Square(Dv1304_Dvars_61);
 			v5877 = -0.5/v5876;
 			v5878 = v1257*v5877;
 			v5879 = v5878*v2596;
@@ -5847,7 +5847,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v52777 = v52776*vars_61;
 			v52778 = v52777*0.5;
 			v52779 = v52767+v52778;
-			v5928 = sqr(Dv1469_Dvars_61);
+			v5928 = Square(Dv1469_Dvars_61);
 			v5929 = -0.5/v5928;
 			v5930 = v1422*v5929;
 			v5931 = v5930*v2606;
@@ -5894,7 +5894,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v52816 = v52815*vars_61;
 			v52817 = v52816*0.5;
 			v52818 = v52806+v52817;
-			v5980 = sqr(Dv1634_Dvars_61);
+			v5980 = Square(Dv1634_Dvars_61);
 			v5981 = -0.5/v5980;
 			v5982 = v1587*v5981;
 			v5983 = v5982*v2616;
@@ -5941,7 +5941,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v52856 = v52855*vars_61;
 			v52857 = v52856*0.5;
 			v52858 = v52846+v52857;
-			v6032 = sqr(Dv1799_Dvars_61);
+			v6032 = Square(Dv1799_Dvars_61);
 			v6033 = -0.5/v6032;
 			v6034 = v1752*v6033;
 			v6035 = v6034*v2626;
@@ -5988,7 +5988,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v52896 = v52895*vars_61;
 			v52897 = v52896*0.5;
 			v52898 = v52886+v52897;
-			v6084 = sqr(Dv1964_Dvars_61);
+			v6084 = Square(Dv1964_Dvars_61);
 			v6085 = -0.5/v6084;
 			v6086 = v1917*v6085;
 			v6087 = v6086*v2636;
@@ -6035,7 +6035,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v52935 = v52934*vars_61;
 			v52936 = v52935*0.5;
 			v52937 = v52925+v52936;
-			v6136 = sqr(Dv2129_Dvars_61);
+			v6136 = Square(Dv2129_Dvars_61);
 			v6137 = -0.5/v6136;
 			v6138 = v2082*v6137;
 			v6139 = v6138*v2646;
@@ -6061,7 +6061,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v52952 = v50690*vars_61;
 			v52953 = v52952*0.5;
 			v52954 = v52951+v52953;
-			v6160 = sqr(Dv2294_Dvars_61);
+			v6160 = Square(Dv2294_Dvars_61);
 			v6161 = -0.5/v6160;
 			v6162 = v2247*v6161;
 			v6163 = v6162*v2656;
@@ -6288,7 +6288,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v53025 = v50799*v53024;
 			v53026 = v2681*v50743;
 			v53027 = v53026*v53024;
-			v6343 = sqr(v2676);
+			v6343 = Square(v2676);
 			v6344 = 0.5/v6343;
 			v6345 = v80*v6344;
 			v6348 = v6345*v6347;
@@ -6301,7 +6301,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v6354 = v6353+v6327;
 			v53028 = v50744*v6354;
 			v53029 = v53027+v53028;
-			v53030 = sqr(v50747);
+			v53030 = Square(v50747);
 			v53031 = v49823/v53030;
 			v53032 = v49838*v53023;
 			v53033 = v53031*v53032;
@@ -6369,14 +6369,14 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v53093 = v50796*v53061;
 			v53094 = 1/v50781;
 			v53095 = v53094*v53074;
-			v53096 = sqr(v50781);
+			v53096 = Square(v50781);
 			v53097 = v49842/v53096;
 			v53098 = v49847*v53066;
 			v53099 = v53097*v53098;
 			v53100 = v53099*4;
 			v53101 = v53095+v53100;
 			v53102 = v50788*v53101;
-			v53103 = sqr(v49846);
+			v53103 = Square(v49846);
 			v53104 = -0.5/v53103;
 			v53105 = v49846*v53104;
 			v53106 = v50783+v53105;
@@ -7932,7 +7932,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v54653 = v54652*v54621;
 			v54654 = v54651-v54653;
 			v54655 = v54650+v54654;
-			v54656 = sqr(v50899);
+			v54656 = Square(v50899);
 			v54657 = v50700/v54656;
 			v54658 = v50868*v54657;
 			v54659 = v50722/v54656;
@@ -7948,7 +7948,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v54669 = v54668*v54555;
 			v54670 = v54667+v54669;
 			v54671 = v50908*v54670;
-			v54672 = sqr(v50704);
+			v54672 = Square(v50704);
 			v54673 = -0.5/v54672;
 			v54674 = v54673*v50907;
 			v54675 = v50698*v54674;
@@ -7982,7 +7982,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v54703 = v54696-v54702;
 			v54704 = v54695+v54703;
 			v54705 = v54687+v54704;
-			v54706 = sqr(v50875);
+			v54706 = Square(v50875);
 			v54707 = v50682/v54706;
 			v54708 = v50872*v54707;
 			v54709 = v50708/v54706;
@@ -8173,7 +8173,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v54895 = v54894*v54482;
 			v54896 = v54893-v54895;
 			v54897 = v54892+v54896;
-			v54898 = sqr(v51012);
+			v54898 = Square(v51012);
 			v54899 = v50634/v54898;
 			v54900 = v50974*v54899;
 			v54901 = v50656/v54898;
@@ -8189,7 +8189,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v54911 = v54910*v54450;
 			v54912 = v54909+v54911;
 			v54913 = v51021*v54912;
-			v54914 = sqr(v50638);
+			v54914 = Square(v50638);
 			v54915 = -0.5/v54914;
 			v54916 = v54915*v51020;
 			v54917 = v50632*v54916;
@@ -8224,7 +8224,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v54946 = v54945*v54490;
 			v54947 = v54944-v54946;
 			v54948 = v54943+v54947;
-			v54949 = sqr(v50981);
+			v54949 = Square(v50981);
 			v54950 = v50616/v54949;
 			v54951 = v50978*v54950;
 			v54952 = v50624/v54949;
@@ -8428,7 +8428,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v55151 = v55150*v54379;
 			v55152 = v55149-v55151;
 			v55153 = v55148+v55152;
-			v55154 = sqr(v51137);
+			v55154 = Square(v51137);
 			v55155 = v50568/v55154;
 			v55156 = v51101*v55155;
 			v55157 = v50590/v55154;
@@ -8444,7 +8444,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v55167 = v55166*v54347;
 			v55168 = v55165+v55167;
 			v55169 = v51145*v55168;
-			v55170 = sqr(v50572);
+			v55170 = Square(v50572);
 			v55171 = -0.5/v55170;
 			v55172 = v51144*v55171;
 			v55173 = v55172*v51145;
@@ -8479,7 +8479,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v55202 = v55201*v54387;
 			v55203 = v55200-v55202;
 			v55204 = v55199+v55203;
-			v55205 = sqr(v51108);
+			v55205 = Square(v51108);
 			v55206 = v50550/v55205;
 			v55207 = v51105*v55206;
 			v55208 = v50558/v55205;
@@ -8675,7 +8675,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v55399 = v55398*v54276;
 			v55400 = v55397-v55399;
 			v55401 = v55396+v55400;
-			v55402 = sqr(v51261);
+			v55402 = Square(v51261);
 			v55403 = v50502/v55402;
 			v55404 = v51225*v55403;
 			v55405 = v50524/v55402;
@@ -8687,7 +8687,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v55411 = v55410*4;
 			v55412 = v55401+v55411;
 			v55413 = v51269*v55412;
-			v55414 = sqr(v50506);
+			v55414 = Square(v50506);
 			v55415 = -0.5/v55414;
 			v55416 = v50506*v55415;
 			v55417 = v51268+v55416;
@@ -8724,7 +8724,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v55448 = v55447*v54284;
 			v55449 = v55446-v55448;
 			v55450 = v55445+v55449;
-			v55451 = sqr(v51232);
+			v55451 = Square(v51232);
 			v55452 = v50484/v55451;
 			v55453 = v51229*v55452;
 			v55454 = v50492/v55451;
@@ -8920,7 +8920,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v55645 = v55644*v54174;
 			v55646 = v55643-v55645;
 			v55647 = v55642+v55646;
-			v55648 = sqr(v51385);
+			v55648 = Square(v51385);
 			v55649 = v50436/v55648;
 			v55650 = v51349*v55649;
 			v55651 = v50458/v55648;
@@ -8936,7 +8936,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v55661 = v55660*v54142;
 			v55662 = v55659+v55661;
 			v55663 = v51393*v55662;
-			v55664 = sqr(v50440);
+			v55664 = Square(v50440);
 			v55665 = -0.5/v55664;
 			v55666 = v51392*v55665;
 			v55667 = v55666*v51393;
@@ -8971,7 +8971,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v55696 = v55695*v54182;
 			v55697 = v55694-v55696;
 			v55698 = v55693+v55697;
-			v55699 = sqr(v51356);
+			v55699 = Square(v51356);
 			v55700 = v50418/v55699;
 			v55701 = v51353*v55700;
 			v55702 = v50426/v55699;
@@ -9166,7 +9166,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v55892 = v55891*v54071;
 			v55893 = v55890-v55892;
 			v55894 = v55889+v55893;
-			v55895 = sqr(v51509);
+			v55895 = Square(v51509);
 			v55896 = v50370/v55895;
 			v55897 = v51473*v55896;
 			v55898 = v50392/v55895;
@@ -9182,7 +9182,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v55908 = v55907*v54039;
 			v55909 = v55906+v55908;
 			v55910 = v51517*v55909;
-			v55911 = sqr(v50374);
+			v55911 = Square(v50374);
 			v55912 = -0.5/v55911;
 			v55913 = v51516*v55912;
 			v55914 = v55913*v51517;
@@ -9217,7 +9217,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v55943 = v55942*v54079;
 			v55944 = v55941-v55943;
 			v55945 = v55940+v55944;
-			v55946 = sqr(v51480);
+			v55946 = Square(v51480);
 			v55947 = v50352/v55946;
 			v55948 = v51477*v55947;
 			v55949 = v50360/v55946;
@@ -9412,7 +9412,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v56139 = v56138*v53968;
 			v56140 = v56137-v56139;
 			v56141 = v56136+v56140;
-			v56142 = sqr(v51633);
+			v56142 = Square(v51633);
 			v56143 = v50304/v56142;
 			v56144 = v51597*v56143;
 			v56145 = v50326/v56142;
@@ -9428,7 +9428,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v56155 = v56154*v53936;
 			v56156 = v56153+v56155;
 			v56157 = v51642*v56156;
-			v56158 = sqr(v50308);
+			v56158 = Square(v50308);
 			v56159 = -0.5/v56158;
 			v56160 = v56159*v51641;
 			v56161 = v50302*v56160;
@@ -9463,7 +9463,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v56190 = v56189*v53976;
 			v56191 = v56188-v56190;
 			v56192 = v56187+v56191;
-			v56193 = sqr(v51604);
+			v56193 = Square(v51604);
 			v56194 = v50286/v56193;
 			v56195 = v51601*v56194;
 			v56196 = v50294/v56193;
@@ -9663,7 +9663,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v56391 = v56390*v53866;
 			v56392 = v56389-v56391;
 			v56393 = v56388+v56392;
-			v56394 = sqr(v51758);
+			v56394 = Square(v51758);
 			v56395 = v50238/v56394;
 			v56396 = v51722*v56395;
 			v56397 = v50260/v56394;
@@ -9675,7 +9675,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v56403 = v56402*4;
 			v56404 = v56393+v56403;
 			v56405 = v51766*v56404;
-			v56406 = sqr(v50242);
+			v56406 = Square(v50242);
 			v56407 = -0.5/v56406;
 			v56408 = v50242*v56407;
 			v56409 = v51765+v56408;
@@ -9712,7 +9712,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v56440 = v56439*v53874;
 			v56441 = v56438-v56440;
 			v56442 = v56437+v56441;
-			v56443 = sqr(v51729);
+			v56443 = Square(v51729);
 			v56444 = v50220/v56443;
 			v56445 = v51726*v56444;
 			v56446 = v50228/v56443;
@@ -9904,7 +9904,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v56633 = v56632*v53768;
 			v56634 = v56631-v56633;
 			v56635 = v56630+v56634;
-			v56636 = sqr(v51882);
+			v56636 = Square(v51882);
 			v56637 = v50172/v56636;
 			v56638 = v51846*v56637;
 			v56639 = v50194/v56636;
@@ -9920,7 +9920,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v56649 = v56648*v53738;
 			v56650 = v56647+v56649;
 			v56651 = v51891*v56650;
-			v56652 = sqr(v50176);
+			v56652 = Square(v50176);
 			v56653 = -0.5/v56652;
 			v56654 = v56653*v51890;
 			v56655 = v50170*v56654;
@@ -9955,7 +9955,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v56684 = v56683*v53776;
 			v56685 = v56682-v56684;
 			v56686 = v56681+v56685;
-			v56687 = sqr(v51853);
+			v56687 = Square(v51853);
 			v56688 = v50154/v56687;
 			v56689 = v51850*v56688;
 			v56690 = v50162/v56687;
@@ -10149,7 +10149,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v56879 = v56878*v53669;
 			v56880 = v56877-v56879;
 			v56881 = v56876+v56880;
-			v56882 = sqr(v52007);
+			v56882 = Square(v52007);
 			v56883 = v50106/v56882;
 			v56884 = v51971*v56883;
 			v56885 = v50128/v56882;
@@ -10165,7 +10165,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v56895 = v56894*v53639;
 			v56896 = v56893+v56895;
 			v56897 = v52015*v56896;
-			v56898 = sqr(v50110);
+			v56898 = Square(v50110);
 			v56899 = -0.5/v56898;
 			v56900 = v52014*v56899;
 			v56901 = v52015*v53639;
@@ -10200,7 +10200,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v56930 = v56929*v53677;
 			v56931 = v56928-v56930;
 			v56932 = v56927+v56931;
-			v56933 = sqr(v51978);
+			v56933 = Square(v51978);
 			v56934 = v50088/v56933;
 			v56935 = v51975*v56934;
 			v56936 = v50096/v56933;
@@ -10388,7 +10388,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v57119 = v57118*v53571;
 			v57120 = v57117-v57119;
 			v57121 = v57116+v57120;
-			v57122 = sqr(v52131);
+			v57122 = Square(v52131);
 			v57123 = v50040/v57122;
 			v57124 = v52095*v57123;
 			v57125 = v50062/v57122;
@@ -10399,7 +10399,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v57130 = v57129*4;
 			v57131 = v57121+v57130;
 			v57132 = v52139*v57131;
-			v57133 = sqr(v50044);
+			v57133 = Square(v50044);
 			v57134 = -0.5/v57133;
 			v57135 = v50044*v57134;
 			v57136 = v52138+v57135;
@@ -10436,7 +10436,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v57167 = v57166*v53578;
 			v57168 = v57165-v57167;
 			v57169 = v57164+v57168;
-			v57170 = sqr(v52102);
+			v57170 = Square(v52102);
 			v57171 = v50022/v57170;
 			v57172 = v52099*v57171;
 			v57173 = v50030/v57170;
@@ -10625,7 +10625,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v57357 = v57356*v53474;
 			v57358 = v57355-v57357;
 			v57359 = v57354+v57358;
-			v57360 = sqr(v52255);
+			v57360 = Square(v52255);
 			v57361 = v49974/v57360;
 			v57362 = v52219*v57361;
 			v57363 = v49996/v57360;
@@ -10636,7 +10636,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v57368 = v57367*4;
 			v57369 = v57359+v57368;
 			v57370 = v52263*v57369;
-			v57371 = sqr(v49978);
+			v57371 = Square(v49978);
 			v57372 = -0.5/v57371;
 			v57373 = v49978*v57372;
 			v57374 = v52262+v57373;
@@ -10673,7 +10673,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v57405 = v57404*v53481;
 			v57406 = v57403-v57405;
 			v57407 = v57402+v57406;
-			v57408 = sqr(v52226);
+			v57408 = Square(v52226);
 			v57409 = v49956/v57408;
 			v57410 = v52223*v57409;
 			v57411 = v49964/v57408;
@@ -10862,7 +10862,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v57595 = v57594*v53377;
 			v57596 = v57593-v57595;
 			v57597 = v57592+v57596;
-			v57598 = sqr(v52379);
+			v57598 = Square(v52379);
 			v57599 = v49908/v57598;
 			v57600 = v52343*v57599;
 			v57601 = v49930/v57598;
@@ -10877,7 +10877,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v57610 = v52385*v57609;
 			v57611 = v57608+v57610;
 			v57612 = v52387*v57611;
-			v57613 = sqr(v49912);
+			v57613 = Square(v49912);
 			v57614 = -0.5/v57613;
 			v57615 = v52386*v57614;
 			v57616 = v57615*v57609;
@@ -10911,7 +10911,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v57644 = v57643*v53384;
 			v57645 = v57642-v57644;
 			v57646 = v57641+v57645;
-			v57647 = sqr(v52350);
+			v57647 = Square(v52350);
 			v57648 = v49890/v57647;
 			v57649 = v52347*v57648;
 			v57650 = v49898/v57647;
@@ -14723,7 +14723,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v61465 = v61464*0.5;
 			v61466 = v61449+v61465;
 			v61467 = v5569*v61466;
-			v18521 = sqr(v5564);
+			v18521 = Square(v5564);
 			v18522 = 0.5/v18521;
 			v18523 = v267*v18522;
 			v18525 = v18523*Dv314_Dvars_61;
@@ -18149,7 +18149,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v64883 = v64882*0.5;
 			v64884 = v64867+v64883;
 			v64885 = v5621*v64884;
-			v23440 = sqr(v5616);
+			v23440 = Square(v5616);
 			v23441 = 0.5/v23440;
 			v23442 = v432*v23441;
 			v23445 = v23442*v23444;
@@ -21290,7 +21290,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v68012 = v68011*0.5;
 			v68013 = v67996+v68012;
 			v68014 = v5673*v68013;
-			v27939 = sqr(v5668);
+			v27939 = Square(v5668);
 			v27940 = 0.5/v27939;
 			v27941 = v597*v27940;
 			v27944 = v27941*v27943;
@@ -24137,7 +24137,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v70851 = v70850*0.5;
 			v70852 = v70835+v70851;
 			v70853 = v5725*v70852;
-			v32006 = sqr(v5720);
+			v32006 = Square(v5720);
 			v32007 = 0.5/v32006;
 			v32008 = v762*v32007;
 			v32010 = v32008*Dv809_Dvars_61;
@@ -26695,7 +26695,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v73398 = v73397*0.5;
 			v73399 = v73382+v73398;
 			v73400 = v5777*v73399;
-			v35654 = sqr(v5772);
+			v35654 = Square(v5772);
 			v35655 = 0.5/v35654;
 			v35656 = v927*v35655;
 			v35658 = v35656*Dv974_Dvars_61;
@@ -28965,7 +28965,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v75652 = v75651*0.5;
 			v75653 = v75636+v75652;
 			v75654 = v5829*v75653;
-			v38884 = sqr(v5824);
+			v38884 = Square(v5824);
 			v38885 = 0.5/v38884;
 			v38886 = v1092*v38885;
 			v38889 = v38886*v38888;
@@ -30943,7 +30943,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v77619 = v77618*0.5;
 			v77620 = v77603+v77619;
 			v77621 = v5881*v77620;
-			v41689 = sqr(v5876);
+			v41689 = Square(v5876);
 			v41690 = 0.5/v41689;
 			v41691 = v1257*v41690;
 			v41693 = v41691*Dv1304_Dvars_61;
@@ -32636,7 +32636,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v79294 = v79293*0.5;
 			v79295 = v79278+v79294;
 			v79296 = v5933*v79295;
-			v44080 = sqr(v5928);
+			v44080 = Square(v5928);
 			v44081 = 0.5/v44080;
 			v44082 = v1422*v44081;
 			v44085 = v44082*v44084;
@@ -34039,7 +34039,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v80680 = v80679*0.5;
 			v80681 = v80664+v80680;
 			v80682 = v5985*v80681;
-			v46049 = sqr(v5980);
+			v46049 = Square(v5980);
 			v46050 = 0.5/v46049;
 			v46051 = v1587*v46050;
 			v46053 = v46051*Dv1634_Dvars_61;
@@ -35155,7 +35155,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v81777 = v81776*0.5;
 			v81778 = v81761+v81777;
 			v81779 = v6037*v81778;
-			v47600 = sqr(v6032);
+			v47600 = Square(v6032);
 			v47601 = 0.5/v47600;
 			v47602 = v1752*v47601;
 			v47604 = v47602*Dv1799_Dvars_61;
@@ -35986,7 +35986,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v82588 = v82587*0.5;
 			v82589 = v82572+v82588;
 			v82590 = v6089*v82589;
-			v48735 = sqr(v6084);
+			v48735 = Square(v6084);
 			v48736 = 0.5/v48735;
 			v48737 = v1917*v48736;
 			v48740 = v48737*v48739;
@@ -36528,7 +36528,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v83110 = v83109*0.5;
 			v83111 = v83094+v83110;
 			v83112 = v6141*v83111;
-			v49452 = sqr(v6136);
+			v49452 = Square(v6136);
 			v49453 = 0.5/v49452;
 			v49455 = v49453*Dv2129_Dvars_61;
 			v49457 = v49455*v2646;
@@ -36736,7 +36736,7 @@ void evalCostGradDiagHess(double *result, double *vars)
 			v83297 = v83294+v83296;
 			v83298 = v6165*v83297;
 			v83299 = v83298*v49498;
-			v49701 = sqr(v6160);
+			v49701 = Square(v6160);
 			v49702 = 0.5/v49701;
 			v49703 = v2247*v49702;
 			v49706 = v49703*v49705;

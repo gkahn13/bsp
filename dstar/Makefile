@@ -6,6 +6,9 @@ DLL = $(BUILD)/ClassLibrary1.dll
 # timesteps
 T = 15
 
+# types of sym functions to create
+SYM_FUNCS=Cost CostGradDiagHess
+
 ####### POINT ############
 PT_DIR = point
 PT_SYM_DIR = $(PT_DIR)/sym
@@ -18,23 +21,22 @@ PT_CS = $(PT_DIR)/Point.cs
 PT_STATE_CS = $(PT_DIR)/PointState.cs
 PT_STATE_EXEC = $(BUILD)/PointState.exe
 point-state: $(PT_STATE_CS) $(PT_CS)
+	make clean
 	mono-csc $(FLAGS) -r:$(DLL) -out:$(PT_STATE_EXEC) $^
-	mono $(PT_STATE_EXEC) $(T)
-	mv *.c $(PT_SYM_DIR)/state-symeval-$(T).c
-	mv *.txt $(PT_MASKS_DIR)/state-masks-$(T).txt
+	bash modifyCompiledSource.sh 'state' $(PT_STATE_EXEC) $(T) $(PT_SYM_DIR) $(PT_MASKS_DIR) '$(SYM_FUNCS)'
 	rm -f $(PT_STATE_EXEC)
 	
 # make point-control
 PT_CONTROL_CS = $(PT_DIR)/PointControl.cs
 PT_CONTROL_EXEC = $(BUILD)/PointControl.exe
 point-control: $(PT_CONTROL_CS) $(PT_CS)
+	make clean
 	mono-csc $(FLAGS) -r:$(DLL) -out:$(PT_CONTROL_EXEC) $^
-	mono $(PT_CONTROL_EXEC) $(T)
-	mv *.c $(PT_SYM_DIR)/control-symeval-$(T).c
-	mv *.txt $(PT_MASKS_DIR)/control-masks-$(T).txt
+	bash modifyCompiledSource.sh 'control' $(PT_CONTROL_EXEC) $(T) $(PT_SYM_DIR) $(PT_MASKS_DIR) '$(SYM_FUNCS)'
 	rm -f $(PT_CONTROL_EXEC)
 	
 clean:
 	rm -f *.txt
 	rm -f *.c
 	rm -f $(BUILD)/*.exe
+	rm -f tmp*

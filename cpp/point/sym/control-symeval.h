@@ -4,8 +4,10 @@
 #define __control_symeval_H__
 
 // Function definitions
-void evalControlCost(double *result, double *vars);
+void evalCost(double *result, double *vars);
 
-void evalControlCostGradDiagHess(double *result, double *vars);
+void evalCostGradDiagHess(double *result, double *vars);
+
+char* getMask();
 
 #endif

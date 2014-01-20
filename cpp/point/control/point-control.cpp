@@ -167,8 +167,10 @@ double controlCollocation(std::vector< Matrix<U_DIM> >& U, controlMPC_params& pr
 
 	initVarVals(U);
 
-	evalControlCost(resultControlCost, vars);
+	evalCost(resultControlCost, vars);
 	prevcost = resultControlCost[0];
+
+	std::cout << "after evalCost" << std::endl;
 
 	LOG_DEBUG("Initialization trajectory cost: %4.10f", prevcost);
 
@@ -182,7 +184,8 @@ double controlCollocation(std::vector< Matrix<U_DIM> >& U, controlMPC_params& pr
 
 		if (solution_accepted) {
 			initVarVals(U);
-			evalControlCostGradDiagHess(resultControlCostGradDiagHess, vars);
+			evalCostGradDiagHess(resultControlCostGradDiagHess, vars);
+			std::cout << "after evalCostGradDiagHess" << std::endl;
 			merit = resultControlCostGradDiagHess[0];
 
 			// evaluate constant cost term (omitted from optimization)
@@ -193,14 +196,21 @@ double controlCollocation(std::vector< Matrix<U_DIM> >& U, controlMPC_params& pr
 			hessian_constant = 0;
 			jac_constant = 0;
 
+			std::cout << "compute H" << std::endl;
+
 			// compute Hessian first
 			// so can force it to be PSD
 			for (int t = 0; t < T-1; ++t) {
+				std::cout << t << std::endl;
 				H[t][0] = resultControlCostGradDiagHess[1+dim+t*U_DIM];
 				H[t][1] = resultControlCostGradDiagHess[1+dim+t*U_DIM+1];
 			}
 
+			std::cout << "before forcePsdHessian" << std::endl;
+
 			forcePsdHessian();
+
+			std::cout << "after forcePsdHessian" << std::endl;
 
 			for (int t = 0; t < T-1; ++t)
 			{
@@ -246,8 +256,9 @@ double controlCollocation(std::vector< Matrix<U_DIM> >& U, controlMPC_params& pr
 			exit(0);
 		}
 		 */
-
+		std::cout << "before solve" << std::endl;
 		int exitflag = controlMPC_solve(&problem, &output, &info);
+		std::cout << "after solve" << std::endl;
 		if (exitflag == 1) {
 			for(int t = 0; t < T-1; ++t) {
 				Matrix<U_DIM>& ut = Uopt[t];
@@ -266,7 +277,7 @@ double controlCollocation(std::vector< Matrix<U_DIM> >& U, controlMPC_params& pr
 		model_merit = optcost + constant_cost; // need to add constant terms that were dropped
 
 		initVarVals(Uopt);
-		evalControlCost(resultControlCost, vars);
+		evalCost(resultControlCost, vars);
 		new_merit = resultControlCost[0];
 
 		LOG_DEBUG("merit: %f", merit);
@@ -308,7 +319,7 @@ double controlCollocation(std::vector< Matrix<U_DIM> >& U, controlMPC_params& pr
 	}
 
 	initVarVals(U);
-	evalControlCost(resultControlCost, vars);
+	evalCost(resultControlCost, vars);
 	optcost = resultControlCost[0];
 
 	delete resultControlCost;

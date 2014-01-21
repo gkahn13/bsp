@@ -1,0 +1,576 @@
+#VRML V2.0 utf8
+
+DirectionalLight {
+  direction 0 -1 -1
+}
+
+DEF front_view Viewpoint {
+	position 0 .4 2.3
+	description "Front View"
+}
+
+NavigationInfo {
+	headlight FALSE
+}
+
+# base su cui appoggia il robot
+DEF manipulator Transform {
+  scale 20 20 20
+  children [
+    Shape {
+      appearance Appearance {
+	material Material { diffuseColor 1 0 0 }
+      }
+      geometry Box {  size .5 .05 .5  } 
+    }
+    #primo giunto rotatorio.
+    DEF joint1 Transform {
+      translation 0 .125 0
+      rotation 0 1 0 .8
+      children [
+	Shape {
+	  appearance Appearance {
+	    material Material { diffuseColor .5 .5 .5 }
+	  }
+	  geometry Cylinder {
+	    radius .21
+	    height .2
+	  }
+	}
+
+	# costruisco ora le due lame che sorreggono il secondo giunto
+	# sostegno sinistro       
+
+	Transform {
+	  translation -.09 .165 0
+	  children [
+	   DEF sostegno Transform {
+	    children [
+	      Shape {
+		appearance Appearance {
+		  material Material {  diffuseColor .5 .5 .5  }
+		}
+		geometry Box { size .01 .13 .31 }
+	      }
+	      #completo il sostegno sinistro
+	      DEF m2 Transform {
+		translation 0 .065 0
+		rotation 0 0 1 1.57
+		children [
+		  Shape {
+		    appearance Appearance {
+		      material Material { diffuseColor .5 .5 .5 }
+		    }
+		    geometry Cylinder { 
+		      radius .155
+		      height .0099
+		    }
+		  }
+		]
+	      }
+	    ]
+	   }
+	  ]
+	}
+	# sostegno destro -> uso il sostegno sostegno sinistro shiftandolo
+	Transform {
+	  translation .09 .165 0
+	  children [
+	    USE sostegno
+	  ]
+	}
+
+	# Introduco ora le 2 spalle.
+	# la spalla e' stata realizzata con 3d studio e poi converita da
+	# formato 3ds a formato vrml 1.0 e infine convertita a vrml 2.0
+
+	Transform {
+	  translation -.185 .24 0
+	  rotation 0 0 1 1.57
+	  children [
+	    DEF giunto2bis Transform {
+	      scale .00033 .00033 .00033
+	      children [
+		DEF spalla Shape {
+		  appearance Appearance {
+		    material Material {
+		      diffuseColor .5 .5 .5
+		    }
+		  }
+		  geometry IndexedFaceSet {      
+		    coord Coordinate {
+		      point [
+				1.137496 277.642459 0.497838,
+				-121.154957 277.642459 -118.825167,
+				-87.638475 277.642459 -145.489320,
+				-146.987364 277.642459 -84.663503,
+				-163.512498 277.642459 -45.150831,
+				-169.692084 277.642459 -2.769888,
+				-165.137812 277.642459 39.816383,
+				-150.135830 277.642459 79.932116,
+				-125.628784 277.642459 115.056708,
+				-93.156539 277.642459 142.983124,
+				-54.759458 277.642459 161.956683,
+				-12.850157 277.642459 170.785144,
+				29.938037 277.642459 168.913841,
+				70.916593 277.642459 156.460345,
+				107.510678 277.642459 134.207129,
+				137.420893 277.642459 103.552453,
+				158.767983 277.642459 66.422477,
+				170.210496 277.642459 25.150213,
+				171.029553 277.642459 -17.671052,
+				161.173686 277.642459 -59.350695,
+				141.262099 277.642459 -97.269841,
+				112.545982 277.642459 -129.045874,
+				76.829650 277.642459 -152.682185,
+				36.357298 277.642459 -166.693643,
+				-6.328036 277.642459 -170.199826,
+				-48.544299 277.642459 -162.980422,
+				-295.601487 -277.642369 -289.035797,
+				-214.274764 -277.642369 -353.735596,
+				-358.283013 -277.642339 -206.143558,
+				-398.380816 -277.642339 -110.267282,
+				-413.375378 -277.642339 -7.431200,
+				-402.324528 -277.642339 95.903084,
+				-365.922719 -277.642339 193.242714,
+				-306.457102 -277.642369 278.471440,
+				-227.664188 -277.642369 346.234083,
+				-134.494811 -277.642369 392.272800,
+				-32.803170 -277.642399 413.694859,
+				71.021102 -277.642399 409.154177,
+				170.454293 -277.642399 378.936112,
+				259.248734 -277.642399 324.939370,
+				331.825018 -277.642399 250.556737,
+				383.623034 -277.642429 160.461977,
+				411.387980 -277.642429 60.316078,
+				413.375378 -277.642429 -43.588426,
+				389.460355 -277.642429 -144.722819,
+				341.145545 -277.642399 -236.732453,
+				271.466792 -277.642399 -313.836038,
+				184.802175 -277.642399 -371.188879,
+				86.597234 -277.642399 -405.187190,
+				-16.977444 -277.642399 -413.694829,
+				-119.413897 -277.642369 -396.177202,
+				1.137446 -277.642399 0.497838
+		      ]
+		    }
+		    coordIndex [
+				2, 1, 0, -1,
+				1, 3, 0, -1,
+				3, 4, 0, -1,
+				4, 5, 0, -1,
+				5, 6, 0, -1,
+				6, 7, 0, -1,
+				7, 8, 0, -1,
+				8, 9, 0, -1,
+				9, 10, 0, -1,
+				10, 11, 0, -1,
+				11, 12, 0, -1,
+				12, 13, 0, -1,
+				13, 14, 0, -1,
+				14, 15, 0, -1,
+				15, 16, 0, -1,
+				16, 17, 0, -1,
+				17, 18, 0, -1,
+				18, 19, 0, -1,
+				19, 20, 0, -1,
+				20, 21, 0, -1,
+				21, 22, 0, -1,
+				22, 23, 0, -1,
+				23, 24, 0, -1,
+				24, 25, 0, -1,
+				25, 2, 0, -1,
+				2, 27, 26, -1,
+				2, 26, 1, -1,
+				1, 26, 28, -1,
+				1, 28, 3, -1,
+				3, 28, 29, -1,
+				3, 29, 4, -1,
+				4, 29, 30, -1,
+				4, 30, 5, -1,
+				5, 30, 31, -1,
+				5, 31, 6, -1,
+				6, 31, 32, -1,
+				6, 32, 7, -1,
+				7, 32, 33, -1,
+				7, 33, 8, -1,
+				8, 33, 34, -1,
+				8, 34, 9, -1,
+				9, 34, 35, -1,
+				9, 35, 10, -1,
+				10, 35, 36, -1,
+				10, 36, 11, -1,
+				11, 36, 37, -1,
+				11, 37, 12, -1,
+				12, 37, 38, -1,
+				12, 38, 13, -1,
+				13, 38, 39, -1,
+				13, 39, 14, -1,
+				14, 39, 40, -1,
+				14, 40, 15, -1,
+				15, 40, 41, -1,
+				15, 41, 16, -1,
+				16, 41, 42, -1,
+				16, 42, 17, -1,
+				17, 42, 43, -1,
+				17, 43, 18, -1,
+				18, 43, 44, -1,
+				18, 44, 19, -1,
+				19, 44, 45, -1,
+				19, 45, 20, -1,
+				20, 45, 46, -1,
+				20, 46, 21, -1,
+				21, 46, 47, -1,
+				21, 47, 22, -1,
+				22, 47, 48, -1,
+				22, 48, 23, -1,
+				23, 48, 49, -1,
+				23, 49, 24, -1,
+				24, 49, 50, -1,
+				24, 50, 25, -1,
+				25, 50, 27, -1,
+				25, 27, 2, -1,
+				27, 51, 26, -1,
+				26, 51, 28, -1,
+				28, 51, 29, -1,
+				29, 51, 30, -1,
+				30, 51, 31, -1,
+				31, 51, 32, -1,
+				32, 51, 33, -1,
+				33, 51, 34, -1,
+				34, 51, 35, -1,
+				35, 51, 36, -1,
+				36, 51, 37, -1,
+				37, 51, 38, -1,
+				38, 51, 39, -1,
+				39, 51, 40, -1,
+				40, 51, 41, -1,
+				41, 51, 42, -1,
+				42, 51, 43, -1,
+				43, 51, 44, -1,
+				44, 51, 45, -1,
+				45, 51, 46, -1,
+				46, 51, 47, -1,
+				47, 51, 48, -1,
+				48, 51, 49, -1,
+				49, 51, 50, -1,
+				50, 51, 27, -1
+		    ]
+		  }
+		 
+		}
+	      ]
+	    }
+	  ]
+	}
+
+	# spalla destra: aggancio poi il resto del braccio a questo giunto.
+	DEF m5 Transform {
+	  translation .185 .24 0
+	  rotation 0 0 1 -1.57
+	  children [
+	    DEF giunto2 Transform {
+	      rotation 0 1 0 .5   # rotazione iniziale
+	      children [
+		Transform {
+		  scale .00033 .00033 .00033 
+		  children [
+		    USE spalla
+		  ]
+		}
+		
+		# braccio centrale
+		# per farlo smussato lo considero come la catena:
+		# cilindro - box - cilindro
+		
+		DEF joint2 Transform {
+		  translation 0 -.18 0
+		  children [
+		    DEF cyl Shape {
+		      appearance Appearance {
+			material Material { diffuseColor .5 .5 .5 }
+		      }
+		      geometry Cylinder {
+			radius .1
+			height .18
+		      }
+		    }
+		    # box centrale
+		    DEF m8 Transform {
+		     translation -.2 0 0
+		     children [
+		      Shape {
+		       appearance Appearance {
+			material Material { diffuseColor .5 .5 .5 }
+		       }
+		       geometry Box { size .4 .18 .2 }
+		      }
+		      # cilindro finale
+		      DEF m9 Transform {
+		       translation -.2 0 0
+		       children [
+			USE cyl
+
+			# giunto 3 
+			DEF joint3 Transform {
+			 rotation 0 1 0 1.8   # valore iniziale
+			 children [
+			  Shape {
+			   appearance Appearance {
+			    material Material { diffuseColor .6 .6 .6 }
+			   }
+			   geometry Cylinder {
+			    radius .08
+			    height .26
+			   }
+			  } 
+			  # le due stanghette uscenti che supportano
+			  # l'ultimo braccio
+
+			  # prima stanghetta
+
+			  Transform {
+			   translation -.08 -.09 0
+			   children [
+			    DEF stang1 Shape {
+			     appearance Appearance {
+			      material Material { diffuseColor .5 .5 .5 }
+			     }
+			     geometry Box { size .17 .01 .16 }
+			    }
+			   ]
+			  }
+			  Transform {
+			   translation -.08 .09 0
+			   children [
+			    USE stang1
+			   ]
+			  }
+			  # definisco ora l'ultimo braccio                               
+			  DEF m12 Transform {
+			   rotation 0 0 1 1.57
+			   # sono tornato al normale sistema di riferimento
+			   translation -.16 0 0
+			   children [
+			    Shape {
+			     appearance Appearance {
+			      material Material { diffuseColor .5 .5 .5 }
+			     }
+			     geometry Box { size .175 .01 .16 }
+			    }
+			    # definisco l'ultimo braccio
+
+			    DEF joint4 Transform {
+			     translation 0 .155 0
+			     rotation 0 1 0 0
+			     children [
+			      Transform {
+			       children [
+				Shape {
+				 appearance Appearance {
+				  material Material { diffuseColor .5 .5 .5 }
+				 }
+				 geometry Cylinder {
+				  radius .07
+				  height .3
+				 }
+				}
+			       ]
+			      }
+			      # 2 stanghette che sostengono il giunto 5
+
+			      Transform {
+			       translation -.05 .15 0
+			       scale .1 1.1 .55
+			       children [
+				DEF stang2 Shape {
+				 appearance Appearance {
+				  material Material { diffuseColor .5 .5 .5 }
+				 }
+				 geometry Sphere{
+				  radius .08
+				 }
+				}
+			       ]
+			      }
+			      Transform {
+			       translation .05 .15 0
+			       scale .1 1.1 .55
+			       children [
+				USE stang2
+			       ]
+			      }
+			      # giunto 5
+			      DEF m16 Transform {
+			       rotation 0 0 1 -1.57
+			       children [
+				DEF joint5 Transform {
+				 translation -.2 0 0
+				 rotation 0 1 0 0
+				 children [
+				  Shape {
+				   appearance Appearance {
+				    material Material {
+				     diffuseColor .5 .5 .5 
+				    }
+				   }
+				   geometry Cylinder {
+				    radius .035
+				    height .09
+				   }
+				  }
+				  DEF m17 Transform {
+				   rotation 0 0 1 1.57
+				   children [
+				    DEF m18 Transform {
+				     translation 0 .038 0
+				     children [
+				      Shape {
+				       appearance Appearance {
+					material Material {
+					 diffuseColor .5 .5 .5 
+					}
+				       }
+				       geometry Box { size .05 .01 .05 }
+				      }
+				      # giunto 6!!! ultimo!
+				      DEF joint6 Transform {
+				       translation 0 .02 0
+				       children [
+					Shape {
+					 appearance Appearance {
+					  material Material {
+					   diffuseColor .5 .5 .5
+					  }
+					 }
+					 geometry Cylinder {
+					   radius .025
+					   height .03
+					 }
+					}
+					# definisco ora la pinza
+					DEF m19 Transform {
+					 translation 0 .02 0
+					 children [
+					  Shape {
+					   appearance Appearance {
+					    material Material {
+					     diffuseColor .5 .5 .5
+					    }
+					   }
+					   geometry Box { 
+					    size .1 .005 .035
+					   }
+					  }
+					  Transform {
+					   translation -.005 .0275 0
+					   children [
+					    DEF ditosin Transform {
+					     # inzialmente il dito e' aperto
+					     translation -.0425 0 0 
+					     children [
+					      Shape {
+					       appearance Appearance {
+						material Material {
+						 diffuseColor .5 .5 .5
+						}
+					       }
+					       geometry Box {
+						size .01 .05 .035
+					       }
+					      }
+					      DEF scatola Transform {
+					       translation .0425 0 0
+					      }
+					     ]
+					    }
+					   ]
+					  }
+					  Transform {
+					   translation .005 .0275 0
+					   children [
+					    DEF ditodes Transform {
+					    # inizialmente il dito e' aperto
+					    translation .0425 0 0 
+					     children [
+					      Shape {
+					       appearance Appearance {
+						material Material {
+						 diffuseColor .5 .5 .5
+						}
+					       }
+					       geometry Box {
+						size .01 .05 .035
+					       }
+					      }
+					     ]
+					    }
+					   ]
+					  }
+					  # trucco per i cubi
+					  DEF blocco1br Transform {
+					   scale .01 .01 .01
+					   children [
+					    Shape {
+					     appearance Appearance {
+					      material Material {
+						diffuseColor 1 1 1
+					      }
+					     }
+					     geometry Box {
+					      size .06 .06 .06
+					     }
+					    }
+					   ]  
+					  }
+					  DEF blocco2br Transform {
+					   rotation 1 0 0 -1.57
+					   translation 0 0 0 
+					   scale .001 .001 .001 
+					   children [
+					    Shape {
+					     appearance Appearance {
+					      material Material {
+					       diffuseColor 1 0 0
+					      }
+					   
+					     }
+					     geometry Box {
+					      size .06 .09 .06 
+					     }
+					    }
+					   ]
+					  }
+					 ]
+					}
+				       ]
+				      }
+				     ]
+				    }
+				   ]
+				  }
+				 ]
+				}
+			       ]
+			      }
+			     ]
+			    }
+			   ]
+			  }
+			 ]
+			}
+		       ]
+		      }
+		     ]
+		    }
+		  ]
+		}
+	      ]
+	    }
+	  ]
+	}
+      ]
+    }
+  ]
+}
+

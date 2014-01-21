@@ -1,0 +1,162 @@
+<!ELEMENT scene (defineTexture*, viewParams?, group+)>
+
+<!ELEMENT viewParams ((eye, view, up) | viewMotion)>
+<!ATTLIST viewParams 
+  viewID CDATA #REQUIRED>
+
+<!ELEMENT group (((pos?, (or | quat)?, scale?) | motion), color*, texture*, (group* | box* | sphere* | cylinder* | cone* | triangles* | polygon* | polygonGroup* | polyline* | tetrahedron* | elevationGrid* | include*))*>
+<!ATTLIST group 
+  colCheck CDATA #REQUIRED
+  flatten CDATA #IMPLIED
+	label CDATA #IMPLIED>
+
+<!ELEMENT box (((pos?, (or | quat)?, scale?) | motion), color*, texture*)>
+<!ATTLIST box 
+	width CDATA #REQUIRED
+	height CDATA #REQUIRED
+	depth CDATA #REQUIRED
+	label CDATA #IMPLIED>
+
+<!ELEMENT sphere (((pos?, (or | quat)?, scale?) | motion), color*, texture*)>
+<!ATTLIST sphere 
+	radius CDATA #REQUIRED
+	label CDATA #IMPLIED>
+
+<!ELEMENT cylinder (((pos?, (or | quat)?, scale?) | motion), color*, texture*)>
+<!ATTLIST cylinder 
+	radius CDATA #REQUIRED
+	height CDATA #REQUIRED
+	label CDATA #IMPLIED>
+
+<!ELEMENT cone (((pos?, (or | quat)?, scale?) | motion), color*, texture*)>
+<!ATTLIST cone 
+	radius CDATA #REQUIRED
+	height CDATA #REQUIRED
+	label CDATA #IMPLIED>
+
+<!ELEMENT triangles (((pos?, (or | quat)?, scale?) | motion), triangle+, color*)>
+<!ATTLIST triangles
+	label CDATA #IMPLIED>
+
+<!ELEMENT polygon (((pos?, (or | quat)?, scale?) | motion), point+, color*)>
+<!ATTLIST polygon
+	label CDATA #IMPLIED>
+
+<!ELEMENT polygonGroup (((pos?, (or | quat)?, scale?) | motion), polygon+, color*)>
+<!ATTLIST polygonGroup
+	label CDATA #IMPLIED>
+
+<!ELEMENT polyline (((pos?, (or | quat)?, scale?) | motion), line+)>
+<!ATTLIST polyline
+	label CDATA #IMPLIED>
+	
+<!ELEMENT line (point*)>
+
+<!ELEMENT tetrahedron (((pos?, (or | quat)?, scale?) | motion), point+, color*)>
+<!ATTLIST tetrahedron
+	label CDATA #IMPLIED>
+
+<!ELEMENT elevationGrid (((pos?, (or | quat)?, scale?) | motion), value+, color*, texture*)>
+<!ATTLIST elevationGrid
+  xDim CDATA #REQUIRED
+  zDim CDATA #REQUIRED
+  xStep CDATA #REQUIRED
+  zStep CDATA #REQUIRED
+	label CDATA #IMPLIED>
+
+<!ELEMENT triangle (((pos?, (or | quat)?, scale?) | motion), point+, color*)>
+<!ATTLIST triangle>
+
+<!ELEMENT include EMPTY>
+<!ATTLIST include
+  fileName CDATA #REQUIRED>
+
+<!ELEMENT eye EMPTY>
+<!ATTLIST eye 
+	x CDATA #REQUIRED
+	y CDATA #REQUIRED
+	z CDATA #REQUIRED>
+
+<!ELEMENT view EMPTY>
+<!ATTLIST view 
+	x CDATA #REQUIRED
+	y CDATA #REQUIRED
+	z CDATA #REQUIRED>
+
+<!ELEMENT up EMPTY>
+<!ATTLIST up 
+	x CDATA #REQUIRED
+	y CDATA #REQUIRED
+	z CDATA #REQUIRED>
+  
+<!ELEMENT point EMPTY>
+<!ATTLIST point
+	x CDATA #REQUIRED
+	y CDATA #REQUIRED
+	z CDATA #REQUIRED>
+
+<!ELEMENT value EMPTY>
+<!ATTLIST value
+	height CDATA #REQUIRED>
+
+<!ELEMENT pos EMPTY>
+<!ATTLIST pos 
+	x CDATA #REQUIRED
+	y CDATA #REQUIRED
+	z CDATA #REQUIRED>
+	
+<!ELEMENT or EMPTY>
+<!ATTLIST or
+  x CDATA #REQUIRED
+  y CDATA #REQUIRED
+  z CDATA #REQUIRED>
+  
+<!ELEMENT quat EMPTY>
+<!ATTLIST quat
+  x CDATA #REQUIRED
+  y CDATA #REQUIRED
+  z CDATA #REQUIRED
+  w CDATA #REQUIRED>
+
+<!ELEMENT scale EMPTY>
+<!ATTLIST scale
+  x CDATA #REQUIRED
+  y CDATA #REQUIRED
+  z CDATA #REQUIRED>
+  
+<!ELEMENT color EMPTY>
+<!ATTLIST color
+  red   CDATA #REQUIRED
+  green CDATA #REQUIRED
+  blue  CDATA #REQUIRED
+  alpha CDATA #IMPLIED
+  sID   CDATA #IMPLIED>
+  
+<!ELEMENT defineTexture EMPTY>
+<!ATTLIST defineTexture
+  fileName CDATA #REQUIRED
+  alpha    CDATA #IMPLIED
+  ID       CDATA #REQUIRED>
+  
+<!ELEMENT texture EMPTY>
+<!ATTLIST texture
+  ID    CDATA #REQUIRED
+  xTile CDATA #IMPLIED
+  yTile CDATA #IMPLIED
+  sID   CDATA #IMPLIED>
+  
+<!ELEMENT motion (keyState*)>
+<!ATTLIST motion
+  cyclic CDATA #REQUIRED>
+
+<!ELEMENT viewMotion (viewKeyState*)>
+<!ATTLIST viewMotion
+  cyclic CDATA #REQUIRED>
+
+<!ELEMENT viewKeyState (eye?, view?, up?)>
+<!ATTLIST viewKeyState
+  time CDATA #REQUIRED>
+
+<!ELEMENT keyState (pos?, (or | quat)?, scale?)>
+<!ATTLIST keyState
+  time CDATA #REQUIRED>

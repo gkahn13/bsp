@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE scene SYSTEM "callisto.dtd">
+
+<scene>
+ 	<group colCheck="true" label="puma">
+	<pos x="0.00" y="0.00" z="0.00"/>
+		<include fileName="robotcrs.wrl" />
+	</group>
+</scene>

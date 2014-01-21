@@ -1,0 +1,16 @@
+C:\Users\gkahn\Downloads\DStarExamples\CreatingRuntimeFunction\bin\x86\Release\Example_CreatingRuntimeFunction.exe
+C:\Users\gkahn\Downloads\DStarExamples\CreatingRuntimeFunction\bin\x86\Release\Example_CreatingRuntimeFunction.pdb
+C:\Users\gkahn\Downloads\DStarExamples\CreatingRuntimeFunction\obj\x86\Release\ResolveAssemblyReference.cache
+C:\Users\gkahn\Downloads\DStarExamples\CreatingRuntimeFunction\obj\x86\Release\Example_CreatingRuntimeFunction.exe
+C:\Users\gkahn\Downloads\DStarExamples\CreatingRuntimeFunction\obj\x86\Release\Example_CreatingRuntimeFunction.pdb
+C:\Users\gkahn\Documents\GitHub\bsp\dstar\arm\Windows\CreatingRuntimeFunction\obj\x86\Release\Example_CreatingRuntimeFunction.exe
+C:\Users\gkahn\Documents\GitHub\bsp\dstar\arm\Windows\CreatingRuntimeFunction\obj\x86\Release\Example_CreatingRuntimeFunction.pdb
+C:\Users\gkahn\Documents\GitHub\bsp\dstar\arm\Windows\CreatingRuntimeFunction\bin\x86\Release\Example_CreatingRuntimeFunction.exe
+C:\Users\gkahn\Documents\GitHub\bsp\dstar\arm\Windows\CreatingRuntimeFunction\bin\x86\Release\Example_CreatingRuntimeFunction.pdb
+C:\Users\gkahn\Documents\GitHub\bsp\dstar\arm\Windows\CreatingRuntimeFunction\bin\x86\Release\ClassLibrary1.dll
+C:\Users\gkahn\Documents\GitHub\bsp\dstar\arm\Windows\CreatingRuntimeFunction\obj\x86\Release\ResolveAssemblyReference.cache
+C:\Users\gkahn\Documents\GitHub\bsp\dstar\Windows\arm\CreatingRuntimeFunction\bin\x86\Release\Example_CreatingRuntimeFunction.exe
+C:\Users\gkahn\Documents\GitHub\bsp\dstar\Windows\arm\CreatingRuntimeFunction\bin\x86\Release\Example_CreatingRuntimeFunction.pdb
+C:\Users\gkahn\Documents\GitHub\bsp\dstar\Windows\arm\CreatingRuntimeFunction\obj\x86\Release\ResolveAssemblyReference.cache
+C:\Users\gkahn\Documents\GitHub\bsp\dstar\Windows\arm\CreatingRuntimeFunction\obj\x86\Release\Example_CreatingRuntimeFunction.exe
+C:\Users\gkahn\Documents\GitHub\bsp\dstar\Windows\arm\CreatingRuntimeFunction\obj\x86\Release\Example_CreatingRuntimeFunction.pdb

@@ -207,14 +207,28 @@ namespace Example_CreatingRuntimeFunction
                 }
             }
             
+            double[] pos = g(x);
             
             double[,] H = new double[ZDIM,XDIM];
             // H = dh/dx, jacobian of observation function (ZDIM by XDIM)
 		    for (int i = 0; i < XDIM; ++i) {
-		        H[0,i] = (J[0,i]-(x[1] - cam0[1]) - (x[0] - cam0[0])-J[1,i]) / ((x[1] - cam0[1])*(x[1] - cam0[1]));
-		        H[1,i] = (J[2,i]-(x[1] - cam0[1]) - (x[2] - cam0[2])-J[1,i]) / ((x[1] - cam0[1])*(x[1] - cam0[1]));
-		        H[2,i] = (J[0,i]-(x[1] - cam1[1]) - (x[0] - cam1[0])-J[1,i]) / ((x[1] - cam1[1])*(x[1] - cam1[1]));
-		        H[3,i] = (J[2,i]-(x[1] - cam1[1]) - (x[2] - cam1[2])-J[1,i]) / ((x[1] - cam1[1])*(x[1] - cam1[1]));
+		        H[0, i] = (J[0, i] * (pos[1] - cam0[1]) - (pos[0] - cam0[0]) * J[1, i]) / ((pos[1] - cam0[1]) * (pos[1] - cam0[1]));
+                H[1, i] = (J[2, i] * (pos[1] - cam0[1]) - (pos[2] - cam0[2]) * J[1, i]) / ((pos[1] - cam0[1]) * (pos[1] - cam0[1]));
+                H[2, i] = (J[0, i] * (pos[1] - cam1[1]) - (pos[0] - cam1[0]) * J[1, i]) / ((pos[1] - cam1[1]) * (pos[1] - cam1[1]));
+                H[3, i] = (J[2, i] * (pos[1] - cam1[1]) - (pos[2] - cam1[2]) * J[1, i]) / ((pos[1] - cam1[1]) * (pos[1] - cam1[1]));
+		        
+		        /*
+		        H[0,i] = (J[0,i]*(x[2] - cam0[2]) - (x[0] - cam0[0])*J[2,i]) / ((x[2] - cam0[2])*(x[2] - cam0[2]));
+		        H[1,i] = (J[1,i]*(x[2] - cam0[2]) - (x[1] - cam0[1])*J[2,i]) / ((x[2] - cam0[2])*(x[2] - cam0[2]));
+		        H[2,i] = (J[0,i]*(x[2] - cam1[2]) - (x[0] - cam1[0])*J[2,i]) / ((x[2] - cam1[2])*(x[2] - cam1[2]));
+		        H[3,i] = (J[1,i]*(x[2] - cam1[2]) - (x[1] - cam1[1])*J[2,i]) / ((x[2] - cam1[2])*(x[2] - cam1[2]));
+		        
+		        H[0,i] = (J[0,i]*(x[1] - cam0[1]) - (x[0] - cam0[0])*J[1,i]) / ((x[1] - cam0[1])*(x[1] - cam0[1]));
+		        H[1,i] = (J[2,i]*(x[1] - cam0[1]) - (x[2] - cam0[2])*J[1,i]) / ((x[1] - cam0[1])*(x[1] - cam0[1]));
+		        H[2,i] = (J[0,i]*(x[1] - cam1[1]) - (x[0] - cam1[0])*J[1,i]) / ((x[1] - cam1[1])*(x[1] - cam1[1]));
+		        H[3,i] = (J[2,i]*(x[1] - cam1[1]) - (x[2] - cam1[2])*J[1,i]) / ((x[1] - cam1[1])*(x[1] - cam1[1]));
+		        */
+		        
 		    }
 		    
             for(int i = 0; i < ZDIM; ++i) {
@@ -226,8 +240,9 @@ namespace Example_CreatingRuntimeFunction
         }
         
         // J = T from the paper
-        void symbolicJacobian(Function[] x, out Function[,] J, out Function[,] H)
+        void symbolicJacobian(Function[] x, out Function[,] H)
         {
+            /*
             // J = dg/dx
             J = new Function[DIM,XDIM];
             for (int i = 0; i < XDIM; ++i)
@@ -238,7 +253,7 @@ namespace Example_CreatingRuntimeFunction
                     J[j,i] = Jicol[j];
                 }
             }
-            
+            */
             
             // H = d(obsfunc)/dx
             H = new Function[ZDIM, XDIM];
@@ -267,28 +282,17 @@ namespace Example_CreatingRuntimeFunction
             Function[] x = new Function[XDIM];
             for (int i = 0; i < nvars; ++i) { vars[i] = new Variable("vars_" + i); x[i] = vars[i];}
             
-            Function[,] J, H;
-            symbolicJacobian(x, out J, out H);
+            //Function[,] J, H;
+            Function[,] H;
+            //symbolicJacobian(x, out J, out H);
+            symbolicJacobian(x, out H);
             
             Function Hvec = Function.derivative(VM.jaggedToLinear<Function>(VM.toJaggedArray<Function>(H)));
-            //Jvec.printOperatorCounts();
-            
-            
+            Hvec.printOperatorCounts();
+
+
             bool[] inputVarIndices;
             vars = initializeInputVariables(Hvec, vars, out inputVarIndices);
-            for (int i = 0; i < nvars; ++i)
-                {
-                    if (inputVarIndices[i])
-                    {
-                        Console.WriteLine("1 ");
-                    }
-                    else
-                    {
-                        Console.WriteLine("0 ");
-                    }
-                }
-            
-              
             Hvec.orderVariablesInDomain(vars);
             
             RuntimeFunction Hrun = Hvec.compile();
@@ -358,10 +362,10 @@ namespace Example_CreatingRuntimeFunction
             
             Function[] obs = new Function[ZDIM];
             
-            obs[0] = (ee_pos[0] - cam0[0])/(ee_pos[2] - cam0[2]) + r_t[0];
-            obs[1] = (ee_pos[1] - cam0[1])/(ee_pos[2] - cam0[2]) + r_t[1];
-            obs[2] = (ee_pos[0] - cam1[0])/(ee_pos[2] - cam1[2]) + r_t[2];
-            obs[3] = (ee_pos[1] - cam1[1])/(ee_pos[2] - cam1[2]) + r_t[3];
+            obs[0] = (ee_pos[0] - cam0[0])/(ee_pos[1] - cam0[1]) + r_t[0];
+            obs[1] = (ee_pos[2] - cam0[2])/(ee_pos[1] - cam0[1]) + r_t[1];
+            obs[2] = (ee_pos[0] - cam1[0])/(ee_pos[1] - cam1[1]) + r_t[2];
+            obs[3] = (ee_pos[2] - cam1[2])/(ee_pos[1] - cam1[1]) + r_t[3];
             
             return obs;
         }
@@ -552,15 +556,13 @@ namespace Example_CreatingRuntimeFunction
         int initVarVals(int T, double[] varvals)
         {
             // For evaluation
+            double[] start = {Math.PI/2, -1.5431281995798991, -0.047595544887998331,
+                               1.4423058659586809, 1.5334368368992011, -1.1431255223182604};
+            double[] goal = {11.5, 11.5, 0}; // TODO: find joint angles!
+            
             double[] u = new double[UDIM];
-            double[] start = new double[XDIM];
-            start[0] = -3.5; start[1] = 2;
-            double[] goal = new double[XDIM];
-            goal[0] = -3.5; goal[1] = -2;
-
-            u[0] = (goal[0] - start[0]) / (T - 1);
-            u[1] = (goal[1] - start[1]) / (T - 1);
-
+            for(int i=0; i < UDIM; ++i) { u[i] = 0; } // zero initialization for now
+            
             //Console.WriteLine("u[0]: " + u[0] + " u[1]: " + u[1]);
 
             // initialize varvals
@@ -572,8 +574,7 @@ namespace Example_CreatingRuntimeFunction
             for (int t = 0; t < (T - 1); ++t)
             {
                 Uvals[t] = new double[UDIM];
-                Uvals[t][0] = u[0];
-                Uvals[t][1] = u[1];
+                for(int i=0; i < UDIM; ++i) { Uvals[t][i] = u[i]; }
             }
 
             Xvals[0] = new double[XDIM];

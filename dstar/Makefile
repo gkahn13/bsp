@@ -35,6 +35,24 @@ point-control: $(PT_CONTROL_CS) $(PT_CS)
 	bash modifyCompiledSource.sh 'control' $(PT_CONTROL_EXEC) $(T) $(PT_SYM_DIR) $(PT_MASKS_DIR) '$(SYM_FUNCS)'
 	rm -f $(PT_CONTROL_EXEC)
 	
+	
+####### arm ##################
+ARM_DIR = ARM
+ARM_SYM_DIR = $(ARM_DIR)/sym
+ARM_MASKS_DIR = $(ARM_DIR)/masks
+
+# Arm.cs
+# PT_CS = $(PT_DIR)/Point.cs
+
+# make point-state
+ARM_STATE_CS = $(ARM_DIR)/ArmState.cs
+ARM_STATE_EXEC = $(BUILD)/ArmState.exe
+arm-state: $(ARM_STATE_CS)
+	make clean
+	mono-csc $(FLAGS) -r:$(DLL) -out:$(ARM_STATE_EXEC) $^
+	bash modifyCompiledSource.sh 'state' $(ARM_STATE_EXEC) $(T) $(ARM_SYM_DIR) $(ARM_MASKS_DIR) '$(SYM_FUNCS)'
+	rm -f $(ARM_STATE_EXEC)
+	
 clean:
 	rm -f *.txt
 	rm -f *.c

@@ -215,20 +215,7 @@ namespace Example_CreatingRuntimeFunction
 		        H[0, i] = (J[0, i] * (pos[1] - cam0[1]) - (pos[0] - cam0[0]) * J[1, i]) / ((pos[1] - cam0[1]) * (pos[1] - cam0[1]));
                 H[1, i] = (J[2, i] * (pos[1] - cam0[1]) - (pos[2] - cam0[2]) * J[1, i]) / ((pos[1] - cam0[1]) * (pos[1] - cam0[1]));
                 H[2, i] = (J[0, i] * (pos[1] - cam1[1]) - (pos[0] - cam1[0]) * J[1, i]) / ((pos[1] - cam1[1]) * (pos[1] - cam1[1]));
-                H[3, i] = (J[2, i] * (pos[1] - cam1[1]) - (pos[2] - cam1[2]) * J[1, i]) / ((pos[1] - cam1[1]) * (pos[1] - cam1[1]));
-		        
-		        /*
-		        H[0,i] = (J[0,i]*(x[2] - cam0[2]) - (x[0] - cam0[0])*J[2,i]) / ((x[2] - cam0[2])*(x[2] - cam0[2]));
-		        H[1,i] = (J[1,i]*(x[2] - cam0[2]) - (x[1] - cam0[1])*J[2,i]) / ((x[2] - cam0[2])*(x[2] - cam0[2]));
-		        H[2,i] = (J[0,i]*(x[2] - cam1[2]) - (x[0] - cam1[0])*J[2,i]) / ((x[2] - cam1[2])*(x[2] - cam1[2]));
-		        H[3,i] = (J[1,i]*(x[2] - cam1[2]) - (x[1] - cam1[1])*J[2,i]) / ((x[2] - cam1[2])*(x[2] - cam1[2]));
-		        
-		        H[0,i] = (J[0,i]*(x[1] - cam0[1]) - (x[0] - cam0[0])*J[1,i]) / ((x[1] - cam0[1])*(x[1] - cam0[1]));
-		        H[1,i] = (J[2,i]*(x[1] - cam0[1]) - (x[2] - cam0[2])*J[1,i]) / ((x[1] - cam0[1])*(x[1] - cam0[1]));
-		        H[2,i] = (J[0,i]*(x[1] - cam1[1]) - (x[0] - cam1[0])*J[1,i]) / ((x[1] - cam1[1])*(x[1] - cam1[1]));
-		        H[3,i] = (J[2,i]*(x[1] - cam1[1]) - (x[2] - cam1[2])*J[1,i]) / ((x[1] - cam1[1])*(x[1] - cam1[1]));
-		        */
-		        
+                H[3, i] = (J[2, i] * (pos[1] - cam1[1]) - (pos[2] - cam1[2]) * J[1, i]) / ((pos[1] - cam1[1]) * (pos[1] - cam1[1]));        
 		    }
 		    
             for(int i = 0; i < ZDIM; ++i) {
@@ -374,23 +361,23 @@ namespace Example_CreatingRuntimeFunction
         {
             // H = d(obsfunc)/dx
             H = new Function[ZDIM, XDIM];
-            for (int i = 0; i < ZDIM; ++i)
+            for (int i = 0; i < XDIM; ++i)
             {
                 Function[] Hicol = Function.D(obsfunc(x_tp1, r_t), x_tp1[i]);
-                for (int j = 0; j < XDIM; ++j)
+                for (int j = 0; j < ZDIM; ++j)
                 {
-                    H[i, j] = Hicol[j];
+                    H[j, i] = Hicol[j];
                 }
             }
 
             // N = d(obsfunc)/dr
             N = new Function[ZDIM, RDIM];
-            for (int i = 0; i < ZDIM; ++i)
+            for (int i = 0; i < RDIM; ++i)
             {
                 Function[] Nicol = Function.D(obsfunc(x_tp1, r_t), r_t[i]);
-                for (int j = 0; j < RDIM; ++j)
+                for (int j = 0; j < ZDIM; ++j)
                 {
-                    N[i, j] = Nicol[j];
+                    N[j, i] = Nicol[j];
                 }
             }
 
@@ -504,13 +491,58 @@ namespace Example_CreatingRuntimeFunction
 
             RuntimeFunction brun = beliefvec.compile();
 
-            double[] result = new double[6], varvals = { -4, 2, 0.214285714285714, -0.285714285714286, 0, 0, 1, 0, 0, 1 };
-            brun.eval(result, varvals);
-            for (int i = 0; i < 6; ++i)
+            double[] result = new double[nvars];
+            double[] varvals = new double[nvars];
+            
+            double[] joints = {Math.PI/2, -1.5431281995798991, -0.047595544887998331,
+                               1.4423058659586809, 1.5334368368992011, -1.1431255223182604};
+            double[] input = {-.1, .1, -.1, -.1, -.1, .1};
+            double[] x_noise = {0, 0, 0, 0, 0, 0};
+            double[] z_noise = {0, 0, 0, 0};
+            double[] S = new double[XDIM*XDIM];
+            for(int i=0; i < XDIM; ++i)
             {
-                Console.Write("b[" + i + "]: " + result[i] + " ");
+                for(int j=0; j < XDIM; ++j)
+                {
+                    if (i == j)
+                    {
+                        S[i+j*XDIM] = 1;   
+                    } else
+                    {
+                        S[i+j*XDIM] = 0;
+                    }
+                }    
             }
-            Console.WriteLine();
+            
+            Console.WriteLine("Before copying");
+
+            joints.CopyTo(varvals, 0);
+            input.CopyTo(varvals, XDIM);
+            x_noise.CopyTo(varvals, XDIM+UDIM);
+            z_noise.CopyTo(varvals, XDIM+UDIM+QDIM);
+            S.CopyTo(varvals, XDIM+UDIM+QDIM+RDIM);
+            
+            Console.WriteLine("After copying");
+    
+            brun.eval(result, varvals);
+            printBelief(result);
+        }
+        
+        void printBelief(double[] b)
+        {
+            int idx = 0;
+            string[] names = {"X","U","Q","R","S"};
+            int[] dims = {XDIM,UDIM,QDIM,RDIM,XDIM*XDIM};
+            
+            for(int i=0; i < dims.Length; ++i)
+            {
+                Console.WriteLine(names[i]);
+                for(int j=0; j < dims[i]; ++j)
+                {
+                    Console.WriteLine(b[idx++]);
+                }
+                Console.WriteLine();
+            }
         }
 
         int initVars(int T, Variable[] vars)
@@ -553,6 +585,7 @@ namespace Example_CreatingRuntimeFunction
             return idx;
         }
 
+        // TODO: (part way done)
         int initVarVals(int T, double[] varvals)
         {
             // For evaluation
@@ -612,6 +645,7 @@ namespace Example_CreatingRuntimeFunction
             return idx;
         }
 
+        // TODO!
         void testBeliefUpdate()
         {
             // num timesteps
@@ -669,6 +703,7 @@ namespace Example_CreatingRuntimeFunction
             Console.WriteLine();
         }
 
+        // TODO!
         void testCostFunc(uint flag)
         {
             // num timesteps
@@ -883,6 +918,7 @@ namespace Example_CreatingRuntimeFunction
             }
         }
 
+        // TODO!
         void computeCostGradDiagHess(int T)
         {
             // num timesteps
@@ -946,122 +982,7 @@ namespace Example_CreatingRuntimeFunction
             fh.Close();        
         }
 
-        Function controlCostFunc(Function[][] U, Function[] q, Function[] r, Function[] x_0, Function[] x_goal, Function[,] Sigma_0, Function alpha_belief, Function alpha_control, Function alpha_final_belief, Function alpha_goal_state)
-        {
-            int T = U.GetLength(0) + 1;
-
-            Function cost = Constant.newConstant(0.0);
-
-            Function[] x_t = x_0, x_tp1;
-            Function[,] Sigma_t = Sigma_0, Sigma_tp1;
-
-            for (int t = 0; t < T - 1; ++t)
-            {
-                cost = cost + alpha_belief * VM.trace(Sigma_t);
-                cost = cost + alpha_control * VM.dot(U[t], U[t]);
-
-                EKF(x_t, U[t], q, r, Sigma_t, out x_tp1, out Sigma_tp1);
-                x_t = x_tp1;
-                Sigma_t = Sigma_tp1;
-            }
-
-            cost = cost + alpha_final_belief * VM.trace(Sigma_t) + alpha_goal_state*VM.dot(VM.minus(x_t,x_goal), VM.minus(x_t,x_goal));
-            return cost;
-        }
-
-        void computeControlCostGradDiagHess()
-        {
-            // num timesteps
-            T = 40;
-
-            // variable instantiations
-            int nparams = 4;
-            int nvars = (T - 1) * UDIM + QDIM + RDIM + XDIM + XDIM + (XDIM * XDIM) + nparams;
-
-            Variable[] vars = new Variable[nvars];
-            for (int i = 0; i < nvars; ++i) { vars[i] = new Variable("vars_" + i); }
-
-            U = new Function[T - 1][];
-
-            int idx = 0;
-            for (int t = 0; t < (T - 1); ++t)
-            {
-                U[t] = new Function[UDIM];
-                for (int i = 0; i < UDIM; ++i)
-                {
-                    U[t][i] = vars[idx++];
-                }
-            }
-            q = new Function[] { vars[idx++], vars[idx++] };
-            r = new Function[] { vars[idx++], vars[idx++] };
-
-            Function[] x_0 = new Function[XDIM];
-            for (int i = 0; i < XDIM; ++i)
-            {
-                x_0[i] = vars[idx++];
-            }
-            Function[] x_goal = new Function[XDIM];
-            for (int i = 0; i < XDIM; ++i)
-            {
-                x_goal[i] = vars[idx++];
-            }
-            Sigma_0 = new Function[XDIM, XDIM];
-            for (int i = 0; i < XDIM; ++i)
-            {
-                for (int j = 0; j < XDIM; ++j)
-                {
-                    Sigma_0[i, j] = vars[idx++];
-                }
-            }
-            
-            Function alpha_belief = vars[idx++];
-            Function alpha_control = vars[idx++];
-            Function alpha_final_belief = vars[idx++];
-            Function alpha_goal_state = vars[idx++];
-
-            Function[] Uvec = VM.jaggedToLinear<Function>(U);
-
-            Function cost = controlCostFunc(U, q, r, x_0, x_goal, Sigma_0, alpha_belief, alpha_control, alpha_final_belief, alpha_goal_state);
-
-            Function[] costJacDiagHessFunc = new Function[2*Uvec.Length + 1];
-            //Function[] costJacDiagHessFunc = new Function[1];
-            costJacDiagHessFunc[0] = cost;
-            idx = 1;
-            for (int i = 0; i < Uvec.Length; ++i)
-            {
-                costJacDiagHessFunc[idx++] = Function.D(cost, Uvec[i]);
-            }
-            for (int i = 0; i < Uvec.Length; ++i)
-            {
-                costJacDiagHessFunc[idx++] = Function.D(cost, Uvec[i], Uvec[i]);
-            }
-            Function costJacDiagHess = Function.derivative(costJacDiagHessFunc);
-            costJacDiagHess.printOperatorCounts();
-
-            bool[] inputVarIndices;
-            Variable[] costJacDiagHessVars = initializeInputVariables(costJacDiagHess, vars, out inputVarIndices);
-            costJacDiagHess.orderVariablesInDomain(costJacDiagHessVars);
-
-            costJacDiagHess.compileCCodeToFile("costControlJacDiagHess40.c");
-            //costJacDiagHess.compileCCodeToFile("costControl25.c");
-
-            System.IO.StreamWriter fh = new System.IO.StreamWriter("control-masks-40.txt");
-            fh.Write(nvars + " ");
-            for (int i = 0; i < nvars; ++i)
-            {
-                Console.WriteLine(inputVarIndices[i]);
-                if (inputVarIndices[i])
-                {
-                    fh.Write("1 ");
-                }
-                else
-                {
-                    fh.Write("0 ");
-                }
-            }
-            fh.WriteLine();
-            fh.Close();
-        }
+        
         
 
         static void Main(string[] args)
@@ -1077,9 +998,9 @@ namespace Example_CreatingRuntimeFunction
             var stopwatch = new Stopwatch();
             stopwatch.Start();
             
-            prog.testKinematics();
+            //prog.testKinematics();
             
-            //prog.testEKFStep();
+            prog.testEKFStep();
 
             //prog.testBeliefUpdate();
 

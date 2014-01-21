@@ -386,28 +386,41 @@ namespace Example_CreatingRuntimeFunction
         void EKF(Function[] x_t, Function[] u_t, Function[] q_t, Function[] r_t, Function[,] Sigma_t, out Function[] x_tp1, out Function[,] Sigma_tp1)
         {
             VM.checkSize<Function>(Sigma_t, XDIM, XDIM);
-
+    
+            //Console.WriteLine("computeDynJacobians");
             Function[,] A, M;
             //computeDynJacobians(x_t, u_t, q_t, out A, out M);
             A = VM.identity<Function>(XDIM, 0, 1); // d(dynfunc)/dx
             M = VM.mult(VM.identity<Function>(UDIM, 0, 1), DT); // d(dynfunc)/dm (noise)
 
+            //Console.WriteLine("compute Sigma_tp1");
+            //VM.print<Function>(A);
+            //VM.print<Function>(Sigma_t);
+            //VM.print<Function>(M);
+            //VM.print<Function>(Q);
+            //Console.WriteLine("end of prints");
             Sigma_tp1 = VM.plus(VM.mult(VM.mult(A, Sigma_t), VM.transpose<Function>(A)), VM.mult(VM.mult(M, Q), VM.transpose<Function>(M)));
+            //Console.WriteLine("after Sigma_tp1");
             //VM.print<Function>(Sigma_tp1);
 
+            //VM.print<Function>(q_t);
             for (int i = 0; i < QDIM; ++i) { q_t[i] = 0; }
 
+            //Console.WriteLine("compute x_tp1");
             x_tp1 = dynfunc(x_t, u_t, q_t);
             //VM.print<Function>(x_tp1);
 
+            //Console.WriteLine("computeObsJacobians");
             Function[,] H, N;
             computeObsJacobians(x_tp1, r_t, out H, out N);
 
+            //Console.WriteLine("compute K1, K2, K");
             Function[,] K1 = VM.mult(Sigma_tp1, VM.transpose<Function>(H));
             Function[,] K2 = VM.plus(VM.mult(VM.mult(H, Sigma_tp1), VM.transpose<Function>(H)), VM.mult(VM.mult(N, R), VM.transpose<Function>(N)));
 
             Function[,] K = VM.transpose(mdivide(VM.transpose(K2), VM.transpose(K1)));
 
+            //Console.WriteLine("compute Sigma_tp1");
             Sigma_tp1 = VM.mult(VM.minus(VM.identity<Function>(XDIM, 0, 1), VM.mult(K, H)), Sigma_tp1);
             //VM.print<Function>(Sigma_tp1);
         }
@@ -568,10 +581,10 @@ namespace Example_CreatingRuntimeFunction
                 }
             }
             
-            Function [] q = new Function[QDIM];
+            q = new Function[QDIM];
             for(int i=0; i < QDIM; ++i) { q[i] = vars[idx++]; }
             
-            Function [] r = new Function[RDIM];
+            r = new Function[RDIM];
             for(int i=0; i < RDIM; ++i) { r[i] = vars[idx++]; }
             
             Sigma_0 = new Function[XDIM, XDIM];
@@ -928,7 +941,7 @@ namespace Example_CreatingRuntimeFunction
             // variable instantiations
             int nparams = 3;
             int nvars = T * XDIM + (T - 1) * UDIM + QDIM + RDIM + (XDIM * XDIM) + nparams;
-
+            
             Variable[] vars = new Variable[nvars];
             for (int i = 0; i < nvars; ++i) { vars[i] = new Variable("vars_" + i); }
 
@@ -993,7 +1006,7 @@ namespace Example_CreatingRuntimeFunction
 
         static void Main(string[] args)
         { 
-            int T = 15;
+            int T = 10;
             string eval_name = "CostGradDiagHess"; // default to comput cost, gradient, and diagonal hessian
            
             if (args.Length >= 1) {
@@ -1009,7 +1022,7 @@ namespace Example_CreatingRuntimeFunction
             Function.printCompilerSource = false;
 
             Program p = new Program();
-            p.T = 15;
+            p.T = T;
 
             var stopwatch = new Stopwatch();
             stopwatch.Start();

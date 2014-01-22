@@ -1,13 +1,8 @@
 #include "state-symeval.h"
-
 #include <math.h>
-
 double Square(double x) {
     return x*x;
-
 }
-
-
 
 char* getMask() {
     return "1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 1 0 0 0 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 1 0 0 1 1 1 1 1 1 1 1 1 ";

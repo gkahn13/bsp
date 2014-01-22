@@ -6,6 +6,8 @@ CPP_FLAGS = -std=c++0x -I.
 PYTHON_FLAGS = -I/usr/include/python2.7 -lpython2.7
 BOOST_FLAGS = -lboost_python -lboost_filesystem -lboost_system
 LINKER_FLAGS = -lrt
+ADOLC_FLAGS = -I/usr/include/adolc -ladolc
+EIGEN_FLAGS = -I/usr/include/eigen3
 
 # default to debug build
 BUILD := debug
@@ -31,6 +33,27 @@ dir:
 
 $(OBJ_DIR)/logging.o : util/logging.cpp
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) -c -o $@ $^
+	
+###### ARM ############
+
+# share arm functions
+ARM_HEADERS = arm/arm.h
+
+# make arm-state
+ARM_STATE_DIR = arm/state
+ARM_STATE_FILES = armStateMPC arm-state logging
+ARM_STATE_OBJS = $(ARM_STATE_FILES:%=$(OBJ_DIR)/%.o)
+
+arm-state: | $(ARM_STATE_OBJS)
+	$(CXX) $(BFLAGS) $(ARM_STATE_OBJS) -o $(BIN_DIR)/arm-state $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS) $(ADOLC_FLAGS) $(EIGEN_FLAGS)
+
+$(OBJ_DIR)/armStateMPC.o : $(ARM_STATE_DIR)/armStateMPC.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+	
+$(OBJ_DIR)/arm-state.o : $(ARM_STATE_DIR)/arm-state.cpp $(ARM_HEADERS)
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) $(ADOLC_FLAGS) $(EIGEN_FLAGS) -c -o $@ $<
+
+
 
 ###### POINT ##########
 
@@ -57,7 +80,7 @@ PT_BELIEF_OBJS = $(PT_BELIEF_FILES:%=$(OBJ_DIR)/%.o)
 belief-setup:
 	bash $(POINT_SETUP_FILE) belief $(T)
 
-belief: | belief-setup $(PT_BELIEF_OBJS)
+point-belief: | belief-setup $(PT_BELIEF_OBJS)
 	$(CXX) $(BFLAGS) $(PT_BELIEF_OBJS) -o $(BIN_DIR)/point-belief $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
 	
 $(OBJ_DIR)/beliefMPC.o : $(PT_BELIEF_DIR)/beliefMPC.c
@@ -78,7 +101,7 @@ PT_STATE_OBJS = $(PT_STATE_FILES:%=$(OBJ_DIR)/%.o)
 state-setup:
 	bash $(POINT_SETUP_FILE) state $(T)
 
-state: | state-setup $(PT_STATE_OBJS)
+point-state: | state-setup $(PT_STATE_OBJS)
 	$(CXX) $(BFLAGS) $(PT_STATE_OBJS) -o $(BIN_DIR)/point-state $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
 
 $(OBJ_DIR)/stateMPC.o : $(PT_STATE_DIR)/stateMPC.c
@@ -92,7 +115,7 @@ PT_STATE_FD_DIR = $(PT_STATE_DIR)
 PT_STATE_FD_FILES = stateMPC state_symeval point-state-finitediff logging
 PT_STATE_FD_OBJS = $(PT_STATE_FD_FILES:%=$(OBJ_DIR)/%.o)
 
-state-finitediff: | state-setup $(PT_STATE_FD_OBJS) 
+point-state-finitediff: | state-setup $(PT_STATE_FD_OBJS) 
 	$(CXX) $(BFLAGS) $(PT_STATE_FD_OBJS) -o $(BIN_DIR)/point-state-finitediff $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
 	
 $(OBJ_DIR)/point-state-finitediff.o : $(PT_STATE_FD_DIR)/point-state-finitediff.cpp $(POINT_HEADERS)
@@ -106,7 +129,7 @@ PT_LP_OBJS = $(PT_LP_FILES:%=$(OBJ_DIR)/%.o)
 lp-setup:
 	bash $(POINT_SETUP_FILE) lp $(T)
 
-lp: | lp-setup $(PT_LP_OBJS)
+point-lp: | lp-setup $(PT_LP_OBJS)
 	$(CXX) $(BFLAGS) $(PT_LP_OBJS) -o $(BIN_DIR)/point-lp $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
 
 $(OBJ_DIR)/lpMPC.o : $(PT_LP_DIR)/lpMPC.c
@@ -123,7 +146,7 @@ PT_CONTROL_OBJS = $(PT_CONTROL_FILES:%=$(OBJ_DIR)/%.o)
 control-setup:
 	bash $(POINT_SETUP_FILE) control $(T)
 
-control: | control-setup $(PT_CONTROL_OBJS) 
+point-control: | control-setup $(PT_CONTROL_OBJS) 
 	$(CXX) $(BFLAGS) $(PT_CONTROL_OBJS) -o $(BIN_DIR)/point-control $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
 
 $(OBJ_DIR)/controlMPC.o : $(PT_CONTROL_DIR)/controlMPC.c

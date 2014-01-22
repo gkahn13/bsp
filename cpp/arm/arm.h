@@ -5,9 +5,7 @@
 #include <math.h>
 
 #include "util/matrix.h"
-//extern "C" {
 #include "util/utils.h"
-//}
 //#include "util/Timer.h"
 #include "util/logging.h"
 
@@ -17,6 +15,8 @@
 #include <boost/filesystem.hpp>
 
 namespace py = boost::python;
+
+//#include <adolc/adouble.h>
 
 #define TIMESTEPS 10
 #define DT 0.5
@@ -30,12 +30,18 @@ namespace py = boost::python;
 #define S_DIM (((X_DIM+1)*X_DIM)/2)
 #define B_DIM (X_DIM+S_DIM)
 
+const double l4 = 2.375;
+const double l3 = 10.375;
+const double l2 = 8;
+const double l1 = 7.25;
+
 
 const double step = 0.0078125*0.0078125;
 
 Matrix<X_DIM> x0;
 Matrix<X_DIM,X_DIM> SqrtSigma0;
-Matrix<G_DIM> posGoal; //Matrix<X_DIM> xGoal;
+//Matrix<G_DIM> posGoal;
+Matrix<X_DIM> xGoal; // TODO: temporary, since goal is a vector of joints
 Matrix<X_DIM> xMin, xMax;
 Matrix<U_DIM> uMin, uMax;
 

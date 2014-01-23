@@ -2,7 +2,7 @@ CXX = g++
 CC = gcc
 
 C_FLAGS = -std=gnu99
-CPP_FLAGS = -std=c++0x -I.
+CPP_FLAGS = -std=c++0x -fpermissive -I.
 PYTHON_FLAGS = -I/usr/include/python2.7 -lpython2.7
 BOOST_FLAGS = -lboost_python -lboost_filesystem -lboost_system
 LINKER_FLAGS = -lrt

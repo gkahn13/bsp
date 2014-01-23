@@ -1,5 +1,5 @@
-#ifndef __POINT_H__
-#define __POINT_H__
+#ifndef __ARM_H__
+#define __ARM_H__
 
 #include <fstream>
 #include <math.h>
@@ -22,7 +22,7 @@ namespace py = boost::python;
 #include <boost/numeric/ublas/io.hpp>
 using namespace boost::numeric::ublas;
 
-#include <adolc/adouble.h>
+#include <adolc/adolc.h>
 
 #define TIMESTEPS 5
 #define DT 1
@@ -42,7 +42,7 @@ const double l2 = 8;
 const double l1 = 7.25;
 
 
-const double step = .1;//0.0078125*0.0078125;
+const double step = 1e-6;//0.0078125*0.0078125;
 
 matrix<double> x0(X_DIM,1);
 matrix<double> SqrtSigma0(X_DIM,X_DIM);
@@ -114,6 +114,18 @@ void printMatrix(std::string name, matrix<TYPE> M)
 	}
 }
 
+template<class TYPE>
+void arrToMatrix(double** arr, matrix<TYPE>& M)
+{
+	for(int i=0; i < M.size1(); ++i)
+	{
+		for(int j=0; j < M.size2(); ++j)
+		{
+			M(i,j) = arr[i][j];
+		}
+	}
+}
+
 // converted
 template<class TYPE>
 matrix<TYPE> dynfunc(const matrix<TYPE>& x, const matrix<TYPE>& u, const matrix<TYPE>& q)
@@ -182,45 +194,85 @@ void linearizeDynamics(const matrix<adouble>& x, const matrix<adouble>& u, const
 
 }
 
-// converted (assuming no work needs to be done)
-// Jacobians: dh(x,r)/dx, dh(x,r)/dr
-// TODO: remove!
-void linearizeObservation(const matrix<adouble>& x, const matrix<adouble>& r, matrix<adouble>& H, matrix<adouble>& N)
+void initAdolcMatrix(matrix<adouble>& mAdolc, matrix<double>& m)
 {
-	LOG_DEBUG("linearize observation");
-	/*
-	//H.reset();
-	printMatrix("x",x);
-	matrix<adouble> xr(x), xl(x);
+	for(int i=0; i < mAdolc.size1(); ++i) {
+		for(int j=0; j < mAdolc.size2(); ++j) {
+			mAdolc(i,j) <<= m(i,j);
+		}
+	}
+}
+
+void retrieveAdolcMatrix(matrix<double>& m, matrix<adouble>& mAdolc)
+{
+	for(int i=0; i < m.size1(); ++i) {
+		for(int j=0; j < m.size2(); ++j) {
+			mAdolc(i,j) >>= m(i,j);
+		}
+	}
+}
+
+void finiteDiffJac(matrix<double>& x, matrix<double>& r)
+{
+	matrix<double> H = zeroMatrix<double>(Z_DIM,X_DIM);
+	matrix<double> xr(x), xl(x);
 	for (size_t i = 0; i < X_DIM; ++i) {
 		xr(i,0) += step; xl(i,0) -= step;
 		column(H, i) = column((obsfunc(xr, r) - obsfunc(xl, r)) / (xr(i,0) - xl(i,0)),0);
 		xr(i,0) = x(i,0); xl(i,0) = x(i,0);
 	}
+	printMatrix<double>("H finite diff", H);
+}
+
+
+// converted (assuming no work needs to be done)
+// Jacobians: dh(x,r)/dx, dh(x,r)/dr
+template<class T>
+void linearizeObservation(matrix<T>& x, matrix<T>& r, matrix<T>& H, matrix<T>& N)
+{
+	LOG_DEBUG("inside linearizeObservation adolc");
+	short int tag = 1;
+	matrix<adouble> xAdolc(X_DIM,1);
+	matrix<double> rAdolc(R_DIM,1);
+	matrix<double> obs(Z_DIM,1);
+	adouble singleObs;
+
+	/*
+	trace_on(tag);
+	initAdolcMatrix(xAdolc, x);
+	//initAdolcMatrix(rAdolc, r);
+	matrix<adouble> obsAdolc = obsfunc<adouble>(xAdolc, r);
+	obsAdolc(0,0) >>= singleObs;
+	trace_off(tag);
 	*/
-	//printMatrix("H",H);
 
-	//for(int i=0; i < R_DIM; ++i) { r(i,0) = 0; } // TODO: remove
-	printMatrix("r",r);
-	printMatrix("obsfunc(x,r)",obsfunc(x,r));
-	//N.reset();
-	matrix<adouble> rr(r), rl(r);
-	for (size_t i = 0; i < R_DIM; ++i) {
-		rr(i,0) += step; rl(i,0) -= step;
-		//printMatrix("rr",rr); printMatrix("rl",rl);
-		LOG_DEBUG("%d",i);
-		printMatrix("obsfunc(x,rr)",obsfunc(x,rr));
-		printMatrix("obsfunc(x,rl)",obsfunc(x,rl));
-		std::cout << "denom " << rr(i,0)-rl(i,0) << std::endl;
-		//printMatrix("whole thing", (obsfunc(x, rr) - obsfunc(x, rl)) / (2*step));
-		column(N, i) = column((obsfunc(x, rr) - obsfunc(x, rl)) / (rr(i,0) - rl(i,0)),0);
-		rr(i,0) = r(i,0); rl(i,0) = r(i,0);
-	}
+	trace_on(tag);
+	initAdolcMatrix(xAdolc, x);
+	//initAdolcMatrix(rAdolc, r);
+	matrix<adouble> obsAdolc = obsfunc<adouble>(xAdolc, r);
+	retrieveAdolcMatrix(obs, obsAdolc);
+	trace_off(tag);
 
-	printMatrix("N",N);
+	int tape_stats[STAT_SIZE];
+	tapestats(tag,tape_stats);             // reading of tape statistics
+	std::cout<<"maxlive "<<tape_stats[NUM_MAX_LIVES]<<"\n";
+
+	double* x_arr = new double[X_DIM];
+	std::copy(x.begin1(), x.end1(), x_arr);
+	double** dobs_dx = new double*[Z_DIM];
+	for(int i=0; i < Z_DIM; ++i) { dobs_dx[i] = new double[X_DIM]; }
+	jacobian(tag, Z_DIM, X_DIM, x_arr, dobs_dx);
+	arrToMatrix(dobs_dx, H);
+	printMatrix("H",H);
+	finiteDiffJac(x,r);
+
 	exit(0);
 
+
+
 }
+
+
 
 
 // converted (assuming no work needs to be done)
@@ -383,10 +435,13 @@ matrix<TYPE> EKF(const matrix<TYPE>& x_t, const matrix<TYPE>& u_t, const matrix<
 
 	printMatrix("x_tp1",x_tp1);
 
-	matrix<TYPE> H(Z_DIM,X_DIM), N(Z_DIM,R_DIM);
+	matrix<TYPE> H = zeroMatrix<TYPE>(Z_DIM,X_DIM);
+	matrix<TYPE> N = zeroMatrix<TYPE>(Z_DIM,R_DIM);
 	//matrix<adouble> r = zeroMatrix(R_DIM,1); // correct?
 	LOG_DEBUG("before linearize observation");
-	//linearizeObservation(x_tp1, zeroMatrix<double>(R_DIM,1), H, N); // TODO: use adol-c
+
+	matrix<double> r = zeroMatrix<double>(R_DIM,1);
+	linearizeObservation<TYPE>(x_tp1, r, H, N);
 
 	printMatrix("H",H);
 	printMatrix("N",N);

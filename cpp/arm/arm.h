@@ -67,10 +67,10 @@ const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 1, alph
 adouble *inputVars, *vars;
 std::vector<int> maskIndices;
 
-template<class T>
-matrix<T> zeroMatrix(int rows, int cols)
+template<class TYPE>
+matrix<TYPE> zeroMatrix(int rows, int cols)
 {
-	matrix<T> M(rows,cols);
+	matrix<TYPE> M(rows,cols);
 	for(int i=0; i < M.size1(); ++i)
 	{
 		for(int j=0; j < M.size2(); ++j)
@@ -81,18 +81,18 @@ matrix<T> zeroMatrix(int rows, int cols)
 	return M;
 }
 
-template<class T>
-matrix<T> identityMatrix(int size)
+template<class TYPE>
+matrix<TYPE> identityMatrix(int size)
 {
-	matrix<T> M = zeroMatrix(size, size);
+	matrix<TYPE> M = zeroMatrix<TYPE>(size, size);
 	for(int i=0; i < size; ++i) { M(i,i) = 1.0; }
 	return M;
 }
 
-template
-matrix<adouble> copyMatrix(matrix<adouble> M)
+template<class TYPE>
+matrix<TYPE> copyMatrix(matrix<TYPE> M)
 {
-	matrix<adouble> Mcopy(M.size1(),M.size2());
+	matrix<TYPE> Mcopy(M.size1(),M.size2());
 	for(int i=0; i < M.size1(); ++i)
 	{
 		for(int j=0; j < M.size2(); ++j)
@@ -103,10 +103,10 @@ matrix<adouble> copyMatrix(matrix<adouble> M)
 	return M;
 }
 
-template<class T>
-void printMatrix(std::string name, matrix<T> M)
+template<class TYPE>
+void printMatrix(std::string name, matrix<TYPE> M)
 {
-	matrix<T> transM = trans(M);
+	matrix<TYPE> transM = trans(M);
 	std::cout << name << std::endl;
 	for(int i=0; i < transM.size2(); ++i)
 	{
@@ -115,27 +115,22 @@ void printMatrix(std::string name, matrix<T> M)
 }
 
 // converted
-template<class T>
-matrix<T> dynfuncTemplate(const matrix<T>& x, const matrix<T>& u, const matrix<T>& q)
+template<class TYPE>
+matrix<TYPE> dynfunc(const matrix<TYPE>& x, const matrix<TYPE>& u, const matrix<TYPE>& q)
 {
-	matrix<T> result = x + (u + q)*DT;
+	matrix<TYPE> result = x + (u + q)*DT;
 	return result;
 }
 
 
 // converted
-matrix<adouble> dynfunc(const matrix<adouble>& x, const matrix<adouble>& u, const matrix<adouble>& q)
-{
-	return x + (u + q)*DT;
-}
-
-// converted
 // joint angles -> end effector position
-matrix<adouble> g(const matrix<adouble>& x)
+template<class TYPE>
+matrix<TYPE> g(const matrix<TYPE>& x)
 {
-    adouble a0 = x(0,0), a1 = x(1,0), a2 = x(2,0), a3 = x(3,0), a4 = x(4,0), a5 = x(5,0);
+    TYPE a0 = x(0,0), a1 = x(1,0), a2 = x(2,0), a3 = x(3,0), a4 = x(4,0), a5 = x(5,0);
 
-    matrix<adouble> p(G_DIM, 1);
+    matrix<TYPE> p(G_DIM, 1);
     p(0,0) = sin(a0) * (cos(a1) * (sin(a2) * (cos(a4) * l4 + l3) + cos(a2) * cos(a3) * sin(a4) * l4) + sin(a1) * (cos(a2) * (cos(a4) * l4 + l3) - sin(a2) * cos(a3) * sin(a4) * l4 + l2)) + cos(a0) * sin(a3) * sin(a4) * l4;
     p(1,0) = -sin(a1) * (sin(a2) * (cos(a4) * l4 + l3) + cos(a2) * cos(a3) * sin(a4) * l4) + cos(a1) * (cos(a2) * (cos(a4) * l4 + l3) - sin(a2) * cos(a3) * sin(a4) * l4 + l2) + l1;
     p(2,0) = cos(a0) * (cos(a1) * (sin(a2) * (cos(a4) * l4 + l3) + cos(a2) * cos(a3) * sin(a4) * l4) + sin(a1) * (cos(a2) * (cos(a4) * l4 + l3) - sin(a2) * cos(a3) * sin(a4) * l4 + l2)) - sin(a0) * sin(a3) * sin(a4) * l4;
@@ -145,11 +140,12 @@ matrix<adouble> g(const matrix<adouble>& x)
 
 // converted
 // Observation model
-matrix<adouble> obsfunc(const matrix<adouble>& x, const matrix<adouble>& r)
+template<class TYPE>
+matrix<TYPE> obsfunc(const matrix<TYPE>& x, const matrix<TYPE>& r)
 {
-	matrix<adouble> ee_pos = g(x);
+	matrix<TYPE> ee_pos = g<TYPE>(x);
 
-	matrix<adouble> obs(Z_DIM, 1);
+	matrix<TYPE> obs(Z_DIM, 1);
 	obs(0,0) = (ee_pos(0,0) - cam0(0,0)) / (ee_pos(1,0) - cam0(1,0)) + r(0,0);
 	obs(1,0) = (ee_pos(2,0) - cam0(2,0)) / (ee_pos(1,0) - cam0(1,0)) + r(1,0);
 	obs(2,0) = (ee_pos(0,0) - cam1(0,0)) / (ee_pos(1,0) - cam1(1,0)) + r(2,0);
@@ -160,6 +156,7 @@ matrix<adouble> obsfunc(const matrix<adouble>& x, const matrix<adouble>& r)
 
 // converted (assuming no work needs to be done)
 // Jacobians: df(x,u,q)/dx, df(x,u,q)/dq
+// TODO: remove!
 void linearizeDynamics(const matrix<adouble>& x, const matrix<adouble>& u, const matrix<adouble>& q, matrix<adouble>& A, matrix<adouble>& M)
 {
 	//matrix<double> m(3,3), v(3,1);
@@ -187,6 +184,7 @@ void linearizeDynamics(const matrix<adouble>& x, const matrix<adouble>& u, const
 
 // converted (assuming no work needs to be done)
 // Jacobians: dh(x,r)/dx, dh(x,r)/dr
+// TODO: remove!
 void linearizeObservation(const matrix<adouble>& x, const matrix<adouble>& r, matrix<adouble>& H, matrix<adouble>& N)
 {
 	LOG_DEBUG("linearize observation");
@@ -227,8 +225,9 @@ void linearizeObservation(const matrix<adouble>& x, const matrix<adouble>& r, ma
 
 // converted (assuming no work needs to be done)
 // Switch between belief vector and matrices
-void unVec(const matrix<adouble>& b, matrix<adouble>& x, matrix<adouble>& SqrtSigma) {
-	matrix<adouble> x_tmp(X_DIM,1);
+template<class TYPE>
+void unVec(const matrix<TYPE>& b, matrix<TYPE>& x, matrix<TYPE>& SqrtSigma) {
+	matrix<TYPE> x_tmp(X_DIM,1);
 	for(int i=0; i < X_DIM; ++i) { x_tmp(i,0) = b(i,0); };
 	x = x_tmp;
 
@@ -243,7 +242,8 @@ void unVec(const matrix<adouble>& b, matrix<adouble>& x, matrix<adouble>& SqrtSi
 }
 
 // converted (assuming no work needs to be done)
-void vec(const matrix<adouble>& x, const matrix<adouble>& SqrtSigma, matrix<adouble>& b) {
+template<class TYPE>
+void vec(const matrix<TYPE>& x, const matrix<TYPE>& SqrtSigma, matrix<TYPE>& b) {
 	for(int i=0; i < X_DIM; ++i) { b(i,0) = x(i,0); }
 	size_t idx = X_DIM;
 	for (size_t j = 0; j < X_DIM; ++j) {
@@ -254,17 +254,18 @@ void vec(const matrix<adouble>& x, const matrix<adouble>& SqrtSigma, matrix<adou
 	}
 }
 
-matrix<adouble> mdivide(matrix<adouble> A, matrix<adouble> B)
+template<class TYPE>
+matrix<TYPE> mdivide(matrix<TYPE> A, matrix<TYPE> B)
 {
 	// Cholesky factorization A = L*~L
 	// check if symmetric
 	int size = A.size1();
-	matrix<adouble> L = zeroMatrix(size,size);
+	matrix<TYPE> L = zeroMatrix<TYPE>(size,size);
 	for (int i = 0; i < size; ++i)
 	{
 		for (int j = i; j < size; ++j)
 		{
-			adouble sum = A(j, i);
+			TYPE sum = A(j, i);
 			for (int k = 0; k < i; ++k)
 			{
 				sum -= L(j, k) * L(i, k);
@@ -282,12 +283,12 @@ matrix<adouble> mdivide(matrix<adouble> A, matrix<adouble> B)
 
 	int ncols = B.size2();
 	// Backward and forward substitution
-	matrix<adouble> M(size, ncols);
+	matrix<TYPE> M(size, ncols);
 	for (int i = 0; i < size; ++i)
 	{
 		for (int k = 0; k < ncols; ++k)
 		{
-			adouble sum = B(i, k);
+			TYPE sum = B(i, k);
 			for (int j = 0; j < i; ++j)
 			{
 				sum -= L(i, j) * M(j, k);
@@ -299,7 +300,7 @@ matrix<adouble> mdivide(matrix<adouble> A, matrix<adouble> B)
 	{
 		for (int k = 0; k < ncols; ++k)
 		{
-			adouble sum = M(i, k);
+			TYPE sum = M(i, k);
 			for (int j = i + 1; j < size; ++j)
 			{
 				sum -= L(j, i) * M(j, k);
@@ -310,6 +311,7 @@ matrix<adouble> mdivide(matrix<adouble> A, matrix<adouble> B)
 	return M;
 }
 
+/*
 // TODO: can't do sqrt(Sigma), so can't comlete function
 // converted (same except for A, M)
 // Belief dynamics
@@ -353,8 +355,10 @@ matrix<adouble> beliefDynamics(const matrix<adouble>& b, const matrix<adouble>& 
 
 	//return b_g;
 }
+*/
 
-matrix<adouble> EKF(const matrix<adouble>& x_t, const matrix<adouble>& u_t, const matrix<adouble>& q_t, const matrix<adouble>& r_t, const matrix<adouble>& Sigma_t)
+template<class TYPE>
+matrix<TYPE> EKF(const matrix<TYPE>& x_t, const matrix<TYPE>& u_t, const matrix<TYPE>& q_t, const matrix<TYPE>& r_t, const matrix<TYPE>& Sigma_t)
 {
 	printMatrix("x_t",x_t);
 	printMatrix("u_t",u_t);
@@ -363,26 +367,26 @@ matrix<adouble> EKF(const matrix<adouble>& x_t, const matrix<adouble>& u_t, cons
 	printMatrix("Sigma_t",Sigma_t);
 
 	//computeDynJacobians(x_t, u_t, q_t, out A, out M);
-	matrix<adouble> A = identityMatrix(X_DIM); // d(dynfunc)/dx
-	matrix<adouble> M = DT*identityMatrix(U_DIM); // d(dynfunc)/dm (noise)
+	matrix<double> A = identityMatrix<double>(X_DIM); // d(dynfunc)/dx
+	matrix<double> M = DT*identityMatrix<double>(U_DIM); // d(dynfunc)/dm (noise)
 
 
 	printMatrix("A",A);
 	printMatrix("M",M);
 
-	matrix<adouble> Sigma_tp1 = prod(((matrix<adouble>)prod(A, Sigma_t)), trans(A)) + prod(((matrix<adouble>)prod(M, Q)), trans(M));
+	matrix<TYPE> Sigma_tp1 = prod(((matrix<TYPE>)prod(A, Sigma_t)), trans(A)) + prod(((matrix<TYPE>)prod(M, Q)), trans(M));
 
 	printMatrix("Sigma_tp1",Sigma_tp1);
 
 	LOG_DEBUG("before dynfunc");
-	matrix<adouble> x_tp1 = dynfunc(x_t, u_t, zeroMatrix(Q_DIM,1));
+	matrix<TYPE> x_tp1 = dynfunc<TYPE>(x_t, u_t, zeroMatrix<double>(Q_DIM,1));
 
 	printMatrix("x_tp1",x_tp1);
 
-	matrix<adouble> H(Z_DIM,X_DIM), N(Z_DIM,R_DIM);
+	matrix<TYPE> H(Z_DIM,X_DIM), N(Z_DIM,R_DIM);
 	//matrix<adouble> r = zeroMatrix(R_DIM,1); // correct?
 	LOG_DEBUG("before linearize observation");
-	linearizeObservation(x_tp1, zeroMatrix(R_DIM,1), H, N);
+	//linearizeObservation(x_tp1, zeroMatrix<double>(R_DIM,1), H, N); // TODO: use adol-c
 
 	printMatrix("H",H);
 	printMatrix("N",N);
@@ -392,34 +396,35 @@ matrix<adouble> EKF(const matrix<adouble>& x_t, const matrix<adouble>& u_t, cons
 	LOG_DEBUG("before K1, K2");
 	//printMatrix("Sigma_tp1",Sigma_tp1);
 	//printMatrix("trans(H)",trans(H));
-	matrix<adouble> K1 = prod(Sigma_tp1, trans(H));
-	matrix<adouble> K2 = prod(((matrix<adouble>)prod(H, Sigma_tp1)), trans(H)) + prod(((matrix<adouble>)prod(N, R)), trans(N));
+	matrix<TYPE> K1 = prod(Sigma_tp1, trans(H));
+	matrix<TYPE> K2 = prod(((matrix<TYPE>)prod(H, Sigma_tp1)), trans(H)) + prod(((matrix<TYPE>)prod(N, R)), trans(N));
 
 	LOG_DEBUG("before K");
-	matrix<adouble> K = trans(mdivide(trans(K2), trans(K1)));
+	matrix<TYPE> K = trans(mdivide<TYPE>(trans(K2), trans(K1)));
 
-	Sigma_tp1 = prod(((matrix<adouble>)(identityMatrix(X_DIM) - prod(K,H))), Sigma_tp1);
+	Sigma_tp1 = prod(((matrix<TYPE>)(identityMatrix<double>(X_DIM) - prod(K,H))), Sigma_tp1);
 
 	LOG_DEBUG("before b_tp1");
-	matrix<adouble> b_tp1(B_DIM,1);
-	vec(x_tp1, Sigma_tp1, b_tp1);
+	matrix<TYPE> b_tp1(B_DIM,1);
+	vec<TYPE>(x_tp1, Sigma_tp1, b_tp1);
 	return b_tp1;
 }
 
-adouble costfunc(const matrix<adouble>& X, const matrix<adouble>& U, const matrix<adouble>& q, const matrix<adouble>& r, const matrix<adouble>& Sigma_0)
+template<class TYPE>
+TYPE costfunc(const matrix<TYPE>& X, const matrix<TYPE>& U, const matrix<TYPE>& q, const matrix<TYPE>& r, const matrix<TYPE>& Sigma_0)
 {
 	LOG_DEBUG("costfunc");
-	adouble cost = 0;
+	TYPE cost = 0;
 
-	matrix<adouble> x_tp1(X_DIM,1);
+	matrix<TYPE> x_tp1(X_DIM,1);
 	column(x_tp1,0) = column(X,0);
-	matrix<adouble> Sigma_t(X_DIM,X_DIM), Sigma_tp1(X_DIM,X_DIM);
+	matrix<TYPE> Sigma_t(X_DIM,X_DIM), Sigma_tp1(X_DIM,X_DIM);
 	Sigma_t = Sigma_0;
 
-	matrix<adouble> Ucol(U_DIM,1), Xcol(X_DIM,1);
+	matrix<TYPE> Ucol(U_DIM,1), Xcol(X_DIM,1);
 	for (int t = 0; t < T - 1; ++t)
 	{
-		LOG_DEBUG("%d",t);
+		LOG_DEBUG("EKF iteration %d",t);
 		for(int i=0; i < X_DIM; ++i) {
 			cost = cost + alpha_belief * Sigma_t(i,i);
 		}
@@ -428,9 +433,9 @@ adouble costfunc(const matrix<adouble>& X, const matrix<adouble>& U, const matri
 
 		column(Xcol,0) = column(X,t);
 		LOG_DEBUG("before EKF");
-		matrix<adouble> b_tp1 = EKF(Xcol, Ucol, q, r, Sigma_t);
+		matrix<TYPE> b_tp1 = EKF<TYPE>(Xcol, Ucol, q, r, Sigma_t);
 		LOG_DEBUG("after EKF");
-		unVec(b_tp1, x_tp1, Sigma_t);
+		unVec<TYPE>(b_tp1, x_tp1, Sigma_t);
 	}
 
 	for(int i=0; i < X_DIM; ++i) {

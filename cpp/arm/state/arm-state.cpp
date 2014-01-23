@@ -186,7 +186,7 @@ double stateCollocation(matrix<double> X, matrix<double> U, const armStateMPC_pa
 	double* resultCost = new double;
 	double* resultCostGradDiagHess = new double[2*dim + 1];
 
-	adouble Hzbar[X_DIM+U_DIM];
+	double Hzbar[X_DIM+U_DIM];
 
 	int nvars = (int)maskIndices.size();
 	vars = new adouble[nvars];
@@ -197,12 +197,12 @@ double stateCollocation(matrix<double> X, matrix<double> U, const armStateMPC_pa
 	//evalCost(resultCost, vars); // TODO: replace with cost function
 	//prevcost = resultCost[0];
 	matrix<double> q(Q_DIM,1), r(R_DIM,1);
-	prevcost = costfunc(X, U, q, r, SqrtSigma0);
+	prevcost = costfunc<double>(X, U, q, r, SqrtSigma0);
 
 	return 0;
 
 	//LOG_DEBUG("Initialization trajectory cost: %4.10f", prevcost);
-
+	/*
 	matrix<adouble> Xopt(X_DIM, T);
 	matrix<adouble> Uopt(U_DIM, T-1);
 
@@ -249,7 +249,7 @@ double stateCollocation(matrix<double> X, matrix<double> U, const armStateMPC_pa
 			for(int t=0; t < T; ++t) {
 				gradient(tag, X_DIM+U_DIM, aXU[t], grad[t]);
 			}
-			/*
+
 
 			// evaluate constant cost term (omitted from optimization)
 			// Need to compute:
@@ -316,9 +316,9 @@ double stateCollocation(matrix<double> X, matrix<double> U, const armStateMPC_pa
 				} else {
 					e[t][0] = 0; e[t][1] = 0;
 				}
-				*/
-			} //setting up problem
 
+			} //setting up problem
+	 */
 			/*
 			// Last stage
 			Matrix<X_DIM>& xT = X[T-1];
@@ -339,9 +339,9 @@ double stateCollocation(matrix<double> X, matrix<double> U, const armStateMPC_pa
 			e[T-1][0] = 0; e[T-1][1] = 0;
 
 			constant_cost = 0.5*hessian_constant + jac_constant + resultCostGradDiagHess[0];
-			*/
-		} // end solution_accepted
 
+		} // end solution_accepted
+		*/
 
 		/*
 		// set trust region bounds based on current trust region size
@@ -485,22 +485,22 @@ int main(int argc, char* argv[])
 	printMatrix("initial U", U);
 
 
-	matrix<double> X(X_DIM,T);
+	matrix<double> X = zeroMatrix<double>(X_DIM,T);
+
+	printMatrix("pre initial X", X);
 
 	column(X,0) = column(x0,0);
 	matrix<double> Xcol(X_DIM,1), Ucol(U_DIM,1);
 	for (int t = 0; t < T-1; ++t) {
 		column(Xcol,0) = column(X,t);
 		column(Ucol,0) = column(U,t);
-		zero_matrix<double>q(Q_DIM,1);
+		matrix<double>q = zeroMatrix<double>(Q_DIM,1);
 
-		matrix<double> x_tp1 = dynfuncTemplate<double>(Xcol, Ucol, q);
-		//for(int i=0; i < X_DIM; ++i) { x_tp1(i,0) >>= X(i,t+1); }
+		matrix<double> x_tp1 = dynfunc<double>(Xcol, Ucol, q);
+		column(X,t+1) = column(x_tp1,0);
 	}
 
-
 	printMatrix("initial X", X);
-	exit(0);
 	//setupDstarInterface(std::string(getMask()));
 
 

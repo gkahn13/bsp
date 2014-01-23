@@ -222,6 +222,15 @@ void finiteDiffJac(matrix<double>& x, matrix<double>& r)
 		xr(i,0) = x(i,0); xl(i,0) = x(i,0);
 	}
 	printMatrix<double>("H finite diff", H);
+
+	matrix<double> N = zeroMatrix<double>(Z_DIM,R_DIM);
+	matrix<double> rr(x), rl(x);
+	for (size_t i = 0; i < R_DIM; ++i) {
+		rr(i,0) += step; rl(i,0) -= step;
+		column(N, i) = column((obsfunc(x, rr) - obsfunc(x, rl)) / (rr(i,0) - rl(i,0)),0);
+		rr(i,0) = r(i,0); rl(i,0) = r(i,0);
+	}
+	printMatrix<double>("N finite diff", N);
 }
 
 
@@ -232,40 +241,46 @@ void linearizeObservation(matrix<T>& x, matrix<T>& r, matrix<T>& H, matrix<T>& N
 {
 	LOG_DEBUG("inside linearizeObservation adolc");
 	short int tag = 1;
+
 	matrix<adouble> xAdolc(X_DIM,1);
-	matrix<double> rAdolc(R_DIM,1);
-	matrix<double> obs(Z_DIM,1);
-	adouble singleObs;
-
-	/*
-	trace_on(tag);
-	initAdolcMatrix(xAdolc, x);
-	//initAdolcMatrix(rAdolc, r);
-	matrix<adouble> obsAdolc = obsfunc<adouble>(xAdolc, r);
-	obsAdolc(0,0) >>= singleObs;
-	trace_off(tag);
-	*/
+	matrix<double> xObs(Z_DIM,1);
 
 	trace_on(tag);
 	initAdolcMatrix(xAdolc, x);
-	//initAdolcMatrix(rAdolc, r);
-	matrix<adouble> obsAdolc = obsfunc<adouble>(xAdolc, r);
-	retrieveAdolcMatrix(obs, obsAdolc);
+	matrix<adouble> xObsAdolc = obsfunc<adouble>(xAdolc, r);
+	retrieveAdolcMatrix(xObs, xObsAdolc);
 	trace_off(tag);
-
-	int tape_stats[STAT_SIZE];
-	tapestats(tag,tape_stats);             // reading of tape statistics
-	std::cout<<"maxlive "<<tape_stats[NUM_MAX_LIVES]<<"\n";
 
 	double* x_arr = new double[X_DIM];
 	std::copy(x.begin1(), x.end1(), x_arr);
 	double** dobs_dx = new double*[Z_DIM];
 	for(int i=0; i < Z_DIM; ++i) { dobs_dx[i] = new double[X_DIM]; }
+
 	jacobian(tag, Z_DIM, X_DIM, x_arr, dobs_dx);
 	arrToMatrix(dobs_dx, H);
-	printMatrix("H",H);
-	finiteDiffJac(x,r);
 
+	printMatrix("H",H);
+
+	matrix<adouble> rAdolc(R_DIM,1);
+	matrix<double> rObs(Z_DIM,1);
+
+	trace_on(tag);
+	initAdolcMatrix(rAdolc, r);
+	matrix<adouble> rObsAdolc = obsfunc<adouble>(x, rAdolc);
+	retrieveAdolcMatrix(rObs, rObsAdolc);
+	trace_off(tag);
+
+	double* r_arr = new double[R_DIM];
+	std::copy(r.begin1(), r.end1(), r_arr);
+	double** dobs_dr = new double*[Z_DIM];
+	for(int i=0; i < Z_DIM; ++i) { dobs_dr[i] = new double[R_DIM]; }
+
+	jacobian(tag, Z_DIM, R_DIM, r_arr, dobs_dr);
+	arrToMatrix(dobs_dx, N);
+
+	printMatrix("N",N);
+
+	finiteDiffJac(x,r);
 	exit(0);
 
 

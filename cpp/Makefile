@@ -12,7 +12,7 @@ EIGEN_FLAGS = -I/usr/include/eigen3
 # default to debug build
 BUILD := debug
 
-BFLAGS.debug = -g -Wall
+BFLAGS.debug = 
 BFLAGS.release = -O3
 BFLAGS := $(BFLAGS.$(BUILD))
 
@@ -45,13 +45,13 @@ ARM_STATE_FILES = armStateMPC arm-state logging
 ARM_STATE_OBJS = $(ARM_STATE_FILES:%=$(OBJ_DIR)/%.o)
 
 arm-state: | $(ARM_STATE_OBJS)
-	$(CXX) $(BFLAGS) $(ARM_STATE_OBJS) -o $(BIN_DIR)/arm-state $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS) $(ADOLC_FLAGS) $(EIGEN_FLAGS)
+	$(CXX) $(BFLAGS) $(ARM_STATE_OBJS) -o $(BIN_DIR)/arm-state $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS) $(ADOLC_FLAGS)
 
 $(OBJ_DIR)/armStateMPC.o : $(ARM_STATE_DIR)/armStateMPC.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
 	
 $(OBJ_DIR)/arm-state.o : $(ARM_STATE_DIR)/arm-state.cpp $(ARM_HEADERS)
-	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) $(ADOLC_FLAGS) $(EIGEN_FLAGS) -c -o $@ $<
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) $(ADOLC_FLAGS) -c -o $@ $<
 
 
 
@@ -120,6 +120,18 @@ point-state-finitediff: | state-setup $(PT_STATE_FD_OBJS)
 	
 $(OBJ_DIR)/point-state-finitediff.o : $(PT_STATE_FD_DIR)/point-state-finitediff.cpp $(POINT_HEADERS)
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
+	
+# make point-state-adolc
+PT_ADOLC_HEADERS = point/point-adolc.h
+PT_STATE_ADOLC_DIR = point/state
+PT_STATE_ADOLC_FILES = stateMPC point-state-adolc logging
+PT_STATE_ADOLC_OBJS = $(PT_STATE_ADOLC_FILES:%=$(OBJ_DIR)/%.o)
+
+point-state-adolc: | $(PT_STATE_ADOLC_OBJS)
+	$(CXX) $(BFLAGS) $(PT_STATE_ADOLC_OBJS) -o $(BIN_DIR)/point-state-adolc $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS) $(ADOLC_FLAGS)
+	
+$(OBJ_DIR)/point-state-adolc.o : $(PT_STATE_ADOLC_DIR)/point-state-adolc.cpp $(PT_ADOLC_HEADERS)
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) $(ADOLC_FLAGS) -c -o $@ $<
 
 # make point-lp
 PT_LP_DIR = point/lp

@@ -241,7 +241,6 @@ void linearizeObservation(matrix<T>& x, matrix<T>& r, matrix<T>& H, matrix<T>& N
 {
 	LOG_DEBUG("inside linearizeObservation adolc");
 	short int tag = 1;
-
 	matrix<adouble> xAdolc(X_DIM,1);
 	matrix<double> xObs(Z_DIM,1);
 
@@ -259,8 +258,7 @@ void linearizeObservation(matrix<T>& x, matrix<T>& r, matrix<T>& H, matrix<T>& N
 	jacobian(tag, Z_DIM, X_DIM, x_arr, dobs_dx);
 	arrToMatrix(dobs_dx, H);
 
-	printMatrix("H",H);
-
+	tag = 2;
 	matrix<adouble> rAdolc(R_DIM,1);
 	matrix<double> rObs(Z_DIM,1);
 
@@ -276,15 +274,9 @@ void linearizeObservation(matrix<T>& x, matrix<T>& r, matrix<T>& H, matrix<T>& N
 	for(int i=0; i < Z_DIM; ++i) { dobs_dr[i] = new double[R_DIM]; }
 
 	jacobian(tag, Z_DIM, R_DIM, r_arr, dobs_dr);
-	arrToMatrix(dobs_dx, N);
+	arrToMatrix(dobs_dr, N);
 
-	printMatrix("N",N);
-
-	finiteDiffJac(x,r);
-	exit(0);
-
-
-
+	//finiteDiffJac(x,r);
 }
 
 
@@ -461,7 +453,6 @@ matrix<TYPE> EKF(const matrix<TYPE>& x_t, const matrix<TYPE>& u_t, const matrix<
 	printMatrix("H",H);
 	printMatrix("N",N);
 
-	exit(0);
 
 	LOG_DEBUG("before K1, K2");
 	//printMatrix("Sigma_tp1",Sigma_tp1);

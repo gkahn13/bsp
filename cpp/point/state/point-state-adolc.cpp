@@ -26,10 +26,6 @@ namespace py = boost::python;
 
 #include <adolc/adolc.h>
 
-const short int DOBS_DX_TAG = 1;
-const short int DOBS_DR_TAG = 2;
-const short int GRAD_COST_TAG = 3;
-const short int HESS_COST_TAG = 4;
 
 extern "C" {
 #include "../sym/state-symeval.h"
@@ -227,6 +223,9 @@ void initXUVectorArray(std::vector<Matrix<X_DIM>>& X, std::vector<Matrix<U_DIM>>
 
 double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >& U, stateMPC_params& problem, stateMPC_output& output, stateMPC_info& info)
 {
+	util::Timer tapeTimer, gradTimer, hessTimer;
+	double tapeTime = 0, gradTime = 0, hessTime = 0;
+
 	int maxIter = 100, idx;
 	double Xeps = 1;
 	double Ueps = 1;
@@ -235,20 +234,16 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 	double delta = 0.01;
 	Matrix<X_DIM,1> x0 = X[0];
 
-	adouble tmp_cost;
 	double prevcost = INFTY, optcost;
 	double merit, model_merit, new_merit;
 	double approx_merit_improve, exact_merit_improve, merit_improve_ratio;
 	double constant_cost, hessian_constant, jac_constant;
-
-	int dim = T*X_DIM + (T-1)*U_DIM;
 
 	double Hzbar[X_DIM+U_DIM];
 
 
 	prevcost = costfunc(X, U, SqrtSigma0).value();
 
-	std::cout << "prevcost: " << prevcost << std::endl;
 
 	LOG_DEBUG("Initialization trajectory cost: %4.10f", prevcost);
 
@@ -257,7 +252,17 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 	std::vector<Matrix<U_DIM> > Uopt(T-1);
 
 	bool solution_accepted = true;
+	bool done_trace_already = false;
 
+	// adol-c initializing
+	short int tag = 0, keep = 1;
+	adouble meritAdolc;
+
+	double* grad_arr = new double[X_DIM*T + U_DIM*(T-1)];
+	double* XU_arr = new double[X_DIM*T + U_DIM*(T-1)];
+
+	double** hess_arr = new double*[X_DIM*T + U_DIM*(T-1)];
+	for(int i=0; i < X_DIM*T + U_DIM*(T-1); ++i) { hess_arr[i] = new double[X_DIM*T + U_DIM*(T-1)]; }
 
 	for(int it = 0; it < maxIter; ++it)
 	{
@@ -265,27 +270,31 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 
 		if (solution_accepted) {
 
-			adouble meritAdolc;
+			util::Timer_tic(&tapeTimer);
+			if (done_trace_already) {
+				merit = costfunc(X, U, SqrtSigma0).value();
+			} else {
+				done_trace_already = false;
+				trace_on(tag, keep);
+				initXUAdolcMatrixes(X,U);
+				meritAdolc = costfunc(X, U, SqrtSigma0);
+				meritAdolc >>= merit;
+				trace_off();
+			}
+			tapeTime += util::Timer_toc(&tapeTimer);
 
-			trace_on(GRAD_COST_TAG);
-			initXUAdolcMatrixes(X,U);
-			meritAdolc = costfunc(X, U, SqrtSigma0);
-			meritAdolc >>= merit;
-			trace_off(GRAD_COST_TAG);
 
 			// compute gradient
-			double* grad_arr = new double[X_DIM*T + U_DIM*(T-1)];
-			double* XU_arr = new double[X_DIM*T + U_DIM*(T-1)];
-
 			initXUVectorArray(X,U,XU_arr);
 
-			gradient(GRAD_COST_TAG, X_DIM*T + U_DIM*(T-1), XU_arr, grad_arr);
+			util::Timer_tic(&gradTimer);
+			gradient(tag, X_DIM*T + U_DIM*(T-1), XU_arr, grad_arr);
+			gradTime += util::Timer_toc(&gradTimer);
 
 			// compute hessian
-			double** hess_arr = new double*[X_DIM*T + U_DIM*(T-1)];
-			for(int i=0; i < X_DIM*T + U_DIM*(T-1); ++i) { hess_arr[i] = new double[X_DIM*T + U_DIM*(T-1)]; }
-
-			hessian(GRAD_COST_TAG, X_DIM*T + U_DIM*(T-1), XU_arr, hess_arr);
+			util::Timer_tic(&hessTimer);
+			hessian(tag, X_DIM*T + U_DIM*(T-1), XU_arr, hess_arr);
+			hessTime += util::Timer_toc(&hessTimer);
 
 			// evaluate constant cost term (omitted from optimization)
 			// Need to compute:
@@ -485,6 +494,10 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 
 	optcost = costfunc(X, U, SqrtSigma0).value();
 
+	std::cout << "tape time: " << tapeTime*1000 << "ms" << std::endl;
+	std::cout << "grad time: " << gradTime*1000 << "ms" << std::endl;
+	std::cout << "hess time: " << hessTime*1000 << "ms" << std::endl;
+
 	return optcost;
 
 }
@@ -533,11 +546,7 @@ int main(int argc, char* argv[])
 	}
 	*/
 
-	std::cout << "before state collocation " << std::endl;
-
 	double cost = stateCollocation(X, U, problem, output, info);
-
-	std::cout << "after state collocation" << std::endl;
 
 	double solvetime = util::Timer_toc(&solveTimer);
 	LOG_INFO("Cost: %4.10f", cost);
@@ -553,7 +562,7 @@ int main(int argc, char* argv[])
 
 
 	// had to copy in python display because Matrix uses adouble
-#define PYTHON_PLOT
+//#define PYTHON_PLOT
 #ifdef PYTHON_PLOT
 	py::list Bvec;
 	for(int j=0; j < B_DIM; j++) {
@@ -596,12 +605,12 @@ int main(int argc, char* argv[])
 	{
 		PyErr_Print();
 	}
-#endif
-
-	cleanup();
 
 	int k;
 	std::cin >> k;
+#endif
+
+	cleanup();
 
 	//CAL_End();
 	return 0;

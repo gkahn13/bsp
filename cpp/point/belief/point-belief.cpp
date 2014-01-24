@@ -738,7 +738,7 @@ int main(int argc, char* argv[])
 	
 	cleanupBeliefMPCVars();
 
-	pythonDisplayTrajectory(B, U);
+	//pythonDisplayTrajectory(B, U);
 
 	/*
 	for (size_t t = 0; t < T; ++t) {
@@ -746,8 +746,8 @@ int main(int argc, char* argv[])
 	}
 	*/
 
-	int k;
-	std::cin >> k;
+	//int k;
+	//std::cin >> k;
 
 	//CAL_End();
 	return 0;

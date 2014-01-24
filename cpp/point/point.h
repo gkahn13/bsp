@@ -4,22 +4,10 @@
 #include <fstream>
 #include <tgmath.h>
 
-/*
-#ifndef USE_ADOLC
 #include "util/matrix.h"
-#else
-#include <adolc/adolc.h>
-#include "util/amatrix.h"
-#endif
-*/
-#include <adolc/adolc.h>
-#include "util/amatrix.h"
 
 
-//extern "C" {
 #include "util/utils.h"
-//}
-//#include "util/Timer.h"
 #include "util/logging.h"
 
 #include <Python.h>
@@ -43,11 +31,6 @@ namespace py = boost::python;
 
 const double step = 0.0078125*0.0078125;
 
-Matrix<X_DIM> x0;
-Matrix<X_DIM,X_DIM> SqrtSigma0;
-Matrix<X_DIM> xGoal;
-Matrix<X_DIM> xMin, xMax;
-Matrix<U_DIM> uMin, uMax;
 
 const int T = TIMESTEPS;
 const double INFTY = 1e10;
@@ -186,7 +169,7 @@ void setupDstarInterface(std::string mask) {
 	inputVars = new double[i];
 }
 
-void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U)
+void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U, Matrix<X_DIM> x0, Matrix<X_DIM> xGoal)
 {
 	for (int t = 0; t < T-1; ++t) {
 		B[t+1] = beliefDynamics(B[t], U[t]);

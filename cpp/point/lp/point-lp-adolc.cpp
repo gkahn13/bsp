@@ -5,12 +5,9 @@
 #include <iomanip>
 
 #include "../point.h"
-#include "../point-double.h"
-
-#define USE_ADOLC
+#include "../point-adouble.h"
 
 #include "util/amatrix.h"
-#include "util/dmatrix.h"
 #include "util/utils.h"
 #include "util/Timer.h"
 #include "util/logging.h"
@@ -25,18 +22,23 @@
 
 namespace py = boost::python;
 
+aMatrix<X_DIM> x0;
+aMatrix<X_DIM,X_DIM> SqrtSigma0;
+aMatrix<X_DIM> xGoal;
+aMatrix<X_DIM> xMin, xMax;
+aMatrix<U_DIM> uMin, uMax;
+
 
 #include <adolc/adolc.h>
 #include <adolc/sparse/sparsedrivers.h>
 
 
 extern "C" {
-//#include "../sym/state-symeval.h"
 #include "lpMPC.h"
 }
 
 namespace cfg {
-const double improve_ratio_threshold = .2;
+const double improve_ratio_threshold = .1;
 const double min_approx_improve = 1e-2;
 const double min_trust_box_size = 1e-2;
 const double trust_shrink_ratio = .1;
@@ -98,9 +100,54 @@ void cleanup()
 	delete[] z;
 }
 
-adouble costfunc(const std::vector<Matrix<X_DIM> >& X, const std::vector<Matrix<U_DIM>>& U, const Matrix<X_DIM,X_DIM>& SqrtSigma_0)
+adouble costfunc_a(const std::vector<aMatrix<X_DIM> >& X, const std::vector<aMatrix<U_DIM>>& U, const aMatrix<X_DIM,X_DIM>& SqrtSigma_0)
 {
 	adouble cost = 0;
+
+	aMatrix<X_DIM> x_tp1;
+	aMatrix<B_DIM> b, b_tp1;
+	aMatrix<X_DIM,X_DIM> SqrtSigma_t, SqrtSigma_tp1;
+	SqrtSigma_t = SqrtSigma_0;
+
+	for (int t = 0; t < T - 1; ++t)
+	{
+
+		cost += alpha_belief*aTr(SqrtSigma_t*SqrtSigma_t) + alpha_control*aTr(~U[t]*U[t]);
+
+		vec_a(X[t], SqrtSigma_t, b);
+		b_tp1 = beliefDynamics_a(b, U[t]);
+		unVec_a(b_tp1, x_tp1, SqrtSigma_t);
+	}
+
+	cost += alpha_belief*aTr(SqrtSigma_t*SqrtSigma_t);
+
+	return cost;
+}
+
+
+double costfunc(const std::vector<aMatrix<X_DIM> >& aX, const std::vector<aMatrix<U_DIM>>& aU, const aMatrix<X_DIM,X_DIM>& aSqrtSigma_0)
+{
+	std::vector<Matrix<X_DIM> > X(T);
+	std::vector<Matrix<U_DIM>> U(T-1);
+	Matrix<X_DIM,X_DIM> SqrtSigma_0;
+
+	for(int t=0; t < T-1; ++t) {
+		for(int i=0; i < X_DIM; ++i) {
+			X[t][i] = aX[t][i].value();
+		}
+		for(int i=0; i < U_DIM; ++i) {
+			U[t][i] = aU[t][i].value();
+		}
+	}
+	for(int i=0; i < X_DIM; ++i) {
+		X[T-1][i] = aX[T-1][i].value();
+	}
+
+	for(int i=0; i < X_DIM*X_DIM; ++i) {
+		SqrtSigma_0[i] = aSqrtSigma_0[i].value();
+	}
+
+	double cost = 0;
 
 	Matrix<X_DIM> x_tp1;
 	Matrix<B_DIM> b, b_tp1;
@@ -124,87 +171,7 @@ adouble costfunc(const std::vector<Matrix<X_DIM> >& X, const std::vector<Matrix<
 
 
 
-double costfunc_d(const std::vector<Matrix<X_DIM> >& aX, const std::vector<Matrix<U_DIM>>& aU, const Matrix<X_DIM,X_DIM>& aSqrtSigma_0)
-{
-	std::vector<dMatrix<X_DIM> > X(T);
-	std::vector<dMatrix<U_DIM>> U(T-1);
-	dMatrix<X_DIM,X_DIM> SqrtSigma_0;
-
-	for(int t=0; t < T-1; ++t) {
-		for(int i=0; i < X_DIM; ++i) {
-			X[t][i] = aX[t][i].value();
-		}
-		for(int i=0; i < U_DIM; ++i) {
-			U[t][i] = aU[t][i].value();
-		}
-	}
-	for(int i=0; i < X_DIM; ++i) {
-		X[T-1][i] = aX[T-1][i].value();
-	}
-
-	for(int i=0; i < X_DIM*X_DIM; ++i) {
-		SqrtSigma_0[i] = aSqrtSigma_0[i].value();
-	}
-
-	double cost = 0;
-
-	dMatrix<X_DIM> x_tp1;
-	dMatrix<B_DIM> b, b_tp1;
-	dMatrix<X_DIM,X_DIM> SqrtSigma_t, SqrtSigma_tp1;
-	SqrtSigma_t = SqrtSigma_0;
-
-	for (int t = 0; t < T - 1; ++t)
-	{
-
-		cost += alpha_belief*dTr(SqrtSigma_t*SqrtSigma_t) + alpha_control*dTr(~U[t]*U[t]);
-
-		vec_d(X[t], SqrtSigma_t, b);
-		b_tp1 = beliefDynamics_d(b, U[t]);
-		unVec_d(b_tp1, x_tp1, SqrtSigma_t);
-	}
-
-	cost += alpha_belief*dTr(SqrtSigma_t*SqrtSigma_t);
-
-	return cost;
-}
-
-
-
-void initVarVals(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matrix<U_DIM> >& U)
-{
-	int idx = 0;
-	for (int t = 0; t < T; ++t) {
-		for (int i = 0; i < X_DIM; ++i) {
-			inputVars[idx++] = X[t][i].value();
-		}
-	}
-	for (int t = 0; t < (T - 1); ++t) {
-		for (int i = 0; i < U_DIM; ++i) {
-			inputVars[idx++] = U[t][i].value();
-		}
-	}
-	for (int i = 0; i < (Q_DIM+R_DIM); ++i) {
-		inputVars[idx++] = 0;
-	}
-	for (int i = 0; i < X_DIM; ++i) { // TODO: should be X_DIM*X_DIM
-		for (int j = 0; j < X_DIM; ++j) {
-			inputVars[idx++] = SqrtSigma0(i,j).value();
-		}
-	}
-	inputVars[idx++] = alpha_belief; inputVars[idx++] = alpha_control; inputVars[idx++] = alpha_final_belief;
-
-	int nvars = (int)maskIndices.size();
-	//vars = new double[nvars];
-
-	// For evaluation
-	idx = 0;
-	for (int i = 0; i < nvars; ++i) {
-		vars[idx++] = inputVars[maskIndices[i]];
-	}
-}
-
-
-void initXUAdolcMatrixes(std::vector<Matrix<X_DIM>>& X, std::vector<Matrix<U_DIM>>& U) {
+void initXUAdolcMatrixes(std::vector<aMatrix<X_DIM>>& X, std::vector<aMatrix<U_DIM>>& U) {
 	for(int t=0; t < T-1; ++t) {
 		for(int i=0; i < X_DIM; ++i) {
 			X[t][i] <<= X[t][i].value();
@@ -219,7 +186,7 @@ void initXUAdolcMatrixes(std::vector<Matrix<X_DIM>>& X, std::vector<Matrix<U_DIM
 }
 
 
-void initXUVectorArray(std::vector<Matrix<X_DIM>>& X, std::vector<Matrix<U_DIM>>& U, double* XU) {
+void initXUVectorArray(std::vector<aMatrix<X_DIM>>& X, std::vector<aMatrix<U_DIM>>& U, double* XU) {
 	int idx = 0;
 	for(int t=0; t < T-1; ++t) {
 		for(int i=0; i < X_DIM; ++i) {
@@ -235,7 +202,7 @@ void initXUVectorArray(std::vector<Matrix<X_DIM>>& X, std::vector<Matrix<U_DIM>>
 }
 
 
-double lpCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >& U, lpMPC_params& problem, lpMPC_output& output, lpMPC_info& info)
+double lpCollocation(std::vector< aMatrix<X_DIM> >& X, std::vector< aMatrix<U_DIM> >& U, lpMPC_params& problem, lpMPC_output& output, lpMPC_info& info)
 {
 	util::Timer tapeTimer, gradTimer, forcesTimer, costTimer;
 	double tapeTime = 0, gradTime = 0, forcesTime = 0, costTime = 0;
@@ -246,25 +213,20 @@ double lpCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM>
 
 	// box constraint around goal
 	double delta = 0.01;
-	Matrix<X_DIM,1> x0 = X[0];
+	aMatrix<X_DIM,1> x0 = X[0];
 
 	double prevcost = INFTY, optcost;
 	double merit, model_merit, new_merit;
 	double approx_merit_improve, exact_merit_improve, merit_improve_ratio;
 	double constant_cost, jac_constant;
 
-	double Hzbar[X_DIM+U_DIM];
-	for(int i=0; i < (X_DIM+U_DIM); ++i) { Hzbar[i] = 0; }
-
-
-	//prevcost = costfunc(X, U, SqrtSigma0).value();
-	prevcost = costfunc_d(X, U, SqrtSigma0);
+	prevcost = costfunc(X, U, SqrtSigma0);
 
 	LOG_DEBUG("Initialization trajectory cost: %4.10f", prevcost);
 
 
-	std::vector<Matrix<X_DIM> > Xopt(T);
-	std::vector<Matrix<U_DIM> > Uopt(T-1);
+	std::vector<aMatrix<X_DIM> > Xopt(T);
+	std::vector<aMatrix<U_DIM> > Uopt(T-1);
 
 	bool solution_accepted = true;
 	bool done_trace_already = false;
@@ -276,9 +238,6 @@ double lpCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM>
 	double* grad_arr = new double[X_DIM*T + U_DIM*(T-1)];
 	double* XU_arr = new double[X_DIM*T + U_DIM*(T-1)];
 
-	double** hess_arr = new double*[X_DIM*T + U_DIM*(T-1)];
-	for(int i=0; i < X_DIM*T + U_DIM*(T-1); ++i) { hess_arr[i] = new double[X_DIM*T + U_DIM*(T-1)]; }
-
 	for(int it = 0; it < maxIter; ++it)
 	{
 		LOG_DEBUG("\nIter: %d", it);
@@ -287,14 +246,14 @@ double lpCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM>
 
 			if (done_trace_already) {
 				util::Timer_tic(&costTimer);
-				merit = costfunc_d(X, U, SqrtSigma0);
+				merit = costfunc(X, U, SqrtSigma0);
 				costTime += util::Timer_toc(&costTimer);
 			} else {
 				util::Timer_tic(&tapeTimer);
 				done_trace_already = true;
 				trace_on(tag, keep);
 				initXUAdolcMatrixes(X,U);
-				meritAdolc = costfunc(X, U, SqrtSigma0);
+				meritAdolc = costfunc_a(X, U, SqrtSigma0);
 				meritAdolc >>= merit;
 				trace_off();
 				tapeTime += util::Timer_toc(&tapeTimer);
@@ -336,10 +295,10 @@ double lpCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM>
 				}
 
 				// TODO: move following CMat code outside, is same every iteration
-				dMatrix<X_DIM,X_DIM+U_DIM> CMat;
+				Matrix<X_DIM,X_DIM+U_DIM> CMat;
 
-				CMat.insert<X_DIM,X_DIM>(0,0,dIdentity<X_DIM>());
-				CMat.insert<X_DIM,U_DIM>(0,X_DIM,DT*dIdentity<U_DIM>());
+				CMat.insert<X_DIM,X_DIM>(0,0,identity<X_DIM>());
+				CMat.insert<X_DIM,U_DIM>(0,X_DIM,DT*identity<U_DIM>());
 				int idx = 0;
 				for(int c = 0; c < (X_DIM+U_DIM); ++c) {
 					for(int r = 0; r < X_DIM; ++r) {
@@ -374,8 +333,8 @@ double lpCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM>
 		// set trust region bounds based on current trust region size
 		for (int t = 0; t < T-1; ++t)
 		{
-			Matrix<X_DIM>& xt = X[t];
-			Matrix<U_DIM>& ut = U[t];
+			aMatrix<X_DIM>& xt = X[t];
+			aMatrix<U_DIM>& ut = U[t];
 
 			// Fill in lb, ub, C, e
 			lb[t][0] = MAX(xMin[0].value(), xt[0].value() - Xeps);
@@ -390,7 +349,7 @@ double lpCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM>
 		} //setting up problem
 
 		// Fill in lb, ub, C, e
-		Matrix<X_DIM>& xT = X[T-1];
+		aMatrix<X_DIM>& xT = X[T-1];
 		lb[T-1][0] = MAX(xGoal[0].value() - delta, xT[0].value() - Xeps);
 		lb[T-1][1] = MAX(xGoal[1].value() - delta, xT[1].value() - Xeps);
 
@@ -409,8 +368,8 @@ double lpCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM>
 		int exitflag = lpMPC_solve(&problem, &output, &info);
 		if (exitflag == 1) {
 			for(int t = 0; t < T-1; ++t) {
-				Matrix<X_DIM>& xt = Xopt[t];
-				Matrix<U_DIM>& ut = Uopt[t];
+				aMatrix<X_DIM>& xt = Xopt[t];
+				aMatrix<U_DIM>& ut = Uopt[t];
 
 				for(int i = 0; i < X_DIM; ++i) {
 					xt[i] = z[t][i];
@@ -420,7 +379,7 @@ double lpCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM>
 				}
 				optcost = info.pobj;
 			}
-			Matrix<X_DIM>& xt = Xopt[T-1];
+			aMatrix<X_DIM>& xt = Xopt[T-1];
 			xt[0] = z[T-1][0]; xt[1] = z[T-1][1];
 		}
 		else {
@@ -431,7 +390,7 @@ double lpCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM>
 		model_merit = optcost + constant_cost; // need to add constant terms that were dropped
 
 		util::Timer_tic(&costTimer);
-		new_merit = costfunc_d(Xopt, Uopt, SqrtSigma0);
+		new_merit = costfunc(Xopt, Uopt, SqrtSigma0);
 		costTime += util::Timer_toc(&costTimer);
 
 		LOG_DEBUG("merit: %f", merit);
@@ -472,7 +431,7 @@ double lpCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM>
 		}
 	}
 
-	optcost = costfunc_d(X, U, SqrtSigma0);
+	optcost = costfunc(X, U, SqrtSigma0);
 
 	std::cout << "tape time: " << tapeTime*1000 << "ms" << std::endl;
 	std::cout << "grad time: " << gradTime*1000 << "ms" << std::endl;
@@ -486,7 +445,7 @@ double lpCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM>
 int main(int argc, char* argv[])
 {
 	x0[0] = -3.5; x0[1] = 2;
-	SqrtSigma0 = identity<X_DIM>();
+	SqrtSigma0 = aIdentity<X_DIM>();
 	xGoal[0] = -3.5; xGoal[1] = -2;
 
 	xMin[0] = -5; xMin[1] = -3;
@@ -494,16 +453,16 @@ int main(int argc, char* argv[])
 	uMin[0] = -1; uMin[1] = -1;
 	uMax[0] = 1; uMax[1] = 1;
 
-	Matrix<U_DIM> uinit;
+	aMatrix<U_DIM> uinit;
 	uinit[0] = (xGoal[0] - x0[0]) / (T-1);
 	uinit[1] = (xGoal[1] - x0[1]) / (T-1);
 
-	std::vector<Matrix<U_DIM> > U(T-1, uinit);
-	std::vector<Matrix<X_DIM> > X(T);
+	std::vector<aMatrix<U_DIM> > U(T-1, uinit);
+	std::vector<aMatrix<X_DIM> > X(T);
 
 	X[0] = x0;
 	for (int t = 0; t < T-1; ++t) {
-		X[t+1] = dynfunc(X[t], U[t], zeros<Q_DIM,1>());
+		X[t+1] = dynfunc_a(X[t], U[t], aZeros<Q_DIM,1>());
 	}
 
 	//setupDstarInterface(std::string(getMask()));
@@ -533,12 +492,12 @@ int main(int argc, char* argv[])
 	LOG_INFO("Cost: %4.10f", cost);
 	LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 
-	Matrix<B_DIM> binit = zeros<B_DIM>();
-	std::vector<Matrix<B_DIM> > B(T, binit);
+	aMatrix<B_DIM> binit = aZeros<B_DIM>();
+	std::vector<aMatrix<B_DIM> > B(T, binit);
 
-	vec(X[0], SqrtSigma0, B[0]);
+	vec_a(X[0], SqrtSigma0, B[0]);
 	for (size_t t = 0; t < T-1; ++t) {
-		B[t+1] = beliefDynamics(B[t], U[t]);
+		B[t+1] = beliefDynamics_a(B[t], U[t]);
 	}
 
 
@@ -596,4 +555,3 @@ int main(int argc, char* argv[])
 	//CAL_End();
 	return 0;
 }
-

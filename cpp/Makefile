@@ -63,7 +63,7 @@ POINT_SETUP_FILE = point/setupFiles.sh
 
 # share point functions
 PT_HEADERS = point/point.h
-PT_ADOLC_HEADERS = point/point.h point/point-double.h
+PT_ADOLC_HEADERS = point/point.h point/point-adouble.h
 
 # symeval	
 PT_SYM_DIR = point/sym

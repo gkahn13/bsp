@@ -63,6 +63,7 @@ POINT_SETUP_FILE = point/setupFiles.sh
 
 # share point functions
 PT_HEADERS = point/point.h
+PT_ADOLC_HEADERS = point/point.h point/point-double.h
 
 # symeval	
 PT_SYM_DIR = point/sym
@@ -123,7 +124,6 @@ $(OBJ_DIR)/point-state-finitediff.o : $(PT_STATE_FD_DIR)/point-state-finitediff.
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
 	
 # make point-state-adolc
-PT_ADOLC_HEADERS = point/point.h point/point-double.h
 PT_STATE_ADOLC_DIR = point/state
 PT_STATE_ADOLC_FILES = stateMPC point-state-adolc logging
 PT_STATE_ADOLC_OBJS = $(PT_STATE_ADOLC_FILES:%=$(OBJ_DIR)/%.o)
@@ -150,6 +150,17 @@ $(OBJ_DIR)/lpMPC.o : $(PT_LP_DIR)/lpMPC.c
 	
 $(OBJ_DIR)/point-lp.o : $(PT_LP_DIR)/point-lp.cpp $(POINT_HEADERS)
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
+	
+# make point-lp-adolc
+PT_LP_ADOLC_DIR = point/lp
+PT_LP_ADOLC_FILES = lpMPC point-lp-adolc logging
+PT_LP_ADOLC_OBJS = $(PT_LP_ADOLC_FILES:%=$(OBJ_DIR)/%.o)
+
+point-lp-adolc: | $(PT_LP_ADOLC_OBJS)
+	$(CXX) $(BFLAGS) $(PT_LP_ADOLC_OBJS) -o $(BIN_DIR)/point-lp-adolc $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS) $(ADOLC_FLAGS)
+	
+$(OBJ_DIR)/point-lp-adolc.o : $(PT_LP_ADOLC_DIR)/point-lp-adolc.cpp $(PT_ADOLC_HEADERS)
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) $(ADOLC_FLAGS) -c -o $@ $<
 
 # make point-control
 PT_CONTROL_DIR = point/control

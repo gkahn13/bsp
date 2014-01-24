@@ -122,7 +122,7 @@ $(OBJ_DIR)/point-state-finitediff.o : $(PT_STATE_FD_DIR)/point-state-finitediff.
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
 	
 # make point-state-adolc
-PT_ADOLC_HEADERS = point/point-adolc.h
+PT_ADOLC_HEADERS = point/point.h
 PT_STATE_ADOLC_DIR = point/state
 PT_STATE_ADOLC_FILES = stateMPC state_symeval point-state-adolc logging
 PT_STATE_ADOLC_OBJS = $(PT_STATE_ADOLC_FILES:%=$(OBJ_DIR)/%.o)

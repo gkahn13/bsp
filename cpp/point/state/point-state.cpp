@@ -223,7 +223,6 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 	prevcost = resultCost[0];
 
 	std::cout << "prevcost: " << prevcost << std::endl;
-	exit(0);
 
 	LOG_DEBUG("Initialization trajectory cost: %4.10f", prevcost);
 

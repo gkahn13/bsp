@@ -261,7 +261,7 @@ inline adouble norm(const Matrix<_numRows, _numColumns>& q) {
   for (size_t j = 0; j < _numColumns; ++j) {
     adouble colabssum = adouble(0);
     for (size_t i = 0; i < _numRows; ++i) {
-      colabssum += std::abs(q(i,j));
+      colabssum += fabs(q(i,j));
     }
     if (colabssum > norm1) {
       norm1 = colabssum;
@@ -316,7 +316,7 @@ inline adouble det(const Matrix<_size, _size>& q) {
     adouble maximum = adouble(0); size_t max_row = k; size_t max_col = k;
     for (size_t i = k; i < _size; ++i) {
       for (size_t j = k; j < _size; ++j) {
-        adouble abs_ij = std::abs(m(row_p[i], col_p[j]));
+        adouble abs_ij = fabs(m(row_p[i], col_p[j]));
         if (abs_ij > maximum) {
           maximum = abs_ij; max_row = i; max_col = j;
         }
@@ -368,7 +368,7 @@ inline Matrix<_size, _numColumns> operator%(const Matrix<_size, _size>& p, const
     adouble maximum = adouble(0); size_t max_row = k; size_t max_col = k;
     for (size_t i = k; i < _size; ++i) {
       for (size_t j = k; j < _size; ++j) {
-        adouble abs_ij = std::abs(m(row_p[i], col_p[j]));
+        adouble abs_ij = fabs(m(row_p[i], col_p[j]));
         if (abs_ij > maximum) {
           maximum = abs_ij; max_row = i; max_col = j;
         }
@@ -438,8 +438,8 @@ inline Matrix<_numColumns, _numRows> pseudoInverse(const Matrix<_numRows, _numCo
     jacobi(~q*q, Vec, Val);
 
     for (size_t i = 0; i < _numColumns; ++i) {
-      if (std::abs(Val(i,i)) <= std::sqrt(DBL_EPSILON)) {
-      //if (std::abs(Val(i,i)) <= DBL_EPSILON) {
+      if (fabs(Val(i,i)) <= std::sqrt(DBL_EPSILON)) {
+      //if (fabs(Val(i,i)) <= DBL_EPSILON) {
         Val(i,i) = 0.0;
       } else {
         Val(i,i) = 1.0 / Val(i,i);
@@ -451,7 +451,7 @@ inline Matrix<_numColumns, _numRows> pseudoInverse(const Matrix<_numRows, _numCo
     jacobi(q*~q, Vec, Val);
 
     for (size_t i = 0; i < _numRows; ++i) {
-      if (std::abs(Val(i,i)) <= std::sqrt(DBL_EPSILON)) {
+      if (fabs(Val(i,i)) <= std::sqrt(DBL_EPSILON)) {
         Val(i,i) = 0.0;
       } else {
         Val(i,i) = 1.0 / Val(i,i);
@@ -481,7 +481,7 @@ inline Matrix<_numColumns, _numRows> pseudoInverse(const Matrix<_numRows, _numCo
     adouble maximum = adouble(0); size_t max_row = k; size_t max_col = k;
     for (size_t i = k; i < _numRows; ++i) {
       for (size_t j = k; j < _numColumns; ++j) {
-        adouble abs_ij = std::abs(m(row_p[i], col_p[j]));
+        adouble abs_ij = fabs(m(row_p[i], col_p[j]));
         if (abs_ij > maximum) {
           maximum = abs_ij; max_row = i; max_col = j;
         }
@@ -602,7 +602,7 @@ inline Matrix<_size, _size> operator!(const Matrix<_size, _size>& q) {
     adouble maximum = adouble(0); size_t max_row = k; size_t max_col = k;
     for (size_t i = k; i < _size; ++i) {
       for (size_t j = k; j < _size; ++j) {
-        adouble abs_ij = std::abs(m(row_p[i], col_p[j]));
+        adouble abs_ij = fabs(m(row_p[i], col_p[j]));
         if (abs_ij > maximum) {
           maximum = abs_ij; max_row = i; max_col = j;
         }
@@ -671,14 +671,14 @@ inline void jacobi(const Matrix<_size, _size>& m, Matrix<_size, _size>& V, Matri
     adouble maximum = 0;
     size_t p, q;
     for (size_t i = 0; i < pivotRow; ++i) {
-      if (std::abs(D(i,pivotRow)) > maximum) {
-        maximum = std::abs(D(i,pivotRow));
+      if (fabs(D(i,pivotRow)) > maximum) {
+        maximum = fabs(D(i,pivotRow));
         p = i; q = pivotRow;
       }
     }
     for (size_t j = pivotRow + 1; j < _size; ++j) {
-      if (std::abs(D(pivotRow,j)) > maximum) {
-        maximum = std::abs(D(pivotRow,j));
+      if (fabs(D(pivotRow,j)) > maximum) {
+        maximum = fabs(D(pivotRow,j));
         p = pivotRow; q = j;
       }
     }

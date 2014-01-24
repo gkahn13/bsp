@@ -278,15 +278,15 @@ double stateCollocation(matrix<double> X, matrix<double> U, const stateMPC_param
 			int idx = 0;
 			for(int t=0; t < T-1; ++t) {
 				for(int i=0; i < X_DIM; ++i) {
-					std::cout << grad_arr[idx++] << " ";
+					std::cout << std::setprecision(10) << grad_arr[idx++] << " ";
 				}
 				for(int i=0; i < U_DIM; ++i) {
-					std::cout << grad_arr[idx++] << " ";
+					std::cout << std::setprecision(10) << grad_arr[idx++] << " ";
 				}
 				std::cout << std::endl;
 			}
 			for(int i=0; i < X_DIM; ++i) {
-				std::cout << grad_arr[idx++] << " ";
+				std::cout << std::setprecision(10) << grad_arr[idx++] << " ";
 			}
 			std::cout << std::endl;
 
@@ -302,12 +302,12 @@ double stateCollocation(matrix<double> X, matrix<double> U, const stateMPC_param
 			std::cout << "symeval gradient" << std::endl;
 			for(int t=0; t < T-1; ++t) {
 				for(int i=0; i < X_DIM+U_DIM; ++i) {
-					std::cout << f[t][i] << " ";
+					std::cout << std::setprecision(10) << f[t][i] << " ";
 				}
 				std::cout << std::endl;
 			}
 			for(int i=0; i < X_DIM; ++i) {
-				std::cout << f[T-1][i] << " ";
+				std::cout << std::setprecision(10) << f[T-1][i] << " ";
 			}
 			std::cout << std::endl;
 

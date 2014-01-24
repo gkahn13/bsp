@@ -263,33 +263,35 @@ void linearizeObservation(matrix<TYPE>& x, matrix<TYPE>& r, matrix<TYPE>& H, mat
 	//finiteDiffJac(x,r);
 }
 
+/*
 // adouble version b/c have to deal with embedded traces as a special case (I think...)
 // Jacobians: dh(x,r)/dx, dh(x,r)/dr
 template <>
 void linearizeObservation<adouble>(matrix<adouble>& x, matrix<adouble>& r, matrix<adouble>& H, matrix<adouble>& N)
 {
-	matrix<double> x_double(X_DIM,1), r_double(R_DIM,1);
+	//matrix<double> x_double(X_DIM,1), r_double(R_DIM,1);
 	// extract value from x and r to compute jacs
-	for(int i=0; i < X_DIM; ++i) { x_double(i,0) = x(i,0).value(); }
-	for(int i=0; i < R_DIM; ++i) { r_double(i,0) = r(i,0).value(); }
+	//for(int i=0; i < X_DIM; ++i) { x_double(i,0) = x(i,0).value(); }
+	//for(int i=0; i < R_DIM; ++i) { r_double(i,0) = r(i,0).value(); }
 
 	LOG_DEBUG("inside linearizeObservation adolc");
 	matrix<adouble> xAdolc(X_DIM,1);
 	matrix<double> xObs(Z_DIM,1);
 
 	trace_on(DOBS_DX_TAG);
-	initAdolcMatrix(xAdolc, x_double);
-	matrix<adouble> xObsAdolc = obsfunc<adouble>(xAdolc, r_double);
-	retrieveAdolcMatrix(xObs, xObsAdolc);
+	//initAdolcMatrix(xAdolc, x_double);
+	matrix<adouble> xObsAdolc = obsfunc<adouble>(x, r);
+	//retrieveAdolcMatrix(xObs, xObsAdolc);
 	trace_off(DOBS_DX_TAG);
 
 	double* x_arr = new double[X_DIM];
-	std::copy(x_double.begin1(), x_double.end1(), x_arr);
+	std::copy(x.begin1(), x.end1(), x_arr);
 	double** dobs_dx = new double*[Z_DIM];
 	for(int i=0; i < Z_DIM; ++i) { dobs_dx[i] = new double[X_DIM]; }
 
 	jacobian(DOBS_DX_TAG, Z_DIM, X_DIM, x_arr, dobs_dx);
 	arrToMatrix(dobs_dx, H);
+
 
 	matrix<adouble> rAdolc(R_DIM,1);
 	matrix<double> rObs(Z_DIM,1);
@@ -308,9 +310,10 @@ void linearizeObservation<adouble>(matrix<adouble>& x, matrix<adouble>& r, matri
 	jacobian(DOBS_DR_TAG, Z_DIM, R_DIM, r_arr, dobs_dr);
 	arrToMatrix(dobs_dr, N);
 
+
 	//finiteDiffJac(x,r);
 }
-
+*/
 
 
 
@@ -474,13 +477,17 @@ matrix<TYPE> EKF(const matrix<TYPE>& x_t, const matrix<TYPE>& u_t, const matrix<
 
 	printMatrix("x_tp1",x_tp1);
 
-	matrix<TYPE> H = zeroMatrix<TYPE>(Z_DIM,X_DIM);
+	//matrix<TYPE> H = zeroMatrix<TYPE>(Z_DIM,X_DIM);
+	matrix<double> H = zeroMatrix<double>(Z_DIM,X_DIM);
 	matrix<TYPE> N = zeroMatrix<TYPE>(Z_DIM,R_DIM);
-	//matrix<adouble> r = zeroMatrix(R_DIM,1); // correct?
+	matrix<TYPE> r = zeroMatrix<TYPE>(R_DIM,1); // correct?
 	LOG_DEBUG("before linearize observation");
 
-	matrix<TYPE> r = zeroMatrix<TYPE>(R_DIM,1);
-	linearizeObservation<TYPE>(x_tp1, r, H, N);
+	H(0,0) = 1; H(1,1) = 1;
+	TYPE intensity = sqrt(x_tp1(0,0) * x_tp1(0,0) * 0.5 * 0.5 + 1e-6);
+	N(0,0) = intensity;
+	N(1,1) = intensity;
+	//linearizeObservation<TYPE>(x_tp1, r, H, N);
 
 	printMatrix("H",H);
 	printMatrix("N",N);

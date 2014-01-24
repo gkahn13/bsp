@@ -12,7 +12,7 @@ EIGEN_FLAGS = -I/usr/include/eigen3
 # default to debug build
 BUILD := debug
 
-BFLAGS.debug = -g -Wall
+BFLAGS.debug = 
 BFLAGS.release = -O3
 BFLAGS := $(BFLAGS.$(BUILD))
 

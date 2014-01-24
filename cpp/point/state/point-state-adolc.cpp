@@ -25,6 +25,7 @@ namespace py = boost::python;
 
 
 #include <adolc/adolc.h>
+#include <adolc/sparse/sparsedrivers.h>
 
 
 extern "C" {
@@ -255,7 +256,7 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 	bool done_trace_already = false;
 
 	// adol-c initializing
-	short int tag = 0, keep = 1;
+	short int tag = 0, keep = 1, repeat = 0;
 	adouble meritAdolc;
 
 	double* grad_arr = new double[X_DIM*T + U_DIM*(T-1)];
@@ -288,13 +289,38 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 			initXUVectorArray(X,U,XU_arr);
 
 			util::Timer_tic(&gradTimer);
-			gradient(tag, X_DIM*T + U_DIM*(T-1), XU_arr, grad_arr);
+			gradient(tag, X_DIM*T + U_DIM*(T-1), XU_arr, grad_arr); // return value is 0
 			gradTime += util::Timer_toc(&gradTimer);
 
 			// compute hessian
 			util::Timer_tic(&hessTimer);
-			hessian(tag, X_DIM*T + U_DIM*(T-1), XU_arr, hess_arr);
+			hessian(tag, X_DIM*T + U_DIM*(T-1), XU_arr, hess_arr); // return value is 0
 			hessTime += util::Timer_toc(&hessTimer);
+
+			// compute sparse hessian
+			unsigned int    *rind  = NULL;
+			unsigned int    *cind  = NULL;
+			double *values = NULL;
+			int nnz = X_DIM*T + U_DIM*(T-1);
+			int options[2];
+
+			options[0] = 0;          /*                               safe mode (default) */
+			options[1] = 0;          /*                       indirect recovery (default) */
+
+			repeat = 0;
+
+			sparse_hess(tag, X_DIM*T + U_DIM*(T-1), repeat, XU_arr, &nnz, &rind, &cind, &values, options);
+
+			printf("In sparse format:\n");
+			for (int i=0;i<nnz;i++)
+			    printf("%2d %2d %10.6f\n\n",rind[i],cind[i],values[i]);
+
+			free(rind); rind = NULL;
+			free(cind); cind = NULL;
+			free(values); values = NULL;
+
+			// sparse_hess(tag, n, repeat, x, #non-zeros, row-indices of non-zeros, column-indices of non-zeros, non-zero values, control parameter array)
+
 
 			// evaluate constant cost term (omitted from optimization)
 			// Need to compute:

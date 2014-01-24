@@ -6,7 +6,8 @@ CPP_FLAGS = -std=c++0x -fpermissive -I.
 PYTHON_FLAGS = -I/usr/include/python2.7 -lpython2.7
 BOOST_FLAGS = -lboost_python -lboost_filesystem -lboost_system
 LINKER_FLAGS = -lrt
-ADOLC_FLAGS = -I/usr/include/adolc -ladolc
+ADOLC_FLAGS = -I/home/gkahn/adolc_base/include -L/home/gkahn/adolc_base/lib64 -ladolc
+#ADOLC_FLAGS = -I/usr/include/adolc -ladolc
 EIGEN_FLAGS = -I/usr/include/eigen3
 
 # default to debug build

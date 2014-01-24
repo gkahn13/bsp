@@ -4,9 +4,11 @@
 #include <cstdlib>
 #include <iomanip>
 
-#include "../arm.h"
+#include "../point.h"
 
-#include "util/matrix.h"
+#define USE_ADOLC
+
+#include "util/amatrix.h"
 #include "util/utils.h"
 #include "util/Timer.h"
 #include "util/logging.h"
@@ -21,19 +23,13 @@
 
 namespace py = boost::python;
 
-//#include <Eigen/Dense>
-//#include <Eigen/Core>
-//#include </usr/include/eigen3/unsupported/Eigen/AdolcForward>
-//using namespace Eigen;
-
-#include <boost/numeric/ublas/matrix.hpp>
-using namespace boost::numeric::ublas;
 
 #include <adolc/adolc.h>
 
+
 extern "C" {
-//#include "../sym/state-symeval.h"
-#include "armStateMPC.h"
+#include "../sym/state-symeval.h"
+#include "stateMPC.h"
 }
 
 namespace cfg {
@@ -44,22 +40,22 @@ const double trust_shrink_ratio = .1;
 const double trust_expand_ratio = 1.5;
 }
 
-// armStateMPC vars
-armStateMPC_FLOAT **H, **f, **lb, **ub, **C, **e, **z;
+// stateMPC vars
+stateMPC_FLOAT **H, **f, **lb, **ub, **C, **e, **z;
 
 
-void setupStateMPCVars(armStateMPC_params& problem, armStateMPC_output& output)
+void setupStateMPCVars(stateMPC_params& problem, stateMPC_output& output)
 {
 	// inputs
-	H = new armStateMPC_FLOAT*[T];
-	f = new armStateMPC_FLOAT*[T];
-	lb = new armStateMPC_FLOAT*[T];
-	ub = new armStateMPC_FLOAT*[T];
-	C = new armStateMPC_FLOAT*[T-1];
-	e = new armStateMPC_FLOAT*[T];
+	H = new stateMPC_FLOAT*[T];
+	f = new stateMPC_FLOAT*[T];
+	lb = new stateMPC_FLOAT*[T];
+	ub = new stateMPC_FLOAT*[T];
+	C = new stateMPC_FLOAT*[T-1];
+	e = new stateMPC_FLOAT*[T];
 
 	// output
-	z = new armStateMPC_FLOAT*[T];
+	z = new stateMPC_FLOAT*[T];
 
 #define SET_VARS(n)    \
 		H[ BOOST_PP_SUB(n,1) ] = problem.H##n ;  \
@@ -103,24 +99,51 @@ void cleanup()
 	delete[] z;
 }
 
-void initVarVals(const matrix<adouble>& X, const matrix<adouble>& U)
+adouble costfunc(const std::vector<Matrix<X_DIM> >& X, const std::vector<Matrix<U_DIM>>& U, const Matrix<X_DIM,X_DIM>& SqrtSigma_0)
+{
+	adouble cost = 0;
+
+	Matrix<X_DIM> x_tp1;
+	Matrix<B_DIM> b, b_tp1;
+	Matrix<X_DIM,X_DIM> SqrtSigma_t, SqrtSigma_tp1;
+	SqrtSigma_t = SqrtSigma_0;
+
+	for (int t = 0; t < T - 1; ++t)
+	{
+
+		cost += alpha_belief*tr(SqrtSigma_t*SqrtSigma_t) + alpha_control*tr(~U[t]*U[t]);
+
+		vec(X[t], SqrtSigma_t, b);
+		b_tp1 = beliefDynamics(b, U[t]);
+		unVec(b_tp1, x_tp1, SqrtSigma_t);
+	}
+
+	cost += alpha_belief*tr(SqrtSigma_t*SqrtSigma_t);
+
+	return cost;
+}
+
+
+void initVarVals(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matrix<U_DIM> >& U)
 {
 	int idx = 0;
 	for (int t = 0; t < T; ++t) {
 		for (int i = 0; i < X_DIM; ++i) {
-			inputVars[idx++] = X(t,i);
+			inputVars[idx++] = X[t][i].value();
 		}
 	}
 	for (int t = 0; t < (T - 1); ++t) {
 		for (int i = 0; i < U_DIM; ++i) {
-			inputVars[idx++] = U(t,i);
+			inputVars[idx++] = U[t][i].value();
 		}
 	}
 	for (int i = 0; i < (Q_DIM+R_DIM); ++i) {
 		inputVars[idx++] = 0;
 	}
-	for (int i = 0; i < (X_DIM+X_DIM); ++i) {
-		inputVars[idx++] = SqrtSigma0(i,0);
+	for (int i = 0; i < X_DIM; ++i) { // TODO: should be X_DIM*X_DIM
+		for (int j = 0; j < X_DIM; ++j) {
+			inputVars[idx++] = SqrtSigma0(i,j).value();
+		}
 	}
 	inputVars[idx++] = alpha_belief; inputVars[idx++] = alpha_control; inputVars[idx++] = alpha_final_belief;
 
@@ -133,6 +156,7 @@ void initVarVals(const matrix<adouble>& X, const matrix<adouble>& U)
 		vars[idx++] = inputVars[maskIndices[i]];
 	}
 }
+
 
 inline void forcePsdHessian() {
 	// zero out negative diagonal entries
@@ -148,8 +172,7 @@ inline void forcePsdHessian() {
 }
 
 bool isValidInputs(double *result) {
-
-	//armStateMPC_FLOAT **H, **f, **lb, **ub, **C, **e, **z;
+	//stateMPC_FLOAT **H, **f, **lb, **ub, **C, **e, **z;
 	for(int t = 0; t < T-1; ++t) {
 		std::cout << "t: " << t << std::endl << std::endl;
 
@@ -166,90 +189,112 @@ bool isValidInputs(double *result) {
 }
 
 
-double stateCollocation(matrix<double> X, matrix<double> U, const armStateMPC_params& problem, const armStateMPC_output& output, const armStateMPC_info& info)
+
+void initXUAdolcMatrixes(std::vector<Matrix<X_DIM>>& X, std::vector<Matrix<U_DIM>>& U) {
+	for(int t=0; t < T-1; ++t) {
+		for(int i=0; i < X_DIM; ++i) {
+			X[t][i] <<= X[t][i].value();
+		}
+		for(int i=0; i < U_DIM; ++i) {
+			U[t][i] <<= U[t][i].value();
+		}
+	}
+	for(int i=0; i < X_DIM; ++i) {
+		X[T-1][i] <<= X[T-1][i].value();
+	}
+}
+
+
+void initXUVectorArray(std::vector<Matrix<X_DIM>>& X, std::vector<Matrix<U_DIM>>& U, double* XU) {
+	int idx = 0;
+	for(int t=0; t < T-1; ++t) {
+		for(int i=0; i < X_DIM; ++i) {
+			XU[idx++] = X[t][i].value();
+		}
+		for(int i=0; i < U_DIM; ++i) {
+			XU[idx++] = U[t][i].value();
+		}
+	}
+	for(int i=0; i < X_DIM; ++i) {
+		XU[idx++] = X[T-1][i].value();
+	}
+}
+
+
+double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >& U, stateMPC_params& problem, stateMPC_output& output, stateMPC_info& info)
 {
-	int maxIter = 100;
+	util::Timer tapeTimer, gradTimer, hessTimer;
+	double tapeTime = 0, gradTime = 0, hessTime = 0;
+
+	int maxIter = 100, idx;
 	double Xeps = 1;
 	double Ueps = 1;
 
 	// box constraint around goal
 	double delta = 0.01;
-	matrix<double> x0(X_DIM,1);
-	column(x0,0) = column(X,0);
+	Matrix<X_DIM,1> x0 = X[0];
 
 	double prevcost = INFTY, optcost;
 	double merit, model_merit, new_merit;
 	double approx_merit_improve, exact_merit_improve, merit_improve_ratio;
 	double constant_cost, hessian_constant, jac_constant;
 
-	int dim = T*X_DIM + (T-1)*U_DIM;
-	double* resultCost = new double;
-	double* resultCostGradDiagHess = new double[2*dim + 1];
-
 	double Hzbar[X_DIM+U_DIM];
 
-	int nvars = (int)maskIndices.size();
-	vars = new adouble[nvars];
 
-	//initVarVals(X, U);
+	prevcost = costfunc(X, U, SqrtSigma0).value();
 
 
-	//evalCost(resultCost, vars); // TODO: replace with cost function
-	//prevcost = resultCost[0];
-	matrix<double> q(Q_DIM,1), r(R_DIM,1);
-	prevcost = costfunc<double>(X, U, q, r, SqrtSigma0);
+	LOG_DEBUG("Initialization trajectory cost: %4.10f", prevcost);
 
-	return 0;
 
-	//LOG_DEBUG("Initialization trajectory cost: %4.10f", prevcost);
-	/*
-	matrix<adouble> Xopt(X_DIM, T);
-	matrix<adouble> Uopt(U_DIM, T-1);
-
-	double **aXU = new double*[T];
-	for(int t=0; t < T; ++ t)
-	{
-		aXU[t] = new double[X_DIM+U_DIM];
-		for(int x_idx=0; x_idx < X_DIM; ++x_idx) { aXU[t][x_idx] = X(t,x_idx); }
-		for(int u_idx=0; u_idx < U_DIM; ++u_idx) { aXU[t][X_DIM+u_idx] = U(t,u_idx); }
-	}
-
+	std::vector<Matrix<X_DIM> > Xopt(T);
+	std::vector<Matrix<U_DIM> > Uopt(T-1);
 
 	bool solution_accepted = true;
+	bool done_trace_already = false;
+
+	// adol-c initializing
+	short int tag = 0, keep = 1;
+	adouble meritAdolc;
+
+	double* grad_arr = new double[X_DIM*T + U_DIM*(T-1)];
+	double* XU_arr = new double[X_DIM*T + U_DIM*(T-1)];
+
+	double** hess_arr = new double*[X_DIM*T + U_DIM*(T-1)];
+	for(int i=0; i < X_DIM*T + U_DIM*(T-1); ++i) { hess_arr[i] = new double[X_DIM*T + U_DIM*(T-1)]; }
 
 	for(int it = 0; it < maxIter; ++it)
 	{
 		LOG_DEBUG("\nIter: %d", it);
 
 		if (solution_accepted) {
-			//initVarVals(X, U);
-			//evalCostGradDiagHess(resultCostGradDiagHess, vars);
-			//merit = resultCostGradDiagHess[0];
 
-			double **grad = new double*[T], **hess = new double*[T];
-			for(int t=0; t < T; ++t)
-			{
-				grad[t] = new double[X_DIM+U_DIM];
-				hess[t] = new double[(X_DIM+U_DIM)*(X_DIM+U_DIM)];
+			util::Timer_tic(&tapeTimer);
+			if (done_trace_already) {
+				merit = costfunc(X, U, SqrtSigma0).value();
+			} else {
+				done_trace_already = false;
+				trace_on(tag, keep);
+				initXUAdolcMatrixes(X,U);
+				meritAdolc = costfunc(X, U, SqrtSigma0);
+				meritAdolc >>= merit;
+				trace_off();
 			}
+			tapeTime += util::Timer_toc(&tapeTimer);
 
-			// gradient pg 19
-			short int tag = 0;
-			trace_on(tag);
 
-			for(int t=0; t < T; ++t)
-			{
-				adouble c = costfunc(X, U, q, r, SqrtSigma0);
-				adouble* xu = new adouble[X_DIM+U_DIM];
-				for(int i=0; i < X_DIM+U_DIM; ++i) { xu[i] <<= aXU[t][i]; }
-			}
+			// compute gradient
+			initXUVectorArray(X,U,XU_arr);
 
-			trace_off();
+			util::Timer_tic(&gradTimer);
+			gradient(tag, X_DIM*T + U_DIM*(T-1), XU_arr, grad_arr);
+			gradTime += util::Timer_toc(&gradTimer);
 
-			for(int t=0; t < T; ++t) {
-				gradient(tag, X_DIM+U_DIM, aXU[t], grad[t]);
-			}
-
+			// compute hessian
+			util::Timer_tic(&hessTimer);
+			hessian(tag, X_DIM*T + U_DIM*(T-1), XU_arr, hess_arr);
+			hessTime += util::Timer_toc(&hessTimer);
 
 			// evaluate constant cost term (omitted from optimization)
 			// Need to compute:
@@ -261,17 +306,21 @@ double stateCollocation(matrix<double> X, matrix<double> U, const armStateMPC_pa
 
 			// compute Hessian first
 			// so can force it to be PSD
+			LOG_DEBUG("Copying hess_arr in...");
+			idx = 0;
 			for (int t = 0; t < T-1; ++t) {
-				H[t][0] = resultCostGradDiagHess[1+dim+t*X_DIM];
-				H[t][1] = resultCostGradDiagHess[1+dim+t*X_DIM+1];
-				H[t][2] = resultCostGradDiagHess[1+dim+T*X_DIM+t*U_DIM];
-				H[t][3] = resultCostGradDiagHess[1+dim+T*X_DIM+t*U_DIM+1];
+				for (int i = 0; i < (X_DIM+U_DIM); ++i) {
+					H[t][i] = hess_arr[idx][idx++];
+				}
 			}
-			H[T-1][0] = resultCostGradDiagHess[1+dim+(T-1)*X_DIM];
-			H[T-1][1] = resultCostGradDiagHess[1+dim+(T-1)*X_DIM+1];
+			for (int i = 0; i < X_DIM; ++i) {
+				H[T-1][i] = hess_arr[idx][idx++];
+			}
 
+			LOG_DEBUG("Forcing hessian to be PSD");
 			forcePsdHessian();
 
+			idx = 0;
 			for (int t = 0; t < T-1; ++t)
 			{
 				Matrix<X_DIM>& xt = X[t];
@@ -282,17 +331,16 @@ double stateCollocation(matrix<double> X, matrix<double> U, const armStateMPC_pa
 				zbar.insert(X_DIM,0,ut);
 
 				for(int i = 0; i < (X_DIM+U_DIM); ++i) {
-					Hzbar[i] = H[t][i]*zbar[i];
+					Hzbar[i] = H[t][i]*zbar[i].value();
 				}
 
-				f[t][0] = resultCostGradDiagHess[1+t*X_DIM];
-				f[t][1] = resultCostGradDiagHess[1+t*X_DIM+1];
-				f[t][2] = resultCostGradDiagHess[1+T*X_DIM+t*U_DIM];
-				f[t][3] = resultCostGradDiagHess[1+T*X_DIM+t*U_DIM+1];
+				for (int i = 0; i < (X_DIM+U_DIM); ++i) {
+					f[t][i] = grad_arr[idx++];
+				}
 
 				for(int i = 0; i < (X_DIM+U_DIM); ++i) {
-					hessian_constant += H[t][i]*zbar[i]*zbar[i];
-					jac_constant += -(f[t][i]*zbar[i]);
+					hessian_constant += H[t][i]*zbar[i].value()*zbar[i].value();
+					jac_constant += -(f[t][i]*zbar[i].value());
 				}
 
 				for(int i = 0; i < (X_DIM+U_DIM); ++i) {
@@ -307,43 +355,45 @@ double stateCollocation(matrix<double> X, matrix<double> U, const armStateMPC_pa
 				int idx = 0;
 				for(int c = 0; c < (X_DIM+U_DIM); ++c) {
 					for(int r = 0; r < X_DIM; ++r) {
-						C[t][idx++] = CMat[c + r*(X_DIM+U_DIM)];
+						C[t][idx++] = CMat[c + r*(X_DIM+U_DIM)].value();
 					}
 				}
 
 				if (t == 0) {
-					e[t][0] = x0[0]; e[t][1] = x0[1];
+					e[t][0] = x0[0].value(); e[t][1] = x0[1].value();
 				} else {
 					e[t][0] = 0; e[t][1] = 0;
 				}
 
+
 			} //setting up problem
-	 */
-			/*
+
+
 			// Last stage
 			Matrix<X_DIM>& xT = X[T-1];
 
-			f[T-1][0] = resultCostGradDiagHess[1+(T-1)*X_DIM];
-			f[T-1][1] = resultCostGradDiagHess[1+(T-1)*X_DIM+1];
-
-			for(int i = 0; i < X_DIM; ++i) {
-				hessian_constant += H[T-1][i]*xT[i]*xT[i];
-				jac_constant += -(f[T-1][i]*xT[i]);
+			for (int i = 0; i < X_DIM; ++i) {
+				f[T-1][i] = grad_arr[idx++];
 			}
 
 			for(int i = 0; i < X_DIM; ++i) {
-				Hzbar[i] = H[T-1][i]*xT[i];
+				hessian_constant += H[T-1][i]*xT[i].value()*xT[i].value();
+				jac_constant += -(f[T-1][i]*xT[i].value());
+			}
+
+			for(int i = 0; i < X_DIM; ++i) {
+				Hzbar[i] = H[T-1][i]*xT[i].value();
 				f[T-1][i] -= Hzbar[i];
 			}
 
 			e[T-1][0] = 0; e[T-1][1] = 0;
 
-			constant_cost = 0.5*hessian_constant + jac_constant + resultCostGradDiagHess[0];
+			constant_cost = 0.5*hessian_constant + jac_constant + merit;
 
 		} // end solution_accepted
-		*/
 
-		/*
+
+
 		// set trust region bounds based on current trust region size
 		for (int t = 0; t < T-1; ++t)
 		{
@@ -351,24 +401,24 @@ double stateCollocation(matrix<double> X, matrix<double> U, const armStateMPC_pa
 			Matrix<U_DIM>& ut = U[t];
 
 			// Fill in lb, ub, C, e
-			lb[t][0] = MAX(xMin[0], xt[0] - Xeps);
-			lb[t][1] = MAX(xMin[1], xt[1] - Xeps);
-			lb[t][2] = MAX(uMin[0], ut[0] - Ueps);
-			lb[t][3] = MAX(uMin[1], ut[1] - Ueps);
+			lb[t][0] = MAX(xMin[0].value(), xt[0].value() - Xeps);
+			lb[t][1] = MAX(xMin[1].value(), xt[1].value() - Xeps);
+			lb[t][2] = MAX(uMin[0].value(), ut[0].value() - Ueps);
+			lb[t][3] = MAX(uMin[1].value(), ut[1].value() - Ueps);
 
-			ub[t][0] = MIN(xMax[0], xt[0] + Xeps);
-			ub[t][1] = MIN(xMax[1], xt[1] + Xeps);
-			ub[t][2] = MIN(uMax[0], ut[0] + Ueps);
-			ub[t][3] = MIN(uMax[1], ut[1] + Ueps);
+			ub[t][0] = MIN(xMax[0].value(), xt[0].value() + Xeps);
+			ub[t][1] = MIN(xMax[1].value(), xt[1].value() + Xeps);
+			ub[t][2] = MIN(uMax[0].value(), ut[0].value() + Ueps);
+			ub[t][3] = MIN(uMax[1].value(), ut[1].value() + Ueps);
 		} //setting up problem
 
 		// Fill in lb, ub, C, e
 		Matrix<X_DIM>& xT = X[T-1];
-		lb[T-1][0] = MAX(xGoal[0] - delta, xT[0] - Xeps);
-		lb[T-1][1] = MAX(xGoal[1] - delta, xT[1] - Xeps);
+		lb[T-1][0] = MAX(xGoal[0].value() - delta, xT[0].value() - Xeps);
+		lb[T-1][1] = MAX(xGoal[1].value() - delta, xT[1].value() - Xeps);
 
-		ub[T-1][0] = MIN(xGoal[0] + delta, xT[0] + Xeps);
-		ub[T-1][1] = MIN(xGoal[1] + delta, xT[1] + Xeps);
+		ub[T-1][0] = MIN(xGoal[0].value() + delta, xT[0].value() + Xeps);
+		ub[T-1][1] = MIN(xGoal[1].value() + delta, xT[1].value() + Xeps);
 
 		// Verify problem inputs
 
@@ -377,8 +427,8 @@ double stateCollocation(matrix<double> X, matrix<double> U, const armStateMPC_pa
 		//	exit(0);
 		//}
 
-
-		int exitflag = armStateMPC_solve(&problem, &output, &info);
+		LOG_DEBUG("Solving with FORCES");
+		int exitflag = stateMPC_solve(&problem, &output, &info);
 		if (exitflag == 1) {
 			for(int t = 0; t < T-1; ++t) {
 				Matrix<X_DIM>& xt = Xopt[t];
@@ -402,9 +452,7 @@ double stateCollocation(matrix<double> X, matrix<double> U, const armStateMPC_pa
 
 		model_merit = optcost + constant_cost; // need to add constant terms that were dropped
 
-		initVarVals(Xopt, Uopt);
-		evalCost(resultCost, vars);
-		new_merit = resultCost[0];
+		new_merit = costfunc(Xopt, Uopt, SqrtSigma0).value();
 
 		LOG_DEBUG("merit: %f", merit);
 		LOG_DEBUG("model_merit: %f", model_merit);
@@ -422,8 +470,6 @@ double stateCollocation(matrix<double> X, matrix<double> U, const armStateMPC_pa
 		if (approx_merit_improve < -1e-5) {
 			LOG_ERROR("Approximate merit function got worse: %f", approx_merit_improve);
 			LOG_ERROR("Failure!");
-			delete resultCost;
-			delete[] resultCostGradDiagHess;
 			return INFTY;
 		} else if (approx_merit_improve < cfg::min_approx_improve) {
 			LOG_DEBUG("Converged: improvement small enough");
@@ -446,67 +492,45 @@ double stateCollocation(matrix<double> X, matrix<double> U, const armStateMPC_pa
 		}
 	}
 
-	initVarVals(X, U);
-	evalCost(resultCost, vars);
-	optcost = resultCost[0];
+	optcost = costfunc(X, U, SqrtSigma0).value();
 
-	delete resultCost;
-	delete[] resultCostGradDiagHess;
+	std::cout << "tape time: " << tapeTime*1000 << "ms" << std::endl;
+	std::cout << "grad time: " << gradTime*1000 << "ms" << std::endl;
+	std::cout << "hess time: " << hessTime*1000 << "ms" << std::endl;
 
 	return optcost;
-	*/
-	return 0;
+
 }
 
 int main(int argc, char* argv[])
 {
-	cam0(0,0) = -4;  cam0(1,0) = 23; cam0(2,0) = 0;
-	cam1(0,0) = 4;  cam1(1,0) = 23; cam1(2,0) = 0;
+	x0[0] = -3.5; x0[1] = 2;
+	SqrtSigma0 = identity<X_DIM>();
+	xGoal[0] = -3.5; xGoal[1] = -2;
 
-	x0(0,0) = .5*M_PI; x0(1,0) = -1.5431281995798991; x0(2,0) = -0.047595544887998331;
-	x0(3,0) = 1.4423058659586809; x0(4,0) = 1.5334368368992011; x0(5,0) = -1.1431255223182604;
+	xMin[0] = -5; xMin[1] = -3;
+	xMax[0] = 5; xMax[1] = 3;
+	uMin[0] = -1; uMin[1] = -1;
+	uMax[0] = 1; uMax[1] = 1;
 
-	SqrtSigma0 = identity_matrix<double>(X_DIM);
+	Matrix<U_DIM> uinit;
+	uinit[0] = (xGoal[0] - x0[0]) / (T-1);
+	uinit[1] = (xGoal[1] - x0[1]) / (T-1);
 
-	xGoal(0,0) = -M_PI/2; xGoal(1,0) = .25*M_PI; xGoal(2,0) = -.5*M_PI;
-	xGoal(3,0) = -M_PI/2; xGoal(4,0) = -.25*M_PI; xGoal(5,0) = .5*M_PI;
+	std::vector<Matrix<U_DIM> > U(T-1, uinit);
+	std::vector<Matrix<X_DIM> > X(T);
 
-	xMin(0,0) = -M_PI; xMin(1,0) = -0.75*M_PI; xMin(2,0) = -0.75*M_PI; xMin(3,0) = -M_PI; xMin(4,0) = -0.75*M_PI; xMin(5,0) = -M_PI;
-	xMax(0,0) = M_PI;  xMax(1,0) = 0.75*M_PI;  xMax(2,0) = 0.75*M_PI;  xMax(3,0) = M_PI;  xMax(4,0) =  0.75*M_PI; xMax(5,0) = M_PI;
-
-	for(int i=0; i < U_DIM; ++i) { uMin(i,0) = -.5; uMax(i,0) = .5; }
-
-
-	matrix<double> uinit = (xGoal - x0) / (T-1);
-
-	matrix<double> U(U_DIM,T-1);
-	for(int t=0; t < T-1; ++t) { column(U,t) = column(uinit,0); }
-
-	printMatrix("initial U", U);
-
-
-	matrix<double> X = zeroMatrix<double>(X_DIM,T);
-
-	printMatrix("pre initial X", X);
-
-	column(X,0) = column(x0,0);
-	matrix<double> Xcol(X_DIM,1), Ucol(U_DIM,1);
+	X[0] = x0;
 	for (int t = 0; t < T-1; ++t) {
-		column(Xcol,0) = column(X,t);
-		column(Ucol,0) = column(U,t);
-		matrix<double>q = zeroMatrix<double>(Q_DIM,1);
-
-		matrix<double> x_tp1 = dynfunc<double>(Xcol, Ucol, q);
-		column(X,t+1) = column(x_tp1,0);
+		X[t+1] = dynfunc(X[t], U[t], zeros<Q_DIM,1>());
 	}
 
-	printMatrix("initial X", X);
 	//setupDstarInterface(std::string(getMask()));
 
 
-	armStateMPC_params problem;
-	armStateMPC_output output;
-	armStateMPC_info info;
+	stateMPC_params problem;
+	stateMPC_output output;
+	stateMPC_info info;
 
 	setupStateMPCVars(problem, output);
 
@@ -514,25 +538,19 @@ int main(int argc, char* argv[])
 	util::Timer_tic(&solveTimer);
 
 	// compute cost for the trajectory
-
-	//for(int i = 0; i < 100000; ++i) {
-	//	for (int t = 0; t < T-1; ++t) {
-	//		X[t+1] = dynfunc(X[t], U[t], zeros<Q_DIM,1>());
-	//	}
-	//}
-
-
-	std::cout << "before state collocation " << std::endl;
+	/*
+	for(int i = 0; i < 100000; ++i) {
+		for (int t = 0; t < T-1; ++t) {
+			X[t+1] = dynfunc(X[t], U[t], zeros<Q_DIM,1>());
+		}
+	}
+	*/
 
 	double cost = stateCollocation(X, U, problem, output, info);
-
-	std::cout << "after state collocation" << std::endl;
 
 	double solvetime = util::Timer_toc(&solveTimer);
 	LOG_INFO("Cost: %4.10f", cost);
 	LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
-
-	/*
 
 	Matrix<B_DIM> binit = zeros<B_DIM>();
 	std::vector<Matrix<B_DIM> > B(T, binit);
@@ -542,15 +560,59 @@ int main(int argc, char* argv[])
 		B[t+1] = beliefDynamics(B[t], U[t]);
 	}
 
-	pythonDisplayTrajectory(B, U);
 
-	cleanup();
+	// had to copy in python display because Matrix uses adouble
+//#define PYTHON_PLOT
+#ifdef PYTHON_PLOT
+	py::list Bvec;
+	for(int j=0; j < B_DIM; j++) {
+		for(int i=0; i < T; i++) {
+			Bvec.append(B[i][j].value());
+		}
+	}
+
+	py::list Uvec;
+		for(int j=0; j < U_DIM; j++) {
+			for(int i=0; i < T-1; i++) {
+			Uvec.append(U[i][j].value());
+		}
+	}
+
+	py::list x0_list, xGoal_list;
+	for(int i=0; i < X_DIM; i++) {
+		x0_list.append(x0[i].value());
+		xGoal_list.append(xGoal[i].value());
+	}
+
+	std::string workingDir = boost::filesystem::current_path().normalize().string();
+	std::string bspDir = workingDir.substr(0,workingDir.find("bsp"));
+
+	try
+	{
+		Py_Initialize();
+		py::object main_module = py::import("__main__");
+		py::object main_namespace = main_module.attr("__dict__");
+		py::exec("import sys, os", main_namespace);
+		py::exec(py::str("sys.path.append('"+bspDir+"bsp/python')"), main_namespace);
+		py::exec("from bsp_light_dark import LightDarkModel", main_namespace);
+		py::object model = py::eval("LightDarkModel()", main_namespace);
+		py::object plot_mod = py::import("plot");
+		py::object plot_traj = plot_mod.attr("plot_belief_trajectory_cpp");
+
+		plot_traj(Bvec, Uvec, model, x0_list, xGoal_list, T);
+	}
+	catch(py::error_already_set const &)
+	{
+		PyErr_Print();
+	}
 
 	int k;
 	std::cin >> k;
-	*/
+#endif
+
+	cleanup();
+
 	//CAL_End();
 	return 0;
-
-
 }
+

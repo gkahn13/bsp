@@ -6,8 +6,8 @@ CPP_FLAGS = -std=c++0x -fpermissive -I.
 PYTHON_FLAGS = -I/usr/include/python2.7 -lpython2.7
 BOOST_FLAGS = -lboost_python -lboost_filesystem -lboost_system
 LINKER_FLAGS = -lrt
-ADOLC_FLAGS = -I/home/gkahn/adolc_base/include -L/home/gkahn/adolc_base/lib64 -ladolc
-#ADOLC_FLAGS = -I/usr/include/adolc -ladolc
+ADOLC_FLAGS = -I/home/gkahn/adolc_base/include -L/home/gkahn/adolc_base/lib64 -ladolc -lColPack
+#ADOLC_FLAGS = -I/usr/include/adolc -ladolc -lColPack
 EIGEN_FLAGS = -I/usr/include/eigen3
 
 # default to debug build
@@ -123,7 +123,7 @@ $(OBJ_DIR)/point-state-finitediff.o : $(PT_STATE_FD_DIR)/point-state-finitediff.
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
 	
 # make point-state-adolc
-PT_ADOLC_HEADERS = point/point.h
+PT_ADOLC_HEADERS = point/point.h point/point-double.h
 PT_STATE_ADOLC_DIR = point/state
 PT_STATE_ADOLC_FILES = stateMPC point-state-adolc logging
 PT_STATE_ADOLC_OBJS = $(PT_STATE_ADOLC_FILES:%=$(OBJ_DIR)/%.o)

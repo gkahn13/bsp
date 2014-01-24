@@ -1,0 +1,849 @@
+#ifndef __dMatrix_H__
+#define __dMatrix_H__
+
+#define _USE_MATH_DEFINES
+
+
+
+#include <cmath>
+#include <float.h>
+#include <iostream>
+#include <assert.h>
+
+
+template <size_t _numRows, size_t _numColumns = 1> class dMatrix {
+
+private:
+  double _elems[_numRows * _numColumns];
+  //double *_elems;
+
+public:
+  /*dMatrix() { _elems = new double[_numRows * _numColumns]; }
+  dMatrix( const dMatrix<_numRows, _numColumns>& q ) {
+    _elems = new double[_numRows * _numColumns];
+    for (size_t i = 0; i < _numRows * _numColumns; ++i) {
+      _elems[i] = q._elems[i]; 
+    }
+  }
+  
+  ~dMatrix() { delete[] _elems; }
+  
+  dMatrix<_numRows, _numColumns>& operator = (const dMatrix<_numRows, _numColumns>& q) {
+    for (size_t i = 0; i < _numRows * _numColumns; ++i) {
+      _elems[i] = q._elems[i]; 
+    }
+    return (*this);
+  }*/
+
+  // Retrieval
+  inline size_t numRows() const { 
+    return _numRows; 
+  }
+  inline size_t numColumns() const { 
+    return _numColumns; 
+  }
+  
+  // Subscript operator
+  inline double& operator () (size_t row, size_t column) {
+    assert(row < _numRows && column < _numColumns);
+    return _elems[row * _numColumns + column]; 
+  }
+  inline double  operator () (size_t row, size_t column) const {
+    assert(row < _numRows && column < _numColumns);
+    return _elems[row * _numColumns + column]; 
+  }
+
+  inline double& operator [] (size_t elt) {
+    assert(elt < _numRows * _numColumns);
+    return _elems[elt]; 
+  }
+  inline double  operator [] (size_t elt) const {
+    assert(elt < _numRows * _numColumns);
+    return _elems[elt]; 
+  }
+
+  // Reset to dZeros
+  inline void reset() { 
+    for (size_t i = 0; i < _numRows * _numColumns; ++i) {
+      _elems[i] = double(0);
+    }
+  }
+
+  // SubdMatrix
+  template <size_t nRows, size_t nCols>
+  inline dMatrix<nRows, nCols> subdMatrix(size_t row, size_t column) const {
+    assert(row + nRows <= _numRows && column + nCols <= _numColumns);
+    dMatrix<nRows, nCols> m;
+    for (size_t i = 0; i < nRows; ++i) {
+      for (size_t j = 0; j < nCols; ++j) {
+        m(i, j) = (*this)(row + i, column + j);
+      }
+    }
+    return m;
+  }
+
+  template <size_t nRows>
+  inline dMatrix<nRows> subdMatrix(size_t row, size_t column) const {
+    assert(row + nRows <= _numRows && column <= _numColumns);
+    dMatrix<nRows> m;
+    for (size_t i = 0; i < nRows; ++i) {
+      m[i] = (*this)(row + i, column);
+    }
+    return m;
+  }
+
+  // Insert
+  template <size_t nRows, size_t nCols>
+  inline void insert(size_t row, size_t column, const dMatrix<nRows, nCols>& q) {
+    assert(row + nRows <= _numRows && column + nCols <= _numColumns);
+    for (size_t i = 0; i < nRows; ++i) {
+      for (size_t j = 0; j < nCols; ++j) {
+        (*this)(row + i, column + j) = q(i, j);
+      }
+    }
+  }
+  
+  // Unary minus
+  inline dMatrix<_numRows, _numColumns> operator-() const {
+    dMatrix<_numRows, _numColumns> m;
+    for (size_t i = 0; i < _numRows * _numColumns; ++i) {
+      m._elems[i] = -_elems[i];
+    }
+    return m;
+  }
+  
+  // Unary plus
+  inline const dMatrix<_numRows, _numColumns>& operator+() const {
+    return *this; 
+  }
+
+  // Equality
+  inline bool operator==(const dMatrix<_numRows, _numColumns>& q) const {
+    for (size_t i = 0; i < _numRows * _numColumns; ++i) {
+      if (_elems[i] < q._elems[i] || _elems[i] > q._elems[i]) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  // Inequality
+  inline bool operator!=(const dMatrix<_numRows, _numColumns>& q) const {
+    for (size_t i = 0; i < _numRows * _numColumns; ++i) {
+        if (_elems[i] < q._elems[i] || _elems[i] > q._elems[i]) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // dMatrix addition
+  inline dMatrix<_numRows, _numColumns> operator+(const dMatrix<_numRows, _numColumns>& q) const {
+    dMatrix<_numRows, _numColumns> m;
+    for (size_t i = 0; i < _numRows * _numColumns; ++i) {
+      m._elems[i] = _elems[i] + q._elems[i];
+    }
+    return m;
+  }
+  inline const dMatrix<_numRows, _numColumns>& operator+=(const dMatrix<_numRows, _numColumns>& q) {
+    for (size_t i = 0; i < _numRows * _numColumns; ++i) {
+      _elems[i] += q._elems[i];
+    }
+    return *this; 
+  }
+  
+  // dMatrix subtraction
+  inline dMatrix<_numRows, _numColumns> operator-(const dMatrix<_numRows, _numColumns>& q) const {
+    dMatrix<_numRows, _numColumns> m;
+    for (size_t i = 0; i < _numRows * _numColumns; ++i) {
+      m._elems[i] = _elems[i] - q._elems[i];
+    }
+    return m;
+  }
+  inline const dMatrix<_numRows, _numColumns>& operator-=(const dMatrix<_numRows, _numColumns>& q) {
+    for (size_t i = 0; i < _numRows * _numColumns; ++i) {
+      _elems[i] -= q._elems[i];
+    }
+    return *this; 
+  }
+
+  // Scalar multiplication
+  inline dMatrix<_numRows, _numColumns> operator*(double a) const {
+    dMatrix<_numRows, _numColumns> m;
+    for (size_t i = 0; i < _numRows * _numColumns; ++i) {
+      m._elems[i] = _elems[i] * a;
+    }
+    return m;
+  }
+  inline const dMatrix<_numRows, _numColumns>& operator*=(double a) {
+    for (size_t i = 0; i < _numRows * _numColumns; ++i) {
+      _elems[i] *= a;
+    }
+    return *this;
+  }
+  
+  // Scalar division
+  inline dMatrix<_numRows, _numColumns> operator/(double a) const {
+    dMatrix<_numRows, _numColumns> m;
+    for (size_t i = 0; i < _numRows * _numColumns; ++i) {
+      m._elems[i] = _elems[i] / a;
+    }
+    return m;
+  }
+  inline const dMatrix<_numRows, _numColumns>& operator/=(double a) {
+    for (size_t i = 0; i < _numRows * _numColumns; ++i) {
+      _elems[i] /= a;
+    }
+    return *this;
+  }
+
+  // dMatrix multiplication
+  template <size_t nCols>
+  inline dMatrix<_numRows, nCols> operator*(const dMatrix<_numColumns, nCols>& q) const {
+    dMatrix<_numRows, nCols> m;
+    for (size_t i = 0; i < _numRows; ++i) {
+      for (size_t j = 0; j < nCols; ++j) {
+        double temp = double(0);
+        for (size_t k = 0; k < _numColumns; ++k) {
+          temp += (*this)(i, k) * q(k, j);
+        }
+        m(i, j) = temp;
+      }
+    }
+    return m;
+  }
+  
+  inline const dMatrix<_numRows, _numColumns>& operator*=(const dMatrix<_numColumns, _numColumns>& q) {
+    return ((*this) = (*this) * q); 
+  }
+
+  // dMatrix transpose
+  inline dMatrix<_numColumns, _numRows> operator~() const {
+    dMatrix<_numColumns, _numRows> m;
+    for (size_t i = 0; i < _numColumns; ++i) {
+      for (size_t j = 0; j < _numRows; ++j) {
+        m(i, j) = (*this)(j, i);
+      }
+    }
+    return m;
+  }
+};
+
+/*template < >
+class dMatrix<1,1>: public dMatrix
+{
+  // Casting to double for 1x1 dMatrix
+  inline operator double() const {
+    return _elems[0];
+  }
+};*/
+
+
+// Scalar multiplication 
+template <size_t _numRows, size_t _numColumns>
+inline dMatrix<_numRows, _numColumns> operator*(double a, const dMatrix<_numRows, _numColumns>& q) { return q*a; }
+
+// dMatrix trace
+template <size_t _size>
+inline double dTr(const dMatrix<_size, _size>& q) {
+  double trace = double(0);
+  for (size_t i = 0; i < _size; ++i){
+    trace += q(i, i);
+  }
+  return trace;
+}
+
+// dMatrix 1-norm
+template <size_t _numRows, size_t _numColumns>
+inline double norm(const dMatrix<_numRows, _numColumns>& q) {
+  double norm1 = double(0);
+  for (size_t j = 0; j < _numColumns; ++j) {
+    double colabssum = double(0);
+    for (size_t i = 0; i < _numRows; ++i) {
+      colabssum += std::abs(q(i,j));
+    }
+    if (colabssum > norm1) {
+      norm1 = colabssum;
+    }
+  }
+  return norm1;
+}
+
+
+// dIdentity dMatrix
+template <size_t _size>
+inline dMatrix<_size, _size> dIdentity() {
+  dMatrix<_size, _size> m;
+  for (size_t i = 0; i < _size; ++i) {
+    for (size_t j = 0; j < _size; ++j) {
+      m(i, j) = (i == j ? double(1) : double(0));
+    }
+  }
+  return m;
+}
+
+// Zero dMatrix
+template <size_t _numRows, size_t _numColumns>
+inline dMatrix<_numRows, _numColumns> dZeros() {
+  dMatrix<_numRows, _numColumns> m;
+  m.reset();
+  return m;
+}
+
+template <size_t _numRows>
+inline dMatrix<_numRows> dZeros() {
+  dMatrix<_numRows> m;
+  m.reset();
+  return m;
+}
+
+// dMatrix determinant
+template <size_t _size>
+inline double det(const dMatrix<_size, _size>& q) {
+  dMatrix<_size, _size> m(q);
+  double D = double(1);
+
+  size_t row_p[_size];
+  size_t col_p[_size];
+  for (size_t i = 0; i < _size; ++i) {
+    row_p[i] = i; col_p[i] = i;
+  }
+
+  // Gaussian elimination
+  for (size_t k = 0; k < _size; ++k) {
+    // find maximal pivot element
+    double maximum = double(0); size_t max_row = k; size_t max_col = k;
+    for (size_t i = k; i < _size; ++i) {
+      for (size_t j = k; j < _size; ++j) {
+        double abs_ij = std::abs(m(row_p[i], col_p[j]));
+        if (abs_ij > maximum) {
+          maximum = abs_ij; max_row = i; max_col = j;
+        }
+      }
+    }
+         
+    // swap rows and columns
+    if (k != max_row) {
+      size_t swap = row_p[k]; row_p[k] = row_p[max_row]; row_p[max_row] = swap;
+      D = -D;
+    }
+    if (k != max_col) {
+      size_t swap = col_p[k]; col_p[k] = col_p[max_col]; col_p[max_col] = swap;
+      D = -D;
+    }
+
+    D *= m(row_p[k], col_p[k]);
+    if (D == double(0)) {
+      return double(0);
+    }
+
+    // eliminate column
+    for (size_t i = k + 1; i < _size; ++i) {
+      double factor = m(row_p[i], col_p[k]) / m(row_p[k], col_p[k]);
+      for (size_t j = k + 1; j < _size; ++j) {
+        m(row_p[i], col_p[j]) -= factor * m(row_p[k], col_p[j]);
+      }
+    }  
+  }
+
+  return D;
+}
+
+// P%Q solves PX = Q for X
+template <size_t _size, size_t _numColumns>
+inline dMatrix<_size, _numColumns> operator%(const dMatrix<_size, _size>& p, const dMatrix<_size, _numColumns>& q) {
+  dMatrix<_size, _size> m(p);
+  dMatrix<_size, _numColumns> inv(q);
+      
+  size_t row_p[_size];
+  size_t col_p[_size];
+  for (size_t i = 0; i < _size; ++i) {
+    row_p[i] = i; col_p[i] = i;
+  }
+
+  // Gaussian elimination
+  for (size_t k = 0; k < _size; ++k) {
+    // find maximal pivot element
+    double maximum = double(0); size_t max_row = k; size_t max_col = k;
+    for (size_t i = k; i < _size; ++i) {
+      for (size_t j = k; j < _size; ++j) {
+        double abs_ij = std::abs(m(row_p[i], col_p[j]));
+        if (abs_ij > maximum) {
+          maximum = abs_ij; max_row = i; max_col = j;
+        }
+      }
+    }
+
+    assert(maximum != double(0));
+
+    // swap rows and columns
+    std::swap(row_p[k], row_p[max_row]);
+    std::swap(col_p[k], col_p[max_col]);
+    
+    // eliminate column
+    for (size_t i = k + 1; i < _size; ++i) {
+      double factor = m(row_p[i], col_p[k]) / m(row_p[k], col_p[k]);
+      for (size_t j = k + 1; j < _size; ++j) {
+        m(row_p[i], col_p[j]) -= factor * m(row_p[k], col_p[j]);
+      }
+      for (size_t j = 0; j < _numColumns; ++j) {
+        inv(row_p[i], j) -= factor * inv(row_p[k], j);
+      }
+    } 
+  }
+
+  // Backward substitution
+  for (size_t k = _size - 1; k != -1; --k) {
+    double quotient = m(row_p[k], col_p[k]);
+
+    for (size_t j = 0; j < _numColumns; ++j) {
+      inv(row_p[k], j) /= quotient;
+    }
+    
+    for (size_t i = 0; i < k; ++i) {
+      double factor = m(row_p[i], col_p[k]);
+      for (size_t j = 0; j < _numColumns; ++j) {
+        inv(row_p[i], j) -= factor * inv(row_p[k], j);
+      }
+    }
+  }
+
+  // reshuffle result
+  size_t invrow_p[_size];
+  for (size_t i = 0; i < _size; ++i) {
+    invrow_p[row_p[i]] = i;
+  }
+  for (size_t i = 0; i < _size; ++i) {
+    for (size_t j = 0; j < _numColumns; ++j) {
+      std::swap(inv(col_p[i], j), inv(row_p[i], j));
+    }
+    row_p[invrow_p[col_p[i]]] = row_p[i];
+    invrow_p[row_p[i]] = invrow_p[col_p[i]];
+  }
+  
+  return inv;
+}
+
+template <size_t _size, size_t _numRows>
+inline dMatrix<_numRows, _size> operator/(const dMatrix<_numRows, _size>& p, const dMatrix<_size, _size>& q) {
+  return ~(~q%~p);
+}
+
+// dMatrix pseudo-inverse
+template <size_t _numRows, size_t _numColumns>
+inline dMatrix<_numColumns, _numRows> pseudoInverse(const dMatrix<_numRows, _numColumns>& q) {
+  if (_numColumns <= _numRows) {
+    dMatrix<_numColumns, _numColumns> Vec, Val;
+    jacobi(~q*q, Vec, Val);
+
+    for (size_t i = 0; i < _numColumns; ++i) {
+      if (std::abs(Val(i,i)) <= std::sqrt(DBL_EPSILON)) {
+      //if (std::abs(Val(i,i)) <= DBL_EPSILON) {
+        Val(i,i) = 0.0;
+      } else {
+        Val(i,i) = 1.0 / Val(i,i);
+      }
+    }
+    return (Vec*Val*~Vec)*~q;
+  } else {
+    dMatrix<_numRows, _numRows> Vec, Val;
+    jacobi(q*~q, Vec, Val);
+
+    for (size_t i = 0; i < _numRows; ++i) {
+      if (std::abs(Val(i,i)) <= std::sqrt(DBL_EPSILON)) {
+        Val(i,i) = 0.0;
+      } else {
+        Val(i,i) = 1.0 / Val(i,i);
+      }
+    }
+    return ~q*(Vec*Val*~Vec);
+  }
+}
+
+/*template <size_t _numRows, size_t _numColumns>
+inline dMatrix<_numColumns, _numRows> pseudoInverse(const dMatrix<_numRows, _numColumns>& q) {
+  dMatrix<_numRows, _numColumns> m(q);
+  
+  size_t row_p[_numRows];
+  size_t col_p[_numColumns];
+  for (size_t i = 0; i < _numRows; ++i) {
+    row_p[i] = i;
+  }
+  for (size_t i = 0; i < _numColumns; ++i) {
+    col_p[i] = i;
+  }
+
+  // Gaussian elimination to determine rank
+  size_t rank = (_numRows < _numColumns ? _numRows : _numColumns);
+  for (size_t k = 0; k < rank; ++k) {
+    // find maximal pivot element
+    double maximum = double(0); size_t max_row = k; size_t max_col = k;
+    for (size_t i = k; i < _numRows; ++i) {
+      for (size_t j = k; j < _numColumns; ++j) {
+        double abs_ij = std::abs(m(row_p[i], col_p[j]));
+        if (abs_ij > maximum) {
+          maximum = abs_ij; max_row = i; max_col = j;
+        }
+      }
+    }
+
+    // check if zero
+    if (maximum <= DBL_EPSILON) {
+      rank = k;
+      break;
+    }
+
+    // swap rows and columns
+    if (k != max_row) {
+      size_t swap = row_p[k]; row_p[k] = row_p[max_row]; row_p[max_row] = swap;
+    }
+    if (k != max_col) {
+      size_t swap = col_p[k]; col_p[k] = col_p[max_col]; col_p[max_col] = swap;
+    }
+
+    // eliminate column
+    for (size_t i = k + 1; i < _numRows; ++i) {
+      double factor = m(row_p[i], col_p[k]) / m(row_p[k], col_p[k]);
+      for (size_t j = k + 1; j < _numColumns; ++j) {
+        m(row_p[i], col_p[j]) -= factor * m(row_p[k], col_p[j]);
+      }
+    } 
+  }
+
+  if (rank == 0) { // zero or empty dMatrix
+    return dZeros<_numColumns, _numRows>();
+  } else if (rank == _numRows && rank == _numColumns) { // full rank square dMatrix
+    // convert so that compiler accepts number of rows and columns for inverse
+    dMatrix<_numRows, _numRows> q2;
+    for (size_t i = 0; i < _numRows * _numRows; ++i) {
+      q2[i] = q[i];
+    }
+    q2 = !q2;
+    dMatrix<_numColumns, _numRows> q3;
+    for (size_t i = 0; i < _numRows * _numRows; ++i) {
+      q3[i] = q2[i];
+    }
+    return q3;
+  } else if (rank == _numRows) { // full row-rank dMatrix
+    return ~q/(q*~q);
+  } else if (rank == _numColumns) { // full column-rank dMatrix
+    return (~q*q)%~q;
+  } // else: not full rank, perform rank decomposition
+
+  // bring m into reduced row echelon form
+  
+  // normalize rows such that 1's appear on the diagonal
+  for (size_t k = 0; k < rank; ++k) {
+    double quotient = m(row_p[k], col_p[k]);
+    for (size_t j = 0; j < k; ++j) {
+      m(row_p[k], col_p[j]) = double(0);
+    }
+    m(row_p[k], col_p[k]) = double(1);
+    for (size_t j = k + 1; j < _numColumns; ++j) {
+      m(row_p[k], col_p[j]) /= quotient;
+    }
+  }
+  
+  // subtract rows such that 0's appear above leading row elements
+  for (size_t k = rank - 1; k != -1; --k) {
+    for (size_t i = 0; i < k; ++i) {
+      double factor = m(row_p[i], col_p[k]);
+      m(row_p[i], col_p[k]) = double(0);
+      for (size_t j = k + 1; j < _numColumns; ++j) {
+        m(row_p[i], col_p[j]) -= factor * m(row_p[k], col_p[j]);
+      }
+    } 
+  }
+
+  // copy m into smaller dMatrix C and swap columns
+  dMatrix<(_numRows < _numColumns ? _numRows : _numColumns), _numColumns> C;
+  for (size_t k = 0; k < rank; ++k) {
+    for (size_t j = 0; j < _numColumns; ++j) {
+      C(k,j) = m(row_p[k], j);
+    }
+  }
+  for (size_t k = rank; k < C.numRows(); ++k) {
+    for (size_t j = 0; j < _numColumns; ++j) {
+      C(k,j) = double(0);
+    }
+  }
+
+  // B is copy of A with columns swapped and non-pivot columns left out
+  dMatrix<_numRows, (_numRows < _numColumns ? _numRows : _numColumns)> B;
+  for (size_t k = 0; k < _numRows; ++k) {
+    for (size_t j = 0; j < rank; ++j ) {
+      B(k,j) = q(k, col_p[j]);
+    }
+    for (size_t j = rank; j < B.numColumns(); ++j) {
+      B(k,j) = double(0);
+    }
+  }
+
+  // Now, q = B*C and B and C are of full row/column rank
+  return ~C*!((~B*B)*(C*~C))*~B;
+}*/
+
+// dMatrix inverse
+template <size_t _size>
+inline dMatrix<_size, _size> operator!(const dMatrix<_size, _size>& q) {
+  dMatrix<_size, _size> m(q);
+  dMatrix<_size, _size> inv = dIdentity<_size>();
+  
+  size_t row_p[_size];
+  size_t col_p[_size];
+  for (size_t i = 0; i < _size; ++i) {
+    row_p[i] = i; col_p[i] = i;
+  }
+
+  // Gaussian elimination
+  for (size_t k = 0; k < _size; ++k) {
+    // find maximal pivot element
+    double maximum = double(0); size_t max_row = k; size_t max_col = k;
+    for (size_t i = k; i < _size; ++i) {
+      for (size_t j = k; j < _size; ++j) {
+        double abs_ij = std::abs(m(row_p[i], col_p[j]));
+        if (abs_ij > maximum) {
+          maximum = abs_ij; max_row = i; max_col = j;
+        }
+      }
+    }
+
+    // swap rows and columns
+    size_t swap = row_p[k]; row_p[k] = row_p[max_row]; row_p[max_row] = swap;
+           swap = col_p[k]; col_p[k] = col_p[max_col]; col_p[max_col] = swap;
+
+    // eliminate column
+    assert(maximum != double(0));
+    for (size_t i = k + 1; i < _size; ++i) {
+      double factor = m(row_p[i], col_p[k]) / m(row_p[k], col_p[k]);
+      
+      for (size_t j = k + 1; j < _size; ++j) {
+        m(row_p[i], col_p[j]) -= factor * m(row_p[k], col_p[j]);
+      }
+      
+      for (size_t j = 0; j < k; ++j) {
+        inv(row_p[i], row_p[j]) -= factor * inv(row_p[k], row_p[j]);
+      }
+      inv(row_p[i], row_p[k]) = -factor;
+    } 
+  }
+
+  // Backward substitution
+  for (size_t k = _size - 1; k != -1; --k) {
+    double quotient = m(row_p[k], col_p[k]);
+    
+    for (size_t j = 0; j < _size; ++j) {
+      inv(row_p[k], j) /= quotient;
+    }
+    
+    for (size_t i = 0; i < k; ++i) {
+      double factor = m(row_p[i], col_p[k]);
+      for (size_t j = 0; j < _size; ++j) {
+        inv(row_p[i], j) -= factor * inv(row_p[k], j);
+      }
+    }
+  }
+
+  // reshuffle result
+  for (size_t i = 0; i < _size; ++i) {
+    for (size_t j = 0; j < _size; ++j) {
+      m(col_p[i], j) = inv(row_p[i], j);
+    }
+  }
+
+  return m; 
+}
+
+template <size_t _size>
+inline void jacobi(const dMatrix<_size, _size>& m, dMatrix<_size, _size>& V, dMatrix<_size, _size>& D) {
+  D = m;
+  V = dIdentity<_size>();
+
+  if (_size <= 1) {
+    return;
+  }
+
+  size_t pivotRow = 0;
+  size_t zeroCount = 0;
+
+  while (true) {
+    double maximum = 0;
+    size_t p, q;
+    for (size_t i = 0; i < pivotRow; ++i) {
+      if (std::abs(D(i,pivotRow)) > maximum) {
+        maximum = std::abs(D(i,pivotRow));
+        p = i; q = pivotRow;
+      }
+    }
+    for (size_t j = pivotRow + 1; j < _size; ++j) {
+      if (std::abs(D(pivotRow,j)) > maximum) {
+        maximum = std::abs(D(pivotRow,j));
+        p = pivotRow; q = j;
+      }
+    }
+    
+    pivotRow = (pivotRow + 1) % _size;
+
+    if (maximum <= DBL_EPSILON) {
+      ++zeroCount;
+      if (zeroCount == _size) {
+        break;
+      } else {
+        continue;
+      }
+    } else {
+      zeroCount = 0;
+    }
+
+    double theta = 0.5*(D(q,q) - D(p,p)) / D(p,q);
+    double t = 1 / (std::abs(theta) + hypot(theta,1));
+    if (theta < 0) t = -t;
+    double c = 1 / hypot(t,1);
+    double s = c*t;
+    double tau = s / (1 + c);
+
+    // update D // 
+    
+    // update D(r,p) and D(r,q)
+    for (size_t r = 0; r < p; ++r) {
+      double Drp = D(r,p); double Drq = D(r,q);
+      D(r,p) -= s*(Drq + tau*Drp);
+      D(r,q) += s*(Drp - tau*Drq);
+    }
+    for (size_t r = p + 1; r < q; ++r) {
+      double Drp = D(p,r); double Drq = D(r,q);
+      D(p,r) -= s*(Drq + tau*Drp);
+      D(r,q) += s*(Drp - tau*Drq);
+    }
+    for (size_t r = q + 1; r < _size; ++r) {
+      double Drp = D(p,r); double Drq = D(q,r);
+      D(p,r) -= s*(Drq + tau*Drp);
+      D(q,r) += s*(Drp - tau*Drq);
+    }
+
+    // update D(p,p), D(q,q), and D(p,q);
+    D(p,p) -= t*D(p,q);
+    D(q,q) += t*D(p,q);
+    D(p,q) = 0;
+
+    // Update V
+    for (size_t r = 0; r < _size; ++r) {
+      double Vrp = V(r,p); double Vrq = V(r,q);
+      V(r,p) -= s*(Vrq + tau*Vrp);
+      V(r,q) += s*(Vrp - tau*Vrq);
+    }
+  }
+
+  // clean up D
+  for (size_t i = 0; i < _size - 1; ++i) {
+    for (size_t j = i+1; j < _size; ++j) {
+      D(j,i) = D(i,j) = 0;
+    }
+  }
+}
+
+
+// dMatrix exponentiation
+#define _B0 1729728e1
+#define _B1 864864e1
+#define _B2 199584e1
+#define _B3 2772e2
+#define _B4 252e2
+#define _B5 1512e0
+#define _B6 56e0
+#define _B7 1e0
+#define _NORMLIM 9.504178996162932e-1
+
+template <size_t _size>
+inline dMatrix<_size, _size> exp(const dMatrix<_size, _size>& q) {
+  dMatrix<_size, _size> A(q);
+  int s = (int) std::max(double(0), ceil(log(norm(A)/_NORMLIM)*M_LOG2E)); 
+
+  A /= pow(2.0,s);
+  dMatrix<_size, _size> A2(A*A);
+  dMatrix<_size, _size> A4(A2*A2);
+  dMatrix<_size, _size> A6(A2*A4);
+  dMatrix<_size, _size> U( A*(A6*_B7 + A4*_B5 + A2*_B3 + dIdentity<_size>()*_B1) );
+  dMatrix<_size, _size> V( A6*_B6 + A4*_B4 + A2*_B2 + dIdentity<_size>()*_B0 );
+  dMatrix<_size, _size> R7 = (V - U)%(V + U);
+
+  for (int i = 0; i < s; ++i) {
+    R7 *= R7;
+  }
+  return R7;
+}
+
+// Input stream
+template <size_t _numRows, size_t _numColumns>
+inline std::istream& operator>>(std::istream& is, dMatrix<_numRows, _numColumns>& q) {
+  for (size_t i = 0; i < _numRows; ++i) {
+    for (size_t j = 0; j < _numColumns; ++j) {
+      is >> q(i,j);
+    }
+  }
+  return is;
+}
+
+// Output stream
+template <size_t _numRows, size_t _numColumns>
+inline std::ostream& operator<<(std::ostream& os, const dMatrix<_numRows, _numColumns>& q) {
+  for (size_t i = 0; i < _numRows; ++i) {
+    for (size_t j = 0; j < _numColumns; ++j) {
+      os << q(i,j) << "\t";
+      //printf_s("%24.24g ", q(i,j));
+    }
+    //printf_s("\n");
+    os << std::endl;
+  }
+  return os;
+}
+
+// Hilbert dMatrix
+template <size_t _size>
+inline dMatrix<_size, _size> hilbert() {
+  dMatrix<_size, _size> m;
+  for (size_t i = 0; i < _size; ++i) {
+    for (size_t j = 0; j < _size; ++j) {
+      m(i, j) = double(1) / (double) (i + j + 1);
+    }
+  }
+  return m;
+}
+
+// Solution to Continuous-time Algebraic Ricatti Equation ~AX + XA - XGX + Q = 0
+template <size_t _size>
+inline dMatrix<_size, _size> care(const dMatrix<_size, _size>& A, const dMatrix<_size, _size>& G, const dMatrix<_size, _size>& Q) {
+  dMatrix<2*_size, 2*_size> H, H2, W, SqrtH2;
+  H.insert(0,0, A);      H.insert(0, _size, -G);
+  H.insert(_size,0, -Q); H.insert(_size, _size, -~A);
+
+  H2 = H*H;
+
+  SqrtH2 = dIdentity<2*_size>();
+  for (size_t i = 0; i < 100; ++i) {
+    SqrtH2 = 0.5*(SqrtH2 + !SqrtH2*H2);
+  }
+
+  W = H - SqrtH2;
+
+  return W.subdMatrix<_size, _size>(_size, 0) * !W.subdMatrix<_size, _size>(0, 0);
+}
+
+
+// Principal square root
+template <size_t _size>
+inline dMatrix<_size, _size> sqrt(const dMatrix<_size, _size>& X) {
+  dMatrix<_size,_size> V;
+  dMatrix<_size,_size> D;
+  jacobi(X, V, D);
+  for (size_t i = 0; i < _size; ++i) {
+		if (D(i,i) > 0) {
+			D(i,i) = sqrt(D(i,i));
+		} else {
+			D(i,i) = 0;
+		}
+	}
+	return (V*D*~V);
+}
+
+#endif

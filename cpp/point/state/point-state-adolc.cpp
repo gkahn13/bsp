@@ -5,10 +5,12 @@
 #include <iomanip>
 
 #include "../point.h"
+#include "../point-double.h"
 
 #define USE_ADOLC
 
 #include "util/amatrix.h"
+#include "util/dmatrix.h"
 #include "util/utils.h"
 #include "util/Timer.h"
 #include "util/logging.h"
@@ -29,7 +31,7 @@ namespace py = boost::python;
 
 
 extern "C" {
-#include "../sym/state-symeval.h"
+//#include "../sym/state-symeval.h"
 #include "stateMPC.h"
 }
 
@@ -123,6 +125,53 @@ adouble costfunc(const std::vector<Matrix<X_DIM> >& X, const std::vector<Matrix<
 
 	return cost;
 }
+
+
+
+double costfunc_d(const std::vector<Matrix<X_DIM> >& aX, const std::vector<Matrix<U_DIM>>& aU, const Matrix<X_DIM,X_DIM>& aSqrtSigma_0)
+{
+	std::vector<dMatrix<X_DIM> > X(T);
+	std::vector<dMatrix<U_DIM>> U(T-1);
+	dMatrix<X_DIM,X_DIM> SqrtSigma_0;
+
+	for(int t=0; t < T-1; ++t) {
+		for(int i=0; i < X_DIM; ++i) {
+			X[t][i] = aX[t][i].value();
+		}
+		for(int i=0; i < U_DIM; ++i) {
+			U[t][i] = aU[t][i].value();
+		}
+	}
+	for(int i=0; i < X_DIM; ++i) {
+		X[T-1][i] = aX[T-1][i].value();
+	}
+
+	for(int i=0; i < X_DIM*X_DIM; ++i) {
+		SqrtSigma_0[i] = aSqrtSigma_0[i].value();
+	}
+
+	double cost = 0;
+
+	dMatrix<X_DIM> x_tp1;
+	dMatrix<B_DIM> b, b_tp1;
+	dMatrix<X_DIM,X_DIM> SqrtSigma_t, SqrtSigma_tp1;
+	SqrtSigma_t = SqrtSigma_0;
+
+	for (int t = 0; t < T - 1; ++t)
+	{
+
+		cost += alpha_belief*dTr(SqrtSigma_t*SqrtSigma_t) + alpha_control*dTr(~U[t]*U[t]);
+
+		vec_d(X[t], SqrtSigma_t, b);
+		b_tp1 = beliefDynamics_d(b, U[t]);
+		unVec_d(b_tp1, x_tp1, SqrtSigma_t);
+	}
+
+	cost += alpha_belief*dTr(SqrtSigma_t*SqrtSigma_t);
+
+	return cost;
+}
+
 
 
 void initVarVals(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matrix<U_DIM> >& U)
@@ -224,8 +273,8 @@ void initXUVectorArray(std::vector<Matrix<X_DIM>>& X, std::vector<Matrix<U_DIM>>
 
 double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >& U, stateMPC_params& problem, stateMPC_output& output, stateMPC_info& info)
 {
-	util::Timer tapeTimer, gradTimer, hessTimer;
-	double tapeTime = 0, gradTime = 0, hessTime = 0;
+	util::Timer tapeTimer, gradTimer, hessTimer, forcesTimer, costTimer;
+	double tapeTime = 0, gradTime = 0, hessTime = 0, forcesTime = 0, costTime = 0;
 
 	int maxIter = 100, idx;
 	double Xeps = 1;
@@ -241,10 +290,11 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 	double constant_cost, hessian_constant, jac_constant;
 
 	double Hzbar[X_DIM+U_DIM];
+	for(int i=0; i < (X_DIM+U_DIM); ++i) { Hzbar[i] = 0; }
 
 
-	prevcost = costfunc(X, U, SqrtSigma0).value();
-
+	//prevcost = costfunc(X, U, SqrtSigma0).value();
+	prevcost = costfunc_d(X, U, SqrtSigma0);
 
 	LOG_DEBUG("Initialization trajectory cost: %4.10f", prevcost);
 
@@ -271,56 +321,94 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 
 		if (solution_accepted) {
 
-			util::Timer_tic(&tapeTimer);
 			if (done_trace_already) {
-				merit = costfunc(X, U, SqrtSigma0).value();
+				util::Timer_tic(&costTimer);
+				//merit = costfunc(X, U, SqrtSigma0).value();
+				merit = costfunc_d(X, U, SqrtSigma0);
+				costTime += util::Timer_toc(&costTimer);
 			} else {
-				done_trace_already = false;
+				util::Timer_tic(&tapeTimer);
+				done_trace_already = true;
 				trace_on(tag, keep);
 				initXUAdolcMatrixes(X,U);
 				meritAdolc = costfunc(X, U, SqrtSigma0);
 				meritAdolc >>= merit;
 				trace_off();
+				tapeTime += util::Timer_toc(&tapeTimer);
 			}
-			tapeTime += util::Timer_toc(&tapeTimer);
 
 
 			// compute gradient
 			initXUVectorArray(X,U,XU_arr);
 
+			/*
+			std::cout << "X" << std::endl;
+			for(int t=0; t < T; ++t) {
+				for(int i=0; i < X_DIM; ++i) {
+					std::cout << X[t][i].value() << " ";
+				}
+				std::cout << std::endl;
+			}
+			*/
+
 			util::Timer_tic(&gradTimer);
 			gradient(tag, X_DIM*T + U_DIM*(T-1), XU_arr, grad_arr); // return value is 0
+			//double* u = {1};
+			//reverse(tag, 1, X_DIM*T + U_DIM*(T-1), 1, u, grad_arr);
 			gradTime += util::Timer_toc(&gradTimer);
 
 			// compute hessian
 			util::Timer_tic(&hessTimer);
-			hessian(tag, X_DIM*T + U_DIM*(T-1), XU_arr, hess_arr); // return value is 0
+			//hessian(tag, X_DIM*T + U_DIM*(T-1), XU_arr, hess_arr); // return value is 0
 			hessTime += util::Timer_toc(&hessTimer);
 
+			/*
+			std::cout << "grad_arr" << std::endl;
+			idx = 0;
+			for (int t = 0; t < T-1; ++t) {
+				for (int i = 0; i < (X_DIM+U_DIM); ++i) {
+					std::cout << grad_arr[idx++] << " ";
+				}
+				std::cout << std::endl;
+			}
+			for (int i = 0; i < X_DIM; ++i) {
+				std::cout << grad_arr[idx++] << " ";
+			}
+			std::cout << std::endl;
+			*/
+
+			/*
+			std::cout << "hess_arr" << std::endl;
+			idx = 0;
+			for (int t = 0; t < T-1; ++t) {
+				for (int i = 0; i < (X_DIM+U_DIM); ++i) {
+					std::cout << hess_arr[idx][idx++] << " ";
+				}
+				std::cout << std::endl;
+			}
+			for (int i = 0; i < X_DIM; ++i) {
+				std::cout << hess_arr[idx][idx++] << " ";
+			}
+			std::cout << std::endl;
+			 */
+			/*
 			// compute sparse hessian
-			unsigned int    *rind  = NULL;
-			unsigned int    *cind  = NULL;
-			double *values = NULL;
 			int nnz = X_DIM*T + U_DIM*(T-1);
+			unsigned int* rind = new unsigned int[nnz];
+			unsigned int* cind = new unsigned int[nnz];
+			double* values = new double[nnz];
 			int options[2];
 
-			options[0] = 0;          /*                               safe mode (default) */
-			options[1] = 0;          /*                       indirect recovery (default) */
+			for(int i=0; i < nnz; ++i) { rind[nnz] = i; cind[nnz] = i; }
+			options[0] = 0;        //                               safe mode (default)
+			options[1] = 0;          //                      indirect recovery (default)
 
 			repeat = 0;
 
+			LOG_DEBUG("before sparse hess");
 			sparse_hess(tag, X_DIM*T + U_DIM*(T-1), repeat, XU_arr, &nnz, &rind, &cind, &values, options);
-
-			printf("In sparse format:\n");
-			for (int i=0;i<nnz;i++)
-			    printf("%2d %2d %10.6f\n\n",rind[i],cind[i],values[i]);
-
-			free(rind); rind = NULL;
-			free(cind); cind = NULL;
-			free(values); values = NULL;
-
-			// sparse_hess(tag, n, repeat, x, #non-zeros, row-indices of non-zeros, column-indices of non-zeros, non-zero values, control parameter array)
-
+			LOG_DEBUG("before after hess");
+			*/
 
 			// evaluate constant cost term (omitted from optimization)
 			// Need to compute:
@@ -330,18 +418,22 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 			hessian_constant = 0;
 			jac_constant = 0;
 
+
+			util::Timer_tic(&forcesTimer);
+
 			// compute Hessian first
 			// so can force it to be PSD
 			LOG_DEBUG("Copying hess_arr in...");
 			idx = 0;
 			for (int t = 0; t < T-1; ++t) {
 				for (int i = 0; i < (X_DIM+U_DIM); ++i) {
-					H[t][i] = hess_arr[idx][idx++];
+					H[t][i] = 0; //hess_arr[idx][idx++];
 				}
 			}
 			for (int i = 0; i < X_DIM; ++i) {
-				H[T-1][i] = hess_arr[idx][idx++];
+				H[T-1][i] = 0; //hess_arr[idx][idx++];
 			}
+
 
 			LOG_DEBUG("Forcing hessian to be PSD");
 			forcePsdHessian();
@@ -356,22 +448,22 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 				zbar.insert(0,0,xt);
 				zbar.insert(X_DIM,0,ut);
 
-				for(int i = 0; i < (X_DIM+U_DIM); ++i) {
-					Hzbar[i] = H[t][i]*zbar[i].value();
-				}
+				//for(int i = 0; i < (X_DIM+U_DIM); ++i) {
+				//	Hzbar[i] = H[t][i]*zbar[i].value();
+				//}
 
 				for (int i = 0; i < (X_DIM+U_DIM); ++i) {
 					f[t][i] = grad_arr[idx++];
 				}
 
 				for(int i = 0; i < (X_DIM+U_DIM); ++i) {
-					hessian_constant += H[t][i]*zbar[i].value()*zbar[i].value();
+					//hessian_constant += H[t][i]*zbar[i].value()*zbar[i].value();
 					jac_constant += -(f[t][i]*zbar[i].value());
 				}
 
-				for(int i = 0; i < (X_DIM+U_DIM); ++i) {
-					f[t][i] -= Hzbar[i];
-				}
+				//for(int i = 0; i < (X_DIM+U_DIM); ++i) {
+				//	f[t][i] -= Hzbar[i];
+				//}
 
 				// TODO: move following CMat code outside, is same every iteration
 				Matrix<X_DIM,X_DIM+U_DIM> CMat;
@@ -403,14 +495,14 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 			}
 
 			for(int i = 0; i < X_DIM; ++i) {
-				hessian_constant += H[T-1][i]*xT[i].value()*xT[i].value();
+				//hessian_constant += H[T-1][i]*xT[i].value()*xT[i].value();
 				jac_constant += -(f[T-1][i]*xT[i].value());
 			}
 
-			for(int i = 0; i < X_DIM; ++i) {
-				Hzbar[i] = H[T-1][i]*xT[i].value();
-				f[T-1][i] -= Hzbar[i];
-			}
+			//for(int i = 0; i < X_DIM; ++i) {
+			//	Hzbar[i] = H[T-1][i]*xT[i].value();
+			//	f[T-1][i] -= Hzbar[i];
+			//}
 
 			e[T-1][0] = 0; e[T-1][1] = 0;
 
@@ -454,6 +546,7 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 		//}
 
 		LOG_DEBUG("Solving with FORCES");
+		forcesTime += util::Timer_toc(&forcesTimer);
 		int exitflag = stateMPC_solve(&problem, &output, &info);
 		if (exitflag == 1) {
 			for(int t = 0; t < T-1; ++t) {
@@ -478,7 +571,10 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 
 		model_merit = optcost + constant_cost; // need to add constant terms that were dropped
 
-		new_merit = costfunc(Xopt, Uopt, SqrtSigma0).value();
+		util::Timer_tic(&costTimer);
+		//new_merit = costfunc(Xopt, Uopt, SqrtSigma0).value();
+		new_merit = costfunc_d(Xopt, Uopt, SqrtSigma0);
+		costTime += util::Timer_toc(&costTimer);
 
 		LOG_DEBUG("merit: %f", merit);
 		LOG_DEBUG("model_merit: %f", model_merit);
@@ -523,6 +619,18 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 	std::cout << "tape time: " << tapeTime*1000 << "ms" << std::endl;
 	std::cout << "grad time: " << gradTime*1000 << "ms" << std::endl;
 	std::cout << "hess time: " << hessTime*1000 << "ms" << std::endl;
+	std::cout << "forces time: " << forcesTime*1000 << "ms" << std::endl;
+	std::cout << "cost time: " << costTime*1000 << "ms" << std::endl;
+	/*
+	size_t tape_stats[STAT_SIZE];
+	tapestats(tag,tape_stats);
+	std::cout << "number of independents: " << tape_stats[0] << std::endl;
+	std::cout << "number of dependents: " << tape_stats[1] << std::endl;
+	std::cout << "maximal number of live active variables: " << tape_stats[2] << std::endl;
+	std::cout << "size of value stack (number of overwrites): " << tape_stats[3] << std::endl;
+	std::cout << "buffer size (multiple of 8): " << tape_stats[4] << std::endl;
+	std::cout << "total number of operations recorded: " << tape_stats[5] << std::endl;\
+	*/
 
 	return optcost;
 
@@ -588,7 +696,7 @@ int main(int argc, char* argv[])
 
 
 	// had to copy in python display because Matrix uses adouble
-//#define PYTHON_PLOT
+#define PYTHON_PLOT
 #ifdef PYTHON_PLOT
 	py::list Bvec;
 	for(int j=0; j < B_DIM; j++) {

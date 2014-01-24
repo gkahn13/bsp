@@ -494,6 +494,9 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 
 double beliefPenaltyCollocation(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U, beliefPenaltyMPC_params& problem, beliefPenaltyMPC_output& output, beliefPenaltyMPC_info& info)
 {
+	util::Timer costTimer;
+	double costTime = 0;
+
 	double penalty_coeff = cfg::initial_penalty_coeff;
 	double trust_box_size = cfg::initial_trust_box_size;
 

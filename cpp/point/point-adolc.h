@@ -36,7 +36,7 @@ using namespace boost::numeric::ublas;
 #define B_DIM (X_DIM+S_DIM)
 
 
-const double step = 1e-6;//0.0078125*0.0078125;
+const double step = 0.0078125*0.0078125;
 
 matrix<double> x0(X_DIM,1);
 matrix<double> SqrtSigma0(X_DIM,X_DIM);
@@ -61,7 +61,7 @@ const short int HESS_COST_TAG = 4;
 
 const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 1, alpha_goal_state = 1;
 
-adouble *inputVars, *vars;
+double *inputVars, *vars;
 std::vector<int> maskIndices;
 
 template<class TYPE>
@@ -123,6 +123,17 @@ void arrToMatrix(double** arr, matrix<TYPE>& M)
 	}
 }
 
+void matrixToArr(matrix<double>& M, double* arr)
+{
+	for(int i=0; i < M.size2(); ++i)
+	{
+		for(int j=0; j < M.size1(); ++j)
+		{
+			arr[i*M.size1()+j] = M(j,i);
+		}
+	}
+}
+
 // converted
 template<class TYPE>
 matrix<TYPE> dynfunc(const matrix<TYPE>& x, const matrix<TYPE>& u, const matrix<TYPE>& q)
@@ -172,58 +183,95 @@ void linearizeDynamics(const matrix<adouble>& x, const matrix<adouble>& u, const
 
 void initAdolcMatrix(matrix<adouble>& mAdolc, matrix<double>& m)
 {
-	for(int i=0; i < mAdolc.size1(); ++i) {
-		for(int j=0; j < mAdolc.size2(); ++j) {
-			mAdolc(i,j) <<= m(i,j);
+	for(int i=0; i < mAdolc.size2(); ++i) {
+		for(int j=0; j < mAdolc.size1(); ++j) {
+			mAdolc(j,i) <<= m(j,i);
 		}
 	}
 }
 
 void retrieveAdolcMatrix(matrix<double>& m, matrix<adouble>& mAdolc)
 {
-	for(int i=0; i < m.size1(); ++i) {
-		for(int j=0; j < m.size2(); ++j) {
-			mAdolc(i,j) >>= m(i,j);
+	for(int i=0; i < m.size2(); ++i) {
+		for(int j=0; j < m.size1(); ++j) {
+			mAdolc(j,i) >>= m(j,i);
 		}
 	}
 }
 
-void finiteDiffJac(matrix<double>& x, matrix<double>& r)
+template<class TYPE>
+void finiteDiffJac(matrix<TYPE>& x, matrix<TYPE>& r, matrix<TYPE>& H, matrix<TYPE>& N)
 {
-	matrix<double> H = zeroMatrix<double>(Z_DIM,X_DIM);
-	matrix<double> xr(x), xl(x);
+	matrix<TYPE> xr(x), xl(x);
 	for (size_t i = 0; i < X_DIM; ++i) {
 		xr(i,0) += step; xl(i,0) -= step;
 		column(H, i) = column((obsfunc(xr, r) - obsfunc(xl, r)) / (xr(i,0) - xl(i,0)),0);
 		xr(i,0) = x(i,0); xl(i,0) = x(i,0);
 	}
-	printMatrix<double>("H finite diff", H);
+	//printMatrix<double>("H finite diff", H);
 
-	matrix<double> N = zeroMatrix<double>(Z_DIM,R_DIM);
-	matrix<double> rr(x), rl(x);
+	matrix<TYPE> rr(x), rl(x);
 	for (size_t i = 0; i < R_DIM; ++i) {
 		rr(i,0) += step; rl(i,0) -= step;
 		column(N, i) = column((obsfunc(x, rr) - obsfunc(x, rl)) / (rr(i,0) - rl(i,0)),0);
 		rr(i,0) = r(i,0); rl(i,0) = r(i,0);
 	}
-	printMatrix<double>("N finite diff", N);
-}
+	//printMatrix<double>("N finite diff", N);
 
+}
 
 // converted (assuming no work needs to be done)
 // Jacobians: dh(x,r)/dx, dh(x,r)/dr
 template<class TYPE>
 void linearizeObservation(matrix<TYPE>& x, matrix<TYPE>& r, matrix<TYPE>& H, matrix<TYPE>& N)
 {
-	matrix<TYPE> x_double(X_DIM,1), r_double(R_DIM,1);
-	if (std::is_same<TYPE,adouble>::value) {
-		// extract value from x and r to compute jacs
-		for(int i=0; i < X_DIM; ++i) { x_double(i,0) = x(i,0).value(); }
-		for(int i=0; i < R_DIM; ++i) { r_double(i,0) = r(i,0).value(); }
-	} else {
-		x_double = x;
-		r_double = r;
-	}
+	LOG_DEBUG("inside linearizeObservation adolc");
+	matrix<adouble> xAdolc(X_DIM,1);
+	matrix<double> xObs(Z_DIM,1);
+
+	trace_on(DOBS_DX_TAG);
+	initAdolcMatrix(xAdolc, x);
+	matrix<adouble> xObsAdolc = obsfunc<adouble>(xAdolc, r);
+	retrieveAdolcMatrix(xObs, xObsAdolc);
+	trace_off(DOBS_DX_TAG);
+
+	double* x_arr = new double[X_DIM];
+	std::copy(x.begin1(), x.end1(), x_arr);
+	double** dobs_dx = new double*[Z_DIM];
+	for(int i=0; i < Z_DIM; ++i) { dobs_dx[i] = new double[X_DIM]; }
+
+	jacobian(DOBS_DX_TAG, Z_DIM, X_DIM, x_arr, dobs_dx);
+	arrToMatrix(dobs_dx, H);
+
+	matrix<adouble> rAdolc(R_DIM,1);
+	matrix<double> rObs(Z_DIM,1);
+
+	trace_on(DOBS_DR_TAG);
+	initAdolcMatrix(rAdolc, r);
+	matrix<adouble> rObsAdolc = obsfunc<adouble>(x, rAdolc);
+	retrieveAdolcMatrix(rObs, rObsAdolc);
+	trace_off(DOBS_DR_TAG);
+
+	double* r_arr = new double[R_DIM];
+	std::copy(r.begin1(), r.end1(), r_arr);
+	double** dobs_dr = new double*[Z_DIM];
+	for(int i=0; i < Z_DIM; ++i) { dobs_dr[i] = new double[R_DIM]; }
+
+	jacobian(DOBS_DR_TAG, Z_DIM, R_DIM, r_arr, dobs_dr);
+	arrToMatrix(dobs_dr, N);
+
+	//finiteDiffJac(x,r);
+}
+
+// adouble version b/c have to deal with embedded traces as a special case (I think...)
+// Jacobians: dh(x,r)/dx, dh(x,r)/dr
+template <>
+void linearizeObservation<adouble>(matrix<adouble>& x, matrix<adouble>& r, matrix<adouble>& H, matrix<adouble>& N)
+{
+	matrix<double> x_double(X_DIM,1), r_double(R_DIM,1);
+	// extract value from x and r to compute jacs
+	for(int i=0; i < X_DIM; ++i) { x_double(i,0) = x(i,0).value(); }
+	for(int i=0; i < R_DIM; ++i) { r_double(i,0) = r(i,0).value(); }
 
 	LOG_DEBUG("inside linearizeObservation adolc");
 	matrix<adouble> xAdolc(X_DIM,1);
@@ -491,8 +539,6 @@ TYPE costfunc(const matrix<TYPE>& X, const matrix<TYPE>& U, const matrix<TYPE>& 
 }
 
 
-/*
-// converted (assuming no work needs to be done)
 void setupDstarInterface(std::string mask) {
 	std::stringstream ss(mask);
 	int val, i=0;
@@ -506,11 +552,55 @@ void setupDstarInterface(std::string mask) {
 	inputVars = new double[i];
 }
 
-// converted
-void pythonDisplayTrajectory(std::vector< matrix<adouble> >& B, std::vector< matrix<adouble> >& U)
+/*
+void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U)
 {
-	// no python for this example
-	// don't use
+	for (int t = 0; t < T-1; ++t) {
+		B[t+1] = beliefDynamics(B[t], U[t]);
+	}
+
+	py::list Bvec;
+	for(int j=0; j < B_DIM; j++) {
+		for(int i=0; i < T; i++) {
+			Bvec.append(B[i][j]);
+		}
+	}
+
+	py::list Uvec;
+		for(int j=0; j < U_DIM; j++) {
+			for(int i=0; i < T-1; i++) {
+			Uvec.append(U[i][j]);
+		}
+	}
+
+	py::list x0_list, xGoal_list;
+	for(int i=0; i < X_DIM; i++) {
+		x0_list.append(x0[i]);
+		xGoal_list.append(xGoal[i]);
+	}
+
+	std::string workingDir = boost::filesystem::current_path().normalize().string();
+	std::string bspDir = workingDir.substr(0,workingDir.find("bsp"));
+
+	try
+	{
+		Py_Initialize();
+		py::object main_module = py::import("__main__");
+		py::object main_namespace = main_module.attr("__dict__");
+		py::exec("import sys, os", main_namespace);
+		py::exec(py::str("sys.path.append('"+bspDir+"bsp/python')"), main_namespace);
+		py::exec("from bsp_light_dark import LightDarkModel", main_namespace);
+		py::object model = py::eval("LightDarkModel()", main_namespace);
+		py::object plot_mod = py::import("plot");
+		py::object plot_traj = plot_mod.attr("plot_belief_trajectory_cpp");
+
+		plot_traj(Bvec, Uvec, model, x0_list, xGoal_list, T);
+	}
+	catch(py::error_already_set const &)
+	{
+		PyErr_Print();
+	}
+
 }
 */
 #endif

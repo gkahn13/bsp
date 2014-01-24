@@ -28,7 +28,7 @@ using namespace boost::numeric::ublas;
 #include <adolc/adolc.h>
 
 extern "C" {
-//#include "../sym/state-symeval.h"
+#include "../sym/state-symeval.h"
 #include "stateMPC.h"
 }
 
@@ -99,35 +99,38 @@ void cleanup()
 	delete[] z;
 }
 
-void initVarVals(const matrix<adouble>& X, const matrix<adouble>& U)
+void initVarVals(const matrix<double>& X, const matrix<double>& U)
 {
 	int idx = 0;
 	for (int t = 0; t < T; ++t) {
 		for (int i = 0; i < X_DIM; ++i) {
-			inputVars[idx++] = X(t,i);
+			inputVars[idx++] = X(i,t);
 		}
 	}
 	for (int t = 0; t < (T - 1); ++t) {
 		for (int i = 0; i < U_DIM; ++i) {
-			inputVars[idx++] = U(t,i);
+			inputVars[idx++] = U(i,t);
 		}
 	}
 	for (int i = 0; i < (Q_DIM+R_DIM); ++i) {
 		inputVars[idx++] = 0;
 	}
-	for (int i = 0; i < (X_DIM+X_DIM); ++i) {
-		inputVars[idx++] = SqrtSigma0(i,0);
+	for (int i = 0; i < X_DIM; ++i) {
+		for (int j = 0; j < X_DIM; ++j)
+		inputVars[idx++] = SqrtSigma0(i,j);
 	}
 	inputVars[idx++] = alpha_belief; inputVars[idx++] = alpha_control; inputVars[idx++] = alpha_final_belief;
 
 	int nvars = (int)maskIndices.size();
 	//vars = new double[nvars];
 
+	std::cout << "mask" << std::endl;
 	// For evaluation
 	idx = 0;
 	for (int i = 0; i < nvars; ++i) {
 		vars[idx++] = inputVars[maskIndices[i]];
 	}
+
 }
 
 inline void forcePsdHessian() {
@@ -161,6 +164,34 @@ bool isValidInputs(double *result) {
 	return true;
 }
 
+void initXUAdolcMatrixes(matrix<double>& X, matrix<double>& U, matrix<adouble>& XAdolc, matrix<adouble>& UAdolc) {
+	for(int t=0; t < T-1; ++t) {
+		for(int i=0; i < X_DIM; ++i) {
+			XAdolc(i,t) <<= X(i,t);
+		}
+		for(int i=0; i < U_DIM; ++i) {
+			UAdolc(i,t) <<= U(i,t);
+		}
+	}
+	for(int i=0; i < X_DIM; ++i) {
+		XAdolc(i,T-1) <<= X(i,T-1);
+	}
+}
+
+void initXUVectorArray(matrix<double>& X, matrix<double>& U, double* XU) {
+	int idx = 0;
+	for(int t=0; t < T-1; ++t) {
+		for(int i=0; i < X_DIM; ++i) {
+			XU[idx++] = X(i,t);
+		}
+		for(int i=0; i < U_DIM; ++i) {
+			XU[idx++] = U(i,t);
+		}
+	}
+	for(int i=0; i < X_DIM; ++i) {
+		XU[idx++] = X(i,T-1);
+	}
+}
 
 double stateCollocation(matrix<double> X, matrix<double> U, const stateMPC_params& problem, const stateMPC_output& output, const stateMPC_info& info)
 {
@@ -185,9 +216,9 @@ double stateCollocation(matrix<double> X, matrix<double> U, const stateMPC_param
 	double Hzbar[X_DIM+U_DIM];
 
 	int nvars = (int)maskIndices.size();
-	vars = new adouble[nvars];
+	vars = new double[nvars];
 
-	//initVarVals(X, U);
+	initVarVals(X, U);
 
 
 	//evalCost(resultCost, vars); // TODO: replace with cost function
@@ -197,18 +228,21 @@ double stateCollocation(matrix<double> X, matrix<double> U, const stateMPC_param
 
 	std::cout << "prevcost: " << prevcost << std::endl;
 
+
 	LOG_DEBUG("Initialization trajectory cost: %4.10f", prevcost);
 
 	matrix<adouble> Xopt(X_DIM, T);
 	matrix<adouble> Uopt(U_DIM, T-1);
 
+	/*
 	double **aXU = new double*[T];
-	for(int t=0; t < T; ++ t)
+	for(int t=0; t < T-1; ++ t)
 	{
 		aXU[t] = new double[X_DIM+U_DIM];
 		for(int x_idx=0; x_idx < X_DIM; ++x_idx) { aXU[t][x_idx] = X(t,x_idx); }
 		for(int u_idx=0; u_idx < U_DIM; ++u_idx) { aXU[t][X_DIM+u_idx] = U(t,u_idx); }
 	}
+	*/
 
 
 	bool solution_accepted = true;
@@ -218,9 +252,9 @@ double stateCollocation(matrix<double> X, matrix<double> U, const stateMPC_param
 		LOG_DEBUG("\nIter: %d", it);
 
 		if (solution_accepted) {
-			//initVarVals(X, U);
-			//evalCostGradDiagHess(resultCostGradDiagHess, vars);
-			//merit = resultCostGradDiagHess[0];
+			initVarVals(X, U);
+			evalCostGradDiagHess(resultCostGradDiagHess, vars);
+			merit = resultCostGradDiagHess[0];
 
 			matrix<adouble> XAdolc(X_DIM,T);
 			matrix<adouble> UAdolc(U_DIM,T-1);
@@ -228,17 +262,54 @@ double stateCollocation(matrix<double> X, matrix<double> U, const stateMPC_param
 			adouble meritAdolc;
 
 			trace_on(GRAD_COST_TAG);
-			initAdolcMatrix(XAdolc, X);
-			initAdolcMatrix(UAdolc, U);
+			initXUAdolcMatrixes(X,U,XAdolc,UAdolc);
 			meritAdolc = costfunc<adouble>(XAdolc, UAdolc, q, r, SqrtSigma0);
 			meritAdolc >>= merit;
 			trace_off(GRAD_COST_TAG);
 
 			double* grad_arr = new double[X_DIM*T + U_DIM*(T-1)];
 			double* XU_arr = new double[X_DIM*T + U_DIM*(T-1)];
-			std::copy(X.begin1(), X.end1(), XU_arr);
-			std::copy(U.begin1(), U.end1(), XU_arr + (X.end1()-X.begin1()));
+
+			initXUVectorArray(X,U,XU_arr);
+
 			gradient(GRAD_COST_TAG, X_DIM*T + U_DIM*(T-1), XU_arr, grad_arr);
+
+			std::cout << "adolc gradient" << std::endl;
+			int idx = 0;
+			for(int t=0; t < T-1; ++t) {
+				for(int i=0; i < X_DIM; ++i) {
+					std::cout << grad_arr[idx++] << " ";
+				}
+				for(int i=0; i < U_DIM; ++i) {
+					std::cout << grad_arr[idx++] << " ";
+				}
+				std::cout << std::endl;
+			}
+			for(int i=0; i < X_DIM; ++i) {
+				std::cout << grad_arr[idx++] << " ";
+			}
+			std::cout << std::endl;
+
+			for(int t=0; t < T-1; ++t) {
+				f[t][0] = resultCostGradDiagHess[1+t*X_DIM];
+				f[t][1] = resultCostGradDiagHess[1+t*X_DIM+1];
+				f[t][2] = resultCostGradDiagHess[1+T*X_DIM+t*U_DIM];
+				f[t][3] = resultCostGradDiagHess[1+T*X_DIM+t*U_DIM+1];
+			}
+			f[T-1][0] = resultCostGradDiagHess[1+(T-1)*X_DIM];
+			f[T-1][1] = resultCostGradDiagHess[1+(T-1)*X_DIM+1];
+
+			std::cout << "symeval gradient" << std::endl;
+			for(int t=0; t < T-1; ++t) {
+				for(int i=0; i < X_DIM+U_DIM; ++i) {
+					std::cout << f[t][i] << " ";
+				}
+				std::cout << std::endl;
+			}
+			for(int i=0; i < X_DIM; ++i) {
+				std::cout << f[T-1][i] << " ";
+			}
+			std::cout << std::endl;
 
 			exit(0);
 
@@ -488,7 +559,7 @@ int main(int argc, char* argv[])
 	}
 
 	printMatrix("initial X", X);
-	//setupDstarInterface(std::string(getMask()));
+	setupDstarInterface(std::string(getMask()));
 
 	stateMPC_params problem;
 	stateMPC_output output;

@@ -12,7 +12,7 @@ EIGEN_FLAGS = -I/usr/include/eigen3
 # default to debug build
 BUILD := debug
 
-BFLAGS.debug = 
+BFLAGS.debug = -g -Wall
 BFLAGS.release = -O3
 BFLAGS := $(BFLAGS.$(BUILD))
 
@@ -124,7 +124,7 @@ $(OBJ_DIR)/point-state-finitediff.o : $(PT_STATE_FD_DIR)/point-state-finitediff.
 # make point-state-adolc
 PT_ADOLC_HEADERS = point/point-adolc.h
 PT_STATE_ADOLC_DIR = point/state
-PT_STATE_ADOLC_FILES = stateMPC point-state-adolc logging
+PT_STATE_ADOLC_FILES = stateMPC state_symeval point-state-adolc logging
 PT_STATE_ADOLC_OBJS = $(PT_STATE_ADOLC_FILES:%=$(OBJ_DIR)/%.o)
 
 point-state-adolc: | $(PT_STATE_ADOLC_OBJS)

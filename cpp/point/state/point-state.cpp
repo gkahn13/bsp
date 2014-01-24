@@ -107,7 +107,7 @@ void initVarVals(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matri
 	for (int i = 0; i < (Q_DIM+R_DIM); ++i) {
 		inputVars[idx++] = 0;
 	}
-	for (int i = 0; i < (X_DIM+X_DIM); ++i) {
+	for (int i = 0; i < (X_DIM+X_DIM); ++i) { // TODO: should be X_DIM*X_DIM
 		inputVars[idx++] = SqrtSigma0[i];
 	}
 	inputVars[idx++] = alpha_belief; inputVars[idx++] = alpha_control; inputVars[idx++] = alpha_final_belief;

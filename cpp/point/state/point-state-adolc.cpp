@@ -227,7 +227,7 @@ void initXUVectorArray(std::vector<Matrix<X_DIM>>& X, std::vector<Matrix<U_DIM>>
 
 double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >& U, stateMPC_params& problem, stateMPC_output& output, stateMPC_info& info)
 {
-	int maxIter = 100;
+	int maxIter = 100, idx;
 	double Xeps = 1;
 	double Ueps = 1;
 
@@ -235,27 +235,22 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 	double delta = 0.01;
 	Matrix<X_DIM,1> x0 = X[0];
 
-	adouble prevcost = INFTY, optcost;
+	adouble tmp_cost;
+	double prevcost = INFTY, optcost;
 	double merit, model_merit, new_merit;
 	double approx_merit_improve, exact_merit_improve, merit_improve_ratio;
 	double constant_cost, hessian_constant, jac_constant;
 
 	int dim = T*X_DIM + (T-1)*U_DIM;
-	double* resultCost = new double;
-	double* resultCostGradDiagHess = new double[2*dim + 1];
 
-	double Hzbar[4];
+	double Hzbar[X_DIM+U_DIM];
 
-	int nvars = (int)maskIndices.size();
-	vars = new double[nvars];
 
-	initVarVals(X, U);
-
-	prevcost = costfunc(X, U, SqrtSigma0);
+	prevcost = costfunc(X, U, SqrtSigma0).value();
 
 	std::cout << "prevcost: " << prevcost << std::endl;
 
-	LOG_DEBUG("Initialization trajectory cost: %4.10f", prevcost.value());
+	LOG_DEBUG("Initialization trajectory cost: %4.10f", prevcost);
 
 
 	std::vector<Matrix<X_DIM> > Xopt(T);
@@ -270,11 +265,6 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 
 		if (solution_accepted) {
 
-			initVarVals(X, U);
-			evalCostGradDiagHess(resultCostGradDiagHess, vars);
-			merit = resultCostGradDiagHess[0];
-
-			double merit;
 			adouble meritAdolc;
 
 			trace_on(GRAD_COST_TAG);
@@ -283,6 +273,7 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 			meritAdolc >>= merit;
 			trace_off(GRAD_COST_TAG);
 
+			// compute gradient
 			double* grad_arr = new double[X_DIM*T + U_DIM*(T-1)];
 			double* XU_arr = new double[X_DIM*T + U_DIM*(T-1)];
 
@@ -290,91 +281,11 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 
 			gradient(GRAD_COST_TAG, X_DIM*T + U_DIM*(T-1), XU_arr, grad_arr);
 
-			std::cout << "adolc gradient" << std::endl;
-			int idx = 0;
-			for(int t=0; t < T-1; ++t) {
-				for(int i=0; i < X_DIM; ++i) {
-					std::cout << std::setprecision(10) << grad_arr[idx++] << " ";
-				}
-				for(int i=0; i < U_DIM; ++i) {
-					std::cout << std::setprecision(10) << grad_arr[idx++] << " ";
-				}
-				std::cout << std::endl;
-			}
-			for(int i=0; i < X_DIM; ++i) {
-				std::cout << std::setprecision(10) << grad_arr[idx++] << " ";
-			}
-			std::cout << std::endl;
-
-			for(int t=0; t < T-1; ++t) {
-				f[t][0] = resultCostGradDiagHess[1+t*X_DIM];
-				f[t][1] = resultCostGradDiagHess[1+t*X_DIM+1];
-				f[t][2] = resultCostGradDiagHess[1+T*X_DIM+t*U_DIM];
-				f[t][3] = resultCostGradDiagHess[1+T*X_DIM+t*U_DIM+1];
-			}
-			f[T-1][0] = resultCostGradDiagHess[1+(T-1)*X_DIM];
-			f[T-1][1] = resultCostGradDiagHess[1+(T-1)*X_DIM+1];
-
-			std::cout << "symeval gradient" << std::endl;
-			for(int t=0; t < T-1; ++t) {
-				for(int i=0; i < X_DIM+U_DIM; ++i) {
-					std::cout << std::setprecision(10) << f[t][i] << " ";
-				}
-				std::cout << std::endl;
-			}
-			for(int i=0; i < X_DIM; ++i) {
-				std::cout << std::setprecision(10) << f[T-1][i] << " ";
-			}
-			std::cout << std::endl;
-
-
+			// compute hessian
 			double** hess_arr = new double*[X_DIM*T + U_DIM*(T-1)];
 			for(int i=0; i < X_DIM*T + U_DIM*(T-1); ++i) { hess_arr[i] = new double[X_DIM*T + U_DIM*(T-1)]; }
 
 			hessian(GRAD_COST_TAG, X_DIM*T + U_DIM*(T-1), XU_arr, hess_arr);
-
-			std::cout << "adolc diag hessian" << std::endl;
-			idx = 0;
-			for(int t=0; t < T-1; ++t) {
-				for(int i=0; i < X_DIM; ++i) {
-					std::cout << std::setprecision(10) << hess_arr[idx][idx++] << " ";
-				}
-				for(int i=0; i < U_DIM; ++i) {
-					std::cout << std::setprecision(10) << hess_arr[idx][idx++] << " ";
-				}
-				std::cout << std::endl;
-			}
-			for(int i=0; i < X_DIM; ++i) {
-				std::cout << std::setprecision(10) << hess_arr[idx][idx++] << " ";
-			}
-			std::cout << std::endl;
-
-
-			for (int t = 0; t < T-1; ++t) {
-				H[t][0] = resultCostGradDiagHess[1+dim+t*X_DIM];
-				H[t][1] = resultCostGradDiagHess[1+dim+t*X_DIM+1];
-				H[t][2] = resultCostGradDiagHess[1+dim+T*X_DIM+t*U_DIM];
-				H[t][3] = resultCostGradDiagHess[1+dim+T*X_DIM+t*U_DIM+1];
-			}
-			H[T-1][0] = resultCostGradDiagHess[1+dim+(T-1)*X_DIM];
-			H[T-1][1] = resultCostGradDiagHess[1+dim+(T-1)*X_DIM+1];
-
-			std::cout << "symeval diag hessian" << std::endl;
-			for(int t=0; t < T-1; ++t) {
-				for(int i=0; i < X_DIM+U_DIM; ++i) {
-					std::cout << std::setprecision(10) << H[t][i] << " ";
-				}
-				std::cout << std::endl;
-			}
-			for(int i=0; i < X_DIM; ++i) {
-				std::cout << std::setprecision(10) << H[T-1][i] << " ";
-			}
-			std::cout << std::endl;
-
-			exit(0);
-
-			/*
-
 
 			// evaluate constant cost term (omitted from optimization)
 			// Need to compute:
@@ -386,17 +297,21 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 
 			// compute Hessian first
 			// so can force it to be PSD
+			LOG_DEBUG("Copying hess_arr in...");
+			idx = 0;
 			for (int t = 0; t < T-1; ++t) {
-				H[t][0] = resultCostGradDiagHess[1+dim+t*X_DIM];
-				H[t][1] = resultCostGradDiagHess[1+dim+t*X_DIM+1];
-				H[t][2] = resultCostGradDiagHess[1+dim+T*X_DIM+t*U_DIM];
-				H[t][3] = resultCostGradDiagHess[1+dim+T*X_DIM+t*U_DIM+1];
+				for (int i = 0; i < (X_DIM+U_DIM); ++i) {
+					H[t][i] = hess_arr[idx][idx++];
+				}
 			}
-			H[T-1][0] = resultCostGradDiagHess[1+dim+(T-1)*X_DIM];
-			H[T-1][1] = resultCostGradDiagHess[1+dim+(T-1)*X_DIM+1];
+			for (int i = 0; i < X_DIM; ++i) {
+				H[T-1][i] = hess_arr[idx][idx++];
+			}
 
+			LOG_DEBUG("Forcing hessian to be PSD");
 			forcePsdHessian();
 
+			idx = 0;
 			for (int t = 0; t < T-1; ++t)
 			{
 				Matrix<X_DIM>& xt = X[t];
@@ -407,17 +322,16 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 				zbar.insert(X_DIM,0,ut);
 
 				for(int i = 0; i < (X_DIM+U_DIM); ++i) {
-					Hzbar[i] = H[t][i]*zbar[i];
+					Hzbar[i] = H[t][i]*zbar[i].value();
 				}
 
-				f[t][0] = resultCostGradDiagHess[1+t*X_DIM];
-				f[t][1] = resultCostGradDiagHess[1+t*X_DIM+1];
-				f[t][2] = resultCostGradDiagHess[1+T*X_DIM+t*U_DIM];
-				f[t][3] = resultCostGradDiagHess[1+T*X_DIM+t*U_DIM+1];
+				for (int i = 0; i < (X_DIM+U_DIM); ++i) {
+					f[t][i] = grad_arr[idx++];
+				}
 
 				for(int i = 0; i < (X_DIM+U_DIM); ++i) {
-					hessian_constant += H[t][i]*zbar[i]*zbar[i];
-					jac_constant += -(f[t][i]*zbar[i]);
+					hessian_constant += H[t][i]*zbar[i].value()*zbar[i].value();
+					jac_constant += -(f[t][i]*zbar[i].value());
 				}
 
 				for(int i = 0; i < (X_DIM+U_DIM); ++i) {
@@ -432,44 +346,45 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 				int idx = 0;
 				for(int c = 0; c < (X_DIM+U_DIM); ++c) {
 					for(int r = 0; r < X_DIM; ++r) {
-						C[t][idx++] = CMat[c + r*(X_DIM+U_DIM)];
+						C[t][idx++] = CMat[c + r*(X_DIM+U_DIM)].value();
 					}
 				}
 
 				if (t == 0) {
-					e[t][0] = x0[0]; e[t][1] = x0[1];
+					e[t][0] = x0[0].value(); e[t][1] = x0[1].value();
 				} else {
 					e[t][0] = 0; e[t][1] = 0;
 				}
-				*/
+
 
 			} //setting up problem
 
-			/*
+
 			// Last stage
 			Matrix<X_DIM>& xT = X[T-1];
 
-			f[T-1][0] = resultCostGradDiagHess[1+(T-1)*X_DIM];
-			f[T-1][1] = resultCostGradDiagHess[1+(T-1)*X_DIM+1];
-
-			for(int i = 0; i < X_DIM; ++i) {
-				hessian_constant += H[T-1][i]*xT[i]*xT[i];
-				jac_constant += -(f[T-1][i]*xT[i]);
+			for (int i = 0; i < X_DIM; ++i) {
+				f[T-1][i] = grad_arr[idx++];
 			}
 
 			for(int i = 0; i < X_DIM; ++i) {
-				Hzbar[i] = H[T-1][i]*xT[i];
+				hessian_constant += H[T-1][i]*xT[i].value()*xT[i].value();
+				jac_constant += -(f[T-1][i]*xT[i].value());
+			}
+
+			for(int i = 0; i < X_DIM; ++i) {
+				Hzbar[i] = H[T-1][i]*xT[i].value();
 				f[T-1][i] -= Hzbar[i];
 			}
 
 			e[T-1][0] = 0; e[T-1][1] = 0;
 
-			constant_cost = 0.5*hessian_constant + jac_constant + resultCostGradDiagHess[0];
-			*/
+			constant_cost = 0.5*hessian_constant + jac_constant + merit;
+
 		} // end solution_accepted
 
 
-		/*
+
 		// set trust region bounds based on current trust region size
 		for (int t = 0; t < T-1; ++t)
 		{
@@ -477,24 +392,24 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 			Matrix<U_DIM>& ut = U[t];
 
 			// Fill in lb, ub, C, e
-			lb[t][0] = MAX(xMin[0], xt[0] - Xeps);
-			lb[t][1] = MAX(xMin[1], xt[1] - Xeps);
-			lb[t][2] = MAX(uMin[0], ut[0] - Ueps);
-			lb[t][3] = MAX(uMin[1], ut[1] - Ueps);
+			lb[t][0] = MAX(xMin[0].value(), xt[0].value() - Xeps);
+			lb[t][1] = MAX(xMin[1].value(), xt[1].value() - Xeps);
+			lb[t][2] = MAX(uMin[0].value(), ut[0].value() - Ueps);
+			lb[t][3] = MAX(uMin[1].value(), ut[1].value() - Ueps);
 
-			ub[t][0] = MIN(xMax[0], xt[0] + Xeps);
-			ub[t][1] = MIN(xMax[1], xt[1] + Xeps);
-			ub[t][2] = MIN(uMax[0], ut[0] + Ueps);
-			ub[t][3] = MIN(uMax[1], ut[1] + Ueps);
+			ub[t][0] = MIN(xMax[0].value(), xt[0].value() + Xeps);
+			ub[t][1] = MIN(xMax[1].value(), xt[1].value() + Xeps);
+			ub[t][2] = MIN(uMax[0].value(), ut[0].value() + Ueps);
+			ub[t][3] = MIN(uMax[1].value(), ut[1].value() + Ueps);
 		} //setting up problem
 
 		// Fill in lb, ub, C, e
 		Matrix<X_DIM>& xT = X[T-1];
-		lb[T-1][0] = MAX(xGoal[0] - delta, xT[0] - Xeps);
-		lb[T-1][1] = MAX(xGoal[1] - delta, xT[1] - Xeps);
+		lb[T-1][0] = MAX(xGoal[0].value() - delta, xT[0].value() - Xeps);
+		lb[T-1][1] = MAX(xGoal[1].value() - delta, xT[1].value() - Xeps);
 
-		ub[T-1][0] = MIN(xGoal[0] + delta, xT[0] + Xeps);
-		ub[T-1][1] = MIN(xGoal[1] + delta, xT[1] + Xeps);
+		ub[T-1][0] = MIN(xGoal[0].value() + delta, xT[0].value() + Xeps);
+		ub[T-1][1] = MIN(xGoal[1].value() + delta, xT[1].value() + Xeps);
 
 		// Verify problem inputs
 
@@ -503,7 +418,7 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 		//	exit(0);
 		//}
 
-
+		LOG_DEBUG("Solving with FORCES");
 		int exitflag = stateMPC_solve(&problem, &output, &info);
 		if (exitflag == 1) {
 			for(int t = 0; t < T-1; ++t) {
@@ -528,9 +443,7 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 
 		model_merit = optcost + constant_cost; // need to add constant terms that were dropped
 
-		initVarVals(Xopt, Uopt);
-		evalCost(resultCost, vars);
-		new_merit = resultCost[0];
+		new_merit = costfunc(Xopt, Uopt, SqrtSigma0).value();
 
 		LOG_DEBUG("merit: %f", merit);
 		LOG_DEBUG("model_merit: %f", model_merit);
@@ -548,8 +461,6 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 		if (approx_merit_improve < -1e-5) {
 			LOG_ERROR("Approximate merit function got worse: %f", approx_merit_improve);
 			LOG_ERROR("Failure!");
-			delete resultCost;
-			delete[] resultCostGradDiagHess;
 			return INFTY;
 		} else if (approx_merit_improve < cfg::min_approx_improve) {
 			LOG_DEBUG("Converged: improvement small enough");
@@ -572,16 +483,10 @@ double stateCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_D
 		}
 	}
 
-	initVarVals(X, U);
-	evalCost(resultCost, vars);
-	optcost = resultCost[0];
-
-	delete resultCost;
-	delete[] resultCostGradDiagHess;
+	optcost = costfunc(X, U, SqrtSigma0).value();
 
 	return optcost;
-	*/
-	return 0;
+
 }
 
 int main(int argc, char* argv[])
@@ -607,7 +512,7 @@ int main(int argc, char* argv[])
 		X[t+1] = dynfunc(X[t], U[t], zeros<Q_DIM,1>());
 	}
 
-	setupDstarInterface(std::string(getMask()));
+	//setupDstarInterface(std::string(getMask()));
 
 
 	stateMPC_params problem;
@@ -646,7 +551,52 @@ int main(int argc, char* argv[])
 		B[t+1] = beliefDynamics(B[t], U[t]);
 	}
 
-	pythonDisplayTrajectory(B, U);
+
+	// had to copy in python display because Matrix uses adouble
+#define PYTHON_PLOT
+#ifdef PYTHON_PLOT
+	py::list Bvec;
+	for(int j=0; j < B_DIM; j++) {
+		for(int i=0; i < T; i++) {
+			Bvec.append(B[i][j].value());
+		}
+	}
+
+	py::list Uvec;
+		for(int j=0; j < U_DIM; j++) {
+			for(int i=0; i < T-1; i++) {
+			Uvec.append(U[i][j].value());
+		}
+	}
+
+	py::list x0_list, xGoal_list;
+	for(int i=0; i < X_DIM; i++) {
+		x0_list.append(x0[i].value());
+		xGoal_list.append(xGoal[i].value());
+	}
+
+	std::string workingDir = boost::filesystem::current_path().normalize().string();
+	std::string bspDir = workingDir.substr(0,workingDir.find("bsp"));
+
+	try
+	{
+		Py_Initialize();
+		py::object main_module = py::import("__main__");
+		py::object main_namespace = main_module.attr("__dict__");
+		py::exec("import sys, os", main_namespace);
+		py::exec(py::str("sys.path.append('"+bspDir+"bsp/python')"), main_namespace);
+		py::exec("from bsp_light_dark import LightDarkModel", main_namespace);
+		py::object model = py::eval("LightDarkModel()", main_namespace);
+		py::object plot_mod = py::import("plot");
+		py::object plot_traj = plot_mod.attr("plot_belief_trajectory_cpp");
+
+		plot_traj(Bvec, Uvec, model, x0_list, xGoal_list, T);
+	}
+	catch(py::error_already_set const &)
+	{
+		PyErr_Print();
+	}
+#endif
 
 	cleanup();
 

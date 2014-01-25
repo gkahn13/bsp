@@ -203,6 +203,17 @@ $(OBJ_DIR)/pointControlMPC.o : $(PT_CONTROL_DIR)/controlMPC.c
 	
 $(OBJ_DIR)/point-control.o : $(PT_CONTROL_DIR)/point-control.cpp $(PT_HEADERS)
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
+	
+# make point-ilqg
+PT_ILQG_DIR = point/ilqg
+PT_ILQG_FILES = point-ilqg
+PT_ILQG_OBJS = $(PT_ILQG_FILES:%=$(OBJ_DIR)/%.o)
+
+point-ilqg: $(PT_ILQG_OBJS)
+	$(CXX) $(BFLAGS) $(PT_ILQG_OBJS) -o $(BIN_DIR)/point-ilqg $(LINKER_FLAGS)
+	
+$(OBJ_DIR)/point-ilqg.o : $(PT_ILQG_DIR)/point-ilqg.cpp $(PT_ILQG_DIR)/ilqg.h
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) -c -o $@ $<
 
 ###### CLEAN ########
 

@@ -45,19 +45,57 @@ const int max_penalty_coeff_increases = 2;
 const int max_sqp_iterations = 50;
 }
 
+void constructHessian(const Matrix<B_DIM>& b, Matrix<S_DIM,S_DIM>& Hess) {
+
+	Matrix<X_DIM> x = b.subMatrix<X_DIM,1>(0,0);
+	Matrix<S_DIM> SqrtSigma = b.subMatrix<S_DIM,1>(X_DIM,0);
+
+	Matrix<G_DIM,X_DIM> J = linearizeg(x);
+	Matrix<X_DIM,X_DIM> JTJ = ~J*J;
+
+	// construct the full Hessian
+	Matrix<X_DIM*X_DIM,X_DIM*X_DIM> Hfull;
+	Hfull.reset();
+
+	for(int i = 0; i < X_DIM; ++i) {
+		Hfull.insert<X_DIM,X_DIM>(i*X_DIM,i*X_DIM,JTJ);
+	}
+
+	Matrix<X_DIM*X_DIM,S_DIM> A;
+	A.reset();
+	int idx = 0;
+	for (int i = 0; i < X_DIM; ++i) {
+	    for(int j = 0; j < X_DIM; ++j) {
+	        if (i <= j) {
+	            A(idx,(2*X_DIM-i+1)*i/2+j-i) = 1;
+	        } else {
+	            A(idx,(2*X_DIM-j+1)*j/2+i-j) = 1;
+	        }
+	        idx++;
+	    }
+	}
+
+	Hess = ~A*Hfull*A;
+	//tracecost = (~SqrtSigma*H*SqrtSigma)[0];
+}
 
 double computeCost(const std::vector< Matrix<B_DIM> >& B, const std::vector< Matrix<U_DIM> >& U)
 {
 	double cost = 0;
 	Matrix<X_DIM> x;
 	Matrix<X_DIM, X_DIM> SqrtSigma;
+	Matrix<G_DIM,X_DIM> J;
+	Matrix<S_DIM, S_DIM> H;
+	double tracecost;
 
 	for(int t = 0; t < T-1; ++t) {
 		unVec(B[t], x, SqrtSigma);
-		cost += alpha_belief*tr(SqrtSigma*SqrtSigma) + alpha_control*tr(~U[t]*U[t]);
+		J = linearizeg(x);
+		cost += alpha_belief*tr(J*SqrtSigma*SqrtSigma*~J) + alpha_control*tr(~U[t]*U[t]);
 	}
 	unVec(B[T-1], x, SqrtSigma);
-	cost += alpha_final_belief*tr(SqrtSigma*SqrtSigma);
+	J = linearizeg(x);
+	cost += alpha_final_belief*tr(J*SqrtSigma*SqrtSigma*~J);
 	return cost;
 }
 
@@ -250,49 +288,16 @@ bool isValidInputs()
 	return true;
 }
 
-void constructHessian(Matrix<B_DIM>& b) {
+// utility to fill Matrix in column major format in FORCES array
 
-	Matrix<X_DIM> x;
-	Matrix<X_DIM,X_DIM> SqrtSigma;
-	unVec(b, x, SqrtSigma);
-
-
-
-	/*
-	JTJ = J'*J;
-	n = size(JTJ,1);
-	sdim = (n*(n+1))/2;
-
-	% construct the full hessian
-	Hfull = [];
-	for i=1:n
-	Hfull = blkdiag(Hfull,JTJ);
-	end
-
-	fprintf('Full trace: %f\n',vec(SS)'*Hfull*vec(SS));
-
-	s = SS(find(tril(ones(n,n))));
-
-	A = zeros(n*n,sdim);
-
-	idx = 0;
-	% Written w.r.t c++ indices, added 1 for matlab 1-based indexing
-	for i = 0:n-1
-	    for j=0:n-1
-	        if (i <= j)
-	            A(idx+1,(2*n-i+1)*i/2+j-i+1) = 1;
-	        else
-	            A(idx+1,(2*n-j+1)*j/2+i-j+1) = 1;
-	        end
-	        idx = idx+1;
-	    end
-	end
-
-	H = A'*Hfull*A;
-	disp(H)
-	fprintf('Reduced trace: %f\n',s'*H*s);
-	*/
-
+template <size_t _numRows, size_t _numColumns>
+inline void fillColMajor(double *X, const Matrix<_numRows, _numColumns>& XMat) {
+	int idx = 0;
+	for(int c = 0; c < _numColumns; ++c) {
+		for(int r = 0; r < _numRows; ++r) {
+			X[idx++] = XMat[c + r*_numColumns];
+		}
+	}
 }
 
 bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U, beliefPenaltyMPC_params& problem, beliefPenaltyMPC_output& output, beliefPenaltyMPC_info& info, double penalty_coeff, double trust_box_size)
@@ -328,6 +333,8 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 		minusI(i,i) = -1;
 	}
 
+	Matrix<S_DIM,S_DIM> Hess;
+
 	// sqp loop
 	while(true)
 	{
@@ -347,6 +354,8 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			for(int i = 0; i < 2*B_DIM; ++i) {
 				f[t][B_DIM+U_DIM+i] = penalty_coeff;
 			}
+
+			constructHessian(B[t], Hess);
 
 		}
 
@@ -393,14 +402,8 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 					CMat.insert<B_DIM,B_DIM>(0,B_DIM+U_DIM,I);
 					CMat.insert<B_DIM,B_DIM>(0,2*B_DIM+U_DIM,minusI);
 
+					fillColMajor(C[t], CMat);
 
-					int idx = 0;
-					int nrows = CMat.numRows(), ncols = CMat.numColumns();
-					for(int c = 0; c < ncols; ++c) {
-						for(int r = 0; r < nrows; ++r) {
-							C[t][idx++] = CMat[c + r*ncols];
-						}
-					}
 					eVec = -h[t] + F[t]*bt + G[t]*ut;
 					int nelems = eVec.numRows();
 					for(int i = 0; i < nelems; ++i) {

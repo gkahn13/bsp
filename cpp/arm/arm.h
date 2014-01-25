@@ -17,7 +17,7 @@
 
 namespace py = boost::python;
 
-#define TIMESTEPS 10
+#define TIMESTEPS 15
 #define DT 1
 #define X_DIM 6
 #define U_DIM 6
@@ -68,16 +68,19 @@ Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matr
 // joint angles -> end effector position
 Matrix<G_DIM> g(const Matrix<X_DIM>& x)
 {
-    double a0 = x[0], a1 = x[1], a2 = x[2], a3 = x[3], a4 = x[4], a5 = x[5];
+	Matrix<X_DIM> sx, cx;
+	for(int i = 0; i < X_DIM; ++i) {
+		sx[i] = sin(x[i]);
+		cx[i] = cos(x[i]);
+	}
 
-    Matrix<G_DIM> p;
-    p[0] = sin(a0) * (cos(a1) * (sin(a2) * (cos(a4) * l4 + l3) + cos(a2) * cos(a3) * sin(a4) * l4) + sin(a1) * (cos(a2) * (cos(a4) * l4 + l3) - sin(a2) * cos(a3) * sin(a4) * l4 + l2)) + cos(a0) * sin(a3) * sin(a4) * l4;
-    p[1] = -sin(a1) * (sin(a2) * (cos(a4) * l4 + l3) + cos(a2) * cos(a3) * sin(a4) * l4) + cos(a1) * (cos(a2) * (cos(a4) * l4 + l3) - sin(a2) * cos(a3) * sin(a4) * l4 + l2) + l1;
-    p[2] = cos(a0) * (cos(a1) * (sin(a2) * (cos(a4) * l4 + l3) + cos(a2) * cos(a3) * sin(a4) * l4) + sin(a1) * (cos(a2) * (cos(a4) * l4 + l3) - sin(a2) * cos(a3) * sin(a4) * l4 + l2)) - sin(a0) * sin(a3) * sin(a4) * l4;
+	Matrix<G_DIM> p;
+	p[0] = sx[0]*(cx[1]*(sx[2]*(cx[4]*l4+l3)+cx[2]*cx[3]*sx[4]*l4)+sx[1]*(cx[2]*(cx[4]*l4+l3)-sx[2]*cx[3]*sx[4]*l4+l2))+cx[0]*sx[3]*sx[4]*l4;
+	p[1] = -sx[1]*(sx[2]*(cx[4]*l4+l3)+cx[2]*cx[3]*sx[4]*l4)+cx[1]*(cx[2]*(cx[4]*l4+l3)-sx[2]*cx[3]*sx[4]*l4+l2)+l1;
+	p[2] = cx[0]*(cx[1]*(sx[2]*(cx[4]*l4+l3)+cx[2]*cx[3]*sx[4]*l4)+sx[1]*(cx[2]*(cx[4]*l4+l3)-sx[2]*cx[3]*sx[4]*l4+l2))-sx[0]*sx[3]*sx[4]*l4;
 
-    return p;
+	return p;
 }
-
 
 // Observation model
 Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r)
@@ -113,6 +116,39 @@ void linearizeDynamics(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Mat
 	}
 }
 
+Matrix<G_DIM,X_DIM> linearizeg(const Matrix<X_DIM>& x)
+{
+	Matrix<X_DIM> sx, cx;
+	for(int i = 0; i < X_DIM; ++i) {
+		sx[i] = sin(x[i]);
+		cx[i] = cos(x[i]);
+	}
+
+	Matrix<G_DIM,X_DIM> J;
+
+    J(0,0) = cx[0]*(cx[1]*(sx[2]*(cx[4]*l4+l3)+cx[2]*cx[3]*sx[4]*l4)+sx[1]*(cx[2]*(cx[4]*l4+l3)-sx[2]*cx[3]*sx[4]*l4+l2))-sx[0]*sx[3]*sx[4]*l4;
+    J(0,1) = sx[0]*(cx[1]*(cx[2]*(cx[4]*l4+l3)-sx[2]*cx[3]*sx[4]*l4+l2)-sx[1]*(sx[2]*(cx[4]*l4+l3)+cx[2]*cx[3]*sx[4]*l4));
+    J(0,2) = sx[0]*(sx[1]*(-sx[2]*(cx[4]*l4+l3)-cx[2]*cx[3]*sx[4]*l4)+cx[1]*(cx[2]*(cx[4]*l4+l3)-sx[2]*cx[3]*sx[4]*l4));
+    J(0,3) = sx[0]*(sx[1]*sx[2]*sx[3]*sx[4]*l4-cx[1]*cx[2]*sx[3]*sx[4]*l4)+cx[0]*cx[3]*sx[4]*l4;
+    J(0,4) = sx[0]*(cx[1]*(cx[2]*cx[3]*cx[4]*l4-sx[2]*sx[4]*l4)+sx[1]*(-cx[2]*sx[4]*l4-sx[2]*cx[3]*cx[4]*l4))+cx[0]*sx[3]*cx[4]*l4;
+    J(0,5) = 0;
+
+    J(1,0) = 0;
+    J(1,1) = -cx[1]*(sx[2]*(cx[4]*l4+l3)+cx[2]*cx[3]*sx[4]*l4)-sx[1]*(cx[2]*(cx[4]*l4+l3)-sx[2]*cx[3]*sx[4]*l4+l2);
+    J(1,2) = cx[1]*(-sx[2]*(cx[4]*l4+l3)-cx[2]*cx[3]*sx[4]*l4)-sx[1]*(cx[2]*(cx[4]*l4+l3)-sx[2]*cx[3]*sx[4]*l4);
+    J(1,3) = cx[1]*sx[2]*sx[3]*sx[4]*l4+sx[1]*cx[2]*sx[3]*sx[4]*l4;
+    J(1,4) = cx[1]*(-cx[2]*sx[4]*l4-sx[2]*cx[3]*cx[4]*l4)-sx[1]*(cx[2]*cx[3]*cx[4]*l4-sx[2]*sx[4]*l4);
+    J(1,5) = 0;
+
+    J(2,0) = -sx[0]*(cx[1]*(sx[2]*(cx[4]*l4+l3)+cx[2]*cx[3]*sx[4]*l4)+sx[1]*(cx[2]*(cx[4]*l4+l3)-sx[2]*cx[3]*sx[4]*l4+l2))-cx[0]*sx[3]*sx[4]*l4;
+    J(2,1) = cx[0]*(cx[1]*(cx[2]*(cx[4]*l4+l3)-sx[2]*cx[3]*sx[4]*l4+l2)-sx[1]*(sx[2]*(cx[4]*l4+l3)+cx[2]*cx[3]*sx[4]*l4));
+    J(2,2) = cx[0]*(sx[1]*(-sx[2]*(cx[4]*l4+l3)-cx[2]*cx[3]*sx[4]*l4)+cx[1]*(cx[2]*(cx[4]*l4+l3)-sx[2]*cx[3]*sx[4]*l4));
+    J(2,3) = cx[0]*(sx[1]*sx[2]*sx[3]*sx[4]*l4-cx[1]*cx[2]*sx[3]*sx[4]*l4)-sx[0]*cx[3]*sx[4]*l4;
+    J(2,4) = cx[0]*(cx[1]*(cx[2]*cx[3]*cx[4]*l4-sx[2]*sx[4]*l4)+sx[1]*(-cx[2]*sx[4]*l4-sx[2]*cx[3]*cx[4]*l4))-sx[0]*sx[3]*cx[4]*l4;
+    J(2,5) = 0;
+
+    return J;
+}
 // Jacobians: dh(x,r)/dx, dh(x,r)/dr
 void linearizeObservation(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r, Matrix<Z_DIM,X_DIM>& H, Matrix<Z_DIM,R_DIM>& N)
 {
@@ -173,10 +209,26 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	x = dynfunc(x, u, zeros<Q_DIM,1>());
 	Sigma = A*Sigma*~A + M*~M;
 
-	// TODO: fill in with symbolically computed linearizations
 	Matrix<Z_DIM,X_DIM> H = zeros<Z_DIM,X_DIM>();
-	Matrix<Z_DIM,R_DIM> N = zeros<Z_DIM,R_DIM>();
-	linearizeObservation(x, zeros<R_DIM>(), H, N);
+	Matrix<Z_DIM,R_DIM> N = identity<Z_DIM>();
+	//linearizeObservation(x, zeros<R_DIM>(), H, N);
+
+	Matrix<G_DIM,X_DIM> J = linearizeg(x);
+
+	for (int i = 0; i < X_DIM; ++i) {
+		/*
+	        H(0,i) = (J(0,i) * (x[2] - cam0[2]) - (x[0] - cam0[0]) * J(2,i)) / ((x[2] - cam0[2]) * (x[2] - cam0[2]));
+	    	H(1,i) = (J(1,i) * (x[2] - cam0[2]) - (x[1] - cam0[1]) * J(2,i)) / ((x[2] - cam0[2]) * (x[2] - cam0[2]));
+	    	H(2,i) = (J(0,i) * (x[2] - cam1[2]) - (x[0] - cam1[0]) * J(2,i)) / ((x[2] - cam1[2]) * (x[2] - cam1[2]));
+	    	H(3,i) = (J(1,i) * (x[2] - cam1[2]) - (x[1] - cam1[1]) * J(2,i)) / ((x[2] - cam1[2]) * (x[2] - cam1[2]));
+		 */
+
+		H(0,i) = (J(0,i) * (x[1] - cam0[1]) - (x[0] - cam0[0]) * J(1,i)) / ((x[1] - cam0[1]) * (x[1] - cam0[1]));
+		H(1,i) = (J(2,i) * (x[1] - cam0[1]) - (x[2] - cam0[2]) * J(1,i)) / ((x[1] - cam0[1]) * (x[1] - cam0[1]));
+		H(2,i) = (J(0,i) * (x[1] - cam1[1]) - (x[0] - cam1[0]) * J(1,i)) / ((x[1] - cam1[1]) * (x[1] - cam1[1]));
+		H(3,i) = (J(2,i) * (x[1] - cam1[1]) - (x[2] - cam1[2]) * J(1,i)) / ((x[1] - cam1[1]) * (x[1] - cam1[1]));
+	}
+
 
 	// TODO: currently fails on second 7th sqp iteration b/c H is huge
 	Matrix<X_DIM,Z_DIM> K = Sigma*~H/(H*Sigma*~H + N*~N);

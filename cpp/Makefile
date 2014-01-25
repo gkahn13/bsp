@@ -40,6 +40,23 @@ $(OBJ_DIR)/logging.o : util/logging.cpp
 # share arm functions
 ARM_HEADERS = arm/arm.h
 
+# make arm-belief
+ARM_BELIEF_DIR = point/arm
+ARM_BELIEF_FILES = armBeliefMPC armBeliefPenaltyMPC arm-belief logging
+ARM_BELIEF_OBJS = $(ARM_BELIEF_FILES:%=$(OBJ_DIR)/%.o)
+
+arm-belief: | $(ARM_BELIEF_OBJS)
+	$(CXX) $(BFLAGS) $(ARM_BELIEF_OBJS) -o $(BIN_DIR)/arm-belief $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
+	
+$(OBJ_DIR)/armBeliefMPC.o : $(ARM_BELIEF_DIR)/armBeliefMPC.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+
+$(OBJ_DIR)/armBeliefPenaltyMPC.o : $(ARM_BELIEF_DIR)/armBeliefPenaltyMPC.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+	
+$(OBJ_DIR)/arm-belief.o : $(ARM_BELIEF_DIR)/arm-belief.cpp $(POINT_HEADERS)
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
+
 # make arm-state
 ARM_STATE_DIR = arm/state
 ARM_STATE_FILES = armStateMPC arm-state logging

@@ -17,7 +17,7 @@
 
 namespace py = boost::python;
 
-#define TIMESTEPS 15
+#define TIMESTEPS 10
 #define DT 1
 #define X_DIM 6
 #define U_DIM 6
@@ -39,7 +39,7 @@ const double step = 0.0078125*0.0078125;
 
 Matrix<X_DIM> x0;
 Matrix<X_DIM,X_DIM> SqrtSigma0;
-//Matrix<G_DIM> posGoal;
+Matrix<G_DIM> posGoal;
 Matrix<X_DIM> xGoal; // TODO: temporary, since goal is a vector of joints
 Matrix<X_DIM> xMin, xMax;
 Matrix<U_DIM> uMin, uMax;
@@ -176,8 +176,9 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	// TODO: fill in with symbolically computed linearizations
 	Matrix<Z_DIM,X_DIM> H = zeros<Z_DIM,X_DIM>();
 	Matrix<Z_DIM,R_DIM> N = zeros<Z_DIM,R_DIM>();
-	//linearizeObservation(x, zeros<R_DIM,1>(), H, N);
+	linearizeObservation(x, zeros<R_DIM>(), H, N);
 
+	// TODO: currently fails on second 7th sqp iteration b/c H is huge
 	Matrix<X_DIM,Z_DIM> K = Sigma*~H/(H*Sigma*~H + N*~N);
 
 	Sigma = (identity<X_DIM>() - K*H)*Sigma;

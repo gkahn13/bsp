@@ -14,34 +14,40 @@ POINT_DIR=" $( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 DIR=$POINT_DIR/$POINT_TYPE
 
 MPC_DIR=$DIR/mpc
-MPC_FILE_NAMES[0]="${POINT_TYPE}MPC"
-if [ $POINT_TYPE = "belief" ]; then MPC_FILE_NAMES+=("${POINT_TYPE}PenaltyMPC"); fi
+if [ $POINT_TYPE = "belief" ]; then
+MPC_FILE_NAME="${POINT_TYPE}PenaltyMPC"
+else
+MPC_FILE_NAME="${POINT_TYPE}MPC"
+fi
 
 CPP_TIMESTEP_DEF="#define TIMESTEPS"
 
 cd $POINT_DIR
 
-for MPC_FILE_NAME in ${MPC_FILE_NAMES[@]}
-do
-    MPC_C_FILE="${MPC_DIR}/${MPC_FILE_NAME}${TIMESTEPS}.c"
-    MPC_H_FILE="${MPC_DIR}/${MPC_FILE_NAME}${TIMESTEPS}.h"
+# deal with FORCES files
+MPC_C_FILE="${MPC_DIR}/${MPC_FILE_NAME}${TIMESTEPS}.c"
+MPC_H_FILE="${MPC_DIR}/${MPC_FILE_NAME}${TIMESTEPS}.h"
 
-    if [ ! -f $MPC_C_FILE ] || [ ! -f $MPC_H_FILE ]; then
-	echo "mpc files do not exist. generating with matlab..."
-	cd $DIR
-	matlab -nodisplay -nosplash -nodesktop -r "point_${POINT_TYPE}_mpc_gen(${TIMESTEPS}); exit"
-	cd $POINT_DIR
-    fi
+if [ ! -f $MPC_C_FILE ] || [ ! -f $MPC_H_FILE ]; then
+    echo "mpc files do not exist. generating with matlab..."
+    cd $DIR
+    if [ $POINT_TYPE = "belief" ]; then MATLAB_FILE_NAME="${POINT_TYPE}_penalty"
+    else MATLAB_FILE_NAME="{$POINT_TYPE}"; fi
+    
+    matlab -nodisplay -nosplash -nodesktop -r "point_${MATLAB_FILE_NAME}_mpc_gen(${TIMESTEPS}); exit"
+    cd $POINT_DIR
+fi
 
-    echo "Copying ${MPC_FILE_NAME}${TIMESTEPS}.c/h to ${MPC_FILE_NAME}.c/h"
-    cp ${MPC_C_FILE} ${DIR}/${MPC_FILE_NAME}".c"
-    cp ${MPC_H_FILE} ${DIR}/${MPC_FILE_NAME}".h"
-done
+echo "Copying ${MPC_FILE_NAME}${TIMESTEPS}.c/h to ${MPC_FILE_NAME}.c/h"
+cp ${MPC_C_FILE} ${DIR}/${MPC_FILE_NAME}".c"
+cp ${MPC_H_FILE} ${DIR}/${MPC_FILE_NAME}".h"
 
+# modify point.h
 echo "replacing TIMESTEPS definition with new TIMESTEPS for point.h in ${POINT_DIR}"
 H_WRITE="${POINT_DIR}/point.h"
 sed -i "s/^${CPP_TIMESTEP_DEF}.*/${CPP_TIMESTEP_DEF} ${TIMESTEPS}/" $H_WRITE
 
+# remove if done with symeval
 if [ $POINT_TYPE = "state" ] || [ $POINT_TYPE = "lp" ] || [ $POINT_TYPE = "control" ]; then
     # since lp uses same sym-eval and mask as state
     if [ $POINT_TYPE = "state" ] || [ $POINT_TYPE = "lp" ]; then

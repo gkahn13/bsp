@@ -22,12 +22,6 @@
 
 namespace py = boost::python;
 
-aMatrix<X_DIM> x0;
-aMatrix<X_DIM,X_DIM> SqrtSigma0;
-aMatrix<X_DIM> xGoal;
-aMatrix<X_DIM> xMin, xMax;
-aMatrix<U_DIM> uMin, uMax;
-
 
 #include <adolc/adolc.h>
 #include <adolc/sparse/sparsedrivers.h>
@@ -37,6 +31,12 @@ extern "C" {
 //#include "../sym/state-symeval.h"
 #include "stateMPC.h"
 }
+
+aMatrix<X_DIM> x0;
+aMatrix<X_DIM,X_DIM> SqrtSigma0;
+aMatrix<X_DIM> xGoal;
+aMatrix<X_DIM> xMin, xMax;
+aMatrix<U_DIM> uMin, uMax;
 
 namespace cfg {
 const double improve_ratio_threshold = .1;

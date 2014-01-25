@@ -23,6 +23,12 @@ extern "C" {
 #include "stateMPC.h"
 }
 
+Matrix<X_DIM> x0;
+Matrix<X_DIM,X_DIM> SqrtSigma0;
+Matrix<X_DIM> xGoal;
+Matrix<X_DIM> xMin, xMax;
+Matrix<U_DIM> uMin, uMax;
+
 namespace cfg {
 const double improve_ratio_threshold = .1;
 const double min_approx_improve = 1e-2;
@@ -595,7 +601,7 @@ int main(int argc, char* argv[])
 		B[t+1] = beliefDynamics(B[t], U[t]);
 	}
 
-	pythonDisplayTrajectory(B, U);
+	pythonDisplayTrajectory(B, U, x0, xGoal);
 
 	cleanup();
 

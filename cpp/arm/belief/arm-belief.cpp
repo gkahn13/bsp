@@ -272,7 +272,7 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 	double merit, model_merit, new_merit;
 	double approx_merit_improve, exact_merit_improve, merit_improve_ratio;
 
-	int sqp_iter = 1;
+	int sqp_iter = 1, index = 0;
 	bool success;
 
 	Matrix<B_DIM,B_DIM> I = identity<B_DIM>();
@@ -312,27 +312,27 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 				for(int i = 0; i < 2*B_DIM; ++i) {
 					f[t][B_DIM+U_DIM+i] = penalty_coeff;
 				}
-				lb[t][0] = MAX(xMin[0], bt[0] - Beps); // TODO: remove hardcoded DIM sized code
-				lb[t][1] = MAX(xMin[1], bt[1] - Beps);
-				lb[t][2] = bt[2] - Beps;
-				lb[t][3] = bt[3] - Beps;
-				lb[t][4] = bt[4] - Beps;
-				lb[t][5] = MAX(uMin[0], ut[0] - Ueps);
-				lb[t][6] = MAX(uMin[1], ut[1] - Ueps);
-				for(int i = 0; i < 2*B_DIM; ++i) {
-					lb[t][B_DIM+U_DIM+i] = 0;
-				}
 
-				ub[t][0] = MIN(xMax[0], bt[0] + Beps); // TODO: remove hardcoded DIM sized code
-				ub[t][1] = MIN(xMax[1], bt[1] + Beps);
-				ub[t][2] = bt[2] + Beps;
-				ub[t][3] = bt[3] + Beps;
-				ub[t][4] = bt[4] + Beps;
-				ub[t][5] = MIN(uMax[0], ut[0] + Ueps);
-				ub[t][6] = MIN(uMax[1], ut[1] + Ueps);
-				//for(int i = 0; i < 2*B_DIM; ++i) {
-				//	ub[t][B_DIM+U_DIM+i] = INFTY;
-				//}
+				index = 0;
+				// x lower bound
+				for(int i = 0; i < X_DIM; ++i) { lb[t][index++] = MAX(xMin[i], bt[i] - Beps); }
+				// sigma lower bound
+				for(int i = 0; i < S_DIM; ++i) { lb[t][index] = bt[index] - Beps; index++; }
+				// u lower bound
+				for(int i = 0; i < U_DIM; ++i) { lb[t][index++] = MAX(uMin[i], ut[i] - Ueps); }
+
+				// TODO: what is this for?
+				for(int i = 0; i < 2*B_DIM; ++i) { lb[t][index++] = 0; }
+
+				index = 0;
+				// x upper bound
+				for(int i = 0; i < X_DIM; ++i) { ub[t][index++] = MIN(xMax[i], bt[i] + Beps); }
+				// sigma upper bound
+				for(int i = 0; i < S_DIM; ++i) { ub[t][index] = bt[index] + Beps; index++; }
+				// u upper bound
+				for(int i = 0; i < U_DIM; ++i) { ub[t][index++] = MIN(uMax[i], ut[i] + Ueps); }
+
+				//for(int i = 0; i < 2*B_DIM; ++i) { ub[t][index++] = INFTY; }
 
 				if (t > 0) {
 					Matrix<B_DIM,3*B_DIM+U_DIM> CMat;
@@ -343,7 +343,6 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 					CMat.insert<B_DIM,B_DIM>(0,B_DIM+U_DIM,I);
 					CMat.insert<B_DIM,B_DIM>(0,2*B_DIM+U_DIM,minusI);
 
-					//std::cout << CMat << std::endl;
 
 					int idx = 0;
 					int nrows = CMat.numRows(), ncols = CMat.numColumns();
@@ -396,11 +395,17 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			lb[T-1][3] = bT[3] - Beps;
 			lb[T-1][4] = bT[4] - Beps;
 
-			ub[T-1][0] = MIN(xGoal[0] + delta, bT[0] + Beps);
-			ub[T-1][1] = MIN(xGoal[1] + delta, bT[1] + Beps);
-			ub[T-1][2] = bT[2] + Beps;
-			ub[T-1][3] = bT[3] + Beps;
-			ub[T-1][4] = bT[4] + Beps;
+			index = 0;
+			// xGoal lower bound
+			for(int i = 0; i < X_DIM; ++i) { lb[T-1][index++] = MAX(xGoal[i] - delta, bT[i] - Beps); }
+			// sigma lower bound
+			for(int i = 0; i < S_DIM; ++i) { lb[T-1][index] = bT[index] - Beps; index++; }
+
+			index = 0;
+			// xGoal upper bound
+			for(int i = 0; i < X_DIM; ++i) { ub[T-1][index++] = MIN(xGoal[i] + delta, bT[i] + Beps); }
+			// sigma lower bound
+			for(int i = 0; i < S_DIM; ++i) { ub[T-1][index] = bT[index] + Beps; index++; }
 
 			// Verify problem inputs
 			//if (!isValidInputs()) {

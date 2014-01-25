@@ -17,6 +17,7 @@ namespace py = boost::python;
 #define BELIEF_PENALTY_MPC
 //#define BELIEF_MPC
 
+
 extern "C" {
 #ifdef BELIEF_PENALTY_MPC
 #include "beliefPenaltyMPC.h"
@@ -28,6 +29,12 @@ beliefPenaltyMPC_FLOAT **f, **lb, **ub, **C, **e, **z;
 beliefMPC_FLOAT **lb, **ub, **C, **e, **z;
 #endif
 }
+
+Matrix<X_DIM> x0;
+Matrix<X_DIM,X_DIM> SqrtSigma0;
+Matrix<X_DIM> xGoal;
+Matrix<X_DIM> xMin, xMax;
+Matrix<U_DIM> uMin, uMax;
 
 namespace cfg {
 const double improve_ratio_threshold = .1;

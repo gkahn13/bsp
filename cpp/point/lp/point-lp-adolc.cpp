@@ -37,10 +37,17 @@ extern "C" {
 #include "lpMPC.h"
 }
 
-namespace cfg {
+/*namespace cfg {
 const double improve_ratio_threshold = .1;
 const double min_approx_improve = 1e-2;
 const double min_trust_box_size = 1e-2;
+const double trust_shrink_ratio = .1;
+const double trust_expand_ratio = 1.5;
+}*/
+namespace cfg {
+const double improve_ratio_threshold = .1;
+const double min_approx_improve = 1e-2;
+const double min_trust_box_size = 1e-3;
 const double trust_shrink_ratio = .1;
 const double trust_expand_ratio = 1.5;
 }
@@ -429,6 +436,11 @@ double lpCollocation(std::vector< aMatrix<X_DIM> >& X, std::vector< aMatrix<U_DI
 			prevcost = optcost;
 			solution_accepted = true;
 		}
+
+		if (Xeps < cfg::min_trust_box_size && Ueps < cfg::min_trust_box_size) {
+			LOG_DEBUG("Converged: x tolerance");
+			break;
+		}
 	}
 
 	optcost = costfunc(X, U, SqrtSigma0);
@@ -502,7 +514,7 @@ int main(int argc, char* argv[])
 
 
 	// had to copy in python display because Matrix uses adouble
-//#define PYTHON_PLOT
+#define PYTHON_PLOT
 #ifdef PYTHON_PLOT
 	py::list Bvec;
 	for(int j=0; j < B_DIM; j++) {

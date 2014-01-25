@@ -13,7 +13,7 @@ EIGEN_FLAGS = -I/usr/include/eigen3
 # default to debug build
 BUILD := debug
 
-BFLAGS.debug = 
+BFLAGS.debug = -g -Wall
 BFLAGS.release = -O3
 BFLAGS := $(BFLAGS.$(BUILD))
 
@@ -46,7 +46,7 @@ ARM_SETUP_FILE = arm/setupFiles.sh
 ARM_HEADERS = arm/arm.h
 
 # make arm-belief
-ARM_BELIEF_DIR = point/arm
+ARM_BELIEF_DIR = arm/belief
 ARM_BELIEF_FILES = armBeliefPenaltyMPC arm-belief logging
 ARM_BELIEF_OBJS = $(ARM_BELIEF_FILES:%=$(OBJ_DIR)/%.o)
 

@@ -1,3 +1,5 @@
+#define PRINT
+
 #include <vector>
 #include <iomanip>
 
@@ -19,7 +21,7 @@ namespace py = boost::python;
 
 extern "C" {
 #ifdef BELIEF_PENALTY_MPC
-#include "beliefPenaltyMPC.h" // TODO: rename to FORCES generated file
+#include "beliefPenaltyMPC.h"
 beliefPenaltyMPC_FLOAT **f, **lb, **ub, **C, **e, **z;
 #endif
 
@@ -248,6 +250,51 @@ bool isValidInputs()
 	return true;
 }
 
+void constructHessian(Matrix<B_DIM>& b) {
+
+	Matrix<X_DIM> x;
+	Matrix<X_DIM,X_DIM> SqrtSigma;
+	unVec(b, x, SqrtSigma);
+
+
+
+	/*
+	JTJ = J'*J;
+	n = size(JTJ,1);
+	sdim = (n*(n+1))/2;
+
+	% construct the full hessian
+	Hfull = [];
+	for i=1:n
+	Hfull = blkdiag(Hfull,JTJ);
+	end
+
+	fprintf('Full trace: %f\n',vec(SS)'*Hfull*vec(SS));
+
+	s = SS(find(tril(ones(n,n))));
+
+	A = zeros(n*n,sdim);
+
+	idx = 0;
+	% Written w.r.t c++ indices, added 1 for matlab 1-based indexing
+	for i = 0:n-1
+	    for j=0:n-1
+	        if (i <= j)
+	            A(idx+1,(2*n-i+1)*i/2+j-i+1) = 1;
+	        else
+	            A(idx+1,(2*n-j+1)*j/2+i-j+1) = 1;
+	        end
+	        idx = idx+1;
+	    end
+	end
+
+	H = A'*Hfull*A;
+	disp(H)
+	fprintf('Reduced trace: %f\n',s'*H*s);
+	*/
+
+}
+
 bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U, beliefPenaltyMPC_params& problem, beliefPenaltyMPC_output& output, beliefPenaltyMPC_info& info, double penalty_coeff, double trust_box_size)
 {
 	LOG_DEBUG("Solving sqp problem with penalty parameter: %2.4f", penalty_coeff);
@@ -292,6 +339,15 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 
 		for (int t = 0; t < T-1; ++t) {
 			linearizeBeliefDynamics(B[t], U[t], F[t], G[t], h[t]);
+
+			// fill in f and H (TODO)
+			for(int i = 0; i < (B_DIM+U_DIM); ++i) {
+				f[t][i] = 0;
+			}
+			for(int i = 0; i < 2*B_DIM; ++i) {
+				f[t][B_DIM+U_DIM+i] = penalty_coeff;
+			}
+
 		}
 
 		// trust region size adjustment
@@ -305,13 +361,7 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 				Matrix<B_DIM>& bt = B[t];
 				Matrix<U_DIM>& ut = U[t];
 
-				// Fill in f, lb, ub, C, e
-				for(int i = 0; i < (B_DIM+U_DIM); ++i) {
-					f[t][i] = 0;
-				}
-				for(int i = 0; i < 2*B_DIM; ++i) {
-					f[t][B_DIM+U_DIM+i] = penalty_coeff;
-				}
+				// Fill in lb, ub, C, e
 
 				index = 0;
 				// x lower bound
@@ -321,7 +371,7 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 				// u lower bound
 				for(int i = 0; i < U_DIM; ++i) { lb[t][index++] = MAX(uMin[i], ut[i] - Ueps); }
 
-				// TODO: what is this for?
+				// for lower bound on L1 slacks
 				for(int i = 0; i < 2*B_DIM; ++i) { lb[t][index++] = 0; }
 
 				index = 0;
@@ -389,12 +439,6 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			Matrix<B_DIM>& bT = B[T-1];
 
 			// Fill in lb, ub, C, e
-			lb[T-1][0] = MAX(xGoal[0] - delta, bT[0] - Beps); // TODO: remove DIM size hard coded
-			lb[T-1][1] = MAX(xGoal[1] - delta, bT[1] - Beps);
-			lb[T-1][2] = bT[2] - Beps;
-			lb[T-1][3] = bT[3] - Beps;
-			lb[T-1][4] = bT[4] - Beps;
-
 			index = 0;
 			// xGoal lower bound
 			for(int i = 0; i < X_DIM; ++i) { lb[T-1][index++] = MAX(xGoal[i] - delta, bT[i] - Beps); }
@@ -693,6 +737,9 @@ int main(int argc, char* argv[])
 
 	SqrtSigma0 = identity<X_DIM>();
 
+	//posGoal[0] = 11.5; posGoal[1] = 11.5; posGoal[2] = 0;
+	posGoal[0] = 11.785; posGoal[1] = 11.205; posGoal[2] = -0.145;
+
 	// TODO: choose legit end goal joints
 	xGoal[0] = -M_PI/2; xGoal[1] = .25*M_PI; xGoal[2] = -.5*M_PI;
 	xGoal[3] = -M_PI/2; xGoal[4] = -.25*M_PI; xGoal[5] = .5*M_PI;
@@ -702,10 +749,7 @@ int main(int argc, char* argv[])
 
 	for(int i=0; i < U_DIM; ++i) { uMin[i] = -.5; uMax[i] = .5; }
 
-	Matrix<U_DIM> uinit;
-	uinit[0] = (xGoal[0] - x0[0]) / (T-1);
-	uinit[1] = (xGoal[1] - x0[1]) / (T-1);
-
+	Matrix<U_DIM> uinit = (xGoal - x0) / (T-1);
 	std::vector<Matrix<U_DIM> > U(T-1, uinit);
 
 	std::vector<Matrix<B_DIM> > B(T);
@@ -716,9 +760,14 @@ int main(int argc, char* argv[])
 		//std::cout << ~B[t] << std::endl;
 	}
 
-	//for (size_t t = 0; t < T; ++t) {
-	//	std::cout << ~B[t];
-	//}
+#ifdef PRINT
+	std::cout << "U initial" << std::endl;
+	for (int t = 0; t < T-1; ++t) { std::cout << std::setprecision(4) << ~U[t]; }
+
+	std::cout << "X initial" << std::endl;
+	for (int t = 0; t < T; ++t) { std::cout << std::setprecision(4) << ~B[t].subMatrix<X_DIM,1>(0,0); }
+#endif
+
 
 #ifdef BELIEF_MPC
 	beliefMPC_params problem;

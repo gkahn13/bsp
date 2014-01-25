@@ -40,10 +40,10 @@ extern "C" {
 
 namespace cfg {
 const double improve_ratio_threshold = .1;
-const double min_approx_improve = 1e-2;
-const double min_trust_box_size = 1e-2;
+const double min_approx_improve = 1e-3;
+const double min_trust_box_size = 1e-5;
 const double trust_shrink_ratio = .1;
-const double trust_expand_ratio = 1.5;
+const double trust_expand_ratio = 1.25;
 }
 
 // stateMPC vars
@@ -239,13 +239,24 @@ void initXUVectorArray(std::vector<aMatrix<X_DIM>>& X, std::vector<aMatrix<U_DIM
 	}
 }
 
+void vectorize(std::vector<aMatrix<X_DIM>>& X, std::vector<aMatrix<U_DIM>>& U, aMatrix<XU_DIM>& XU_vector) {
+	int idx = 0;
+	for(int t=0; t < T-1; ++t) {
+		XU_vector.insert(idx,0,X[t]);
+		idx += X_DIM;
+		XU_vector.insert(idx,0,U[t]);
+		idx += U_DIM;
+	}
+	XU_vector.insert(idx,0,X[T-1]);
+}
+
 
 double stateCollocation(std::vector< aMatrix<X_DIM> >& X, std::vector< aMatrix<U_DIM> >& U, stateMPC_params& problem, stateMPC_output& output, stateMPC_info& info)
 {
 	util::Timer tapeTimer, gradTimer, hessTimer, forcesTimer, costTimer;
 	double tapeTime = 0, gradTime = 0, hessTime = 0, forcesTime = 0, costTime = 0;
 
-	int maxIter = 100, idx;
+	int maxIter = 1000, idx;
 	double Xeps = 1;
 	double Ueps = 1;
 
@@ -279,10 +290,23 @@ double stateCollocation(std::vector< aMatrix<X_DIM> >& X, std::vector< aMatrix<U
 	adouble meritAdolc;
 
 	double* grad_arr = new double[X_DIM*T + U_DIM*(T-1)];
+	double* grad_arr_tp1 = new double[X_DIM*T + U_DIM*(T-1)];
 	double* XU_arr = new double[X_DIM*T + U_DIM*(T-1)];
+	double* XU_arr_tp1 = new double[X_DIM*T + U_DIM*(T-1)];
 
 	double** hess_arr = new double*[X_DIM*T + U_DIM*(T-1)];
 	for(int i=0; i < X_DIM*T + U_DIM*(T-1); ++i) { hess_arr[i] = new double[X_DIM*T + U_DIM*(T-1)]; }
+
+	// full Hessian from current timstep and prev
+	aMatrix<XU_DIM,XU_DIM> B = 1.0*aIdentity<XU_DIM>();
+	aMatrix<XU_DIM,XU_DIM> B_tp1 = 1.0*aIdentity<XU_DIM>();
+
+	aMatrix<XU_DIM> G, G_tp1;
+
+	aMatrix<XU_DIM> XU;
+	aMatrix<XU_DIM> XU_tp1;
+	vectorize(X, U, XU);
+
 
 	for(int it = 0; it < maxIter; ++it)
 	{
@@ -321,14 +345,21 @@ double stateCollocation(std::vector< aMatrix<X_DIM> >& X, std::vector< aMatrix<U
 			*/
 
 			util::Timer_tic(&gradTimer);
-			gradient(tag, X_DIM*T + U_DIM*(T-1), XU_arr, grad_arr); // return value is 0
-			//double* u = {1};
-			//reverse(tag, 1, X_DIM*T + U_DIM*(T-1), 1, u, grad_arr);
+			if (it == 0) {
+				gradient(tag, XU_DIM, XU_arr, grad_arr); // return value is 0
+				for(int i=0; i < XU_DIM; ++i) { G[i] = grad_arr[i]; }
+			} else {
+				grad_arr = grad_arr_tp1;
+				G = G_tp1;
+				B = B_tp1;
+			}
 			gradTime += util::Timer_toc(&gradTimer);
 
 			// compute hessian
 			util::Timer_tic(&hessTimer);
 			//hessian(tag, X_DIM*T + U_DIM*(T-1), XU_arr, hess_arr); // return value is 0
+
+
 			hessTime += util::Timer_toc(&hessTimer);
 
 			/*
@@ -390,19 +421,27 @@ double stateCollocation(std::vector< aMatrix<X_DIM> >& X, std::vector< aMatrix<U
 
 			util::Timer_tic(&forcesTimer);
 
+			//for(int i=0; i < X_DIM+U_DIM; ++i) {
+			//	B(i,i) = 0;
+			//}
+
 			// compute Hessian first
 			// so can force it to be PSD
 			LOG_DEBUG("Copying hess_arr in...");
+			std::cout << "B" << std::endl;
 			idx = 0;
 			for (int t = 0; t < T-1; ++t) {
 				for (int i = 0; i < (X_DIM+U_DIM); ++i) {
-					H[t][i] = 0; //hess_arr[idx][idx++];
+					std::cout << B(idx,idx).value() << " ";
+					H[t][i] = B(idx,idx).value(); idx++;
 				}
+				std::cout << std::endl;
 			}
 			for (int i = 0; i < X_DIM; ++i) {
-				H[T-1][i] = 0; //hess_arr[idx][idx++];
+				std::cout << B(idx,idx).value() << " ";
+				H[T-1][i] = B(idx, idx).value(); idx++;
 			}
-
+			std::cout << std::endl;
 
 			LOG_DEBUG("Forcing hessian to be PSD");
 			forcePsdHessian();
@@ -410,32 +449,32 @@ double stateCollocation(std::vector< aMatrix<X_DIM> >& X, std::vector< aMatrix<U
 			idx = 0;
 			for (int t = 0; t < T-1; ++t)
 			{
-				//Matrix<X_DIM>& xt = X[t];
-				//Matrix<U_DIM>& ut = U[t];
+				aMatrix<X_DIM>& xt = X[t];
+				aMatrix<U_DIM>& ut = U[t];
 
-				//Matrix<X_DIM+U_DIM> zbar;
-				//zbar.insert(0,0,xt);
-				//zbar.insert(X_DIM,0,ut);
+				aMatrix<X_DIM+U_DIM> zbar;
+				zbar.insert(0,0,xt);
+				zbar.insert(X_DIM,0,ut);
 
-				//for(int i = 0; i < (X_DIM+U_DIM); ++i) {
-				//	Hzbar[i] = H[t][i]*zbar[i].value();
-				//}
+				for(int i = 0; i < (X_DIM+U_DIM); ++i) {
+					Hzbar[i] = H[t][i]*zbar[i].value();
+				}
 
 				for (int i = 0; i < (X_DIM+U_DIM); ++i) {
 					f[t][i] = grad_arr[idx++];
 				}
 
 				for(int i = 0; i < X_DIM; ++i) {
-					//hessian_constant += H[t][i]*zbar[i].value()*zbar[i].value();
+					hessian_constant += H[t][i]*zbar[i].value()*zbar[i].value();
 					jac_constant += -(f[t][i]*X[t][i].value());
 				}
 				for(int i = 0; i < U_DIM; ++i) {
 					jac_constant += -(f[t][i+X_DIM]*U[t][i].value());
 				}
 
-				//for(int i = 0; i < (X_DIM+U_DIM); ++i) {
-				//	f[t][i] -= Hzbar[i];
-				//}
+				for(int i = 0; i < (X_DIM+U_DIM); ++i) {
+					f[t][i] -= Hzbar[i];
+				}
 
 				// TODO: move following CMat code outside, is same every iteration
 				Matrix<X_DIM,X_DIM+U_DIM> CMat;
@@ -460,21 +499,21 @@ double stateCollocation(std::vector< aMatrix<X_DIM> >& X, std::vector< aMatrix<U
 
 
 			// Last stage
-			//Matrix<X_DIM>& xT = X[T-1];
+			aMatrix<X_DIM>& xT = X[T-1];
 
 			for (int i = 0; i < X_DIM; ++i) {
 				f[T-1][i] = grad_arr[idx++];
 			}
 
 			for(int i = 0; i < X_DIM; ++i) {
-				//hessian_constant += H[T-1][i]*xT[i].value()*xT[i].value();
+				hessian_constant += H[T-1][i]*xT[i].value()*xT[i].value();
 				jac_constant += -(f[T-1][i]*X[T-1][i].value());
 			}
 
-			//for(int i = 0; i < X_DIM; ++i) {
-			//	Hzbar[i] = H[T-1][i]*xT[i].value();
-			//	f[T-1][i] -= Hzbar[i];
-			//}
+			for(int i = 0; i < X_DIM; ++i) {
+				Hzbar[i] = H[T-1][i]*xT[i].value();
+				f[T-1][i] -= Hzbar[i];
+			}
 
 			e[T-1][0] = 0; e[T-1][1] = 0;
 
@@ -567,7 +606,6 @@ double stateCollocation(std::vector< aMatrix<X_DIM> >& X, std::vector< aMatrix<U
 			return INFTY;
 		} else if (approx_merit_improve < cfg::min_approx_improve) {
 			LOG_DEBUG("Converged: improvement small enough");
-			X = Xopt; U = Uopt;
 			solution_accepted = true;
 			break;
 		} else if ((exact_merit_improve < 0) || (merit_improve_ratio < cfg::improve_ratio_threshold)) {
@@ -580,9 +618,53 @@ double stateCollocation(std::vector< aMatrix<X_DIM> >& X, std::vector< aMatrix<U
 			// expand Xeps and Ueps
 			Xeps *= cfg::trust_expand_ratio;
 			Ueps *= cfg::trust_expand_ratio;
-			X = Xopt; U = Uopt;
 			prevcost = optcost;
 			solution_accepted = true;
+		}
+
+		if (Xeps < cfg::min_trust_box_size && Ueps < cfg::min_trust_box_size) {
+			LOG_DEBUG("Converged: x tolerance");
+			return true;
+		}
+
+		if (solution_accepted) {
+			initXUVectorArray(Xopt,Uopt,XU_arr_tp1);
+			gradient(tag, XU_DIM, XU_arr_tp1, grad_arr_tp1); // return value is 0
+			for(int i=0; i < XU_DIM; ++i) { G_tp1[i] = grad_arr_tp1[i]; }
+			vectorize(X, U, XU);
+			vectorize(Xopt,Uopt,XU_tp1);
+			aMatrix<XU_DIM> s = XU_tp1 - XU;
+			aMatrix<XU_DIM> y = G_tp1 - G;
+
+			adouble theta;
+			bool decision = ((~s*y)[0] >= .2*(~s*B*s)[0]);
+			if (decision) {
+				theta = 1;
+			} else {
+				theta = (.8*(~s*B*s)[0])/((~s*B*s-~s*y)[0]);
+			}
+
+			std::cout << "theta: " << theta << std::endl;
+
+			aMatrix<XU_DIM> r = theta*y + (1-theta)*B*s;
+			X = Xopt; U = Uopt;
+			//B_tp1 = B - ((B*s)*~(B*s))/((~s*B*s)[0]) + (r*~r)/((~r*s)[0]);
+			aMatrix<XU_DIM> rBs = r-B*s;
+
+			/*
+			for(int t=0; t < T-1; ++t) {
+				aMatrix<(X_DIM+U_DIM),(X_DIM+U_DIM)> B_sub = B.subaMatrix<(X_DIM+U_DIM),(X_DIM+U_DIM)>(t*(X_DIM+U_DIM),t*(X_DIM*U_DIM)),
+						B_tp1_sub;
+				aMatrix<(X_DIM+U_DIM)>  r_sub = r.subaMatrix<(X_DIM+U_DIM),1>(t*(X_DIM+U_DIM),0),
+										s_sub = s.subaMatrix<(X_DIM+U_DIM),1>(t*(X_DIM+U_DIM),0),
+										rBs_sub;
+
+				rBs_sub = r_sub - B_sub*s_sub;
+				B_tp1_sub = B_sub + ((rBs_sub)*~(rBs_sub))/((~(rBs_sub)*s_sub)[0]);
+				B_tp1.insert(t*(X_DIM+U_DIM),t*(X_DIM+U_DIM),B_tp1_sub);
+			}
+			*/
+			B_tp1 = B + ((rBs)*~(rBs))/((~(rBs)*s)[0]);
 		}
 	}
 

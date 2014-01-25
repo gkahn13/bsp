@@ -27,7 +27,7 @@ namespace py = boost::python;
 
 #define S_DIM (((X_DIM+1)*X_DIM)/2)
 #define B_DIM (X_DIM+S_DIM)
-
+#define XU_DIM (X_DIM*T+U_DIM*(T-1))
 
 const double step = 0.0078125*0.0078125;
 

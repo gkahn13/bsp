@@ -34,37 +34,42 @@ aMatrix<U_DIM> uMin, uMax;
 
 
 extern "C" {
-//#include "../sym/state-symeval.h"
-#include "stateMPC.h"
+#include "lpMPC.h"
 }
 
+/*namespace cfg {
+const double improve_ratio_threshold = .1;
+const double min_approx_improve = 1e-2;
+const double min_trust_box_size = 1e-2;
+const double trust_shrink_ratio = .1;
+const double trust_expand_ratio = 1.5;
+}*/
 namespace cfg {
 const double improve_ratio_threshold = .1;
-const double min_approx_improve = 1e-3;
-const double min_trust_box_size = 1e-5;
+const double min_approx_improve = 1e-2;
+const double min_trust_box_size = 1e-3;
 const double trust_shrink_ratio = .1;
-const double trust_expand_ratio = 1.25;
+const double trust_expand_ratio = 1.5;
 }
 
-// stateMPC vars
-stateMPC_FLOAT **H, **f, **lb, **ub, **C, **e, **z;
+// lpMPC vars
+lpMPC_FLOAT **f, **lb, **ub, **C, **e, **z;
 
 
-void setupStateMPCVars(stateMPC_params& problem, stateMPC_output& output)
+
+void setupLpMPCVars(lpMPC_params& problem, lpMPC_output& output)
 {
 	// inputs
-	H = new stateMPC_FLOAT*[T];
-	f = new stateMPC_FLOAT*[T];
-	lb = new stateMPC_FLOAT*[T];
-	ub = new stateMPC_FLOAT*[T];
-	C = new stateMPC_FLOAT*[T-1];
-	e = new stateMPC_FLOAT*[T];
+	f = new lpMPC_FLOAT*[T];
+	lb = new lpMPC_FLOAT*[T];
+	ub = new lpMPC_FLOAT*[T];
+	C = new lpMPC_FLOAT*[T-1];
+	e = new lpMPC_FLOAT*[T];
 
 	// output
-	z = new stateMPC_FLOAT*[T];
+	z = new lpMPC_FLOAT*[T];
 
 #define SET_VARS(n)    \
-		H[ BOOST_PP_SUB(n,1) ] = problem.H##n ;  \
 		f[ BOOST_PP_SUB(n,1) ] = problem.f##n ;  \
 		lb[ BOOST_PP_SUB(n,1) ] = problem.lb##n ;	\
 		ub[ BOOST_PP_SUB(n,1) ] = problem.ub##n ;	\
@@ -77,7 +82,6 @@ void setupStateMPCVars(stateMPC_params& problem, stateMPC_output& output)
 #include BOOST_PP_LOCAL_ITERATE()
 
 #define SET_LAST_VARS(n)    \
-		H[ BOOST_PP_SUB(n,1) ] = problem.H##n ;  \
 		f[ BOOST_PP_SUB(n,1) ] = problem.f##n ;  \
 		lb[ BOOST_PP_SUB(n,1) ] = problem.lb##n ;	\
 		ub[ BOOST_PP_SUB(n,1) ] = problem.ub##n ;	\
@@ -90,13 +94,11 @@ void setupStateMPCVars(stateMPC_params& problem, stateMPC_output& output)
 
 }
 
-
 void cleanup()
 {
 	delete[] inputVars;
 	delete[] vars;
 
-	delete[] H;
 	delete[] f;
 	delete[] lb;
 	delete[] ub;
@@ -176,39 +178,6 @@ double costfunc(const std::vector<aMatrix<X_DIM> >& aX, const std::vector<aMatri
 
 
 
-
-inline void forcePsdHessian() {
-	// zero out negative diagonal entries
-	for(int t = 0; t < T-1; ++t) {
-		for(int i = 0; i < (X_DIM+U_DIM); ++i) {
-			H[t][i] = (H[t][i] < 0) ? 0 : H[t][i];
-		}
-	}
-
-	for(int i = 0; i < X_DIM; ++i) {
-		H[T-1][i] = (H[T-1][i] < 0) ? 0 : H[T-1][i];
-	}
-}
-
-bool isValidInputs(double *result) {
-	//stateMPC_FLOAT **H, **f, **lb, **ub, **C, **e, **z;
-	for(int t = 0; t < T-1; ++t) {
-		std::cout << "t: " << t << std::endl << std::endl;
-
-
-
-		std::cout << "H: " << std::endl;
-		for(int i = 0; i < 4; ++i) {
-			std::cout << H[t][i] << std::endl;
-		}
-
-		std::cout << std::endl << std::endl;
-	}
-	return true;
-}
-
-
-
 void initXUAdolcMatrixes(std::vector<aMatrix<X_DIM>>& X, std::vector<aMatrix<U_DIM>>& U) {
 	for(int t=0; t < T-1; ++t) {
 		for(int i=0; i < X_DIM; ++i) {
@@ -239,24 +208,13 @@ void initXUVectorArray(std::vector<aMatrix<X_DIM>>& X, std::vector<aMatrix<U_DIM
 	}
 }
 
-void vectorize(std::vector<aMatrix<X_DIM>>& X, std::vector<aMatrix<U_DIM>>& U, aMatrix<XU_DIM>& XU_vector) {
-	int idx = 0;
-	for(int t=0; t < T-1; ++t) {
-		XU_vector.insert(idx,0,X[t]);
-		idx += X_DIM;
-		XU_vector.insert(idx,0,U[t]);
-		idx += U_DIM;
-	}
-	XU_vector.insert(idx,0,X[T-1]);
-}
 
-
-double stateCollocation(std::vector< aMatrix<X_DIM> >& X, std::vector< aMatrix<U_DIM> >& U, stateMPC_params& problem, stateMPC_output& output, stateMPC_info& info)
+double lpCollocation(std::vector< aMatrix<X_DIM> >& X, std::vector< aMatrix<U_DIM> >& U, lpMPC_params& problem, lpMPC_output& output, lpMPC_info& info)
 {
-	util::Timer tapeTimer, gradTimer, hessTimer, forcesTimer, costTimer;
-	double tapeTime = 0, gradTime = 0, hessTime = 0, forcesTime = 0, costTime = 0;
+	util::Timer tapeTimer, gradTimer, forcesTimer, costTimer;
+	double tapeTime = 0, gradTime = 0, forcesTime = 0, costTime = 0;
 
-	int maxIter = 50, idx;
+	int maxIter = 100, idx;
 	double Xeps = 1;
 	double Ueps = 1;
 
@@ -267,11 +225,7 @@ double stateCollocation(std::vector< aMatrix<X_DIM> >& X, std::vector< aMatrix<U
 	double prevcost = INFTY, optcost;
 	double merit, model_merit, new_merit;
 	double approx_merit_improve, exact_merit_improve, merit_improve_ratio;
-	double constant_cost, hessian_constant, jac_constant;
-
-	double Hzbar[X_DIM+U_DIM];
-	for(int i=0; i < (X_DIM+U_DIM); ++i) { Hzbar[i] = 0; }
-
+	double constant_cost, jac_constant;
 
 	prevcost = costfunc(X, U, SqrtSigma0);
 
@@ -289,23 +243,7 @@ double stateCollocation(std::vector< aMatrix<X_DIM> >& X, std::vector< aMatrix<U
 	adouble meritAdolc;
 
 	double* grad_arr = new double[X_DIM*T + U_DIM*(T-1)];
-	double* grad_arr_tp1 = new double[X_DIM*T + U_DIM*(T-1)];
 	double* XU_arr = new double[X_DIM*T + U_DIM*(T-1)];
-	double* XU_arr_tp1 = new double[X_DIM*T + U_DIM*(T-1)];
-
-	double** hess_arr = new double*[X_DIM*T + U_DIM*(T-1)];
-	for(int i=0; i < X_DIM*T + U_DIM*(T-1); ++i) { hess_arr[i] = new double[X_DIM*T + U_DIM*(T-1)]; }
-
-	// full Hessian from current timstep and prev
-	aMatrix<XU_DIM,XU_DIM> B = 1.0*aIdentity<XU_DIM>();
-	aMatrix<XU_DIM,XU_DIM> B_tp1 = 1.0*aIdentity<XU_DIM>();
-
-	aMatrix<XU_DIM> G, G_tp1;
-
-	aMatrix<XU_DIM> XU;
-	aMatrix<XU_DIM> XU_tp1;
-	vectorize(X, U, XU);
-
 
 	for(int it = 0; it < maxIter; ++it)
 	{
@@ -330,16 +268,10 @@ double stateCollocation(std::vector< aMatrix<X_DIM> >& X, std::vector< aMatrix<U
 
 
 			// compute gradient
+			initXUVectorArray(X,U,XU_arr);
+
 			util::Timer_tic(&gradTimer);
-			if (it == 0) {
-				initXUVectorArray(X,U,XU_arr);
-				gradient(tag, XU_DIM, XU_arr, grad_arr); // return value is 0
-				for(int i=0; i < XU_DIM; ++i) { G[i] = grad_arr[i]; }
-			} else {
-				grad_arr = grad_arr_tp1;
-				G = G_tp1;
-				B = B_tp1;
-			}
+			gradient(tag, X_DIM*T + U_DIM*(T-1), XU_arr, grad_arr); // return value is 0
 			gradTime += util::Timer_toc(&gradTimer);
 
 
@@ -349,60 +281,24 @@ double stateCollocation(std::vector< aMatrix<X_DIM> >& X, std::vector< aMatrix<U
 			// ~z_bar * H * z_bar (easy to compute since H is diagonal)
 			// -f * z_bar
 			constant_cost = 0;
-			hessian_constant = 0;
 			jac_constant = 0;
 
 
 			util::Timer_tic(&forcesTimer);
 
 
-			// compute Hessian first
-			// so can force it to be PSD
-			//std::cout << "B" << std::endl;
-			idx = 0;
-			for (int t = 0; t < T-1; ++t) {
-				for (int i = 0; i < (X_DIM+U_DIM); ++i) {
-					//std::cout << B(idx,idx).value() << " ";
-					H[t][i] = B(idx,idx).value(); idx++;
-				}
-				//std::cout << std::endl;
-			}
-			for (int i = 0; i < X_DIM; ++i) {
-				//std::cout << B(idx,idx).value() << " ";
-				H[T-1][i] = B(idx, idx).value(); idx++;
-			}
-			//std::cout << std::endl;
-
-			forcePsdHessian();
-
 			idx = 0;
 			for (int t = 0; t < T-1; ++t)
 			{
-				aMatrix<X_DIM>& xt = X[t];
-				aMatrix<U_DIM>& ut = U[t];
-
-				aMatrix<X_DIM+U_DIM> zbar;
-				zbar.insert(0,0,xt);
-				zbar.insert(X_DIM,0,ut);
-
-				for(int i = 0; i < (X_DIM+U_DIM); ++i) {
-					Hzbar[i] = H[t][i]*zbar[i].value();
-				}
-
 				for (int i = 0; i < (X_DIM+U_DIM); ++i) {
 					f[t][i] = grad_arr[idx++];
 				}
 
 				for(int i = 0; i < X_DIM; ++i) {
-					hessian_constant += H[t][i]*zbar[i].value()*zbar[i].value();
 					jac_constant += -(f[t][i]*X[t][i].value());
 				}
 				for(int i = 0; i < U_DIM; ++i) {
 					jac_constant += -(f[t][i+X_DIM]*U[t][i].value());
-				}
-
-				for(int i = 0; i < (X_DIM+U_DIM); ++i) {
-					f[t][i] -= Hzbar[i];
 				}
 
 				// TODO: move following CMat code outside, is same every iteration
@@ -426,30 +322,19 @@ double stateCollocation(std::vector< aMatrix<X_DIM> >& X, std::vector< aMatrix<U
 
 			} //setting up problem
 
-
-			// Last stage
-			aMatrix<X_DIM>& xT = X[T-1];
-
 			for (int i = 0; i < X_DIM; ++i) {
 				f[T-1][i] = grad_arr[idx++];
 			}
 
 			for(int i = 0; i < X_DIM; ++i) {
-				hessian_constant += H[T-1][i]*xT[i].value()*xT[i].value();
 				jac_constant += -(f[T-1][i]*X[T-1][i].value());
-			}
-
-			for(int i = 0; i < X_DIM; ++i) {
-				Hzbar[i] = H[T-1][i]*xT[i].value();
-				f[T-1][i] -= Hzbar[i];
 			}
 
 			e[T-1][0] = 0; e[T-1][1] = 0;
 
-			constant_cost = 0.5*hessian_constant + jac_constant + merit;
+			constant_cost = jac_constant + merit;
 
 		} // end solution_accepted
-
 
 
 		// set trust region bounds based on current trust region size
@@ -478,9 +363,16 @@ double stateCollocation(std::vector< aMatrix<X_DIM> >& X, std::vector< aMatrix<U
 		ub[T-1][0] = MIN(xGoal[0].value() + delta, xT[0].value() + Xeps);
 		ub[T-1][1] = MIN(xGoal[1].value() + delta, xT[1].value() + Xeps);
 
+		// Verify problem inputs
 
+		//if (!isValidInputs(result)) {
+		//	std::cout << "Inputs are not valid!" << std::endl;
+		//	exit(0);
+		//}
+
+		LOG_DEBUG("Solving with FORCES");
 		forcesTime += util::Timer_toc(&forcesTimer);
-		int exitflag = stateMPC_solve(&problem, &output, &info);
+		int exitflag = lpMPC_solve(&problem, &output, &info);
 		if (exitflag == 1) {
 			for(int t = 0; t < T-1; ++t) {
 				aMatrix<X_DIM>& xt = Xopt[t];
@@ -527,6 +419,7 @@ double stateCollocation(std::vector< aMatrix<X_DIM> >& X, std::vector< aMatrix<U
 			return INFTY;
 		} else if (approx_merit_improve < cfg::min_approx_improve) {
 			LOG_DEBUG("Converged: improvement small enough");
+			X = Xopt; U = Uopt;
 			solution_accepted = true;
 			break;
 		} else if ((exact_merit_improve < 0) || (merit_improve_ratio < cfg::improve_ratio_threshold)) {
@@ -539,6 +432,7 @@ double stateCollocation(std::vector< aMatrix<X_DIM> >& X, std::vector< aMatrix<U
 			// expand Xeps and Ueps
 			Xeps *= cfg::trust_expand_ratio;
 			Ueps *= cfg::trust_expand_ratio;
+			X = Xopt; U = Uopt;
 			prevcost = optcost;
 			solution_accepted = true;
 		}
@@ -547,42 +441,14 @@ double stateCollocation(std::vector< aMatrix<X_DIM> >& X, std::vector< aMatrix<U
 			LOG_DEBUG("Converged: x tolerance");
 			break;
 		}
-
-		if (solution_accepted) {
-			initXUVectorArray(Xopt,Uopt,XU_arr_tp1);
-			gradient(tag, XU_DIM, XU_arr_tp1, grad_arr_tp1); // return value is 0
-			for(int i=0; i < XU_DIM; ++i) { G_tp1[i] = grad_arr_tp1[i]; }
-			vectorize(X, U, XU);
-			vectorize(Xopt,Uopt,XU_tp1);
-			aMatrix<XU_DIM> s = XU_tp1 - XU;
-			aMatrix<XU_DIM> y = G_tp1 - G;
-
-			adouble theta;
-			bool decision = ((~s*y)[0] >= .2*(~s*B*s)[0]);
-			if (decision) {
-				theta = 1;
-			} else {
-				theta = (.8*(~s*B*s)[0])/((~s*B*s-~s*y)[0]);
-			}
-
-			//std::cout << "theta: " << theta << std::endl;
-
-			aMatrix<XU_DIM> r = theta*y + (1-theta)*B*s;
-			X = Xopt; U = Uopt;
-			aMatrix<XU_DIM> rBs = r-B*s;
-			B_tp1 = B + ((rBs)*~(rBs))/((~(rBs)*s)[0]);
-		}
 	}
 
 	optcost = costfunc(X, U, SqrtSigma0);
 
-	//LOG_DEBUG("tape time: %f")
-	//std::cout << "tape time: " << tapeTime*1000 << "ms" << std::endl;
-	//std::cout << "grad time: " << gradTime*1000 << "ms" << std::endl;
-	//std::cout << "hess time: " << hessTime*1000 << "ms" << std::endl;
-	//std::cout << "forces time: " << forcesTime*1000 << "ms" << std::endl;
-	//std::cout << "cost time: " << costTime*1000 << "ms" << std::endl;
-
+	std::cout << "tape time: " << tapeTime*1000 << "ms" << std::endl;
+	std::cout << "grad time: " << gradTime*1000 << "ms" << std::endl;
+	std::cout << "forces time: " << forcesTime*1000 << "ms" << std::endl;
+	std::cout << "cost time: " << costTime*1000 << "ms" << std::endl;
 
 	return optcost;
 
@@ -614,11 +480,11 @@ int main(int argc, char* argv[])
 	//setupDstarInterface(std::string(getMask()));
 
 
-	stateMPC_params problem;
-	stateMPC_output output;
-	stateMPC_info info;
+	lpMPC_params problem;
+	lpMPC_output output;
+	lpMPC_info info;
 
-	setupStateMPCVars(problem, output);
+	setupLpMPCVars(problem, output);
 
 	util::Timer solveTimer;
 	util::Timer_tic(&solveTimer);
@@ -632,7 +498,7 @@ int main(int argc, char* argv[])
 	}
 	*/
 
-	double cost = stateCollocation(X, U, problem, output, info);
+	double cost = lpCollocation(X, U, problem, output, info);
 
 	double solvetime = util::Timer_toc(&solveTimer);
 	LOG_INFO("Cost: %4.10f", cost);
@@ -648,7 +514,7 @@ int main(int argc, char* argv[])
 
 
 	// had to copy in python display because Matrix uses adouble
-//#define PYTHON_PLOT
+#define PYTHON_PLOT
 #ifdef PYTHON_PLOT
 	py::list Bvec;
 	for(int j=0; j < B_DIM; j++) {
@@ -701,4 +567,3 @@ int main(int argc, char* argv[])
 	//CAL_End();
 	return 0;
 }
-

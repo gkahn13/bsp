@@ -4,22 +4,10 @@
 #include <fstream>
 #include <tgmath.h>
 
-/*
-#ifndef USE_ADOLC
 #include "util/matrix.h"
-#else
-#include <adolc/adolc.h>
-#include "util/amatrix.h"
-#endif
-*/
-#include <adolc/adolc.h>
-#include "util/amatrix.h"
 
 
-//extern "C" {
 #include "util/utils.h"
-//}
-//#include "util/Timer.h"
 #include "util/logging.h"
 
 #include <Python.h>
@@ -39,15 +27,10 @@ namespace py = boost::python;
 
 #define S_DIM (((X_DIM+1)*X_DIM)/2)
 #define B_DIM (X_DIM+S_DIM)
-
+#define XU_DIM (X_DIM*T+U_DIM*(T-1))
 
 const double step = 0.0078125*0.0078125;
 
-Matrix<X_DIM> x0;
-Matrix<X_DIM,X_DIM> SqrtSigma0;
-Matrix<X_DIM> xGoal;
-Matrix<X_DIM> xMin, xMax;
-Matrix<U_DIM> uMin, uMax;
 
 const int T = TIMESTEPS;
 const double INFTY = 1e10;
@@ -139,6 +122,7 @@ void vec(const Matrix<X_DIM>& x, const Matrix<X_DIM,X_DIM>& SqrtSigma, Matrix<B_
 	}
 }
 
+
 // Belief dynamics
 Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	Matrix<X_DIM> x;
@@ -147,16 +131,19 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 
 	Matrix<X_DIM,X_DIM> Sigma = SqrtSigma*SqrtSigma;
 
-	Matrix<X_DIM,X_DIM> A;
-	Matrix<X_DIM,Q_DIM> M;
-	linearizeDynamics(x, u, zeros<Q_DIM,1>(), A, M);
+	Matrix<X_DIM,X_DIM> A = identity<X_DIM>();
+	Matrix<X_DIM,Q_DIM> M = .01*identity<U_DIM>();
+	//linearizeDynamics(x, u, zeros<Q_DIM,1>(), A, M);
 
 	x = dynfunc(x, u, zeros<Q_DIM,1>());
 	Sigma = A*Sigma*~A + M*~M;
 
-	Matrix<Z_DIM,X_DIM> H;
-	Matrix<Z_DIM,R_DIM> N;
-	linearizeObservation(x, zeros<R_DIM,1>(), H, N);
+	Matrix<Z_DIM,X_DIM> H = zeros<Z_DIM,X_DIM>();
+	Matrix<Z_DIM,R_DIM> N = zeros<Z_DIM,R_DIM>();
+	H(0,0) = 1; H(1,1) = 1;
+	N(0,0) = sqrt(x(0,0) * x(0,0) * 0.5 * 0.5 + 1e-6);
+	N(1,1) = sqrt(x(0,0) * x(0,0) * 0.5 * 0.5 + 1e-6);
+	//linearizeObservation(x, zeros<R_DIM,1>(), H, N);
 
 	Matrix<X_DIM,Z_DIM> K = Sigma*~H/(H*Sigma*~H + N*~N);
 
@@ -182,7 +169,7 @@ void setupDstarInterface(std::string mask) {
 	inputVars = new double[i];
 }
 
-void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U)
+void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U, Matrix<X_DIM> x0, Matrix<X_DIM> xGoal)
 {
 	for (int t = 0; t < T-1; ++t) {
 		B[t+1] = beliefDynamics(B[t], U[t]);

@@ -2,8 +2,20 @@
 #define __POINT_H__
 
 #include <fstream>
+#include <tgmath.h>
 
+/*
+#ifndef USE_ADOLC
 #include "util/matrix.h"
+#else
+#include <adolc/adolc.h>
+#include "util/amatrix.h"
+#endif
+*/
+#include <adolc/adolc.h>
+#include "util/amatrix.h"
+
+
 //extern "C" {
 #include "util/utils.h"
 //}
@@ -58,8 +70,8 @@ Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matr
 // Observation model
 Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r)
 {
-	double intensity = sqrt(sqr(0.5*x[0]) + 1e-6);
-	Matrix<Z_DIM> z = x + intensity*r;
+	//double intensity = sqrt(0.5*0.5*x[0]*x[0] + 1e-6);
+	Matrix<Z_DIM> z = x + sqrt(0.5*0.5*x[0]*x[0] + 1e-6)*r;
 	return z;
 }
 

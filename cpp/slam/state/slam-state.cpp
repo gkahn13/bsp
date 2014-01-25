@@ -63,7 +63,6 @@ void linearizeBeliefDynamics(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, Mat
 	F.reset();
 	Matrix<B_DIM> b;
 	Matrix<S_DIM> SqrtSigma = SqrtSigma0;
-	vec(x, 
 	Matrix<B_DIM> br(b), bl(b);
 	for (size_t i = 0; i < B_DIM; ++i) {
 		br[i] += step; bl[i] -= step;

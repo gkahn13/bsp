@@ -16,22 +16,7 @@ const double DT = 1;
 using namespace CasADi;
 using namespace std;
 
-// moved to point-dynobsjac for analytical Jacobians
-/*
-SXMatrix dynfunc(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& q_t)
-{
-  	SXMatrix x_tp1 = x_t + u_t*DT + q_t*0.01;
-  	return x_tp1;
-}
-
-SXMatrix obsfunc(const SXMatrix& x_t, const SXMatrix& r_t)
-{
-  	SXMatrix intensity(sqrt(x_t(0) * x_t(0) * 0.5 * 0.5 + 1e-6));
-  	SXMatrix z_t = x_t + r_t*intensity;
-   	return z_t;
-}
-*/
-
+// dynfunc and obsfunc moved to point-dynobsjac for analytical Jacobians
 SXMatrix dynfunc(const SXMatrix& x_t, const SXMatrix& u_t)
 {
   	SXMatrix x_tp1 = x_t + u_t*DT;
@@ -50,6 +35,8 @@ void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMa
 	A(0,0) = 1; A(1,1) = 1;
 	M(0,0) = 0.01; M(1,1) = 0.01;
 
+	//Sigma_tp1 = mul(mul(A,Sigma_t),trans(A)) + mul(M,trans(M));
+	// only because A and M are diagonal matrices
 	Sigma_tp1 = A*Sigma_t*trans(A) + M*trans(M);
 
 	x_tp1 = dynfunc(x_t, u_t);
@@ -66,7 +53,6 @@ void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMa
 	//H(1,0) = (r(1)*((0.5*(0.5*(x_tp1(0)+x_tp1(0))))/(sqrt(((0.5*(0.5*sq(x_tp1(0))))+1e-06))+sqrt(((0.5*(0.5*sq(x_tp1(0))))+1e-06)))));
 	// Evaluated at r = 0, simplifies to:
 	H(0,0) = 1;
-	H(1,0) = 0;
 	H(1,1) = 1;
 
 	//N(0,0) = sqrt(((0.5*(0.5*sq(x_tp1(0))))+1e-06));
@@ -75,9 +61,8 @@ void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMa
 	N(0,0) = intensity;
 	N(1,1) = intensity;
 
-	//SXMatrix K = Sigma_tp1 * trans(H) * inv(H*Sigma_tp1*trans(H) + N*trans(N));
-	SXMatrix K = Sigma_tp1 * trans(H) * solve(H*Sigma_tp1*trans(H) + N*trans(N),SXMatrix(DMatrix::eye(ZDIM)));
-	Sigma_tp1 = Sigma_tp1 - K*H*Sigma_tp1;
+    SXMatrix K = mul(mul(Sigma_tp1,trans(H)),solve(mul(mul(H,Sigma_tp1),trans(H)) + mul(N,trans(N)),SXMatrix(DMatrix::eye(ZDIM))));
+	Sigma_tp1 = Sigma_tp1 - mul(K,mul(H,Sigma_tp1));
 }
 
 // params[0] = alpha_belief

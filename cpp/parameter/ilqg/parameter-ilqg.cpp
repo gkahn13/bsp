@@ -1,4 +1,4 @@
-#include "../point.h"
+#include "../parameter.h"
 
 #include "util/matrix.h"
 
@@ -12,44 +12,23 @@
 
 namespace py = boost::python;
 
-/*
-#define TIMESTEPS 15
-#define DT 1.0
-#define X_DIM 2
-#define U_DIM 2
-#define Z_DIM 2
-#define S_DIM (((X_DIM+1)*X_DIM)/2)
-#define B_DIM (X_DIM + S_DIM)
-*/
 
 SymmetricMatrix<U_DIM> Rint;
 SymmetricMatrix<X_DIM> Qint;
-SymmetricMatrix<X_DIM> QGoal;
+SymmetricMatrix<X_DIM> QGoal, QGoalVariance, QintVariance;
 SymmetricMatrix<X_DIM> Sigma0;
 
 Matrix<X_DIM> x0, xGoal;
 
-
-
 inline Matrix<X_DIM> f(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u)
-{  
-	Matrix<X_DIM> xNew;
-
-	xNew[0] = x[0] + u[0] * DT;
-	xNew[1] = x[1] + u[1] * DT;
-
-	return xNew;
+{
+	return dynfunc(x, u, zeros<U_DIM,1>());
 }
 
 // Observation model
 inline Matrix<Z_DIM> h(const Matrix<X_DIM>& x)
 {
-	Matrix<Z_DIM> z;
-
-	z[0] = x[0];
-	z[1] = x[1];
-
-	return z;
+	return obsfunc(x, zeros<Z_DIM,1>());
 }
 
 // Jacobian df/dx(x,u)
@@ -97,17 +76,24 @@ inline Matrix<_zDim,_xDim> dhdx(Matrix<_zDim> (*h)(const Matrix<_xDim>&), const 
 inline SymmetricMatrix<X_DIM> varM(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u)
 {
 	SymmetricMatrix<X_DIM> S = identity<X_DIM>();
-	S(0,0) = 0.01;
-	S(1,1) = 0.01;
+	S(0,0) = 0.25*0.001 + 0.0000000000001;
+	S(1,1) = 0.25*0.001 + 0.0000000000001;
+	S(2,2) = 1.0*0.001 + 0.0000000000001;
+	S(3,3) = 1.0*0.001 + 0.0000000000001;
+	S(4,4) = 0.0005;
+	S(5,5) = 0.0005;
+	S(6,6) = 0.0001;
+	S(7,7) = 0.0001;
 	return S;
 }
 
 inline SymmetricMatrix<Z_DIM> varN(const Matrix<X_DIM>& x)
 {
 	SymmetricMatrix<Z_DIM> S = identity<Z_DIM>();
-	double intensity = sqrt(sqr(0.5*x[0]) + 1e-6);
-	S(0,0) = intensity;
-	S(1,1) = intensity;
+	S(0,0) = 0.0001;
+	S(1,1) = 0.0001;
+	S(2,2) = 0.00001;
+	S(3,3) = 0.00001;
 	return S;
 }
 
@@ -116,24 +102,21 @@ inline void quadratizeFinalCost(const Matrix<X_DIM>& xBar, const SymmetricMatrix
 {
 	if (flag & COMPUTE_S) S = QGoal;
 	if (flag & COMPUTE_sT) sT = ~(xBar - xGoal)*QGoal;
-	//if (flag & COMPUTE_s) s = 0.5*scalar(~(xBar - xGoal)*QGoal*(xBar - xGoal)) + scalar(vecTh(QGoal)*vectorize(SigmaBar));
-	if (flag & COMPUTE_s) s = 2*(0.5*scalar(~(xBar - xGoal)*QGoal*(xBar - xGoal)) + scalar(vecTh(QGoal)*vectorize(SigmaBar)));
-	if (flag & COMPUTE_tT) tT = vecTh(QGoal);
+	if (flag & COMPUTE_s) s = 0.5*scalar(~(xBar - xGoal)*QGoal*(xBar - xGoal)) + scalar(vecTh(QGoalVariance)*vectorize(SigmaBar));
+	if (flag & COMPUTE_tT) tT = vecTh(QGoalVariance);
 }
 
 // Compute closed form quadratic cost function around around b and u
 inline bool quadratizeCost(const Matrix<X_DIM>& xBar, const SymmetricMatrix<X_DIM>& SigmaBar, const Matrix<U_DIM>& uBar, double& q, SymmetricMatrix<X_DIM>& Q, SymmetricMatrix<U_DIM>& R, 
 						   Matrix<U_DIM, X_DIM>& P, Matrix<1,X_DIM>& qT, Matrix<1,U_DIM>& rT, Matrix<1,S_DIM>& pT, unsigned int flag) 
 {
-	if (flag & COMPUTE_Q) Q = zeros<X_DIM>(); // penalize uncertainty
+	if (flag & COMPUTE_Q) Q = Qint; // penalize uncertainty
 	if (flag & COMPUTE_R) R = Rint;
 	if (flag & COMPUTE_P) P = zeros<U_DIM,X_DIM>();
-	if (flag & COMPUTE_qT) qT = zeros<1, X_DIM>();
+	if (flag & COMPUTE_qT) qT = ~(xBar - xGoal)*Qint;
 	if (flag & COMPUTE_rT) rT = ~uBar*Rint;
-	if (flag & COMPUTE_pT) pT = vecTh(Qint);
-	//if (flag & COMPUTE_q) q = 0.5*scalar(~uBar*Rint*uBar) + scalar(vecTh(Qint)*vectorize(SigmaBar));
-	if (flag & COMPUTE_q) q = 2*(0.5*scalar(~uBar*Rint*uBar) + scalar(vecTh(Qint)*vectorize(SigmaBar)));
-
+	if (flag & COMPUTE_pT) pT = vecTh(QintVariance);
+	if (flag & COMPUTE_q) q = 0.5*scalar(~(xBar - xGoal)*Qint*(xBar - xGoal)) + 0.5*scalar(~uBar*Rint*uBar) + scalar(vecTh(QintVariance)*vectorize(SigmaBar));
 	return true;
 }
 
@@ -180,27 +163,79 @@ double costfunc(const std::vector<Matrix<B_DIM> >& B, const std::vector<Matrix<U
 
 int main(int argc, char* argv[])
 {
-	x0[0] = -3.5; x0[1] = 2;
-	xGoal[0] = -3.5; xGoal[1] = -2;
+	double length1_est = .05,
+			length2_est = .05,
+			mass1_est = .105,
+			mass2_est = .089;
+
+	// position, then velocity
+	x0[0] = -M_PI/2.0; x0[1] = -M_PI/2.0; x0[2] = 0; x0[3] = 0;
+	// parameter start estimates (alphabetical, then numerical order)
+	x0[4] = 1/length1_est; x0[5] = 1/length2_est; x0[6] = 1/mass1_est; x0[7] = 1/mass2_est;
+
+	xGoal[0] = -M_PI/2.0; xGoal[1] = -M_PI/2.0; xGoal[2] = 0.0; xGoal[3] = 0.0;
+	xGoal[4] = 1/length1_est; xGoal[5] = 1/length2_est; xGoal[6] = 1/mass1_est; xGoal[7] = 1/mass2_est;
+
 
 	// init controls from start to goal -- straight line trajectory
-	std::vector< Matrix<U_DIM> > uBar((T-1), (xGoal - x0)/(double)(T-1));
+	// TODO: possibly switch to random controls
+	std::vector< Matrix<U_DIM> > uBar((T-1), (xGoal.subMatrix<U_DIM,1>(0,0) - x0.subMatrix<U_DIM,1>(0,0))/(double)(T-1));
 
-	Rint = identity<U_DIM>();
-	Qint = 10.0*identity<X_DIM>();
-	QGoal = 100.0*identity<X_DIM>();
+	Rint = 1000.0*identity<U_DIM>();
+
+	Qint(0,0) = 1.0;
+	Qint(1,1) = 1.0;
+	Qint(2,2) = 1.0;
+	Qint(3,3) = 1.0;
+	Qint(4,4) = 0.0;
+	Qint(5,5) = 0.0;
+	Qint(6,6) = 0.0;
+	Qint(7,7) = 0.0;
+
+	QintVariance(0,0) = 0.0;
+	QintVariance(1,1) = 0.0;
+	QintVariance(2,2) = 0.0;
+	QintVariance(3,3) = 0.0;
+	QintVariance(4,4) = 10000000.0;
+	QintVariance(5,5) = 10000000.0;
+	QintVariance(6,6) = 1000000.0;
+	QintVariance(7,7) = 1000000.0;
+
+	QGoal(0,0) = 1.0;
+	QGoal(1,1) = 1.0;
+	QGoal(2,2) = 1.0;
+	QGoal(3,3) = 1.0;
+	QGoal(4,4) = 0.0;
+	QGoal(5,5) = 0.0;
+	QGoal(6,6) = 0.0;
+	QGoal(7,7) = 0.0;
+
+	QGoalVariance(0,0) = 0.0;
+	QGoalVariance(1,1) = 0.0;
+	QGoalVariance(2,2) = 0.0;
+	QGoalVariance(3,3) = 0.0;
+	QGoalVariance(4,4) = 10000000.0;
+	QGoalVariance(5,5) = 10000000.0;
+	QGoalVariance(6,6) = 1000000.0;
+	QGoalVariance(7,7) = 1000000.0;
 
 	std::vector< Matrix<U_DIM, X_DIM> > L;
 	std::vector< Matrix<X_DIM> > xBar;
 	std::vector< SymmetricMatrix<X_DIM> > SigmaBar;
 	
-	Sigma0 = identity<X_DIM>();
+	Sigma0(4,4) = 0.5;
+	Sigma0(5,5) = 0.5;
+	Sigma0(6,6) = 1.0;
+	Sigma0(7,7) = 1.0;
+
 	xBar.push_back(x0);
 	SigmaBar.push_back(Sigma0);
 
-	
+	std::cout << "solvePOMDP" << std::endl;
 
 	solvePOMDP(linearizeDynamics, linearizeObservation, quadratizeFinalCost, quadratizeCost, xBar, SigmaBar, uBar, L);
+
+	std::cout << "POMDP solved" << std::endl;
 
 	//for (size_t i = 0; i < xBar.size(); ++i) {
 	//	std::cout << ~(xBar[i]);
@@ -214,6 +249,7 @@ int main(int argc, char* argv[])
 	double cost = costfunc(B, uBar, Sigma0);
 	std::cout << "Our computed cost: " << cost << std::endl;
 
+	/*
 #define PLOT
 #ifdef PLOT
 
@@ -231,12 +267,6 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	py::list x0_list, xGoal_list;
-	for(int i=0; i < X_DIM; i++) {
-		x0_list.append(x0[i]);
-		xGoal_list.append(xGoal[i]);
-	}
-
 	std::string workingDir = boost::filesystem::current_path().normalize().string();
 	std::string bspDir = workingDir.substr(0,workingDir.find("bsp"));
 
@@ -246,13 +276,13 @@ int main(int argc, char* argv[])
 		py::object main_module = py::import("__main__");
 		py::object main_namespace = main_module.attr("__dict__");
 		py::exec("import sys, os", main_namespace);
-		py::exec(py::str("sys.path.append('"+bspDir+"bsp/python')"), main_namespace);
-		py::exec("from bsp_light_dark import LightDarkModel", main_namespace);
-		py::object model = py::eval("LightDarkModel()", main_namespace);
-		py::object plot_mod = py::import("plot");
-		py::object plot_traj = plot_mod.attr("plot_belief_trajectory_cpp");
+		py::exec(py::str("sys.path.append('"+workingDir+"/parameter')"), main_namespace);
+		//py::exec("from bsp_light_dark import LightDarkModel", main_namespace);
+		//py::object model = py::eval("LightDarkModel()", main_namespace);
+		py::object plot_mod = py::import("plot_parameter");
+		py::object plot_traj = plot_mod.attr("plot_parameter_trajectory");
 
-		plot_traj(Bvec, Uvec, model, x0_list, xGoal_list, T);
+		plot_traj(Bvec, Uvec, B_DIM, X_DIM, U_DIM, T);
 	}
 	catch(py::error_already_set const &)
 	{
@@ -262,6 +292,7 @@ int main(int argc, char* argv[])
 	int k;
 	std::cin >> k;
 #endif
+*/
 
 
 	return 0;

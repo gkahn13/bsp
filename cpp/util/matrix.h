@@ -63,15 +63,15 @@ public:
 	    return m;
 	  }
 
-	template <size_t numRows>
-	inline Matrix<numRows> subMatrix(size_t row, size_t column) const {
-		assert(row + numRows <= _numRows && column < _numColumns);
-		Matrix<numRows> m;
-		for (size_t i = 0; i < numRows; ++i) {
-			m[i] = (*this)(row + i, column);
-		}
-		return m;
-	}
+	  template <size_t nRows>
+	  inline Matrix<nRows> subMatrix(size_t row, size_t column) const {
+	    assert(row + nRows <= _numRows && column <= _numColumns);
+	    Matrix<nRows> m;
+	    for (size_t i = 0; i < nRows; ++i) {
+	      m[i] = (*this)(row + i, column);
+	    }
+	    return m;
+	  }
 
 	inline Matrix<_numRows> column(size_t columnNr) const {
 		assert(columnNr < _numColumns);

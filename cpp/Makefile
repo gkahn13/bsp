@@ -75,6 +75,20 @@ $(OBJ_DIR)/armStateMPC.o : $(ARM_STATE_DIR)/armStateMPC.c
 	
 $(OBJ_DIR)/arm-state.o : $(ARM_STATE_DIR)/arm-state.cpp $(ARM_HEADERS)
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) $(ADOLC_FLAGS) -c -o $@ $<
+	
+
+
+###### PARAMETER ###########
+# make point-ilqg
+PARAM_ILQG_DIR = parameter/ilqg
+PARAM_ILQG_FILES = parameter-ilqg
+PARAM_ILQG_OBJS = $(PARAM_ILQG_FILES:%=$(OBJ_DIR)/%.o)
+
+parameter-ilqg: $(PARAM_ILQG_OBJS)
+	$(CXX) $(BFLAGS) $(PARAM_ILQG_OBJS) -o $(BIN_DIR)/param-ilqg $(PYTHON_FLAGS) $(BOOST_FLAGS) $(LINKER_FLAGS)
+	
+$(OBJ_DIR)/parameter-ilqg.o : $(PARAM_ILQG_DIR)/parameter-ilqg.cpp $(PARAM_ILQG_DIR)/ilqg.h
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) -c -o $@ $<
 
 
 

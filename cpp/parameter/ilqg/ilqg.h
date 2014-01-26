@@ -550,7 +550,7 @@ inline void solvePOMDP(void (*linearizeDynamics)(const Matrix<_xDim>&, const Mat
 	std::cout << "Cost to begin : " << initialCost << std::endl;
 	
 
-#define PLOT
+//#define PLOT
 #ifdef PLOT
 	Py_Initialize();
 #endif

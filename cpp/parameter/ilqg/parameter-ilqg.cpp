@@ -135,7 +135,7 @@ inline void linearizeObservation(const Matrix<X_DIM>& xBar, Matrix<Z_DIM, X_DIM>
 }
 
 
-double costfunc(const std::vector<Matrix<B_DIM> >& B, const std::vector<Matrix<U_DIM> >& U, const Matrix<X_DIM,X_DIM>& Sigma_0)
+double costfunc(const std::vector<Matrix<B_DIM> >& B, const std::vector<Matrix<U_DIM> >& U)
 {
 	double cost = 0;
 
@@ -144,7 +144,6 @@ double costfunc(const std::vector<Matrix<B_DIM> >& B, const std::vector<Matrix<U
 	Matrix<X_DIM,X_DIM> Sigma;
 
 	b = B[0];
-	Sigma = Sigma_0;
 
 	unVec(b, x, Sigma);
 	for (int t = 0; t < T - 1; ++t)
@@ -152,14 +151,22 @@ double costfunc(const std::vector<Matrix<B_DIM> >& B, const std::vector<Matrix<U
 		cost += alpha_belief*tr(Sigma) + alpha_control*tr(~U[t]*U[t]);
 
 		b = beliefDynamics(b, U[t], false);
+		//b = B[t+1];
 		unVec(b, x, Sigma);
 	}
-	unVec(B[T-1], x, Sigma);
+	//unVec(B[T-1], x, Sigma);
 	cost += alpha_belief*tr(Sigma);
 
 	return cost;
 }
 
+Matrix<X_DIM> SigmaDiag(const Matrix<X_DIM,X_DIM>& Sigma) {
+	Matrix<X_DIM> diag;
+	for(int i = 0; i < X_DIM; ++i) {
+		diag[i] = Sigma(i,i);
+	}
+	return diag;
+}
 
 int main(int argc, char* argv[])
 {
@@ -241,22 +248,48 @@ int main(int argc, char* argv[])
 	//	std::cout << ~(xBar[i]);
 	//}
 
-	std::vector< Matrix<B_DIM> > B(T);
+	std::vector< Matrix<B_DIM> > Bpomdp(T);
 	for(int t = 0; t < T; ++t) {
-		vec(xBar[t], SigmaBar[t], B[t], false);
+		vec(xBar[t], SigmaBar[t], Bpomdp[t], false);
 	}
 
-	double cost = costfunc(B, uBar, Sigma0);
-	std::cout << "Our computed cost: " << cost << std::endl;
+	std::vector< Matrix<B_DIM> > Bekf(T);
+	vec(xBar[0], SigmaBar[0], Bekf[0]);
+	for (int t = 0; t < T - 1; ++t)
+	{
+		Bekf[t+1] = beliefDynamics(Bekf[t], uBar[t], false);
+	}
 
-	/*
-#define PLOT
-#ifdef PLOT
+	double cost_pomdp = costfunc(Bpomdp, uBar);
+	double cost_ekf = costfunc(Bekf, uBar);
+
+	std::cout << "cost pomdp: " << cost_pomdp << std::endl;
+	std::cout << "cost ekf: " << cost_ekf << std::endl;
+
+	Matrix<X_DIM> xpomdp, xekf;
+	Matrix<X_DIM,X_DIM> Sigmapomdp, Sigmaekf;
+	for(int t = 0; t < T; ++t) {
+		unVec(Bpomdp[t], xpomdp, Sigmapomdp);
+		unVec(Bekf[t], xekf, Sigmaekf);
+		//std::cout << "t: " << t << " xpomdp" << std::endl;
+		//std::cout << ~xpomdp;
+		//std::cout << "t: " << t << " xekf" << std::endl;
+		//std::cout << ~xekf << std::endl;
+		std::cout << "t: " << t << " Sigmapomdp" << std::endl;
+		std::cout << ~SigmaDiag(Sigmapomdp);
+		std::cout << "t: " << t << " Sigmaekf" << std::endl;
+		std::cout << ~SigmaDiag(Sigmaekf) << std::endl << std::endl;
+	}
+
+#define CPP_PLOT
+#ifdef CPP_PLOT
+
+	Py_Initialize();
 
 	py::list Bvec;
 	for(int j=0; j < B_DIM; j++) {
 		for(int i=0; i < T; i++) {
-			Bvec.append(B[i][j]);
+			Bvec.append(Bpomdp[i][j]);
 		}
 	}
 
@@ -268,31 +301,19 @@ int main(int argc, char* argv[])
 	}
 
 	std::string workingDir = boost::filesystem::current_path().normalize().string();
-	std::string bspDir = workingDir.substr(0,workingDir.find("bsp"));
 
-	try
-	{
-		Py_Initialize();
-		py::object main_module = py::import("__main__");
-		py::object main_namespace = main_module.attr("__dict__");
-		py::exec("import sys, os", main_namespace);
-		py::exec(py::str("sys.path.append('"+workingDir+"/parameter')"), main_namespace);
-		//py::exec("from bsp_light_dark import LightDarkModel", main_namespace);
-		//py::object model = py::eval("LightDarkModel()", main_namespace);
-		py::object plot_mod = py::import("plot_parameter");
-		py::object plot_traj = plot_mod.attr("plot_parameter_trajectory");
+	py::object main_module = py::import("__main__");
+	py::object main_namespace = main_module.attr("__dict__");
+	py::exec("import sys, os", main_namespace);
+	py::exec(py::str("sys.path.append('"+workingDir+"/parameter')"), main_namespace);
+	py::object plot_mod = py::import("plot_parameter");
+	py::object plot_traj = plot_mod.attr("plot_parameter_trajectory");
 
-		plot_traj(Bvec, Uvec, B_DIM, X_DIM, U_DIM, T);
-	}
-	catch(py::error_already_set const &)
-	{
-		PyErr_Print();
-	}
+	plot_traj(Bvec, Uvec, B_DIM, X_DIM, U_DIM, T);
 
-	int k;
-	std::cin >> k;
+	//int k;
+	//std::cin >> k;
 #endif
-*/
 
 
 	return 0;

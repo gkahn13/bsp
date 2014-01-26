@@ -1297,5 +1297,21 @@ inline double scalar(const Matrix<1,1>& M) {
 	return M[0];
 }
 
+// Principal square root
+template <size_t _size>
+inline Matrix<_size, _size> sqrt(const Matrix<_size, _size>& X) {
+  Matrix<_size,_size> V;
+  Matrix<_size,_size> D;
+  jacobi2(X, V, D);
+  for (size_t i = 0; i < _size; ++i) {
+		if (D(i,i) > 0) {
+			D(i,i) = sqrt(D(i,i));
+		} else {
+			D(i,i) = 0;
+		}
+	}
+	return (V*D*~V);
+}
+
 
 #endif

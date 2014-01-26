@@ -155,7 +155,7 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u, boo
 	Sigma = (identity<X_DIM>() - K*H)*Sigma;
 
 	Matrix<B_DIM> g;
-	vec(x, Sigma, g, isSqrtSigma);
+	vec(x, sqrt(Sigma), g);
 
 	return g;
 }

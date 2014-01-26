@@ -51,17 +51,17 @@ public:
 	}
 
 	// Submatrix
-	template <size_t numRows, size_t numColumns>
-	inline Matrix<numRows, numColumns> subMatrix(size_t row, size_t column) const {
-		assert(row + numRows <= _numRows && column + numColumns <= _numColumns);
-		Matrix<numRows, numColumns> m;
-		for (size_t i = 0; i < numRows; ++i) {
-			for (size_t j = 0; j < numColumns; ++j) {
-				m(i, j) = (*this)(row + i, column + j);
-			}
-		}
-		return m;
-	}
+	  template <size_t nRows, size_t nCols>
+	  inline Matrix<nRows, nCols> subMatrix(size_t row, size_t column) const {
+	    assert(row + nRows <= _numRows && column + nCols <= _numColumns);
+	    Matrix<nRows, nCols> m;
+	    for (size_t i = 0; i < nRows; ++i) {
+	      for (size_t j = 0; j < nCols; ++j) {
+	        m(i, j) = (*this)(row + i, column + j);
+	      }
+	    }
+	    return m;
+	  }
 
 	template <size_t numRows>
 	inline Matrix<numRows> subMatrix(size_t row, size_t column) const {

@@ -24,13 +24,13 @@ const unsigned int COMPUTE_qT = (1 << 12);
 const unsigned int COMPUTE_rT = (1 << 13);
 const unsigned int COMPUTE_pT = (1 << 14);
 
-const double step = 0.0078125 / 16;
+//const double step = 0.0078125 / 16;
 const double goldenRatio = 0.5*(3.0 - sqrt(5.0));
 const double infCost = 1e10;
 
 // Computes vector containing the elements (column by column) of the lower triangle of symmetric matrix S.
 template <size_t _xDim>
-inline Matrix<_sDim> vec(const SymmetricMatrix<_xDim>& S) {
+inline Matrix<_sDim> vectorize(const SymmetricMatrix<_xDim>& S) {
 	Matrix<_sDim> v;
 	for (size_t i = 0; i < ((_xDim+1)*_xDim)/2; ++i) {
 		v[i] = S[i];
@@ -38,7 +38,7 @@ inline Matrix<_sDim> vec(const SymmetricMatrix<_xDim>& S) {
 	return v;
 }
 
-// computes row vector such that 0.5*tr(S*Sigma) = vecTh(S)*vec(Sigma)
+// computes row vector such that 0.5*tr(S*Sigma) = vecTh(S)*vectorize(Sigma)
 template <size_t _xDim>
 inline Matrix<1,_sDim> vecTh(const SymmetricMatrix<_xDim>& S) {
 	Matrix<1,_sDim> v;
@@ -97,8 +97,8 @@ inline void computeCEFJ(void (*linearizeDynamics)(const Matrix<_xDim>&, const Ma
 		linearizeObservation(xNext, H, N);
 		beliefDynamics(A, M, H, N, SigmaBar, GammaL, WL);
 
-		tTC[i] = scalar(tT * vec((GammaR - GammaL) / (2.0*step)) );
-		vecSF[i] = scalar(hvecS * vec((WR - WL) / (2.0*step)) );
+		tTC[i] = scalar(tT * vectorize((GammaR - GammaL) / (2.0*step)) );
+		vecSF[i] = scalar(hvecS * vectorize((WR - WL) / (2.0*step)) );
 
 		xR[i] = xL[i] = xBar[i];
 	}
@@ -116,8 +116,8 @@ inline void computeCEFJ(void (*linearizeDynamics)(const Matrix<_xDim>&, const Ma
 		linearizeObservation(xNext, H, N);
 		beliefDynamics(A, M, H, N, SigmaBar, GammaL, WL);
 
-		tTE[i] = scalar(tT * vec((GammaR - GammaL) / (2.0*step)) );
-		vecSJ[i] = scalar(hvecS * vec((WR - WL) / (2.0*step)) );
+		tTE[i] = scalar(tT * vectorize((GammaR - GammaL) / (2.0*step)) );
+		vecSJ[i] = scalar(hvecS * vectorize((WR - WL) / (2.0*step)) );
 
 		uR[i] = uL[i] = uBar[i];
 	}
@@ -155,9 +155,9 @@ inline void computeDG(const Matrix<_xDim, _xDim>& A, const SymmetricMatrix<_xDim
 	size_t idx = 0;
 	for (size_t j = 0; j < _xDim; ++j) {
 		for (size_t i = j; i < _xDim; ++i) {
-			Matrix<_sDim> vecdSigmaVij = vec(dSigma(V, i, j));
+			Matrix<_sDim> vecdSigmaVij = vectorize(dSigma(V, i, j));
 			tTD[idx] = scalar( tT * vecdSigmaVij );
-			vecSG[idx] = scalar( hvecS * (vec(dSigma(A, i, j)) - vecdSigmaVij) );
+			vecSG[idx] = scalar( hvecS * (vectorize(dSigma(A, i, j)) - vecdSigmaVij) );
 			++idx;
 		}
 	}
@@ -272,7 +272,7 @@ inline void expectedCost(void (*linearizeDynamics)(const Matrix<_xDim>&, const M
 	bool retcode = quadratizeCost(xBar, SigmaBar, uBar, q, Q, R, P, qT, rT, pT, COMPUTE_q|COMPUTE_Q|COMPUTE_R|COMPUTE_P);
 
 	if (retcode) {
-		s = q + s + scalar(vecTh(S)*vec(WBar));
+		s = q + s; // + scalar(vecTh(S)*vectorize(WBar));
 	} else {
 		s = infCost;
 	}
@@ -319,10 +319,16 @@ inline void integrateControlPolicy(void (*linearizeDynamics)(const Matrix<_xDim>
 
 	size_t pathLen = uBar.size();
 
+	int Umax = 1, Umin = -1;
+
 	xNext[0] = xBar[0];
 	SigmaNext[0] = SigmaBar0;
 	for (size_t t = 0; t < pathLen; ++t) {
 		uNext[t] = eps*l[t] + L[t]*(xNext[t] - xBar[t]) + uBar[t];
+
+		for(size_t i = 0; i < _uDim; ++i) {
+			uNext[t][i] = ((Umax-Umin)/2)*std::tanh(uNext[t][i]) + ((Umax+Umin)/2);
+		}
 
 		linearizeDynamics(xNext[t], uNext[t], xNext[t+1], A, B, M, COMPUTE_c|COMPUTE_A|COMPUTE_M);
 		linearizeObservation(xNext[t+1], H, N);

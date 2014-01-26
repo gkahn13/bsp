@@ -2,9 +2,8 @@
 #define __POINT_H__
 
 #include <fstream>
-#include <tgmath.h>
 
-#include "util/matrix.h"
+#include "util/ilqg-matrix.h"
 
 
 #include "util/utils.h"
@@ -99,24 +98,28 @@ void linearizeObservation(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r, Matrix
 }
 
 // Switch between belief vector and matrices
-void unVec(const Matrix<B_DIM>& b, Matrix<X_DIM>& x, Matrix<X_DIM,X_DIM>& SqrtSigma) {
+void unVec(const Matrix<B_DIM>& b, Matrix<X_DIM>& x, Matrix<X_DIM,X_DIM>& S) {
 	x = b.subMatrix<X_DIM,1>(0,0);
 	size_t idx = X_DIM;
 	for (size_t j = 0; j < X_DIM; ++j) {
 		for (size_t i = j; i < X_DIM; ++i) {
-			SqrtSigma(i,j) = b[idx];
-			SqrtSigma(j,i) = b[idx];
+			S(i,j) = b[idx];
+			S(j,i) = b[idx];
 			++idx;
 		}
 	}
 }
 
-void vec(const Matrix<X_DIM>& x, const Matrix<X_DIM,X_DIM>& SqrtSigma, Matrix<B_DIM>& b) {
+void vec(const Matrix<X_DIM>& x, const Matrix<X_DIM,X_DIM>& S, Matrix<B_DIM>& b, bool isSqrtSigma = true) {
 	b.insert(0,0,x);
 	size_t idx = X_DIM;
 	for (size_t j = 0; j < X_DIM; ++j) {
 		for (size_t i = j; i < X_DIM; ++i) {
-			b[idx] = 0.5 * (SqrtSigma(i,j) + SqrtSigma(j,i));
+			if (isSqrtSigma) {
+				b[idx] = 0.5 * (S(i,j) + S(j,i));
+			} else {
+				b[idx] = S(i,j);
+			}
 			++idx;
 		}
 	}
@@ -124,12 +127,14 @@ void vec(const Matrix<X_DIM>& x, const Matrix<X_DIM,X_DIM>& SqrtSigma, Matrix<B_
 
 
 // Belief dynamics
-Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
+Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u, bool isSqrtSigma = true) {
 	Matrix<X_DIM> x;
-	Matrix<X_DIM,X_DIM> SqrtSigma;
-	unVec(b, x, SqrtSigma);
+	Matrix<X_DIM,X_DIM> Sigma;
+	unVec(b, x, Sigma);
 
-	Matrix<X_DIM,X_DIM> Sigma = SqrtSigma*SqrtSigma;
+	if (isSqrtSigma) {
+		Sigma = Sigma*Sigma;
+	}
 
 	Matrix<X_DIM,X_DIM> A = identity<X_DIM>();
 	Matrix<X_DIM,Q_DIM> M = .01*identity<U_DIM>();
@@ -150,7 +155,7 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	Sigma = (identity<X_DIM>() - K*H)*Sigma;
 
 	Matrix<B_DIM> g;
-	vec(x, sqrt(Sigma), g);
+	vec(x, Sigma, g, isSqrtSigma);
 
 	return g;
 }

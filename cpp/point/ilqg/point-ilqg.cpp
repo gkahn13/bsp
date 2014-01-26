@@ -1,16 +1,26 @@
+#include "../point.h"
+
 #include "util/ilqg-matrix.h"
 
 #include "ilqg.h"
 
 #include <time.h>
 
+#include <Python.h>
+#include <boost/python.hpp>
+#include <boost/filesystem.hpp>
 
+namespace py = boost::python;
+
+/*
+#define TIMESTEPS 15
 #define DT 1.0
 #define X_DIM 2
 #define U_DIM 2
 #define Z_DIM 2
 #define S_DIM (((X_DIM+1)*X_DIM)/2)
 #define B_DIM (X_DIM + S_DIM)
+*/
 
 SymmetricMatrix<U_DIM> Rint;
 SymmetricMatrix<X_DIM> Qint;
@@ -18,6 +28,8 @@ SymmetricMatrix<X_DIM> QGoal;
 SymmetricMatrix<X_DIM> Sigma0;
 
 Matrix<X_DIM> x0, xGoal;
+
+
 
 inline Matrix<X_DIM> f(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u)
 {  
@@ -104,8 +116,8 @@ inline void quadratizeFinalCost(const Matrix<X_DIM>& xBar, const SymmetricMatrix
 {
 	if (flag & COMPUTE_S) S = QGoal;
 	if (flag & COMPUTE_sT) sT = ~(xBar - xGoal)*QGoal;
-	//if (flag & COMPUTE_s) s = 0.5*scalar(~(xBar - xGoal)*QGoal*(xBar - xGoal)) + scalar(vecTh(QGoal)*vec(SigmaBar));
-	if (flag & COMPUTE_s) s = 2*(0.5*scalar(~(xBar - xGoal)*QGoal*(xBar - xGoal)) + scalar(vecTh(QGoal)*vec(SigmaBar)));
+	//if (flag & COMPUTE_s) s = 0.5*scalar(~(xBar - xGoal)*QGoal*(xBar - xGoal)) + scalar(vecTh(QGoal)*vectorize(SigmaBar));
+	if (flag & COMPUTE_s) s = 2*(0.5*scalar(~(xBar - xGoal)*QGoal*(xBar - xGoal)) + scalar(vecTh(QGoal)*vectorize(SigmaBar)));
 	if (flag & COMPUTE_tT) tT = vecTh(QGoal);
 }
 
@@ -119,8 +131,8 @@ inline bool quadratizeCost(const Matrix<X_DIM>& xBar, const SymmetricMatrix<X_DI
 	if (flag & COMPUTE_qT) qT = zeros<1, X_DIM>();
 	if (flag & COMPUTE_rT) rT = ~uBar*Rint;
 	if (flag & COMPUTE_pT) pT = vecTh(Qint);
-	//if (flag & COMPUTE_q) q = 0.5*scalar(~uBar*Rint*uBar) + scalar(vecTh(Qint)*vec(SigmaBar));
-	if (flag & COMPUTE_q) q = 2*(0.5*scalar(~uBar*Rint*uBar) + scalar(vecTh(Qint)*vec(SigmaBar)));
+	//if (flag & COMPUTE_q) q = 0.5*scalar(~uBar*Rint*uBar) + scalar(vecTh(Qint)*vectorize(SigmaBar));
+	if (flag & COMPUTE_q) q = 2*(0.5*scalar(~uBar*Rint*uBar) + scalar(vecTh(Qint)*vectorize(SigmaBar)));
 
 	return true;
 }
@@ -139,19 +151,44 @@ inline void linearizeObservation(const Matrix<X_DIM>& xBar, Matrix<Z_DIM, X_DIM>
 	N = varN(xBar);
 }
 
+
+double costfunc(const std::vector<Matrix<B_DIM> >& B, const std::vector<Matrix<U_DIM> >& U, const Matrix<X_DIM,X_DIM>& Sigma_0)
+{
+	double cost = 0;
+
+	Matrix<X_DIM> x;
+	Matrix<B_DIM> b;
+	Matrix<X_DIM,X_DIM> Sigma;
+
+	b = B[0];
+	Sigma = Sigma_0;
+
+	unVec(b, x, Sigma);
+	for (int t = 0; t < T - 1; ++t)
+	{
+		cost += alpha_belief*tr(Sigma) + alpha_control*tr(~U[t]*U[t]);
+
+		b = beliefDynamics(b, U[t]);
+		unVec(b, x, Sigma);
+	}
+	unVec(B[T-1], x, Sigma);
+	cost += alpha_belief*tr(Sigma);
+
+	return cost;
+}
+
+
 int main(int argc, char* argv[])
 {
-	size_t numSteps = 15;
-	
 	x0[0] = -3.5; x0[1] = 2;
 	xGoal[0] = -3.5; xGoal[1] = -2;
 
 	// init controls from start to goal -- straight line trajectory
-	std::vector< Matrix<U_DIM> > uBar(numSteps, (xGoal - x0)/(double)numSteps); 
+	std::vector< Matrix<U_DIM> > uBar((T-1), (xGoal - x0)/(double)(T-1));
 
 	Rint = identity<U_DIM>();
 	Qint = 10.0*identity<X_DIM>();
-	QGoal = 10.0*identity<X_DIM>();
+	QGoal = 100.0*identity<X_DIM>();
 
 	std::vector< Matrix<U_DIM, X_DIM> > L;
 	std::vector< Matrix<X_DIM> > xBar;
@@ -169,8 +206,63 @@ int main(int argc, char* argv[])
 	//	std::cout << ~(xBar[i]);
 	//}
 
+	std::vector< Matrix<B_DIM> > B(T);
+	for(int t = 0; t < T; ++t) {
+		vec(xBar[t], SigmaBar[t], B[t], false);
+	}
+
+	double cost = costfunc(B, uBar, Sigma0);
+	std::cout << "Our computed cost: " << cost << std::endl;
+
+#define PLOT
+#ifdef PLOT
+
+	py::list Bvec;
+	for(int j=0; j < B_DIM; j++) {
+		for(int i=0; i < T; i++) {
+			Bvec.append(B[i][j]);
+		}
+	}
+
+	py::list Uvec;
+	for(int j=0; j < U_DIM; j++) {
+		for(int i=0; i < T-1; i++) {
+			Uvec.append(uBar[i][j]);
+		}
+	}
+
+	py::list x0_list, xGoal_list;
+	for(int i=0; i < X_DIM; i++) {
+		x0_list.append(x0[i]);
+		xGoal_list.append(xGoal[i]);
+	}
+
+	std::string workingDir = boost::filesystem::current_path().normalize().string();
+	std::string bspDir = workingDir.substr(0,workingDir.find("bsp"));
+
+	try
+	{
+		Py_Initialize();
+		py::object main_module = py::import("__main__");
+		py::object main_namespace = main_module.attr("__dict__");
+		py::exec("import sys, os", main_namespace);
+		py::exec(py::str("sys.path.append('"+bspDir+"bsp/python')"), main_namespace);
+		py::exec("from bsp_light_dark import LightDarkModel", main_namespace);
+		py::object model = py::eval("LightDarkModel()", main_namespace);
+		py::object plot_mod = py::import("plot");
+		py::object plot_traj = plot_mod.attr("plot_belief_trajectory_cpp");
+
+		plot_traj(Bvec, Uvec, model, x0_list, xGoal_list, T);
+	}
+	catch(py::error_already_set const &)
+	{
+		PyErr_Print();
+	}
+
 	int k;
 	std::cin >> k;
+#endif
+
 
 	return 0;
 }

@@ -210,10 +210,10 @@ PT_ILQG_FILES = point-ilqg
 PT_ILQG_OBJS = $(PT_ILQG_FILES:%=$(OBJ_DIR)/%.o)
 
 point-ilqg: $(PT_ILQG_OBJS)
-	$(CXX) $(BFLAGS) $(PT_ILQG_OBJS) -o $(BIN_DIR)/point-ilqg $(LINKER_FLAGS)
+	$(CXX) $(BFLAGS) $(PT_ILQG_OBJS) -o $(BIN_DIR)/point-ilqg $(PYTHON_FLAGS) $(BOOST_FLAGS) $(LINKER_FLAGS)
 	
 $(OBJ_DIR)/point-ilqg.o : $(PT_ILQG_DIR)/point-ilqg.cpp $(PT_ILQG_DIR)/ilqg.h
-	$(CXX) $(CPP_FLAGS) $(BFLAGS) -c -o $@ $<
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) -c -o $@ $<
 
 ###### CLEAN ########
 

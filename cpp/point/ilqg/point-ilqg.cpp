@@ -1,6 +1,6 @@
 #include "../point.h"
 
-#include "util/ilqg-matrix.h"
+#include "util/matrix.h"
 
 #include "ilqg.h"
 

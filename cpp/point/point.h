@@ -3,7 +3,7 @@
 
 #include <fstream>
 
-#include "util/ilqg-matrix.h"
+#include "util/matrix.h"
 
 
 #include "util/utils.h"

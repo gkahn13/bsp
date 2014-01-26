@@ -2,7 +2,7 @@
 #ifndef __POMDP_On4_H__
 #define __POMDP_On4_H__
 
-#include "util/ilqg-matrix.h"
+#include "util/matrix.h"
 #include "util/utils.h"
 #include <vector>
 

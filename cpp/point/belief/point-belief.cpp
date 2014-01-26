@@ -712,7 +712,6 @@ int main(int argc, char* argv[])
 		//std::cout << ~B[t] << std::endl;
 	}
 
-	//double initialCost = computeCost(B, U);
 
 	//for (size_t t = 0; t < T; ++t) {
 	//	std::cout << ~B[t];
@@ -745,7 +744,6 @@ int main(int argc, char* argv[])
 #endif
 
 	double solvetime = util::Timer_toc(&solveTimer);
-	//LOG_INFO("Initial cost: %4.10f", initialCost);
 	LOG_INFO("Optimized cost: %4.10f", cost);
 	LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 	

@@ -150,11 +150,9 @@ double costfunc(const std::vector<Matrix<B_DIM> >& B, const std::vector<Matrix<U
 	{
 		cost += alpha_belief*tr(Sigma) + alpha_control*tr(~U[t]*U[t]);
 
-		b = beliefDynamics(b, U[t], false);
-		//b = B[t+1];
+		b = B[t+1];
 		unVec(b, x, Sigma);
 	}
-	//unVec(B[T-1], x, Sigma);
 	cost += alpha_belief*tr(Sigma);
 
 	return cost;

@@ -110,16 +110,12 @@ void unVec(const Matrix<B_DIM>& b, Matrix<X_DIM>& x, Matrix<X_DIM,X_DIM>& S) {
 	}
 }
 
-void vec(const Matrix<X_DIM>& x, const Matrix<X_DIM,X_DIM>& S, Matrix<B_DIM>& b, bool isSqrtSigma = true) {
+void vec(const Matrix<X_DIM>& x, const Matrix<X_DIM,X_DIM>& S, Matrix<B_DIM>& b) {
 	b.insert(0,0,x);
 	size_t idx = X_DIM;
 	for (size_t j = 0; j < X_DIM; ++j) {
 		for (size_t i = j; i < X_DIM; ++i) {
-			if (isSqrtSigma) {
-				b[idx] = 0.5 * (S(i,j) + S(j,i));
-			} else {
-				b[idx] = S(i,j);
-			}
+			b[idx] = 0.5 * (S(i,j) + S(j,i));
 			++idx;
 		}
 	}
@@ -127,14 +123,12 @@ void vec(const Matrix<X_DIM>& x, const Matrix<X_DIM,X_DIM>& S, Matrix<B_DIM>& b,
 
 
 // Belief dynamics
-Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u, bool isSqrtSigma = true) {
+Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	Matrix<X_DIM> x;
 	Matrix<X_DIM,X_DIM> Sigma;
 	unVec(b, x, Sigma);
 
-	if (isSqrtSigma) {
-		Sigma = Sigma*Sigma;
-	}
+	Sigma = Sigma*Sigma;
 
 	Matrix<X_DIM,X_DIM> A = identity<X_DIM>();
 	Matrix<X_DIM,Q_DIM> M = .01*identity<U_DIM>();

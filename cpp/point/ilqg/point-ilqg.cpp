@@ -152,27 +152,26 @@ inline void linearizeObservation(const Matrix<X_DIM>& xBar, Matrix<Z_DIM, X_DIM>
 }
 
 
-double costfunc(const std::vector<Matrix<B_DIM> >& B, const std::vector<Matrix<U_DIM> >& U, const Matrix<X_DIM,X_DIM>& Sigma_0)
+double costfunc(const std::vector<Matrix<B_DIM> >& B, const std::vector<Matrix<U_DIM> >& U)
 {
 	double cost = 0;
 
 	Matrix<X_DIM> x;
 	Matrix<B_DIM> b;
-	Matrix<X_DIM,X_DIM> Sigma;
+	Matrix<X_DIM,X_DIM> SqrtSigma;
 
 	b = B[0];
-	Sigma = Sigma_0;
 
-	unVec(b, x, Sigma);
+	unVec(b, x, SqrtSigma);
 	for (int t = 0; t < T - 1; ++t)
 	{
-		cost += alpha_belief*tr(Sigma) + alpha_control*tr(~U[t]*U[t]);
+		cost += alpha_belief*tr(SqrtSigma*SqrtSigma) + alpha_control*tr(~U[t]*U[t]);
 
-		b = beliefDynamics(b, U[t], false);
-		unVec(b, x, Sigma);
+		b = beliefDynamics(b, U[t]);
+		unVec(b, x, SqrtSigma);
 	}
-	unVec(B[T-1], x, Sigma);
-	cost += alpha_belief*tr(Sigma);
+	unVec(B[T-1], x, SqrtSigma);
+	cost += alpha_belief*tr(SqrtSigma*SqrtSigma);
 
 	return cost;
 }
@@ -208,10 +207,10 @@ int main(int argc, char* argv[])
 
 	std::vector< Matrix<B_DIM> > B(T);
 	for(int t = 0; t < T; ++t) {
-		vec(xBar[t], SigmaBar[t], B[t], false);
+		vec(xBar[t], sqrt(SigmaBar[t]), B[t]);
 	}
 
-	double cost = costfunc(B, uBar, Sigma0);
+	double cost = costfunc(B, uBar);
 	std::cout << "Our computed cost: " << cost << std::endl;
 
 #define PLOT

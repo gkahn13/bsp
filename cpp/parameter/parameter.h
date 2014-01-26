@@ -305,8 +305,8 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u, boo
 	x = dynfunc(x, u, zeros<Q_DIM,1>());
 	Sigma = A*Sigma*~A + M*~M;
 
-	Matrix<Z_DIM,X_DIM> H;
-	Matrix<Z_DIM,R_DIM> N;
+	Matrix<Z_DIM,X_DIM> H = zeros<Z_DIM,X_DIM>();
+	Matrix<Z_DIM,R_DIM> N = zeros<Z_DIM,R_DIM>();
 	linearizeObservation(x, zeros<R_DIM,1>(), H, N);
 
 	Matrix<X_DIM,Z_DIM> K = Sigma*~H/(H*Sigma*~H + N*~N);
@@ -314,7 +314,7 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u, boo
 	Sigma = (identity<X_DIM>() - K*H)*Sigma;
 
 	Matrix<B_DIM> g;
-	vec(x, Sigma, g, isSqrtSigma);
+	vec(x, sqrt(Sigma), g);
 
 	return g;
 }

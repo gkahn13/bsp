@@ -1314,4 +1314,21 @@ inline Matrix<_size, _size> sqrt(const Matrix<_size, _size>& X) {
 }
 
 
+// Principal square root
+template <size_t _size>
+inline SymmetricMatrix<_size> sqrt(const SymmetricMatrix<_size>& X) {
+  Matrix<_size,_size> V;
+  SymmetricMatrix<_size> D;
+  jacobi(X, V, D);
+  for (size_t i = 0; i < _size; ++i) {
+		if (D(i,i) > 0) {
+			D(i,i) = sqrt(D(i,i));
+		} else {
+			D(i,i) = 0;
+		}
+	}
+	return (SymProd(V,D*~V));
+}
+
+
 #endif

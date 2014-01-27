@@ -1,5 +1,5 @@
-#ifndef __POINT_H__
-#define __POINT_H__
+#ifndef __PARAMETER_H__
+#define __PARAMETER_H__
 
 #include <fstream>
 
@@ -329,11 +329,16 @@ void setupDstarInterface(std::string mask) {
 	inputVars = new double[i];
 }
 
-void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U, Matrix<X_DIM> x0, Matrix<X_DIM> xGoal)
+void pythonDisplayTrajectory(std::vector< Matrix<U_DIM> >& U, Matrix<X_DIM,X_DIM> SqrtSigma0, Matrix<X_DIM> x0, Matrix<X_DIM> xGoal)
 {
-	for (int t = 0; t < T-1; ++t) {
+	std::vector< Matrix<B_DIM> > B(T);
+	vec(x0, SqrtSigma0, B[0]);
+	for (int t = 0; t < T - 1; ++t)
+	{
 		B[t+1] = beliefDynamics(B[t], U[t]);
 	}
+
+	Py_Initialize();
 
 	py::list Bvec;
 	for(int j=0; j < B_DIM; j++) {
@@ -343,39 +348,22 @@ void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matri
 	}
 
 	py::list Uvec;
-		for(int j=0; j < U_DIM; j++) {
-			for(int i=0; i < T-1; i++) {
+	for(int j=0; j < U_DIM; j++) {
+		for(int i=0; i < T-1; i++) {
 			Uvec.append(U[i][j]);
 		}
 	}
 
-	py::list x0_list, xGoal_list;
-	for(int i=0; i < X_DIM; i++) {
-		x0_list.append(x0[i]);
-		xGoal_list.append(xGoal[i]);
-	}
-
 	std::string workingDir = boost::filesystem::current_path().normalize().string();
-	std::string bspDir = workingDir.substr(0,workingDir.find("bsp"));
 
-	try
-	{
-		Py_Initialize();
-		py::object main_module = py::import("__main__");
-		py::object main_namespace = main_module.attr("__dict__");
-		py::exec("import sys, os", main_namespace);
-		py::exec(py::str("sys.path.append('"+bspDir+"bsp/python')"), main_namespace);
-		py::exec("from bsp_light_dark import LightDarkModel", main_namespace);
-		py::object model = py::eval("LightDarkModel()", main_namespace);
-		py::object plot_mod = py::import("plot");
-		py::object plot_traj = plot_mod.attr("plot_belief_trajectory_cpp");
+	py::object main_module = py::import("__main__");
+	py::object main_namespace = main_module.attr("__dict__");
+	py::exec("import sys, os", main_namespace);
+	py::exec(py::str("sys.path.append('"+workingDir+"/parameter')"), main_namespace);
+	py::object plot_mod = py::import("plot_parameter");
+	py::object plot_traj = plot_mod.attr("plot_parameter_trajectory");
 
-		plot_traj(Bvec, Uvec, model, x0_list, xGoal_list, T);
-	}
-	catch(py::error_already_set const &)
-	{
-		PyErr_Print();
-	}
+	plot_traj(Bvec, Uvec, B_DIM, X_DIM, U_DIM, T);
 
 }
 

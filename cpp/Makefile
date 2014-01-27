@@ -59,7 +59,7 @@ arm-belief: | arm-belief-setup $(ARM_BELIEF_OBJS)
 $(OBJ_DIR)/armBeliefPenaltyMPC.o : $(ARM_BELIEF_DIR)/beliefPenaltyMPC.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
 	
-$(OBJ_DIR)/arm-belief.o : $(ARM_BELIEF_DIR)/arm-belief.cpp $(POINT_HEADERS)
+$(OBJ_DIR)/arm-belief.o : $(ARM_BELIEF_DIR)/arm-belief.cpp $(ARM_HEADERS)
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
 
 # make arm-state
@@ -75,6 +75,44 @@ $(OBJ_DIR)/armStateMPC.o : $(ARM_STATE_DIR)/armStateMPC.c
 	
 $(OBJ_DIR)/arm-state.o : $(ARM_STATE_DIR)/arm-state.cpp $(ARM_HEADERS)
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) $(ADOLC_FLAGS) -c -o $@ $<
+	
+
+
+###### PARAMETER ###########
+
+# share parameter functions
+PARAM_SETUP_FILE = parameter/setupFiles.sh
+
+PARAM_HEADERS = parameter/parameter.h
+
+# make parameter-belief
+PARAM_BELIEF_DIR = parameter/belief
+PARAM_BELIEF_FILES = parameterBeliefPenaltyMPC parameter-belief logging
+PARAM_BELIEF_OBJS = $(PARAM_BELIEF_FILES:%=$(OBJ_DIR)/%.o)
+
+parameter-belief-setup:
+	bash $(PARAM_SETUP_FILE) belief $(T)
+
+parameter-belief: | parameter-belief-setup $(PARAM_BELIEF_OBJS)
+	$(CXX) $(BFLAGS) $(PARAM_BELIEF_OBJS) -o $(BIN_DIR)/parameter-belief $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
+	
+$(OBJ_DIR)/parameterBeliefPenaltyMPC.o : $(PARAM_BELIEF_DIR)/beliefPenaltyMPC.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+	
+$(OBJ_DIR)/parameter-belief.o : $(PARAM_BELIEF_DIR)/parameter-belief.cpp $(ARM_HEADERS)
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
+	
+
+# make parameter-ilqg
+PARAM_ILQG_DIR = parameter/ilqg
+PARAM_ILQG_FILES = parameter-ilqg
+PARAM_ILQG_OBJS = $(PARAM_ILQG_FILES:%=$(OBJ_DIR)/%.o)
+
+parameter-ilqg: $(PARAM_ILQG_OBJS)
+	$(CXX) $(BFLAGS) $(PARAM_ILQG_OBJS) -o $(BIN_DIR)/parameter-ilqg $(PYTHON_FLAGS) $(BOOST_FLAGS) $(LINKER_FLAGS)
+	
+$(OBJ_DIR)/parameter-ilqg.o : $(PARAM_ILQG_DIR)/parameter-ilqg.cpp $(PARAM_ILQG_DIR)/ilqg.h
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) -c -o $@ $<
 
 
 
@@ -203,6 +241,17 @@ $(OBJ_DIR)/pointControlMPC.o : $(PT_CONTROL_DIR)/controlMPC.c
 	
 $(OBJ_DIR)/point-control.o : $(PT_CONTROL_DIR)/point-control.cpp $(PT_HEADERS)
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
+	
+# make point-ilqg
+PT_ILQG_DIR = point/ilqg
+PT_ILQG_FILES = point-ilqg
+PT_ILQG_OBJS = $(PT_ILQG_FILES:%=$(OBJ_DIR)/%.o)
+
+point-ilqg: $(PT_ILQG_OBJS)
+	$(CXX) $(BFLAGS) $(PT_ILQG_OBJS) -o $(BIN_DIR)/point-ilqg $(PYTHON_FLAGS) $(BOOST_FLAGS) $(LINKER_FLAGS)
+	
+$(OBJ_DIR)/point-ilqg.o : $(PT_ILQG_DIR)/point-ilqg.cpp $(PT_ILQG_DIR)/ilqg.h
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) -c -o $@ $<
 
 ###### CLEAN ########
 

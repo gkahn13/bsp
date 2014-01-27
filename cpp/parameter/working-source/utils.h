@@ -9,11 +9,23 @@
 inline double sqr(double x) {
 	return x*x;
 }
-/*
+
+inline double sigmoid(double x, double mean)
+{
+	double y = (x - mean);
+	double s = (y/sqrt(1+y*y))+1.0;
+	//double s = (y/(1.0 + abs(y)))+1.0;
+
+	if (x < mean) 
+		return s*0.1;
+	else
+		return s*10.0;
+}
+
 inline double random() {
 	return ((double) rand()) / RAND_MAX;
 }
-*/
+
 /*************************************************************************
 Cephes Math Library Release 2.8:  June, 2000
 Copyright by Stephen L. Moshier
@@ -407,24 +419,6 @@ inline double cdf(double x) {
 	//return 0.5*(1.0 + erf(x*M_SQRT1_2));
 }
 
-/*!
- *  @brief       Randomly samples from the multivariate Gaussian distribution with specified
- *               mean and variance.
- *  @tparam      dim     The dimension of the distribution.
- *  @param       mean    The mean of the distribution.
- *  @param       var     The variance (covariance matrix) of the distribution.
- *  @returns     A random vector from the specified Gaussian distribution.
- *  \ingroup globalfunc
- */
-template <size_t dim>
-inline Matrix<dim> sampleGaussian(const Matrix<dim>& mean, const SymmetricMatrix<dim>& var) {
-  Matrix<dim> sample = sampleGaussian<dim>();
-  Matrix<dim,dim> L;
-  chol(var, L);
-  return L * sample + mean;
-}
-
-#ifdef WIN32
 #include "glut.h"
 const double DEG2RAD = M_PI/180;
 
@@ -441,7 +435,7 @@ inline void drawUnitCircle(void *userdef, float time) {
 	glLineWidth(4.0f);
 	glDisable(GL_LIGHTING);
 	glBegin(GL_LINE_LOOP);
-	glColor3f(1.0f, 0.843f, 0.0f);
+	glColor3f(0.0f, 0.0f, 0.0f);
 	//glColor3f(0.5f, 0.0f, 1.0f);
 
 	for (int i = 0; i < 36; i++)
@@ -454,162 +448,142 @@ inline void drawUnitCircle(void *userdef, float time) {
 	glLineWidth(4.0f);
 }
 
-inline void drawUnitSphere(void *userdef, float time)
+// Jacobian df/dx(x,u)
+template <size_t _xDim, size_t _uDim>
+inline Matrix<_xDim,_xDim> dfdx(double step, Matrix<_xDim> (*f)(double, const Matrix<_xDim>&, const Matrix<_uDim>&), const Matrix<_xDim>& x, const Matrix<_uDim>& u) 
 {
-	glDisable(GL_LIGHTING);
-	glLineWidth(4.0f);
-	glColor3f(0.0f, 0.0f, 0.0f);
-	
-	glutWireSphere(1.0, 15, 10);
-
-	glLineWidth(4.0f);
-	glEnable(GL_LIGHTING);
+	Matrix<_xDim,_xDim> A;
+	Matrix<_xDim> xr(x), xl(x);
+	for (size_t i = 0; i < _xDim; ++i) {
+		xr[i] += step; xl[i] -= step;
+		A.insert(0,i, (e.f(step, xr, u) - e.f(step, xl, u)) / (2.0*step));
+		xr[i] = xl[i] = x[i];
+	}
+	return A;
 }
-#include <cmath>
-#include <windows.h>
 
-
-class Timer
+// Jacobian df/du(x,u)
+template <size_t _xDim, size_t _uDim>
+inline Matrix<_xDim,_uDim> dfdu(double step, Matrix<_xDim> (*f)(double, const Matrix<_xDim>&, const Matrix<_uDim>&), const Matrix<_xDim>& x, const Matrix<_uDim>& u) 
 {
-public:
-	Timer() {
-		this->init();
+	Matrix<_xDim,_uDim> B;
+	Matrix<_uDim> ur(u), ul(u);
+	for (size_t i = 0; i < _uDim; ++i) {
+		ur[i] += step; ul[i] -= step;
+		B.insert(0,i, (e.f(step, x, ur) - e.f(step, x, ul)) / (2.0*step));
+		ur[i] = ul[i] = u[i];
 	}
+	return B;
+}
 
-	~Timer(){};
-
-	bool start() {
-
-		bool bSuccess = false;
-
-		if(!m_bTimerRunning && m_bTimerSupported)
-		{
-			m_startCount = 0;
-			m_stopCount = 0;
-			m_interval = 0;
-
-			if(QueryPerformanceCounter((LARGE_INTEGER*)&m_startCount))
-			{
-				m_bTimerRunning = true;
-				bSuccess = true;
-			}
-		}
-
-		return bSuccess;
+// Jacobian dh/dx(x)
+template <size_t _xDim, size_t _zDim>
+inline Matrix<_zDim,_xDim> dhdx(double step, Matrix<_zDim> (*h)(const Matrix<_xDim>&), const Matrix<_xDim>& x) 
+{
+	Matrix<_zDim,_xDim> H;
+	Matrix<_xDim> xr(x), xl(x);
+	for (size_t i = 0; i < _xDim; ++i) {
+		xr[i] += step; xl[i] -= step;
+		H.insert(0,i, (e.h(xr) - e.h(xl)) / (2.0*step));
+		xr[i] = xl[i] = x[i];
 	}
+	return H;
+}
 
-	
-	bool stop() {
-
-		bool bSuccess = false;
-
-		if(m_bTimerRunning && m_bTimerSupported)
-		{
-			if(QueryPerformanceCounter((LARGE_INTEGER*)&m_stopCount))
-			{
-				m_bTimerRunning = false;
-				bSuccess = true;
-			}
-		}
-
-		return bSuccess;
+inline Matrix<4,1> quatFromRot(const Matrix<3,3>& R) 
+{
+	double x = R(2,1) - R(1,2);
+	double y = R(0,2) - R(2,0);
+	double z = R(1,0) - R(0,1);
+	double r = sqrt(x*x+y*y+z*z);
+	double t = R(0,0) + R(1,1) + R(2,2);
+	double angle = atan2(r,t-1);
+	if (angle != 0) {
+		x /= r;
+		y /= r;
+		z /= r;
+	} else {
+		x = 0;
+		y = 0;
+		z = 0;
 	}
+	Matrix<4,1> q;
+	q(0,0) = sin(angle/2)*x;
+	q(1,0) = sin(angle/2)*y;
+	q(2,0) = sin(angle/2)*z;
+	q(3,0) = cos(angle/2);
 
-	void reset() {
-		this->init();
-	}
+	return q;
+}
 
-	double interval_S() {
-		return ((double)(m_stopCount - m_startCount) - m_adjustCount) / (double)m_frequency;
-	}
+/*!
+ *  @brief       Randomly samples from the uniform distribution over range [0,1].
+ *  @returns     A uniform random number in [0,1].
+ *  \ingroup globalfunc
+ */
+inline double random_highprecision() {
+  return ((rand() << 15) + rand()) / 1073741823.0;
+}
 
-	double interval_mS() {
-		return (((m_stopCount - m_startCount) - m_adjustCount) * 1000.0) / (double)m_frequency;
-	}
+/*!
+ *  @brief       Randomly samples from the univariate standard Gaussian distribution N(0,1).
+ *  @returns     A random number from the univariate standard Gaussian distribution N(0,1).
+ *  \ingroup globalfunc
+ */
+inline std::pair<double, double> normal() {
+  double u, v, s;
 
-	double interval_uS() {
-		return (((m_stopCount - m_startCount) - m_adjustCount) * 1000000.0) / (double)m_frequency;
-	}
+  do {
+    u = 2.0*random_highprecision()-1.0;
+    v = 2.0*random_highprecision()-1.0;
+    s = u*u + v*v;
+  } while (s > 1.0 || s == 0.0);
 
-	double resolution_S() {
-		return 1.0 / (double)m_frequency;
-	}
+  double r = sqrt(-2.0*log(s)/s);
 
-	double resolution_mS() {
-		return 1000.0 / (double)m_frequency;
-	}
+  return std::make_pair(u*r, v*r);
+}
 
-	double resolution_uS() {
-		return 1000000.0 / (double)m_frequency;
-	}
+/*!
+ *  @brief       Randomly samples from the multivariate standard Gaussian distribution N(0,I).
+ *  @tparam      dim     The dimension of the distribution.
+ *  @returns     A random vector from the multivariate standard Gaussian distribution N(0,I).
+ *  \ingroup globalfunc
+ */
+template <size_t dim>
+inline Matrix<dim> sampleGaussian() {
+  Matrix<dim> sample;
+  for (int j = 0; j < dim / 2; ++j) {
+	std::pair<double,double> n = normal();
+    sample[j*2] = n.first;
+	sample[j*2+1] = n.second;
+  }
+  if (dim % 2 == 1) {
+    sample[dim - 1] = normal().first;
+  }
+  return sample;
+}
 
-	double correction_uS() {
-		return (m_adjustCount * 1000000.0) / (double)m_frequency;
-	}
+/*!
+ *  @brief       Randomly samples from the multivariate Gaussian distribution with specified 
+ *               mean and variance.
+ *  @tparam      dim     The dimension of the distribution.
+ *  @param       mean    The mean of the distribution.
+ *  @param       var     The variance (covariance matrix) of the distribution.
+ *  @returns     A random vector from the specified Gaussian distribution.
+ *  \ingroup globalfunc
+ */
+template <size_t dim>
+inline Matrix<dim> sampleGaussian(const Matrix<dim>& mean, const SymmetricMatrix<dim>& var) {
+  Matrix<dim> sample = sampleGaussian<dim>();
+  Matrix<dim,dim> L;
+  chol(var, L);
+  return L * sample + mean;
+}
 
-	void init() {
-
-		m_frequency = 0;
-		m_adjustCount = 0;
-		m_bTimerSupported = false;
-		m_bTimerRunning = false;
-
-		if(QueryPerformanceFrequency((LARGE_INTEGER*)&m_frequency))
-		{
-			m_bTimerSupported = true;
-
-			// Measure the 'Stop' function call overhead
-			const int iNumSamples = 10;
-			__int64 samples[iNumSamples];
-			__int64 countTot = 0;
-			double dAvCount = 0.0;
-			double dAvDeviance = 0.0;
-
-			for(int i = 0; i < iNumSamples; i++)
-			{
-				this->start();
-				this->stop();
-
-				samples[i] = m_stopCount - m_startCount;
-				countTot += samples[i];
-			}
-
-			dAvCount = (double)countTot / (double)iNumSamples;
-
-			// Get the average deviance
-			for(int i = 0; i < iNumSamples; i++)
-			{
-				dAvDeviance += fabs(((double)samples[i]) - dAvCount);
-			}
-
-			// Average deviance only required for debug
-			dAvDeviance /= iNumSamples;
-			m_adjustCount = (__int64)dAvCount;
-		}
-	}
-
-	void set_start_time(__int64 & c) {
-		c = 0;
-		QueryPerformanceCounter((LARGE_INTEGER*) &c);
-	}
-
-	double elapsed_time(__int64 & c) {
-		__int64 end = 0;
-		QueryPerformanceCounter((LARGE_INTEGER*)&end);
-		return (double)((end - c) - m_adjustCount) / (double)m_frequency;
-	}
-
-private:
-	__int64 m_interval;
-	__int64 m_frequency;
-	__int64 m_startCount;
-	__int64 m_stopCount;
-	__int64 m_adjustCount;
-	bool m_bTimerSupported;
-	bool m_bTimerRunning;
-};
-#endif
-
-
+template <typename T>
+inline int sgn(T val) {
+	return(T(0) < val) - (val < T(0));
+}
 
 #endif

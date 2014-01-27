@@ -32,6 +32,27 @@ def decompose_belief(b, bDim, xDim):
 
     return x, Sigma
 
+def plot_robot(jointAngles, length1, length2, T):
+    plt.figure(1);
+    plt.axis([-length1-length2, length1+length2,-length1-length2, length1+length2])
+    
+    jointAngles = np.array(jointAngles)
+    jointAngles = jointAngles.reshape(2,T)
+    
+    for i in xrange(T):
+        j0 = jointAngles[0,i]
+        j1 = jointAngles[1,i]
+        
+        middleLinkPos = [length1*math.cos(j0), length1*math.sin(j0)]
+        endEffectorPos = [length1*math.cos(j0) + length2*math.cos(j1), length1*math.sin(j0) + length2*math.sin(j1)]
+        
+        plt.plot([0, middleLinkPos[0], endEffectorPos[0]], [0, middleLinkPos[1], endEffectorPos[1]])
+        
+        plt.show(block=False)
+        plt.pause(.05)
+        raw_input()
+        
+
 def plot_parameter_trajectory(B, U, bDim, xDim, uDim, T):
     
     B = np.matrix(B)

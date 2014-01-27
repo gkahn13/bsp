@@ -16,8 +16,8 @@
 
 namespace py = boost::python;
 
-#define TIMESTEPS 15
-#define DT 1.0
+#define TIMESTEPS 100
+#define DT 1.0/100.0
 
 // J_DIM == SIM_X_DIM in original file
 #define J_DIM 4 // number of joints in state (2 position and 2 velocity)
@@ -57,7 +57,8 @@ const double motor2_torque_const = 0.0077;
 const double gear2_ratio = 70;
 }
 
-const double step = 0.0078125 / 16;
+
+const double diffEps = 0.0078125 / 16;
 
 
 const int T = TIMESTEPS;
@@ -175,13 +176,14 @@ Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matr
 	double mass1 = (x6 == 0 ? 0.0 : 1/x6);
 	double mass2 = (x7 == 0 ? 0.0 : 1/x7);
 
+	// TODO: where to add noise?
 	k1 = jointdynfunc(jinit, u + q, length1, length2, mass1, mass2);
-	k2 = jointdynfunc(jinit + 0.5*step*k1, u + q, length1, length2, mass1, mass2);
-	k3 = jointdynfunc(jinit + 0.5*step*k2, u + q, length1, length2, mass1, mass2);
-	k4 = jointdynfunc(jinit + step*k3, u + q, length1, length2, mass1, mass2);
+	k2 = jointdynfunc(jinit + 0.5*DT*k1, u + q, length1, length2, mass1, mass2);
+	k3 = jointdynfunc(jinit + 0.5*DT*k2, u + q, length1, length2, mass1, mass2);
+	k4 = jointdynfunc(jinit + DT*k3, u + q, length1, length2, mass1, mass2);
 
 	Matrix<X_DIM> xNew = zeros<X_DIM,1>();
-	xNew.insert(0, 0, jinit + step*(k1 + 2.0*(k2 + k3) + k4)/6.0);
+	xNew.insert(0, 0, jinit + DT*(k1 + 2.0*(k2 + k3) + k4)/6.0);
 	xNew[4] = x4;
 	xNew[5] = x5;
 	xNew[6] = x6;
@@ -227,7 +229,7 @@ void linearizeDynamics(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Mat
 	A.reset();
 	Matrix<X_DIM> xr(x), xl(x);
 	for (size_t i = 0; i < X_DIM; ++i) {
-		xr[i] += step; xl[i] -= step;
+		xr[i] += diffEps; xl[i] -= diffEps;
 		A.insert(0,i, (dynfunc(xr, u, q) - dynfunc(xl, u, q)) / (xr[i] - xl[i]));
 		xr[i] = x[i]; xl[i] = x[i];
 	}
@@ -235,7 +237,7 @@ void linearizeDynamics(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Mat
 	M.reset();
 	Matrix<Q_DIM> qr(q), ql(q);
 	for (size_t i = 0; i < Q_DIM; ++i) {
-		qr[i] += step; ql[i] -= step;
+		qr[i] += diffEps; ql[i] -= diffEps;
 		M.insert(0,i, (dynfunc(x, u, qr) - dynfunc(x, u, ql)) / (qr[i] - ql[i]));
 		qr[i] = q[i]; ql[i] = q[i];
 	}
@@ -247,7 +249,7 @@ void linearizeObservation(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r, Matrix
 	H.reset();
 	Matrix<X_DIM> xr(x), xl(x);
 	for (size_t i = 0; i < X_DIM; ++i) {
-		xr[i] += step; xl[i] -= step;
+		xr[i] += diffEps; xl[i] -= diffEps;
 		H.insert(0,i, (obsfunc(xr, r) - obsfunc(xl, r)) / (xr[i] - xl[i]));
 		xr[i] = x[i]; xl[i] = x[i];
 	}
@@ -255,7 +257,7 @@ void linearizeObservation(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r, Matrix
 	N.reset();
 	Matrix<R_DIM> rr(r), rl(r);
 	for (size_t i = 0; i < R_DIM; ++i) {
-		rr[i] += step; rl[i] -= step;
+		rr[i] += diffEps; rl[i] -= diffEps;
 		N.insert(0,i, (obsfunc(x, rr) - obsfunc(x, rl)) / (rr[i] - rl[i]));
 		rr[i] = r[i]; rl[i] = r[i];
 	}

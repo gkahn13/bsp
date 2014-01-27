@@ -303,8 +303,10 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 				Matrix<U_DIM>& ut = U[t];
 
 				index = 0;
-				// x lower bound
-				for(int i = 0; i < X_DIM; ++i) { lb[t][index++] = MAX(xMin[i], bt[i] - Beps); }
+				// x joint lower bound
+				for(int i = 0; i < J_DIM; ++i) { lb[t][index++] = MAX(xMin[i], bt[i] - Beps); }
+				// x param lower bound
+				for(int i = 0; i < K_DIM; ++i) { lb[t][index++] = xMin[i]; }
 				// sigma lower bound
 				for(int i = 0; i < S_DIM; ++i) { lb[t][index] = bt[index] - Beps; index++; }
 				// u lower bound
@@ -315,7 +317,9 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 
 				index = 0;
 				// x upper bound
-				for(int i = 0; i < X_DIM; ++i) { ub[t][index++] = MIN(xMax[i], bt[i] + Beps); }
+				for(int i = 0; i < J_DIM; ++i) { ub[t][index++] = MIN(xMax[i], bt[i] + Beps); }
+				// x param upper bound
+				for(int i = 0; i < K_DIM; ++i) { ub[t][index++] = xMax[i]; }
 				// sigma upper bound
 				for(int i = 0; i < S_DIM; ++i) { ub[t][index] = bt[index] + Beps; index++; }
 				// u upper bound
@@ -369,14 +373,18 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			// Fill in lb, ub, C, e
 			index = 0;
 			// xGoal lower bound
-			for(int i = 0; i < X_DIM; ++i) { lb[T-1][index++] = MAX(xGoal[i] - delta, bT[i] - Beps); }
+			for(int i = 0; i < J_DIM; ++i) { lb[T-1][index++] = MAX(xGoal[i] - delta, bT[i] - Beps); }
+			// x param lower bound
+			for(int i = 0; i < K_DIM; ++i) { lb[T-1][index++] = xMin[T-1]; }
 			// sigma lower bound
 			for(int i = 0; i < S_DIM; ++i) { lb[T-1][index] = bT[index] - Beps; index++; }
 
 			index = 0;
 			// xGoal upper bound
-			for(int i = 0; i < X_DIM; ++i) { ub[T-1][index++] = MIN(xGoal[i] + delta, bT[i] + Beps); }
-			// sigma lower bound
+			for(int i = 0; i < J_DIM; ++i) { ub[T-1][index++] = MIN(xGoal[i] + delta, bT[i] + Beps); }
+			// x param upper bound
+			for(int i = 0; i < K_DIM; ++i) { ub[T-1][index++] = xMax[T-1]; }
+			// sigma upper bound
 			for(int i = 0; i < S_DIM; ++i) { ub[T-1][index] = bT[index] + Beps; index++; }
 
 			// Verify problem inputs

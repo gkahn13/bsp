@@ -38,8 +38,8 @@ inline Matrix<_xDim,_xDim> dfdx(Matrix<_xDim> (*f)(const Matrix<_xDim>&, const M
 	Matrix<_xDim,_xDim> A;
 	Matrix<_xDim> xr(x), xl(x);
 	for (size_t i = 0; i < _xDim; ++i) {
-		xr[i] += step; xl[i] -= step;
-		A.insert(0,i, (f(xr, u) - f(xl, u)) / (2.0*step));
+		xr[i] += diffEps; xl[i] -= diffEps;
+		A.insert(0,i, (f(xr, u) - f(xl, u)) / (2.0*diffEps));
 		xr[i] = xl[i] = x[i];
 	}
 	return A;
@@ -52,8 +52,8 @@ inline Matrix<_xDim,_uDim> dfdu(Matrix<_xDim> (*f)(const Matrix<_xDim>&, const M
 	Matrix<_xDim,_uDim> B;
 	Matrix<_uDim> ur(u), ul(u);
 	for (size_t i = 0; i < _uDim; ++i) {
-		ur[i] += step; ul[i] -= step;
-		B.insert(0,i, (f(x, ur) - f(x, ul)) / (2.0*step));
+		ur[i] += diffEps; ul[i] -= diffEps;
+		B.insert(0,i, (f(x, ur) - f(x, ul)) / (2.0*diffEps));
 		ur[i] = ul[i] = u[i];
 	}
 	return B;
@@ -66,8 +66,8 @@ inline Matrix<_zDim,_xDim> dhdx(Matrix<_zDim> (*h)(const Matrix<_xDim>&), const 
 	Matrix<_zDim,_xDim> H;
 	Matrix<_xDim> xr(x), xl(x);
 	for (size_t i = 0; i < _xDim; ++i) {
-		xr[i] += step; xl[i] -= step;
-		H.insert(0,i, (h(xr) - h(xl)) / (2.0*step));
+		xr[i] += diffEps; xl[i] -= diffEps;
+		H.insert(0,i, (h(xr) - h(xl)) / (2.0*diffEps));
 		xr[i] = xl[i] = x[i];
 	}
 	return H;

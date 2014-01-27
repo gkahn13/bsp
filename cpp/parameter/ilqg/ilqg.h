@@ -12,6 +12,8 @@
 
 namespace py = boost::python;
 
+//const double diffEps = 0.0078125 / 16;
+
 #define _sDim (((_xDim+1)*_xDim)/2)
 
 const unsigned int COMPUTE_c = (1 << 0);
@@ -30,9 +32,9 @@ const unsigned int COMPUTE_qT = (1 << 12);
 const unsigned int COMPUTE_rT = (1 << 13);
 const unsigned int COMPUTE_pT = (1 << 14);
 
-//const double step = 0.0078125 / 16;
 const double goldenRatio = 0.5*(3.0 - sqrt(5.0));
 const double infCost = 1e10;
+
 
 // Computes vector containing the elements (column by column) of the lower triangle of symmetric matrix S.
 template <size_t _xDim>
@@ -93,7 +95,7 @@ inline void computeCEFJ(void (*linearizeDynamics)(const Matrix<_xDim>&, const Ma
 	// Compute Jacobians C and F
 	Matrix<_xDim> xR(xBar), xL(xBar);
 	for (size_t i = 0; i < _xDim; ++i) {
-		xR[i] += step; xL[i] -= step;
+		xR[i] += diffEps; xL[i] -= diffEps;
 
 		linearizeDynamics(xR, uBar, xNext, A, B, M, COMPUTE_c|COMPUTE_A|COMPUTE_M);
 		linearizeObservation(xNext, H, N);
@@ -103,8 +105,8 @@ inline void computeCEFJ(void (*linearizeDynamics)(const Matrix<_xDim>&, const Ma
 		linearizeObservation(xNext, H, N);
 		beliefDynamics(A, M, H, N, SigmaBar, GammaL, WL);
 
-		tTC[i] = scalar(tT * vectorize((GammaR - GammaL) / (2.0*step)) );
-		vecSF[i] = scalar(hvecS * vectorize((WR - WL) / (2.0*step)) );
+		tTC[i] = scalar(tT * vectorize((GammaR - GammaL) / (2.0*diffEps)) );
+		vecSF[i] = scalar(hvecS * vectorize((WR - WL) / (2.0*diffEps)) );
 
 		xR[i] = xL[i] = xBar[i];
 	}
@@ -112,7 +114,7 @@ inline void computeCEFJ(void (*linearizeDynamics)(const Matrix<_xDim>&, const Ma
 	// Compute E and J
 	Matrix<_uDim> uR(uBar), uL(uBar);
 	for (size_t i = 0; i < _uDim; ++i) {
-		uR[i] += step; uL[i] -= step;
+		uR[i] += diffEps; uL[i] -= diffEps;
 
 		linearizeDynamics(xBar, uR, xNext, A, B, M, COMPUTE_c|COMPUTE_A|COMPUTE_M);
 		linearizeObservation(xNext, H, N);
@@ -122,8 +124,8 @@ inline void computeCEFJ(void (*linearizeDynamics)(const Matrix<_xDim>&, const Ma
 		linearizeObservation(xNext, H, N);
 		beliefDynamics(A, M, H, N, SigmaBar, GammaL, WL);
 
-		tTE[i] = scalar(tT * vectorize((GammaR - GammaL) / (2.0*step)) );
-		vecSJ[i] = scalar(hvecS * vectorize((WR - WL) / (2.0*step)) );
+		tTE[i] = scalar(tT * vectorize((GammaR - GammaL) / (2.0*diffEps)) );
+		vecSJ[i] = scalar(hvecS * vectorize((WR - WL) / (2.0*diffEps)) );
 
 		uR[i] = uL[i] = uBar[i];
 	}

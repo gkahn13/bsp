@@ -152,27 +152,18 @@ inline void linearizeObservation(const Matrix<X_DIM>& xBar, Matrix<Z_DIM, X_DIM>
 }
 
 
-double costfunc(const std::vector<Matrix<B_DIM> >& B, const std::vector<Matrix<U_DIM> >& U)
+double costfunc(const std::vector< Matrix<B_DIM> >& B, const std::vector< Matrix<U_DIM> >& U)
 {
 	double cost = 0;
-
 	Matrix<X_DIM> x;
-	Matrix<B_DIM> b;
-	Matrix<X_DIM,X_DIM> SqrtSigma;
+	Matrix<X_DIM, X_DIM> SqrtSigma;
 
-	b = B[0];
-
-	unVec(b, x, SqrtSigma);
-	for (int t = 0; t < T - 1; ++t)
-	{
+	for(int t = 0; t < T-1; ++t) {
+		unVec(B[t], x, SqrtSigma);
 		cost += alpha_belief*tr(SqrtSigma*SqrtSigma) + alpha_control*tr(~U[t]*U[t]);
-
-		b = beliefDynamics(b, U[t]);
-		unVec(b, x, SqrtSigma);
 	}
 	unVec(B[T-1], x, SqrtSigma);
-	cost += alpha_belief*tr(SqrtSigma*SqrtSigma);
-
+	cost += alpha_final_belief*tr(SqrtSigma*SqrtSigma);
 	return cost;
 }
 
@@ -197,7 +188,13 @@ int main(int argc, char* argv[])
 	xBar.push_back(x0);
 	SigmaBar.push_back(Sigma0);
 
-	
+	std::vector< Matrix<B_DIM> > Binitial(T);
+	vec(x0, sqrt(Sigma0), Binitial[0]);
+	for (int t = 0; t < T - 1; ++t)
+	{
+		Binitial[t+1] = beliefDynamics(Binitial[t], uBar[t]);
+	}
+	double cost_initial = costfunc(Binitial, uBar);
 
 	solvePOMDP(linearizeDynamics, linearizeObservation, quadratizeFinalCost, quadratizeCost, xBar, SigmaBar, uBar, L);
 
@@ -205,13 +202,24 @@ int main(int argc, char* argv[])
 	//	std::cout << ~(xBar[i]);
 	//}
 
-	std::vector< Matrix<B_DIM> > B(T);
+	std::vector< Matrix<B_DIM> > Bpomdp(T);
 	for(int t = 0; t < T; ++t) {
-		vec(xBar[t], sqrt(SigmaBar[t]), B[t]);
+		vec(xBar[t], sqrt(SigmaBar[t]), Bpomdp[t]);
 	}
 
-	double cost = costfunc(B, uBar);
-	std::cout << "Our computed cost: " << cost << std::endl;
+	std::vector< Matrix<B_DIM> > Bekf(T);
+	vec(xBar[0], sqrt(SigmaBar[0]), Bekf[0]);
+	for (int t = 0; t < T - 1; ++t)
+	{
+		Bekf[t+1] = beliefDynamics(Bekf[t], uBar[t]);
+	}
+
+	double cost_pomdp = costfunc(Bpomdp, uBar);
+	double cost_ekf = costfunc(Bekf, uBar);
+
+	std::cout << "cost initial: " << cost_initial << std::endl;
+	std::cout << "cost pomdp: " << cost_pomdp << std::endl;
+	std::cout << "cost ekf: " << cost_ekf << std::endl;
 
 #define PLOT
 #ifdef PLOT
@@ -219,7 +227,7 @@ int main(int argc, char* argv[])
 	py::list Bvec;
 	for(int j=0; j < B_DIM; j++) {
 		for(int i=0; i < T; i++) {
-			Bvec.append(B[i][j]);
+			Bvec.append(Bpomdp[i][j]);
 		}
 	}
 

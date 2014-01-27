@@ -280,6 +280,7 @@ inline void expectedCost(void (*linearizeDynamics)(const Matrix<_xDim>&, const M
 	if (retcode) {
 		s = q + s; // + scalar(vecTh(S)*vectorize(WBar));
 	} else {
+		std::cout << "retcode in expectedCost is infinity!" << std::endl;
 		s = infCost;
 	}
 
@@ -548,7 +549,6 @@ inline void solvePOMDP(void (*linearizeDynamics)(const Matrix<_xDim>&, const Mat
 	// compute expected cost 
 	double initialCost = computeExpectedCost(linearizeDynamics, quadratizeFinalCost, quadratizeCost, L, xBar, SigmaBar, uBar, WBar);
 	std::cout << "Cost to begin : " << initialCost << std::endl;
-	
 
 //#define PLOT
 #ifdef PLOT

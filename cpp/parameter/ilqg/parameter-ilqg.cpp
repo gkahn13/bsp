@@ -102,7 +102,7 @@ inline void quadratizeFinalCost(const Matrix<X_DIM>& xBar, const SymmetricMatrix
 {
 	if (flag & COMPUTE_S) S = QGoal;
 	if (flag & COMPUTE_sT) sT = ~(xBar - xGoal)*QGoal;
-	if (flag & COMPUTE_s) s = 0.5*scalar(~(xBar - xGoal)*QGoal*(xBar - xGoal)) + scalar(vecTh(QGoalVariance)*vectorize(SigmaBar));
+	if (flag & COMPUTE_s) s = 0.5*scalar(~(xBar - xGoal)*QGoal*(xBar - xGoal)) + scalar(vecTh(QGoalVariance)*vectorize(SigmaBar)); // TODO: this cost is huge, why?
 	if (flag & COMPUTE_tT) tT = vecTh(QGoalVariance);
 }
 
@@ -135,26 +135,18 @@ inline void linearizeObservation(const Matrix<X_DIM>& xBar, Matrix<Z_DIM, X_DIM>
 }
 
 
-double costfunc(const std::vector<Matrix<B_DIM> >& B, const std::vector<Matrix<U_DIM> >& U)
+double costfunc(const std::vector< Matrix<B_DIM> >& B, const std::vector< Matrix<U_DIM> >& U)
 {
 	double cost = 0;
-
 	Matrix<X_DIM> x;
-	Matrix<B_DIM> b;
-	Matrix<X_DIM,X_DIM> Sigma;
+	Matrix<X_DIM, X_DIM> SqrtSigma;
 
-	b = B[0];
-
-	unVec(b, x, Sigma);
-	for (int t = 0; t < T - 1; ++t)
-	{
-		cost += alpha_belief*tr(Sigma) + alpha_control*tr(~U[t]*U[t]);
-
-		b = B[t+1];
-		unVec(b, x, Sigma);
+	for(int t = 0; t < T-1; ++t) {
+		unVec(B[t], x, SqrtSigma);
+		cost += alpha_belief*tr(SqrtSigma*SqrtSigma) + alpha_control*tr(~U[t]*U[t]);
 	}
-	cost += alpha_belief*tr(Sigma);
-
+	unVec(B[T-1], x, SqrtSigma);
+	cost += alpha_final_belief*tr(SqrtSigma*SqrtSigma);
 	return cost;
 }
 
@@ -236,6 +228,14 @@ int main(int argc, char* argv[])
 	xBar.push_back(x0);
 	SigmaBar.push_back(Sigma0);
 
+	std::vector< Matrix<B_DIM> > Binitial(T);
+	vec(x0, sqrt(Sigma0), Binitial[0]);
+	for (int t = 0; t < T - 1; ++t)
+	{
+		Binitial[t+1] = beliefDynamics(Binitial[t], uBar[t]);
+	}
+	double cost_initial = costfunc(Binitial, uBar);
+
 	std::cout << "solvePOMDP" << std::endl;
 
 	solvePOMDP(linearizeDynamics, linearizeObservation, quadratizeFinalCost, quadratizeCost, xBar, SigmaBar, uBar, L);
@@ -248,35 +248,36 @@ int main(int argc, char* argv[])
 
 	std::vector< Matrix<B_DIM> > Bpomdp(T);
 	for(int t = 0; t < T; ++t) {
-		vec(xBar[t], SigmaBar[t], Bpomdp[t], false);
+		vec(xBar[t], sqrt(SigmaBar[t]), Bpomdp[t]);
 	}
 
 	std::vector< Matrix<B_DIM> > Bekf(T);
-	vec(xBar[0], SigmaBar[0], Bekf[0]);
+	vec(xBar[0], sqrt(SigmaBar[0]), Bekf[0]);
 	for (int t = 0; t < T - 1; ++t)
 	{
-		Bekf[t+1] = beliefDynamics(Bekf[t], uBar[t], false);
+		Bekf[t+1] = beliefDynamics(Bekf[t], uBar[t]);
 	}
 
 	double cost_pomdp = costfunc(Bpomdp, uBar);
 	double cost_ekf = costfunc(Bekf, uBar);
 
+	std::cout << "cost initial: " << cost_initial << std::endl;
 	std::cout << "cost pomdp: " << cost_pomdp << std::endl;
 	std::cout << "cost ekf: " << cost_ekf << std::endl;
 
 	Matrix<X_DIM> xpomdp, xekf;
-	Matrix<X_DIM,X_DIM> Sigmapomdp, Sigmaekf;
+	Matrix<X_DIM,X_DIM> SqrtSigmapomdp, SqrtSigmaekf;
 	for(int t = 0; t < T; ++t) {
-		unVec(Bpomdp[t], xpomdp, Sigmapomdp);
-		unVec(Bekf[t], xekf, Sigmaekf);
+		unVec(Bpomdp[t], xpomdp, SqrtSigmapomdp);
+		unVec(Bekf[t], xekf, SqrtSigmaekf);
 		//std::cout << "t: " << t << " xpomdp" << std::endl;
 		//std::cout << ~xpomdp;
 		//std::cout << "t: " << t << " xekf" << std::endl;
 		//std::cout << ~xekf << std::endl;
 		std::cout << "t: " << t << " Sigmapomdp" << std::endl;
-		std::cout << ~SigmaDiag(Sigmapomdp);
+		std::cout << ~SigmaDiag(SqrtSigmapomdp);
 		std::cout << "t: " << t << " Sigmaekf" << std::endl;
-		std::cout << ~SigmaDiag(Sigmaekf) << std::endl << std::endl;
+		std::cout << ~SigmaDiag(SqrtSigmaekf) << std::endl << std::endl;
 	}
 
 #define CPP_PLOT
@@ -287,7 +288,7 @@ int main(int argc, char* argv[])
 	py::list Bvec;
 	for(int j=0; j < B_DIM; j++) {
 		for(int i=0; i < T; i++) {
-			Bvec.append(Bpomdp[i][j]);
+			Bvec.append(Bekf[i][j]);
 		}
 	}
 

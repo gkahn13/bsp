@@ -175,10 +175,10 @@ Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matr
 	double mass1 = (x6 == 0 ? 0.0 : 1/x6);
 	double mass2 = (x7 == 0 ? 0.0 : 1/x7);
 
-	k1 = jointdynfunc(jinit, u, length1, length2, mass1, mass2);
-	k2 = jointdynfunc(jinit + 0.5*step*k1, u, length1, length2, mass1, mass2);
-	k3 = jointdynfunc(jinit + 0.5*step*k2, u, length1, length2, mass1, mass2);
-	k4 = jointdynfunc(jinit + step*k3, u, length1, length2, mass1, mass2);
+	k1 = jointdynfunc(jinit, u + q, length1, length2, mass1, mass2);
+	k2 = jointdynfunc(jinit + 0.5*step*k1, u + q, length1, length2, mass1, mass2);
+	k3 = jointdynfunc(jinit + 0.5*step*k2, u + q, length1, length2, mass1, mass2);
+	k4 = jointdynfunc(jinit + step*k3, u + q, length1, length2, mass1, mass2);
 
 	Matrix<X_DIM> xNew = zeros<X_DIM,1>();
 	xNew.insert(0, 0, jinit + step*(k1 + 2.0*(k2 + k3) + k4)/6.0);
@@ -215,6 +215,8 @@ Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r)
 	//z[1] = x4*sinx0 + x5*sinx1;
 	z[2] = x2;
 	z[3] = x3;
+
+	z = z + r;
 
 	return z;
 }
@@ -272,16 +274,12 @@ void unVec(const Matrix<B_DIM>& b, Matrix<X_DIM>& x, Matrix<X_DIM,X_DIM>& S) {
 	}
 }
 
-void vec(const Matrix<X_DIM>& x, const Matrix<X_DIM,X_DIM>& S, Matrix<B_DIM>& b, bool isSqrtSigma = true) {
+void vec(const Matrix<X_DIM>& x, const Matrix<X_DIM,X_DIM>& S, Matrix<B_DIM>& b) {
 	b.insert(0,0,x);
 	size_t idx = X_DIM;
 	for (size_t j = 0; j < X_DIM; ++j) {
 		for (size_t i = j; i < X_DIM; ++i) {
-			if (isSqrtSigma) {
-				b[idx] = 0.5 * (S(i,j) + S(j,i));
-			} else {
-				b[idx] = S(i,j);
-			}
+			b[idx] = 0.5 * (S(i,j) + S(j,i));
 			++idx;
 		}
 	}
@@ -289,14 +287,12 @@ void vec(const Matrix<X_DIM>& x, const Matrix<X_DIM,X_DIM>& S, Matrix<B_DIM>& b,
 
 
 // Belief dynamics
-Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u, bool isSqrtSigma = true) {
+Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	Matrix<X_DIM> x;
 	Matrix<X_DIM,X_DIM> Sigma;
 	unVec(b, x, Sigma);
 
-	if (isSqrtSigma) {
-		Sigma = Sigma*Sigma;
-	}
+	Sigma = Sigma*Sigma;
 
 	Matrix<X_DIM,X_DIM> A;
 	Matrix<X_DIM,Q_DIM> M;

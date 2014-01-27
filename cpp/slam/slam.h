@@ -19,9 +19,9 @@
 
 namespace py = boost::python;
 
-#define TIMESTEPS 10
+#define TIMESTEPS 20
 #define DT 1.0
-#define NUM_LANDMARKS 1
+#define NUM_LANDMARKS 3
 #define X_DIM 3+NUM_LANDMARKS*2
 #define U_DIM 2
 #define Z_DIM 2*NUM_LANDMARKS
@@ -31,8 +31,8 @@ namespace py = boost::python;
 #define S_DIM (((X_DIM+1)*(X_DIM))/2)
 #define B_DIM (X_DIM+S_DIM)
 
-const double length = 1;
-const double camera_range = 5;
+const double length = 4;
+const double camera_range = 30;
 const double camera_view_angle = 3.1415926535/4;
 
 const double step = 0.0078125*0.0078125;
@@ -43,6 +43,8 @@ Matrix<X_DIM,X_DIM> SqrtSigma0;
 Matrix<X_DIM> xGoal;
 Matrix<X_DIM> xMin, xMax;
 Matrix<U_DIM> uMin, uMax;
+Matrix<Q_DIM, Q_DIM> Q;
+Matrix<R_DIM, R_DIM> R;
 
 const int T = TIMESTEPS;
 const double INFTY = 1e10;
@@ -58,11 +60,10 @@ std::vector<int> maskIndices;
 Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<Q_DIM>& q)
 {
   Matrix<X_DIM> xAdd = zeros<X_DIM,1>();
-    
-  xAdd[0] = u[0] * DT * cos(x[2]) + q[0];//+ noise 
-  xAdd[1] = u[0] * DT * sin(x[2]) + q[1];//+ noise 
-  xAdd[2] = u[0] * DT * tan(u[1])/length + q[2];//+ noise 
-
+  
+  xAdd[0] = (u[0]) * DT * cos(x[2]+u[1])+q[0];//+ noise 
+  xAdd[1] = (u[0]) * DT * sin(x[2]+u[1])+q[1];//+ noise 
+  xAdd[2] = (u[0]) * DT * sin(u[1])/length+q[2];//+ noise 
   Matrix<X_DIM> xNew = x + xAdd;
   return xNew;
 }
@@ -99,13 +100,14 @@ end
 
 double signedDist(const Matrix<2> pt, const std::vector<Matrix<2>> camera_region)
 {
+  
   //camera_region = shrink_camera(camera_region);
   double d12 = line_point_signed_dist(camera_region[0],camera_region[1],pt);
   double d23 = line_point_signed_dist(camera_region[1],camera_region[2],pt);
   double d31 = line_point_signed_dist(camera_region[2],camera_region[0],pt);
   if (d12 <= 0.0 && d23 <= 0.0 && d31 <= 0.0) {
     return std::max({d12, d23, d31});
-  } else {
+    } else {
     d12 = segment_point_dist(camera_region[0],camera_region[1], pt);
     d23 = segment_point_dist(camera_region[1],camera_region[2], pt);
     d31 = segment_point_dist(camera_region[2],camera_region[0], pt);
@@ -126,6 +128,7 @@ Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r)
     //First point is on the robots center position
     camera_region[0][0] = x[0];
     camera_region[0][1] = x[1];
+
     double side_length = camera_range / cos(camera_view_angle);
 
     camera_region[1][0] = x[0] + side_length*cos(x[2]-camera_view_angle);
@@ -136,8 +139,15 @@ Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r)
 
     Matrix<2> landmarkPoint = x.subMatrix<2>(3+2*i,0);
     double sd = signedDist(landmarkPoint, camera_region);
-    z[2*i] = (x[0] - x[3+i]) + r[2*i]/ std::pow((1+exp(-sd)),2);
-    z[2*i+1] = (x[1] - x[4+i]) + r[2*i+1]/ std::pow((1+exp(-sd)),2);
+
+    //double dist = std::sqrt(std::pow(landmarkPoint[0]-x[0], 2) + std::pow(landmarkPoint[1]-x[1],2));
+    //double ang = atan2(landmarkPoint[1]-x[1], landmarkPoint[0]-x[0]);
+    
+    //z[2*i] = dist + r[2*i]/std::pow(1+(exp(-sd)),20);
+    //z[2*i+1] = ang - x[2] + r[2*i+1]/ std::pow(1+(exp(-sd)),20);
+
+    z[2*i] = (x[0] - x[3+2*i]) + r[2*i]/ std::pow(1+(exp(-sd)),20);
+    z[2*i+1] = (x[1] - x[4+2*i]) + r[2*i+1]/ std::pow(1+(exp(-sd)),20);
   }
   return z;
 }
@@ -193,9 +203,9 @@ void linearizeObservation(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r, Matrix
 	H.reset();
 	Matrix<X_DIM> xr(x), xl(x);
 	for (size_t i = 0; i < X_DIM; ++i) {
-		xr[i] += step; xl[i] -= step;
-		H.insert(0,i, (obsfunc(xr, r) - obsfunc(xl, r)) / (xr[i] - xl[i]));
-		xr[i] = x[i]; xl[i] = x[i];
+	  xr[i] += step; xl[i] -= step;
+	  H.insert(0,i, (obsfunc(xr, r) - obsfunc(xl, r)) / (xr[i] - xl[i]));
+	  xr[i] = x[i]; xl[i] = x[i];
 	}
 
 	N.reset();
@@ -204,6 +214,7 @@ void linearizeObservation(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r, Matrix
 		rr[i] += step; rl[i] -= step;
 		N.insert(0,i, (obsfunc(x, rr) - obsfunc(x, rl)) / (rr[i] - rl[i]));
 		rr[i] = r[i]; rl[i] = r[i];
+
 	}
 }
 
@@ -244,13 +255,19 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	linearizeDynamics(x, u, zeros<Q_DIM,1>(), A, M);
 
 	x = dynfunc(x, u, zeros<Q_DIM,1>());
-	Sigma = A*Sigma*~A + M*~M;
 
+	//Should include a Q here
+	Sigma = A*Sigma*~A + M*Q*~M;
+	
 	Matrix<Z_DIM,X_DIM> H;
 	Matrix<Z_DIM,R_DIM> N;
 	linearizeObservation(x, zeros<R_DIM,1>(), H, N);
-	Matrix<X_DIM,Z_DIM> K = Sigma*~H/(H*Sigma*~H + N*~N);
+
+	//Should include an R here
+	Matrix<X_DIM,Z_DIM> K = Sigma*~H/(H*Sigma*~H + N*R*~N);
+
 	Sigma = (identity<X_DIM>() - K*H)*Sigma;
+
 	Matrix<B_DIM> g;
 	vec(x, sqrt(Sigma), g);
 
@@ -303,7 +320,7 @@ void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B)
 		py::object plot_mod = py::import("plot_slam");
 		py::object plot_traj = plot_mod.attr("plot_belief_trajectory");
 
-		plot_traj(Bvec, B_DIM, X_DIM, T);
+		plot_traj(Bvec, B_DIM, X_DIM, T, camera_range, camera_view_angle);
 	}
 	catch(py::error_already_set const &)
 	{

@@ -19,7 +19,7 @@ namespace py = boost::python;
 #define TIMESTEPS 15
 #define DT 1.0
 
-#define NUM_LANDMARKS 4
+#define NUM_LANDMARKS 5
 #define NUM_WAYPOINTS 5
 
 #define P_DIM 2 // robot state size (x, y)
@@ -36,7 +36,7 @@ namespace py = boost::python;
 #define XU_DIM (X_DIM*T+U_DIM*(T-1))
 
 const double step = 0.0078125*0.0078125;
-
+const double range = 500;
 
 const int T = TIMESTEPS;
 const double INFTY = 1e10;
@@ -74,8 +74,9 @@ Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r)
 		l1 = l[i+1];
 
 		dist = sqrt(std::pow(x0 - l0, 2) + std::pow(x1 - l1, 2));
-		z[i] = ((x0 - l0) + r[i])/ std::pow(1+(exp(-dist)),20);
-		z[i+1] = ((x1 - l1) + r[i+1])/ std::pow(1+(exp(-dist)),20);
+
+		z[i] = (x0 - l0) + (r[i])/ std::pow(1+exp(range-dist),2);
+		z[i+1] = (x1 - l1) + (r[i+1])/ std::pow(1+exp(range-dist),2);
 	}
 
 	return z;
@@ -158,9 +159,10 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	//Matrix<X_DIM,Q_DIM> M = .01*identity<U_DIM>();
 	Matrix<X_DIM,X_DIM> A;
 	Matrix<X_DIM,Q_DIM> M;
-	linearizeDynamics(x, u, zeros<Q_DIM,1>(), A, M);
 
+	linearizeDynamics(x, u, zeros<Q_DIM,1>(), A, M);
 	x = dynfunc(x, u, zeros<Q_DIM,1>());
+
 	Sigma = A*Sigma*~A + M*~M;
 
 	Matrix<Z_DIM,X_DIM> H = zeros<Z_DIM,X_DIM>();
@@ -170,7 +172,7 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	Matrix<X_DIM,Z_DIM> K = Sigma*~H/(H*Sigma*~H + N*~N);
 
 	Sigma = (identity<X_DIM>() - K*H)*Sigma;
-
+	
 	Matrix<B_DIM> g;
 	vec(x, sqrt(Sigma), g);
 

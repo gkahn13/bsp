@@ -38,39 +38,39 @@ void testPlotting(std::vector< Matrix<P_DIM> >& waypoints) {
 int main(int argc, char* argv[])
 {
 	std::vector< Matrix<P_DIM> > waypoints(NUM_WAYPOINTS);
-	waypoints[0][0] = 2; waypoints[0][1] = 0;
-	waypoints[1][0] = 4; waypoints[1][1] = 0;
-	waypoints[2][0] = 4; waypoints[2][1] = 4;
-	waypoints[3][0] = 2; waypoints[3][1] = .2;
-	waypoints[4][0] = 0; waypoints[4][1] = 4;
+	waypoints[0][0] = 2000; waypoints[0][1] = 0;
+	waypoints[1][0] = 4000; waypoints[1][1] = 0;
+	waypoints[2][0] = 4000; waypoints[2][1] = 4000;
+	waypoints[3][0] = 2000; waypoints[3][1] = 200;
+	waypoints[4][0] = 0; waypoints[4][1] = 4000;
 
 	//testPlotting(waypoints);
 
 
 	std::vector< Matrix<P_DIM> > landmarks(NUM_LANDMARKS);
-	landmarks[0][0] = 2; landmarks[0][1] = 0;
-	landmarks[1][0] = 4; landmarks[1][1] = 0;
-	landmarks[2][0] = 4; landmarks[2][1] = 4;
-	landmarks[3][0] = 0; landmarks[3][1] = 4;
+	landmarks[0][0] = 2000; landmarks[0][1] = 0;
+	landmarks[1][0] = 4000; landmarks[1][1] = 0;
+	landmarks[2][0] = 4000; landmarks[2][1] = 4000;
+	landmarks[3][0] = 2000; landmarks[3][1] = 200;
+	landmarks[4][0] = 0; landmarks[4][1] = 4000;
 
 
 	// for now, landmarks == waypoints
 	Matrix<X_DIM> x0;
-	for(int i = 0; i < L_DIM; i += 2) {
-		x0.insert(P_DIM+i, 0, landmarks[i]);
+	for(int i = 0; i < NUM_LANDMARKS; ++i) {
+		x0.insert(P_DIM+2*i, 0, landmarks[i]);
 	}
 
 	Matrix<X_DIM,X_DIM> SqrtSigma0 = identity<X_DIM>();
-	std::vector<Matrix<B_DIM> > B(T*NUM_LANDMARKS);
+	std::vector<Matrix<B_DIM> > B(T*NUM_WAYPOINTS);
 
 	Matrix<P_DIM> pGoal;
 	pGoal[0] = 0; pGoal[1] = 0;
 	x0.insert(0, 0, pGoal);
 
 	vec(x0, SqrtSigma0, B[0]);
-
-	int index = 1;
-	for(int i = 0; i < 1; ++i) {
+	int index = 0;
+	for(int i = 0; i < NUM_WAYPOINTS; ++i) {
 		Matrix<P_DIM> p0 = pGoal;
 		pGoal = waypoints[i];
 
@@ -79,15 +79,20 @@ int main(int argc, char* argv[])
 		Matrix<U_DIM> uinit = (pGoal - p0) / (T-1);
 		//std::vector<Matrix<U_DIM> > U(T-1, uinit);
 
+		
+		Matrix<X_DIM> xtmp;
+		Matrix<X_DIM, X_DIM> stmp;
 		for(int t = 0; t < T - 1; ++t) {
 			B[index+1] = beliefDynamics(B[index], uinit);
-			std::cout << ~B[index+1].subMatrix<P_DIM>(0,0);
+			unVec(B[index+1], xtmp, stmp);
+			//std::cout << tr(stmp) << ": "<<xtmp[0] << ", "<<xtmp[1] << std::endl;
 			index++;
 		}
+		//std::cout << "----------" << std::endl;
 		//pythonDisplayTrajectory(B, waypoints);
 	}
 
-	pythonDisplayTrajectory(B, waypoints);
+	//pythonDisplayTrajectory(B, waypoints);
 
 
 

@@ -1,21 +1,12 @@
-#ifndef __POINT_H__
-#define __POINT_H__
+#ifndef __ARM_H__
+#define __ARM_H__
 
 #include <fstream>
-#include <tgmath.h>
 
-#include "util/matrix.h"
+#include "matrix.h"
 
-
-#include "util/utils.h"
-#include "util/logging.h"
-
-#include <Python.h>
-//#include <pythonrun.h>
-#include <boost/python.hpp>
-#include <boost/filesystem.hpp>
-
-namespace py = boost::python;
+#include "utils.h"
+//#include "util/logging.h"
 
 #define TIMESTEPS 15
 #define DT 1
@@ -39,6 +30,9 @@ const double step = 0.0078125*0.0078125;
 
 Matrix<X_DIM> x0;
 Matrix<X_DIM,X_DIM> SqrtSigma0;
+Matrix<U_DIM, U_DIM> QC; // process noise covariance
+Matrix<Z_DIM, Z_DIM> RC; // measurement noise covariance
+	
 Matrix<G_DIM> posGoal;
 Matrix<X_DIM> xGoal; // TODO: temporary, since goal is a vector of joints
 Matrix<X_DIM> xMin, xMax;
@@ -46,6 +40,7 @@ Matrix<U_DIM> uMin, uMax;
 
 Matrix<G_DIM> cam0, cam1;
 
+const double goaldelta = 0.1;
 
 const int T = TIMESTEPS;
 const double INFTY = 1e10;
@@ -53,11 +48,18 @@ const double INFTY = 1e10;
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
-const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 1, alpha_goal_state = 1;
+// iLQG params
+SymmetricMatrix<U_DIM> Rint;
+SymmetricMatrix<X_DIM> Qint;
+SymmetricMatrix<X_DIM> QGoal;
+SymmetricMatrix<X_DIM> Sigma0;
 
-//double *inputVars, *vars;
-//std::vector<int> maskIndices;
+const double alpha_belief = 10, alpha_final_belief = 100, alpha_control = 0.1, alpha_goal_state = 1;
 
+// callisto visualization stuff
+int cal_environment, cal_paths, cal_objects, cal_ellipse;
+int joint_group[6];
+float null_joint[6];
 
 Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<U_DIM>& q)
 {
@@ -116,15 +118,13 @@ void linearizeDynamics(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Mat
 	}
 }
 
-Matrix<G_DIM,X_DIM> linearizeg(const Matrix<X_DIM>& x)
+void linearizeg(const Matrix<X_DIM>& x, Matrix<G_DIM, X_DIM>& J)
 {
 	Matrix<X_DIM> sx, cx;
 	for(int i = 0; i < X_DIM; ++i) {
 		sx[i] = sin(x[i]);
 		cx[i] = cos(x[i]);
 	}
-
-	Matrix<G_DIM,X_DIM> J;
 
     J(0,0) = cx[0]*(cx[1]*(sx[2]*(cx[4]*l4+l3)+cx[2]*cx[3]*sx[4]*l4)+sx[1]*(cx[2]*(cx[4]*l4+l3)-sx[2]*cx[3]*sx[4]*l4+l2))-sx[0]*sx[3]*sx[4]*l4;
     J(0,1) = sx[0]*(cx[1]*(cx[2]*(cx[4]*l4+l3)-sx[2]*cx[3]*sx[4]*l4+l2)-sx[1]*(sx[2]*(cx[4]*l4+l3)+cx[2]*cx[3]*sx[4]*l4));
@@ -146,9 +146,8 @@ Matrix<G_DIM,X_DIM> linearizeg(const Matrix<X_DIM>& x)
     J(2,3) = cx[0]*(sx[1]*sx[2]*sx[3]*sx[4]*l4-cx[1]*cx[2]*sx[3]*sx[4]*l4)-sx[0]*cx[3]*sx[4]*l4;
     J(2,4) = cx[0]*(cx[1]*(cx[2]*cx[3]*cx[4]*l4-sx[2]*sx[4]*l4)+sx[1]*(-cx[2]*sx[4]*l4-sx[2]*cx[3]*cx[4]*l4))-sx[0]*sx[3]*cx[4]*l4;
     J(2,5) = 0;
-
-    return J;
 }
+
 // Jacobians: dh(x,r)/dx, dh(x,r)/dr
 void linearizeObservation(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r, Matrix<Z_DIM,X_DIM>& H, Matrix<Z_DIM,R_DIM>& N)
 {
@@ -207,13 +206,14 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	//linearizeDynamics(x, u, zeros<Q_DIM,1>(), A, M);
 
 	x = dynfunc(x, u, zeros<Q_DIM,1>());
-	Sigma = A*Sigma*~A + M*~M;
+	Sigma = A*Sigma*~A + M*QC*~M;
 
 	Matrix<Z_DIM,X_DIM> H = zeros<Z_DIM,X_DIM>();
 	Matrix<Z_DIM,R_DIM> N = identity<Z_DIM>();
 	//linearizeObservation(x, zeros<R_DIM>(), H, N);
 
-	Matrix<G_DIM,X_DIM> J = linearizeg(x);
+	Matrix<G_DIM,X_DIM> J; 
+	linearizeg(x, J);
 
 	for (int i = 0; i < X_DIM; ++i) {
 		/*
@@ -223,24 +223,570 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	    	H(3,i) = (J(1,i) * (x[2] - cam1[2]) - (x[1] - cam1[1]) * J(2,i)) / ((x[2] - cam1[2]) * (x[2] - cam1[2]));
 		 */
 
-		H(0,i) = (J(0,i) * (x[1] - cam0[1]) - (x[0] - cam0[0]) * J(1,i)) / ((x[1] - cam0[1]) * (x[1] - cam0[1]));
-		H(1,i) = (J(2,i) * (x[1] - cam0[1]) - (x[2] - cam0[2]) * J(1,i)) / ((x[1] - cam0[1]) * (x[1] - cam0[1]));
-		H(2,i) = (J(0,i) * (x[1] - cam1[1]) - (x[0] - cam1[0]) * J(1,i)) / ((x[1] - cam1[1]) * (x[1] - cam1[1]));
-		H(3,i) = (J(2,i) * (x[1] - cam1[1]) - (x[2] - cam1[2]) * J(1,i)) / ((x[1] - cam1[1]) * (x[1] - cam1[1]));
+		H(0,i) = -(J(0,i) * (x[1] - cam0[1]) - (x[0] - cam0[0]) * J(1,i)) / ((x[1] - cam0[1]) * (x[1] - cam0[1]));
+		H(1,i) = -(J(2,i) * (x[1] - cam0[1]) - (x[2] - cam0[2]) * J(1,i)) / ((x[1] - cam0[1]) * (x[1] - cam0[1]));
+		H(2,i) = -(J(0,i) * (x[1] - cam1[1]) - (x[0] - cam1[0]) * J(1,i)) / ((x[1] - cam1[1]) * (x[1] - cam1[1]));
+		H(3,i) = -(J(2,i) * (x[1] - cam1[1]) - (x[2] - cam1[2]) * J(1,i)) / ((x[1] - cam1[1]) * (x[1] - cam1[1]));
 	}
 
 
-	// TODO: currently fails on second 7th sqp iteration b/c H is huge
-	Matrix<X_DIM,Z_DIM> K = Sigma*~H/(H*Sigma*~H + N*~N);
+	Matrix<X_DIM,Z_DIM> K = Sigma*~H/(H*Sigma*~H + N*RC*~N);
 
 	Sigma = (identity<X_DIM>() - K*H)*Sigma;
 
 	Matrix<B_DIM> g;
-	vec(x, sqrt(Sigma), g);
+	vec(x, sqrtm(Sigma), g);
 
 	return g;
 }
 
+void initProblemParams()
+{
+	/*cam0[0] = -4;  cam0[1] = 11.5; cam0[2] = -23;
+	cam1[0] = 4;  cam1[1] = 11.5; cam1[2] = -23;*/
 
+	cam0[0] = -4;  cam0[1] = 30; cam0[2] = 0;
+	cam1[0] = 4;  cam1[1] = 30; cam1[2] = 0;
+
+	x0[0] = .5*M_PI; x0[1] = -1.5431281995798991; x0[2] = -0.047595544887998331;
+	x0[3] = 1.4423058659586809; x0[4] = 1.5334368368992011; x0[5] = -1.1431255223182604;
+
+	SqrtSigma0 = identity<X_DIM>();
+
+	xGoal[0] = -1.4846950311433709; xGoal[1] = -2.2314918647565389; xGoal[2] = 1.4680882089972564;
+	xGoal[3] = 0.37654505159140872; xGoal[4] = 1.660179950900027; xGoal[5] = -2.718448168983489;
+
+	posGoal[0] = 11.5; posGoal[1] = 11.5; posGoal[2] = 0;
+	//posGoal = g(xGoal);
+
+	xMin[0] = -M_PI; xMin[1] = -0.75*M_PI; xMin[2] = -0.75*M_PI; xMin[3] = -M_PI; xMin[4] = -0.75*M_PI; xMin[5] = -M_PI;
+	xMax[0] = M_PI;  xMax[1] = 0.75*M_PI;  xMax[2] = 0.75*M_PI;  xMax[3] = M_PI;  xMax[4] =  0.75*M_PI; xMax[5] = M_PI;
+
+	//uMin[0] = -0.5; uMin[1] = -0.5; uMin[2] = -0.5; uMin[3] = -0.5; uMin[4] = -0.5; uMin[5] = -0.5;
+	//uMax[0] = 0.5; uMax[1] = 0.5; uMax[2] = 0.5; uMax[3] = 0.5; uMax[4] = 0.5; uMax[5] = 0.5;
+	
+	for(int i=0; i < U_DIM; ++i) { uMin[i] = -.5; uMax[i] = .5; }
+
+	SqrtSigma0 = identity<X_DIM>() * 0.1;
+
+	QC = identity<U_DIM>() * 0.01;
+	RC = identity<Z_DIM>() * 0.01;
+}
+
+Matrix<4,1> quatFromAA(const Matrix<3>& axis, double angle);
+void drawPolyline3d(int pathlen, float* pts, int groupid);
+Matrix<4,1> quatFromRot(const Matrix<3,3>& R);
+void preprocess(const std::vector<Matrix<X_DIM> >& path, std::vector<Matrix<G_DIM, X_DIM> >& J, std::vector<Matrix<X_DIM,X_DIM> >& Sigma);
+
+void displayTrajectory(const std::vector<Matrix<X_DIM> >& X, const std::vector<Matrix<U_DIM> >& U, const std::vector<Matrix<B_DIM> >& Bopt, bool interp = true) 
+{
+	int nsteps = (int)U.size()+1;
+	
+	// show trajectory
+	if (interp) {
+		int nparts = 10;
+		int np[1] = {nparts*(nsteps-1)+1};
+		float* p = new float[3*np[0]];
+		Matrix<X_DIM> x = X[0];
+		int idx = 0;
+		int npts = 0;
+		Matrix<G_DIM> q = g(x);
+		p[idx] = (float) q[0]; p[idx+1] = (float)q[1]; p[idx+2] = (float)q[2];
+		idx += 3;
+		for (int i = 0; i < nsteps-1; ++i) {
+			for(int j = 1; j <= nparts; ++j) {
+				x = dynfunc(x, U[i]/(double)nparts, zeros<Q_DIM,1>());
+				q = g(x);
+				p[idx] = (float) q[0]; p[idx+1] = (float)q[1]; p[idx+2] = (float)q[2];
+				idx += 3;
+			}
+		}
+		//CAL_CreatePolyline(cal_paths, 1, np, p, 0);
+		drawPolyline3d(np[0], p, cal_paths);
+		delete[] p;
+	} else {
+		int np[1] = {nsteps};
+		float* p = new float[3*np[0]];
+		for (int i = 0; i < nsteps; ++i) {
+			Matrix<G_DIM> q = g(X[i]);
+			p[3*i] = (float) q[0]; p[3*i+1] = (float)q[1]; p[3*i+2] = (float)q[2];
+		}
+		//CAL_CreatePolyline(cal_paths, 1, np, p, 0);
+		drawPolyline3d(nsteps, p, cal_paths);
+		delete[] p;
+	}
+
+	std::cout << "Last goal: " << ~g(X.back()) << std::endl;
+
+	//visualize last state
+	//showState(X.back());
+	
+	//std::vector<Matrix<G_DIM, X_DIM> > J;
+	//std::vector<Matrix<X_DIM, X_DIM> > Sigma;
+	//preprocess(X, J, Sigma);
+
+	std::vector<Matrix<B_DIM> > B(T);
+	vec(x0, SqrtSigma0, B[0]);
+	for (size_t t = 0; t < T-1; ++t) {
+		B[t+1] = beliefDynamics(B[t], U[t]);
+		//std::cout << ~B[t] << std::endl;
+	}
+
+	Matrix<G_DIM, X_DIM> J;
+	Matrix<X_DIM, X_DIM> SqrtSigma;
+	Matrix<X_DIM> x;
+
+	for (int t = 0; t < nsteps; ++t) 
+	{
+		Matrix<G_DIM,G_DIM> EVec, EVal;
+
+		//jacobi(J[t]*Sigma[t]*~J[t], EVec, EVal);
+
+		unVec(B[t], x, SqrtSigma);
+		//unVec(Bopt[t], x, SqrtSigma);
+
+		linearizeg(x, J);
+		jacobi(J*SqrtSigma*SqrtSigma*~J, EVec, EVal);
+
+		Matrix<4,1> q = quatFromRot(EVec);
+		Matrix<G_DIM> p = g(X[t]);
+
+		float pos[3] = {(float) p[0], (float) p[1], (float) p[2]};
+		float quat[4] = {(float) q(0,0), (float) q(1,0), (float) q(2,0), (float) q(3,0)};
+		float scale[3] = {(float) (2*sqrt(EVal(0,0))), (float) (2*sqrt(EVal(1,1))), (float) (2*sqrt(EVal(2,2)))};
+		
+		CAL_AddGroupKeyState(cal_ellipse, (float) (t * DT), pos, quat, scale, true);
+		
+		// Add joint angles for display along trajectory
+		for (int j = 0; j < 6; ++j) {
+			double angle = X[t][j] + null_joint[j];
+			if (angle < 0) {
+				angle += 2*M_PI;
+			} else if (angle >= 2*M_PI) {
+				angle -= 2*M_PI;
+			}
+
+			float rot[3] = {0.f, (float)angle, 0.f}; 
+			CAL_AddGroupKeyState(joint_group[j], (float) (t * DT), 0, rot, 0, false);
+		}
+	}
+}
+
+
+void displayStateTrajectory(const std::vector<Matrix<X_DIM> >& X, const std::vector<Matrix<U_DIM> >& U, bool interp = true) 
+{
+	int nsteps = (int)U.size()+1;
+	
+	// show trajectory
+	if (interp) {
+		int nparts = 10;
+		int np[1] = {nparts*(nsteps-1)+1};
+		float* p = new float[3*np[0]];
+		Matrix<X_DIM> x = X[0];
+		int idx = 0;
+		int npts = 0;
+		Matrix<G_DIM> q = g(x);
+		p[idx] = (float) q[0]; p[idx+1] = (float)q[1]; p[idx+2] = (float)q[2];
+		idx += 3;
+		for (int i = 0; i < nsteps-1; ++i) {
+			for(int j = 1; j <= nparts; ++j) {
+				x = dynfunc(x, U[i]/(double)nparts, zeros<Q_DIM,1>());
+				q = g(x);
+				p[idx] = (float) q[0]; p[idx+1] = (float)q[1]; p[idx+2] = (float)q[2];
+				idx += 3;
+			}
+		}
+		//CAL_CreatePolyline(cal_paths, 1, np, p, 0);
+		drawPolyline3d(np[0], p, cal_paths);
+		delete[] p;
+	} else {
+		int np[1] = {nsteps};
+		float* p = new float[3*np[0]];
+		for (int i = 0; i < nsteps; ++i) {
+			Matrix<G_DIM> q = g(X[i]);
+			p[3*i] = (float) q[0]; p[3*i+1] = (float)q[1]; p[3*i+2] = (float)q[2];
+		}
+		//CAL_CreatePolyline(cal_paths, 1, np, p, 0);
+		drawPolyline3d(nsteps, p, cal_paths);
+		delete[] p;
+	}
+
+	std::cout << "Last goal: " << ~g(X.back()) << std::endl;
+
+	//visualize last state
+	//showState(X.back());
+	
+	//std::vector<Matrix<G_DIM, X_DIM> > J;
+	//std::vector<Matrix<X_DIM, X_DIM> > Sigma;
+	//preprocess(X, J, Sigma);
+
+	std::vector<Matrix<B_DIM> > B(T);
+	vec(x0, SqrtSigma0, B[0]);
+	for (size_t t = 0; t < T-1; ++t) {
+		B[t+1] = beliefDynamics(B[t], U[t]);
+		//std::cout << ~B[t] << std::endl;
+	}
+
+	Matrix<G_DIM, X_DIM> J;
+	Matrix<X_DIM, X_DIM> SqrtSigma;
+	Matrix<X_DIM> x;
+
+	for (int t = 0; t < nsteps; ++t) 
+	{
+		Matrix<G_DIM,G_DIM> EVec, EVal;
+
+		//jacobi(J[t]*Sigma[t]*~J[t], EVec, EVal);
+
+		unVec(B[t], x, SqrtSigma);
+		//unVec(Bopt[t], x, SqrtSigma);
+
+		linearizeg(x, J);
+		jacobi(J*SqrtSigma*SqrtSigma*~J, EVec, EVal);
+
+		Matrix<4,1> q = quatFromRot(EVec);
+		Matrix<G_DIM> p = g(X[t]);
+
+		float pos[3] = {(float) p[0], (float) p[1], (float) p[2]};
+		float quat[4] = {(float) q(0,0), (float) q(1,0), (float) q(2,0), (float) q(3,0)};
+		float scale[3] = {(float) (2*sqrt(EVal(0,0))), (float) (2*sqrt(EVal(1,1))), (float) (2*sqrt(EVal(2,2)))};
+		
+		CAL_AddGroupKeyState(cal_ellipse, (float) (t * DT), pos, quat, scale, true);
+		
+		// Add joint angles for display along trajectory
+		for (int j = 0; j < 6; ++j) {
+			double angle = X[t][j] + null_joint[j];
+			if (angle < 0) {
+				angle += 2*M_PI;
+			} else if (angle >= 2*M_PI) {
+				angle -= 2*M_PI;
+			}
+
+			float rot[3] = {0.f, (float)angle, 0.f}; 
+			CAL_AddGroupKeyState(joint_group[j], (float) (t * DT), 0, rot, 0, false);
+		}
+	}
+}
+
+void initEnvironment() 
+{
+	CAL_CreateGroup(&cal_paths, 0, false, "Paths");
+	CAL_SetGroupColor(cal_paths, 0, 0, 0);
+
+	CAL_CreateGroup(&cal_ellipse, 0, false, "Ellipse");
+	CAL_SetGroupColor(cal_ellipse, 0, 1, 0, 0.65);
+	CAL_CreateSphere(cal_ellipse, 1, 0, 0, 0);
+
+	CAL_CreateGroup(&cal_environment, 0, false, "Environment");
+	CAL_CreateGroup(&cal_objects, cal_environment, false, "Objects");
+
+	CAL_SetGroupColor(cal_objects, 0, 0, 1);
+	//CAL_CreateBox(cal_obstacles, 0.4, 0.4, 1, cam0[0], cam0[1], cam0[2]+0.5);
+	//CAL_CreateBox(cal_obstacles, 3, 3, 0.2, cam0[0], cam0[1], cam0[2]+1);
+	//CAL_CreateBox(cal_obstacles, 0.4, 0.4, 1, cam1[0], cam1[1], cam0[2]+0.5);
+	//CAL_CreateBox(cal_obstacles, 3, 3, 0.2, cam1[0], cam1[1], cam0[2]+1);
+
+	CAL_CreateBox(cal_objects, 0.4f, 1.f, 0.4f, (float)cam0[0], (float)(cam0[1]-0.5), (float)cam0[2]);
+	CAL_CreateBox(cal_objects, 3.f, 0.2f, 3.f, (float)cam0[0], (float)(cam0[1]-1), (float)cam0[2]);
+	CAL_CreateBox(cal_objects, 0.4f, 1.f, 0.4f, (float)cam1[0], (float)(cam1[1]-0.5), (float)cam1[2]);
+	CAL_CreateBox(cal_objects, 3.f, 0.2f, 3.f, (float)cam1[0], (float)(cam1[1]-1), (float)cam1[2]);
+
+	int retcode = CAL_LoadScene("data\\robotcrs.wrl", cal_objects);
+	//std::cerr << "Return code: " << retcode << std::endl;
+	
+	CAL_GetID(&(joint_group[0]), "joint1");
+	CAL_GetID(&(joint_group[1]), "joint2");
+	CAL_GetID(&(joint_group[2]), "joint3");
+	CAL_GetID(&(joint_group[3]), "joint4");
+	CAL_GetID(&(joint_group[4]), "joint5");
+	CAL_GetID(&(joint_group[5]), "joint6");
+
+	null_joint[0] = 0;
+	null_joint[1] = 5.78;
+	null_joint[2] = 0;
+	null_joint[3] = 0;
+	null_joint[4] = 0;
+	null_joint[5] = 0;
+	
+	CAL_SetViewParams(0, 0, 50, 0, 0, 0, 0, 0, 0, 1); 
+
+	//showState(start);
+}
+
+void showState(const Matrix<X_DIM>& x) 
+{
+	for (int k = 0; k < X_DIM; ++k) {
+		double angle = x[k] + null_joint[k];
+		if (angle >= 2*M_PI) {
+			angle -= 2*M_PI;
+		}
+		if (angle < 0) {
+			angle += 2*M_PI;
+		}
+
+		CAL_SetGroupOrientation(joint_group[k], 0, (float) angle, 0);
+	}
+	Matrix<G_DIM> p = g(x);
+	//CAL_SetGroupPosition(cal_ellipse, p[0], p[1], p[2]); 
+}
+
+
+// Jacobians: dg(b,u)/db, dg(b,u)/du
+void linearizeBeliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u, Matrix<B_DIM,B_DIM>& F, Matrix<B_DIM,U_DIM>& G, Matrix<B_DIM>& h)
+{
+	F.reset();
+	Matrix<B_DIM> br(b), bl(b);
+	for (size_t i = 0; i < B_DIM; ++i) {
+		br[i] += step; bl[i] -= step;
+		F.insert(0,i, (beliefDynamics(br, u) - beliefDynamics(bl, u)) / (br[i] - bl[i]));
+		br[i] = b[i]; bl[i] = b[i];
+	}
+
+	G.reset();
+	Matrix<U_DIM> ur(u), ul(u);
+	for (size_t i = 0; i < U_DIM; ++i) {
+		ur[i] += step; ul[i] -= step;
+		G.insert(0,i, (beliefDynamics(b, ur) - beliefDynamics(b, ul)) / (ur[i] - ul[i]));
+		ur[i] = u[i]; ul[i] = u[i];
+	}
+
+	h = beliefDynamics(b, u);
+}
+
+
+
+
+
+
+
+
+
+
+void preprocess(const std::vector<Matrix<X_DIM> >& path, std::vector<Matrix<G_DIM, X_DIM> >& J, std::vector<Matrix<X_DIM,X_DIM> >& Sigma) 
+{
+	std::vector<Matrix<X_DIM, X_DIM> > A; // process matrix
+	std::vector<Matrix<X_DIM, U_DIM> > B; // input matrix
+	Matrix<X_DIM, X_DIM> C; // LQR state deviation cost
+	Matrix<U_DIM, U_DIM> D; // LQR input deviation cost
+	std::vector<Matrix<X_DIM, U_DIM> > V; // process noise matrix
+	Matrix<U_DIM, U_DIM> M; // process noise covariance
+	std::vector<Matrix<Z_DIM, X_DIM> > H; // measurement matrix
+	std::vector<Matrix<Z_DIM, Z_DIM> > W; // measurement noise matrix
+	Matrix<Z_DIM, Z_DIM> N; // measurement noise covariance
+	Matrix<X_DIM, X_DIM> P_0; // initial state covariance
+	std::vector<Matrix<U_DIM, X_DIM> > L; // feedback matrix
+	std::vector<Matrix<X_DIM, Z_DIM> > K; // Kalman-gain matrix
+
+	std::vector<Matrix<2*X_DIM, 2*X_DIM> > R;
+
+	int l = (int) path.size();
+
+	A.resize(l); // process matrix
+	B.resize(l); // input matrix
+	V.resize(l); // process noise matrix
+	H.resize(l); // measurement matrix
+	W.resize(l); // measurement noise matrix
+	L.resize(l); // feedback matrix
+	K.resize(l); // Kalman-gain matrix
+	R.resize(l);
+
+	J.resize(l);
+	Sigma.resize(l);
+
+	// Initialization
+	C = identity<X_DIM>();
+	D = identity<U_DIM>();
+
+	P_0 = identity<X_DIM>() * 0.01;
+
+	M = identity<U_DIM>() * 0.01;
+	N = identity<Z_DIM>() * 0.01;
+
+	// Jacobians
+	for (int k = 0; k < l; ++k) 
+	{
+		Matrix<G_DIM> g_path = g(path[k]);
+
+		A[k] = identity<X_DIM>();
+		B[k] = DT * identity<U_DIM>();
+		V[k] = B[k];
+
+		linearizeg(path[k], J[k]);
+
+		for (int i = 0; i < X_DIM; ++i) {
+			/*H[k](0,i) = (J[k](0,i)*(g_path[2] - cam0[2]) - (g_path[0] - cam0[0])*J[k](2,i)) / ((g_path[2] - cam0[2])*(g_path[2] - cam0[2]));
+			H[k](1,i) = (J[k](1,i)*(g_path[2] - cam0[2]) - (g_path[1] - cam0[1])*J[k](2,i)) / ((g_path[2] - cam0[2])*(g_path[2] - cam0[2]));
+			H[k](2,i) = (J[k](0,i)*(g_path[2] - cam1[2]) - (g_path[0] - cam1[0])*J[k](2,i)) / ((g_path[2] - cam1[2])*(g_path[2] - cam1[2]));
+			H[k](3,i) = (J[k](1,i)*(g_path[2] - cam1[2]) - (g_path[1] - cam1[1])*J[k](2,i)) / ((g_path[2] - cam1[2])*(g_path[2] - cam1[2]));*/
+
+			H[k](0,i) = -(J[k](0,i)*(g_path[1] - cam0[1]) - (g_path[0] - cam0[0])*J[k](1,i)) / ((g_path[1] - cam0[1])*(g_path[1] - cam0[1]));
+			H[k](1,i) = -(J[k](2,i)*(g_path[1] - cam0[1]) - (g_path[2] - cam0[2])*J[k](1,i)) / ((g_path[1] - cam0[1])*(g_path[1] - cam0[1]));
+			H[k](2,i) = -(J[k](0,i)*(g_path[1] - cam1[1]) - (g_path[0] - cam1[0])*J[k](1,i)) / ((g_path[1] - cam1[1])*(g_path[1] - cam1[1]));
+			H[k](3,i) = -(J[k](2,i)*(g_path[1] - cam1[1]) - (g_path[2] - cam1[2])*J[k](1,i)) / ((g_path[1] - cam1[1])*(g_path[1] - cam1[1]));
+		}
+
+		W[k] = identity<Z_DIM>();
+	}
+
+	// LQR
+	Matrix<X_DIM, X_DIM> S;
+	S = C;
+	L[l - 1] = zeros<U_DIM, X_DIM>();
+	for (int k = l - 2; k >= 0; --k) {
+		L[k] = -!(~B[k+1]*S*B[k+1] + D)*~B[k+1]*S*A[k+1];
+		S = C + ~A[k+1]*S*A[k+1] + ~A[k+1]*S*B[k+1]*L[k];
+	}
+
+	// Kalman
+	Matrix<X_DIM, X_DIM> P;
+	P = P_0;
+	K[0] = zeros<X_DIM, Z_DIM>();
+	for (int k = 1; k < l; ++k) {
+		P = A[k]*P*~A[k] + V[k]*M*~V[k];
+		K[k] = P*~H[k]*!(H[k]*P*~H[k] + W[k]*N*~W[k]);
+		P = (identity<X_DIM>() - K[k]*H[k])*P;
+	}
+
+	std::vector<Matrix<2*X_DIM, 2*X_DIM> > F(l);
+	std::vector<Matrix<2*X_DIM, U_DIM+Z_DIM> > G(l);
+
+	// Combination of LQR and Kalman
+	Matrix<U_DIM+Z_DIM, U_DIM+Z_DIM> Q = zeros<U_DIM+Z_DIM, U_DIM+Z_DIM>();
+	Q.insert(0,0, M); Q.insert(U_DIM, U_DIM, N);
+
+	R[0].reset();
+	R[0].insert(0,0,P_0);
+	Sigma[0] = P_0; //R[0].subMatrix<X_DIM,X_DIM>(0,0);
+
+	for (int k = 1; k < l; ++k) {
+		F[k].insert(0,0,     A[k]);           F[k].insert(0,X_DIM,     B[k]*L[k-1]);
+		F[k].insert(X_DIM,0, K[k]*H[k]*A[k]); F[k].insert(X_DIM,X_DIM, A[k] + B[k]*L[k-1] - K[k]*H[k]*A[k]);
+
+		G[k].insert(0,0,     V[k]);           G[k].insert(0,U_DIM,     zeros<X_DIM,Z_DIM>());
+		G[k].insert(X_DIM,0, K[k]*H[k]*V[k]); G[k].insert(X_DIM,U_DIM, K[k]*W[k]);
+
+		R[k] = F[k]*R[k-1]*~F[k] + G[k]*Q*~G[k];
+		Sigma[k] = R[k].subMatrix<X_DIM,X_DIM>(0,0);
+	}
+}
+
+
+// helper functions
+
+inline Matrix<4,1> quatFromAA(const Matrix<3>& axis, double angle)
+{
+	Matrix<4,1> q;
+	double sa = sin(-angle*0.5);
+	double ca = cos(angle*0.5);
+	q(0,0) = sa*axis[0];
+	q(1,0) = sa*axis[1];
+	q(2,0) = sa*axis[2];
+	q(3,0) = ca;
+
+	return q;
+}
+
+inline void drawPolyline3d(int pathlen, float* pts, int groupid)
+{
+	Matrix<3> p1, p2, m, t, c;
+	Matrix<4,1> q;
+	double len1, len2;
+	int obj;
+
+	p1[0] = (float)pts[0]; p1[1] = (float)pts[1]; p1[2] = (float)pts[2];
+	for (int i = 1; i < pathlen; ++i) {
+		p2[0] = (float)pts[3*i]; p2[1] = (float)pts[3*i+1]; p2[2] = (float)pts[3*i+2];
+		m = (p1 + p2)*0.5;
+		len1 = sqrt(tr((p2 - p1)*~(p2 - p1)));
+		t = (p2 - p1)/len1;
+		c[0] = -t[2]; c[1] = 0.0; c[2] = t[0];
+		len2 = sqrt(t[0]*t[0] + t[2]*t[2]);
+		c = c/len2;
+		CAL_CreateCylinder(groupid, 0.04f, (float)len1, 0.0f, 0.0f, 0.0f, &obj);
+		q = quatFromAA(c, acos(t[1]));
+		CAL_SetObjectQuaternion(obj, (float) q[0], (float) q[1], (float) q[2], (float) q[3]);
+		CAL_SetObjectPosition(obj, (float)m[0], (float)m[1], (float)m[2]);
+		p1 = p2;
+	}
+}
+
+Matrix<4,1> quatFromRot(const Matrix<3,3>& R) {
+	double x = R(2,1) - R(1,2);
+	double y = R(0,2) - R(2,0);
+	double z = R(1,0) - R(0,1);
+	double r = sqrt(x*x+y*y+z*z);
+	double t = R(0,0) + R(1,1) + R(2,2);
+	double angle = atan2(r,t-1);
+	if (angle != 0) {
+		x /= r;
+		y /= r;
+		z /= r;
+	} else {
+		x = 0;
+		y = 0;
+		z = 0;
+	}
+	Matrix<4,1> q;
+	q(0,0) = sin(angle/2)*x;
+	q(1,0) = sin(angle/2)*y;
+	q(2,0) = sin(angle/2)*z;
+	q(3,0) = cos(angle/2);
+
+	return q;
+}
+
+
+inline void saveOptimizedTrajectory(std::vector<Matrix<U_DIM> >& Uopt) {
+	std::ofstream fptr("data\\optimized-controls.txt", std::ios::out);
+	fptr << T << std::endl;
+	for(int t = 0; t < T-1; ++t) {
+		fptr << ~Uopt[t];
+	}
+	fptr.close();
+}
+
+inline void readOptimizedTrajectory(std::vector<Matrix<U_DIM> >& U) {
+	std::ifstream fptr("data\\optimized-controls.txt", std::ios::in);
+	int nsteps;
+	fptr >> nsteps;
+	//std::cout << "nsteps: " << nsteps << std::endl;
+	U.clear();
+	U.resize(nsteps-1);
+	for(int t = 0; t < nsteps-1; ++t) {
+		fptr >> U[t];
+		//std::cout << ~U[t];
+	}
+	fptr.close();
+}
+
+void readTrajectoryFromFile(const std::string& filename, std::vector<Matrix<X_DIM> >& path)
+{
+	std::ifstream fptr(filename.c_str(),std::ios::in);
+	int nsteps;
+	fptr >> nsteps;
+	path.resize(nsteps);
+	for(int i = 0; i < nsteps; ++i) {
+		fptr >> path[i];
+	}
+	fptr.close();
+}
+
+// utility to fill Matrix in column major format in FORCES array
+template <size_t _numRows>
+inline void fillCol(double *X, const Matrix<_numRows>& XCol) {
+	int idx = 0;
+	for(int r = 0; r < _numRows; ++r) {
+		X[idx++] = XCol[r];
+	}
+}
+
+template <size_t _numRows, size_t _numColumns>
+inline void fillColMajor(double *X, const Matrix<_numRows, _numColumns>& XMat) {
+	int idx = 0;
+	for(int c = 0; c < _numColumns; ++c) {
+		for(int r = 0; r < _numRows; ++r) {
+			X[idx++] = XMat[c + r*_numColumns];
+		}
+	}
+}
 
 #endif

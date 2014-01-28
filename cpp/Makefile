@@ -252,6 +252,24 @@ point-ilqg: $(PT_ILQG_OBJS)
 	
 $(OBJ_DIR)/point-ilqg.o : $(PT_ILQG_DIR)/point-ilqg.cpp $(PT_ILQG_DIR)/ilqg.h
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) -c -o $@ $<
+	
+	
+###### POINT-SLAM ##########
+
+# share point functions
+PT_SLAM_HEADERS = point-slam/point-slam.h
+
+# make point-slam-test
+PT_SLAM_TEST_DIR = point-slam/test
+PT_SLAM_TEST_FILES = point-slam-test
+PT_SLAM_TEST_OBJS = $(PT_SLAM_TEST_FILES:%=$(OBJ_DIR)/%.o)
+
+point-slam-test: | $(PT_SLAM_TEST_OBJS)
+	$(CXX) $(BFLAGS) $(PT_SLAM_TEST_OBJS) -o $(BIN_DIR)/point-slam-test $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
+	
+$(OBJ_DIR)/point-slam-test.o : $(PT_SLAM_TEST_DIR)/point-slam-test.cpp
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) -c -o $@ $<
+
 
 ###### CLEAN ########
 

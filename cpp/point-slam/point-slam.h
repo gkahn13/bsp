@@ -20,6 +20,7 @@ namespace py = boost::python;
 #define DT 1.0
 
 #define NUM_LANDMARKS 4
+#define NUM_WAYPOINTS 5
 
 #define P_DIM 2 // robot state size (x, y)
 #define L_DIM (2*NUM_LANDMARKS) // landmark state size (x, y)
@@ -153,19 +154,18 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 
 	Sigma = Sigma*Sigma;
 
-	Matrix<X_DIM,X_DIM> A = identity<X_DIM>();
-	Matrix<X_DIM,Q_DIM> M = .01*identity<U_DIM>();
-	//linearizeDynamics(x, u, zeros<Q_DIM,1>(), A, M);
+	//Matrix<X_DIM,X_DIM> A = identity<X_DIM>();
+	//Matrix<X_DIM,Q_DIM> M = .01*identity<U_DIM>();
+	Matrix<X_DIM,X_DIM> A;
+	Matrix<X_DIM,Q_DIM> M;
+	linearizeDynamics(x, u, zeros<Q_DIM,1>(), A, M);
 
 	x = dynfunc(x, u, zeros<Q_DIM,1>());
 	Sigma = A*Sigma*~A + M*~M;
 
 	Matrix<Z_DIM,X_DIM> H = zeros<Z_DIM,X_DIM>();
 	Matrix<Z_DIM,R_DIM> N = zeros<Z_DIM,R_DIM>();
-	H(0,0) = 1; H(1,1) = 1;
-	N(0,0) = sqrt(x(0,0) * x(0,0) * 0.5 * 0.5 + 1e-6);
-	N(1,1) = sqrt(x(0,0) * x(0,0) * 0.5 * 0.5 + 1e-6);
-	//linearizeObservation(x, zeros<R_DIM,1>(), H, N);
+	linearizeObservation(x, zeros<R_DIM,1>(), H, N);
 
 	Matrix<X_DIM,Z_DIM> K = Sigma*~H/(H*Sigma*~H + N*~N);
 
@@ -178,44 +178,40 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 }
 
 
-void setupDstarInterface(std::string mask) {
-	std::stringstream ss(mask);
-	int val, i=0;
-	while (ss >> val) {
-		if (val == 1) {
-			maskIndices.push_back(i);
-		}
-		i++;
-	}
-
-	inputVars = new double[i];
-}
-
-void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U, Matrix<X_DIM> x0, Matrix<X_DIM> xGoal)
+void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<P_DIM> >& waypoints)
 {
 
-	py::list Bvec;
-	for(int j=0; j < B_DIM; j++) {
-		for(int i=0; i < T; i++) {
-			Bvec.append(B[i][j]);
+	// B_vec is only for the robot, not the landmarks
+	py::list B_vec;
+	for(int j=0; j < P_DIM; j++) {
+		for(int i=0; i < T*NUM_WAYPOINTS; i++) {
+			B_vec.append(B[i][j]);
 		}
 	}
 
-	py::list Uvec;
-		for(int j=0; j < U_DIM; j++) {
-			for(int i=0; i < T-1; i++) {
-			Uvec.append(U[i][j]);
-		}
+	Matrix<X_DIM> x;
+	Matrix<X_DIM,X_DIM> SqrtSigma;
+	for(int i=0; i < T*NUM_WAYPOINTS; i++) {
+		unVec(B[i], x, SqrtSigma);
+		B_vec.append(SqrtSigma[0,0]);
+	}
+	for(int i=0; i < T*NUM_WAYPOINTS; i++) {
+		unVec(B[i], x, SqrtSigma);
+		B_vec.append(SqrtSigma[1,0]);
+	}
+	for(int i=0; i < T*NUM_WAYPOINTS; i++) {
+		unVec(B[i], x, SqrtSigma);
+		B_vec.append(SqrtSigma[1,1]);
 	}
 
-	py::list x0_list, xGoal_list;
-	for(int i=0; i < X_DIM; i++) {
-		x0_list.append(x0[i]);
-		xGoal_list.append(xGoal[i]);
+	py::list waypoints_vec;
+	for(int j=0; j < 2; j++) {
+		for(int i=0; i < NUM_WAYPOINTS; i++) {
+			waypoints_vec.append(waypoints[i][j]);
+		}
 	}
 
 	std::string workingDir = boost::filesystem::current_path().normalize().string();
-	std::string bspDir = workingDir.substr(0,workingDir.find("bsp"));
 
 	try
 	{
@@ -223,13 +219,11 @@ void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matri
 		py::object main_module = py::import("__main__");
 		py::object main_namespace = main_module.attr("__dict__");
 		py::exec("import sys, os", main_namespace);
-		py::exec(py::str("sys.path.append('"+bspDir+"bsp/python')"), main_namespace);
-		py::exec("from bsp_light_dark import LightDarkModel", main_namespace);
-		py::object model = py::eval("LightDarkModel()", main_namespace);
-		py::object plot_mod = py::import("plot");
-		py::object plot_traj = plot_mod.attr("plot_belief_trajectory_cpp");
+		py::exec(py::str("sys.path.append('"+workingDir+"/point-slam')"), main_namespace);
+		py::object plot_mod = py::import("plot_point_slam");
+		py::object plot_traj = plot_mod.attr("plot_point_trajectory");
 
-		plot_traj(Bvec, Uvec, model, x0_list, xGoal_list, T);
+		plot_traj(B_vec, waypoints_vec, T*NUM_WAYPOINTS);
 	}
 	catch(py::error_already_set const &)
 	{

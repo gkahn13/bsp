@@ -5,60 +5,80 @@ import time
 
 import matplotlib.pyplot as plt
 
-import belief
 
 import IPython
 
-def plot_belief_trajectory(B, U, model, start=None, goal=None):
+
+
+# belief is just belief of point robot, not waypoints
+# T is time for total trajectory (i.e. to all the waypoints)
+def plot_point_trajectory(B, waypoints, T):
     plt.clf()
     plt.cla()
 
-    xDim = model.xDim
-    bDim = model.bDim
-    uDim = model.uDim
-    start = model.start if start is None else start
-    goal = model.goal if goal is None else goal
-    T = model.T
+    xDim = 2
+    bDim = 5
+    uDim = 2
+    
+    B = np.matrix(B)
+    B = B.reshape(bDim, T)
+    
+    numWaypoints = len(waypoints)/2
+    waypoints = np.matrix(waypoints)
+    waypoints = waypoints.reshape(2, numWaypoints)
+    
+    plt.axis([-1,5,-1,5])
 
-    plt.axis([-5,3,-3,3])
-
-    model.plot_domain(B)
-
-    if start is not None:
-        plt.plot(start[0,0],start[1,0],'go',markersize=20.0)
-    if goal is not None:
-        plt.plot(goal[0,0],goal[1,0],'go',markersize=20.0)
-
+    # plot mean of trajectory
     plot_mean(B[0:2,:])
+    
+    
+    for i in xrange(numWaypoints):
+        plt.plot(waypoints[0,i],waypoints[1,i],color='purple',marker='s',markersize=8.0)
 
     Xt = ml.zeros([xDim,T])
 
     for t in xrange(0,T-1):
-        Xt[:,t], SqrtSigma_t = belief.decompose_belief(B[:,t], model)
+        Xt[:,t], SqrtSigma_t = decompose_belief(B[:,t], bDim, xDim)
         Sigma_t = SqrtSigma_t*SqrtSigma_t
 
-        plot_cov(Xt[0:2,t], Sigma_t[0:2,0:2])
+        #plot_cov(Xt[0:2,t], Sigma_t[0:2,0:2])
 
-    Xt[:,T-1], SqrtSigma_T = belief.decompose_belief(B[:,T-1], model)
+    Xt[:,T-1], SqrtSigma_T = decompose_belief(B[:,T-1], bDim, xDim)
     Sigma_T = SqrtSigma_T*SqrtSigma_T
 
-    plot_cov(Xt[0:2,T-1], Sigma_T[0:2,0:2])
-
+    #plot_cov(Xt[0:2,T-1], Sigma_T[0:2,0:2])
+    
     plt.show(block=False)
     plt.pause(.05)
     
-def plot_belief_trajectory_cpp(B, model, start, goal, T):
-    bDim = model.bDim
-    uDim = model.uDim
+    raw_input()
     
-    B = np.matrix(B)
-    B = np.matrix(B.reshape(bDim, T))
-    
-    model.T = T
-    model.setStartState(ml.matrix(start).T)
-    model.setGoalState(ml.matrix(goal).T)
 
-    plot_belief_trajectory(B, U, model)
+def compose_belief(x, SqrtSigma, bDim, xDim):
+    b = ml.zeros([bDim,1])
+    b[0:xDim] = x
+    idx = xDim
+    for j in xrange(0,xDim):
+        for i in xrange(j,xDim):
+            b[idx] = 0.5 * (SqrtSigma.item(i,j) + SqrtSigma.item(j,i))
+            idx = idx+1
+
+    return b
+
+def decompose_belief(b, bDim, xDim):
+    x = b[0:xDim]
+    idx = xDim
+    
+    SqrtSigma = ml.zeros([xDim, xDim])
+
+    for j in xrange(0,xDim):
+        for i in xrange(j,xDim):
+            SqrtSigma[i,j] = b[idx]
+            SqrtSigma[j,i] = SqrtSigma[i,j]
+            idx = idx+1
+
+    return x, SqrtSigma
 
     
 def plot_mean(X):

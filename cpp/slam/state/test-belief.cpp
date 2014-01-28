@@ -12,14 +12,13 @@ int main() {
   R = zeros<R_DIM, R_DIM>();
   for (int i=0; i<NUM_LANDMARKS; ++i) {
     R(i*2, i*2) = 10;
-    R(i*2+1, i*2+1) = 10;//std::pow(3.14159265358979/180, 2);
+    R(i*2+1, i*2+1) = std::pow(3.14159265358979/180, 2);
     sqrtsigma0(3+i*2, 3+i*2) = R(i*2, i*2);
     sqrtsigma0(3+i*2+1, 3+i*2+1) = R(i*2+1, i*2+1);
   }
   Q = zeros<Q_DIM, Q_DIM>();
-  Q(0,0) = 3;
-  Q(1,1) = 3;
-  Q(2,2) = .3;//std::pow(3.141592653589793238462643383/60,2);
+  Q(0,0) = .1;
+  Q(1,1) = std::pow(3.141592653589793238462643383/60,2);
 
   init_landmarks();
   std::vector<Matrix<B_DIM> > B(T);
@@ -35,16 +34,27 @@ int main() {
   Matrix<2> u2;
   u2[0] = 1; u2[1] = -3.14159265358979/4;
 
-
-  for (int i=0;i<4;++i){
+  for (int i=0;i<10;++i){
     U[i] = u;
   }
+
+  for (int i=10;i<20;++i){
+    U[i] = u2;
+  }
+
+  
+ for (int i=20;i<29;++i){
+    U[i] = u;
+  }
+
+    
+  /*
   U[4] = uforward;
   U[5] = uforward;
   for (int i=6;i<19;++i){
     U[i] = ustop;
   }
-  
+  */
   Matrix<X_DIM> x0 = zeros<X_DIM,1>();
   x0[0]=0; x0[1]=0; x0[2]=0; 
   for (int i=0; i<NUM_LANDMARKS; ++i) {

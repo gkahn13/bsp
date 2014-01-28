@@ -2,13 +2,13 @@ std::vector< Matrix<2> > actualLandmarks(81);
 void init_landmarks() {
   Matrix<2> tmp;
   //tmp[0]=553.8; tmp[1]=634.3; 
-  tmp[0] = 5; tmp[1] = 5;
+  tmp[0] = 10; tmp[1] = 0;
   actualLandmarks[0] = tmp;
   //tmp[0]=683.4; tmp[1]=258.5; 
-    tmp[0] = 6; tmp[1] = 5;
+    tmp[0] = 5; tmp[1] = 5;
   actualLandmarks[1]=tmp;
   //tmp[0]=274.1; tmp[1]=643.4; 
-  tmp[0] = 5; tmp[1] = 6;
+  tmp[0] = 7; tmp[1] = -2;
   actualLandmarks[2]=tmp;
   
   tmp[0]=586.2; tmp[1]=826.0; 

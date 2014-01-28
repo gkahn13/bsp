@@ -19,20 +19,20 @@
 
 namespace py = boost::python;
 
-#define TIMESTEPS 20
+#define TIMESTEPS 30
 #define DT 1.0
 #define NUM_LANDMARKS 3
 #define X_DIM 3+NUM_LANDMARKS*2
 #define U_DIM 2
 #define Z_DIM 2*NUM_LANDMARKS
-#define Q_DIM 3
+#define Q_DIM 2
 #define R_DIM 2*NUM_LANDMARKS
 
 #define S_DIM (((X_DIM+1)*(X_DIM))/2)
 #define B_DIM (X_DIM+S_DIM)
 
 const double length = 4;
-const double camera_range = 30;
+const double camera_range = 3;
 const double camera_view_angle = 3.1415926535/4;
 
 const double step = 0.0078125*0.0078125;
@@ -61,9 +61,9 @@ Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matr
 {
   Matrix<X_DIM> xAdd = zeros<X_DIM,1>();
   
-  xAdd[0] = (u[0]) * DT * cos(x[2]+u[1])+q[0];//+ noise 
-  xAdd[1] = (u[0]) * DT * sin(x[2]+u[1])+q[1];//+ noise 
-  xAdd[2] = (u[0]) * DT * sin(u[1])/length+q[2];//+ noise 
+  xAdd[0] = (u[0]+q[0]) * DT * cos(x[2]+u[1]+q[0]);//+ noise 
+  xAdd[1] = (u[0]+q[0]) * DT * sin(x[2]+u[1]+q[1]);//+ noise 
+  xAdd[2] = (u[0]+q[0]) * DT * sin(u[1]+q[1])/length;//+ noise 
   Matrix<X_DIM> xNew = x + xAdd;
   return xNew;
 }
@@ -146,6 +146,10 @@ Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r)
     //z[2*i] = dist + r[2*i]/std::pow(1+(exp(-sd)),20);
     //z[2*i+1] = ang - x[2] + r[2*i+1]/ std::pow(1+(exp(-sd)),20);
 
+    //jferguson -update this
+    //New observation model -> observe a distance and an angle
+    //Dynamics model stays more or less the same
+
     z[2*i] = (x[0] - x[3+2*i]) + r[2*i]/ std::pow(1+(exp(-sd)),20);
     z[2*i+1] = (x[1] - x[4+2*i]) + r[2*i+1]/ std::pow(1+(exp(-sd)),20);
   }
@@ -154,8 +158,28 @@ Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r)
 
 
 // Jacobians: df(x,u,q)/dx, df(x,u,q)/dq
-void linearizeDynamics(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<Q_DIM>& q, Matrix<X_DIM,X_DIM>& A, Matrix<X_DIM,Q_DIM>& M)
+void linearizeDynamics(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<Q_DIM>& q, Matrix<3,3>& A, Matrix<3,2>& M)
 {
+  //jferguson -- hardcode this
+  //g is control input steer angle
+  double s= sin(u[1]+x[2]); double c= cos(u[1]+x[2]);
+  double vts= u[0]*DT*s; double vtc= u[0]*DT*c;
+
+  M.reset();
+  M(0, 0) = DT*c;
+  M(0, 1) = -vts;
+  M(1, 0) = DT*s;
+  M(1, 1) = vtc;
+  M(2, 0) = DT*sin(u[1])/length;
+  M(2, 1) = u[0]*DT*cos(u[1])/length;
+
+  A.reset();
+  A(0,0) = 1;
+  A(1,1) = 1;
+  A(2,2) = 1;
+  A(0,2) = -vts;
+  A(1,2) = vtc;
+  /*
 	A.reset();
 	Matrix<X_DIM> xr(x), xl(x);
 	for (size_t i = 0; i < X_DIM; ++i) {
@@ -171,12 +195,13 @@ void linearizeDynamics(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Mat
 		M.insert(0,i, (dynfunc(x, u, qr) - dynfunc(x, u, ql)) / (qr[i] - ql[i]));
 		qr[i] = q[i]; ql[i] = q[i];
 	}
+  */
 }
 
 // Jacobians: df(x,u,q)/dx, df(x,u,q)/du
 void linearizeDynamicsFunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, Matrix<X_DIM,X_DIM>& A, Matrix<X_DIM,Q_DIM>& M, const Matrix<X_DIM>& h)
 {
-  
+  //jferguson -- hardcode this
 	A.reset();
 	Matrix<X_DIM> xr(x), xl(x);
 	for (size_t i = 0; i < X_DIM; ++i) {
@@ -200,6 +225,32 @@ void linearizeDynamicsFunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, Matri
 // Jacobians: dh(x,r)/dx, dh(x,r)/dr
 void linearizeObservation(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r, Matrix<Z_DIM,X_DIM>& H, Matrix<Z_DIM,R_DIM>& N)
 {
+
+  H.reset();
+  for (int i=0; i<NUM_LANDMARKS; ++i) {
+    double dx = x[3+2*i] - x[0];
+    double dy = x[4+2*i] - x[1];
+    double d2 = std::pow(dx,2) + std::pow(dy, 2);
+    double d = std::sqrt(d2);
+    double xd = dx/d;
+    double yd = dy/d;
+    double xd2 = dx/d2;
+    double yd2 = dy/2;
+  
+    H(i, 0) = -xd;
+    H(i, 1) = -yd;
+    H(i, 2) = 0;
+    H(i+1, 0) = yd2;
+    H(i+1, 1) = -xd2;
+    H(i+1, 2) = -1;
+    H(i, 3+i) = xd;
+    H(i, 3+i+1) = yd;
+    H(i+1, 3+i) = -yd2;
+    H(i+1, 3+i+1) = xd2;
+  }
+  
+  //jferguson -- hardcode this
+  /*
 	H.reset();
 	Matrix<X_DIM> xr(x), xl(x);
 	for (size_t i = 0; i < X_DIM; ++i) {
@@ -207,7 +258,7 @@ void linearizeObservation(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r, Matrix
 	  H.insert(0,i, (obsfunc(xr, r) - obsfunc(xl, r)) / (xr[i] - xl[i]));
 	  xr[i] = x[i]; xl[i] = x[i];
 	}
-
+  
 	N.reset();
 	Matrix<R_DIM> rr(r), rl(r);
 	for (size_t i = 0; i < R_DIM; ++i) {
@@ -216,6 +267,7 @@ void linearizeObservation(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r, Matrix
 		rr[i] = r[i]; rl[i] = r[i];
 
 	}
+  */
 }
 
 // Switch between belief vector and matrices
@@ -250,21 +302,21 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 
 	Matrix<X_DIM,X_DIM> Sigma = SqrtSigma*SqrtSigma;
 
-	Matrix<X_DIM,X_DIM> A;
-	Matrix<X_DIM,Q_DIM> M;
+	Matrix<3,3> A;
+	Matrix<3,2> M;
 	linearizeDynamics(x, u, zeros<Q_DIM,1>(), A, M);
+	Sigma.insert<3,3>(0,0, A*Sigma.subMatrix<3,3>(0,0)*~A + M*Q*~M);
 
+	Sigma.insert<3,X_DIM-3>(0,3, A*(Sigma.subMatrix<3,X_DIM-3>(0,3)));
 	x = dynfunc(x, u, zeros<Q_DIM,1>());
 
 	//Should include a Q here
-	Sigma = A*Sigma*~A + M*Q*~M;
-	
+	//	Sigma = A*Sigma*~A + M*Q*~M;
 	Matrix<Z_DIM,X_DIM> H;
 	Matrix<Z_DIM,R_DIM> N;
 	linearizeObservation(x, zeros<R_DIM,1>(), H, N);
-
 	//Should include an R here
-	Matrix<X_DIM,Z_DIM> K = Sigma*~H/(H*Sigma*~H + N*R*~N);
+	Matrix<X_DIM,Z_DIM> K = Sigma*~H/(H*Sigma*~H + R);//N*R*~N);
 
 	Sigma = (identity<X_DIM>() - K*H)*Sigma;
 

@@ -47,7 +47,7 @@ def plot_belief_trajectory(B, U, model, start=None, goal=None):
     plt.show(block=False)
     plt.pause(.05)
     
-def plot_belief_trajectory_cpp(B, U, model, start, goal, T):
+def plot_belief_trajectory_cpp(B, model, start, goal, T):
     bDim = model.bDim
     uDim = model.uDim
     

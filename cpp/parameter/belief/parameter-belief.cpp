@@ -29,6 +29,7 @@ Matrix<X_DIM> xGoal;
 Matrix<X_DIM> xMin, xMax;
 Matrix<U_DIM> uMin, uMax;
 
+/*
 namespace cfg {
 const double improve_ratio_threshold = .1;
 const double min_approx_improve = 1e-4;
@@ -42,20 +43,39 @@ const double initial_trust_box_size = 1;
 const int max_penalty_coeff_increases = 2;
 const int max_sqp_iterations = 50;
 }
+*/
+namespace cfg {
+const double improve_ratio_threshold = .1;
+const double min_approx_improve = 1e-2;
+const double min_trust_box_size = 1e-3;
+const double trust_shrink_ratio = .5;
+const double trust_expand_ratio = 1.5;
+const double cnt_tolerance = 1e-4;
+const double penalty_coeff_increase_ratio = 2;
+const double initial_penalty_coeff = 10;
+const double initial_trust_box_size = 1;
+const int max_penalty_coeff_increases = 2;
+const int max_sqp_iterations = 50;
+}
 
 
 double computeCost(const std::vector< Matrix<B_DIM> >& B, const std::vector< Matrix<U_DIM> >& U)
 {
 	double cost = 0;
 	Matrix<X_DIM> x;
-	Matrix<X_DIM, X_DIM> SqrtSigma;
+	Matrix<X_DIM, X_DIM> SqrtSigma, Sigma;
 
 	for(int t = 0; t < T-1; ++t) {
 		unVec(B[t], x, SqrtSigma);
-		cost += alpha_belief*tr(SqrtSigma*SqrtSigma) + alpha_control*tr(~U[t]*U[t]);
+		Sigma = SqrtSigma*SqrtSigma;
+		cost += alpha_joint_belief*tr(Sigma.subMatrix<J_DIM,J_DIM>(0,0)) +
+				 alpha_param_belief*tr(Sigma.subMatrix<K_DIM,K_DIM>(J_DIM,J_DIM)) +
+				 alpha_control*tr(~U[t]*U[t]);
 	}
 	unVec(B[T-1], x, SqrtSigma);
-	cost += alpha_final_belief*tr(SqrtSigma*SqrtSigma);
+	Sigma = SqrtSigma*SqrtSigma;
+	cost += alpha_final_joint_belief*tr(Sigma.subMatrix<J_DIM,J_DIM>(0,0)) +
+			 alpha_final_param_belief*tr(Sigma.subMatrix<K_DIM,K_DIM>(J_DIM,J_DIM));
 	return cost;
 }
 
@@ -65,7 +85,7 @@ void linearizeBeliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u, Mat
 	F.reset();
 	Matrix<B_DIM> br(b), bl(b);
 	for (size_t i = 0; i < B_DIM; ++i) {
-		br[i] += step; bl[i] -= step;
+		br[i] += diffEps; bl[i] -= diffEps;
 		F.insert(0,i, (beliefDynamics(br, u) - beliefDynamics(bl, u)) / (br[i] - bl[i]));
 		br[i] = b[i]; bl[i] = b[i];
 	}
@@ -73,7 +93,7 @@ void linearizeBeliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u, Mat
 	G.reset();
 	Matrix<U_DIM> ur(u), ul(u);
 	for (size_t i = 0; i < U_DIM; ++i) {
-		ur[i] += step; ul[i] -= step;
+		ur[i] += diffEps; ul[i] -= diffEps;
 		G.insert(0,i, (beliefDynamics(b, ur) - beliefDynamics(b, ul)) / (ur[i] - ul[i]));
 		ur[i] = u[i]; ul[i] = u[i];
 	}
@@ -84,6 +104,7 @@ void linearizeBeliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u, Mat
 
 void setupBeliefVars(beliefPenaltyMPC_params& problem, beliefPenaltyMPC_output& output)
 {
+	// H = new beliefPenaltyMPC_FLOAT
 	f = new beliefPenaltyMPC_FLOAT*[T-1];
 	lb = new beliefPenaltyMPC_FLOAT*[T];
 	ub = new beliefPenaltyMPC_FLOAT*[T];
@@ -130,18 +151,23 @@ double computeMerit(const std::vector< Matrix<B_DIM> >& B, const std::vector< Ma
 {
 	double merit = 0;
 	Matrix<X_DIM> x;
-	Matrix<X_DIM, X_DIM> SqrtSigma;
+	Matrix<X_DIM, X_DIM> SqrtSigma, Sigma;
 	Matrix<B_DIM> dynviol;
 	for(int t = 0; t < T-1; ++t) {
 		unVec(B[t], x, SqrtSigma);
-		merit += alpha_belief*tr(SqrtSigma*SqrtSigma) + alpha_control*tr(~U[t]*U[t]);
+		Sigma = SqrtSigma*SqrtSigma;
+		merit += alpha_joint_belief*tr(Sigma.subMatrix<J_DIM,J_DIM>(0,0)) +
+				 alpha_param_belief*tr(Sigma.subMatrix<K_DIM,K_DIM>(J_DIM,J_DIM)) +
+				 alpha_control*tr(~U[t]*U[t]);
 		dynviol = (B[t+1] - beliefDynamics(B[t], U[t]) );
 		for(int i = 0; i < B_DIM; ++i) {
 			merit += penalty_coeff*fabs(dynviol[i]);
 		}
 	}
 	unVec(B[T-1], x, SqrtSigma);
-	merit += alpha_final_belief*tr(SqrtSigma*SqrtSigma);
+	Sigma = SqrtSigma*SqrtSigma;
+	merit += alpha_final_joint_belief*tr(Sigma.subMatrix<J_DIM,J_DIM>(0,0)) +
+			 alpha_final_param_belief*tr(Sigma.subMatrix<K_DIM,K_DIM>(J_DIM,J_DIM));
 	return merit;
 }
 
@@ -279,6 +305,8 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 		merit = computeMerit(B, U, penalty_coeff);
 		LOG_DEBUG("  merit: %4.10f", merit);
 
+		//pythonDisplayTrajectory(U, SqrtSigma0, x0, xGoal);
+
 		for (int t = 0; t < T-1; ++t) {
 			linearizeBeliefDynamics(B[t], U[t], F[t], G[t], h[t]);
 
@@ -303,10 +331,10 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 				Matrix<U_DIM>& ut = U[t];
 
 				index = 0;
-				// x joint lower bound
-				for(int i = 0; i < J_DIM; ++i) { lb[t][index++] = MAX(xMin[i], bt[i] - Beps); }
+				// x lower bound
+				for(int i = 0; i < X_DIM; ++i) { lb[t][index++] = MAX(xMin[i], bt[i] - Beps); }
 				// x param lower bound
-				for(int i = 0; i < K_DIM; ++i) { lb[t][index++] = xMin[i]; }
+				//for(int i = 0; i < K_DIM; ++i) { lb[t][index++] = xMin[i+J_DIM]; }
 				// sigma lower bound
 				for(int i = 0; i < S_DIM; ++i) { lb[t][index] = bt[index] - Beps; index++; }
 				// u lower bound
@@ -317,9 +345,9 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 
 				index = 0;
 				// x upper bound
-				for(int i = 0; i < J_DIM; ++i) { ub[t][index++] = MIN(xMax[i], bt[i] + Beps); }
+				for(int i = 0; i < X_DIM; ++i) { ub[t][index++] = MIN(xMax[i], bt[i] + Beps); }
 				// x param upper bound
-				for(int i = 0; i < K_DIM; ++i) { ub[t][index++] = xMax[i]; }
+				//for(int i = 0; i < K_DIM; ++i) { ub[t][index++] = xMax[i+J_DIM]; }
 				// sigma upper bound
 				for(int i = 0; i < S_DIM; ++i) { ub[t][index] = bt[index] + Beps; index++; }
 				// u upper bound
@@ -373,17 +401,17 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			// Fill in lb, ub, C, e
 			index = 0;
 			// xGoal lower bound
-			for(int i = 0; i < J_DIM; ++i) { lb[T-1][index++] = MAX(xGoal[i] - delta, bT[i] - Beps); }
+			for(int i = 0; i < X_DIM; ++i) { lb[T-1][index++] = MAX(xGoal[i] - delta, bT[i] - Beps); }
 			// x param lower bound
-			for(int i = 0; i < K_DIM; ++i) { lb[T-1][index++] = xMin[T-1]; }
+			//for(int i = 0; i < K_DIM; ++i) { lb[T-1][index++] = xMin[i+J_DIM]; }
 			// sigma lower bound
 			for(int i = 0; i < S_DIM; ++i) { lb[T-1][index] = bT[index] - Beps; index++; }
 
 			index = 0;
 			// xGoal upper bound
-			for(int i = 0; i < J_DIM; ++i) { ub[T-1][index++] = MIN(xGoal[i] + delta, bT[i] + Beps); }
+			for(int i = 0; i < X_DIM; ++i) { ub[T-1][index++] = MIN(xGoal[i] + delta, bT[i] + Beps); }
 			// x param upper bound
-			for(int i = 0; i < K_DIM; ++i) { ub[T-1][index++] = xMax[T-1]; }
+			//for(int i = 0; i < K_DIM; ++i) { ub[T-1][index++] = xMax[i+J_DIM]; }
 			// sigma upper bound
 			for(int i = 0; i < S_DIM; ++i) { ub[T-1][index] = bT[index] + Beps; index++; }
 
@@ -515,15 +543,23 @@ double beliefPenaltyCollocation(std::vector< Matrix<B_DIM> >& B, std::vector< Ma
 
 int main(int argc, char* argv[])
 {
+	// actual: 6.66, 6.66, 10.86, 13
 	double length1_est = .05, // inverse = 20
 			length2_est = .05, // inverse = 20
 			mass1_est = .105, // inverse = 9.52
 			mass2_est = .089; // inverse = 11.24
 
+
 	// position, then velocity
 	x0[0] = -M_PI/2.0; x0[1] = -M_PI/2.0; x0[2] = 0; x0[3] = 0;
 	// parameter start estimates (alphabetical, then numerical order)
 	x0[4] = 1/length1_est; x0[5] = 1/length2_est; x0[6] = 1/mass1_est; x0[7] = 1/mass2_est;
+
+
+	Matrix<X_DIM> x_real;
+	x_real[0] = -M_PI/2.0; x_real[1] = -M_PI/2.0; x_real[2] = 0; x_real[3] = 0;
+	x_real[4] = 1/dynamics::length1; x_real[5] = 1/dynamics::length2; x_real[6] = 1/dynamics::mass1; x_real[7] = 1/dynamics::mass2;
+
 
 	xGoal[0] = -M_PI/2.0; xGoal[1] = -M_PI/2.0; xGoal[2] = 0.0; xGoal[3] = 0.0;
 	xGoal[4] = 1/length1_est; xGoal[5] = 1/length2_est; xGoal[6] = 1/mass1_est; xGoal[7] = 1/mass2_est;
@@ -536,8 +572,8 @@ int main(int argc, char* argv[])
 
 	xMin[0] = -M_PI; // joint pos 1
 	xMin[1] = -M_PI; // joint pos 2
-	xMin[2] = -M_PI/2; // joint vel 1
-	xMin[3] = -M_PI/2; // joint vel 2
+	xMin[2] = -M_PI; // joint vel 1
+	xMin[3] = -M_PI; // joint vel 2
 	xMin[4] = 0; // 1/length1
 	xMin[5] = 0; // 1/length2
 	xMin[6] = 0; // 1/mass1
@@ -545,8 +581,8 @@ int main(int argc, char* argv[])
 
 	xMax[0] = M_PI; // joint pos 1
 	xMax[1] = M_PI; // joint pos 2
-	xMax[2] = M_PI/2; // joint vel 1
-	xMax[3] = M_PI/2; // joint vel 2
+	xMax[2] = M_PI; // joint vel 1
+	xMax[3] = M_PI; // joint vel 2
 	xMax[4] = 1/.01; // 1/length1
 	xMax[5] = 1/.01; // 1/length2
 	xMax[6] = 1/.01; // 1/mass1
@@ -557,30 +593,15 @@ int main(int argc, char* argv[])
 		uMax[i] = 1;
 	}
 
-	Matrix<U_DIM> uinit = (xGoal.subMatrix<U_DIM,1>(0,0) - x0.subMatrix<U_DIM,1>(0,0))/(double)(T-1);
+	//Matrix<U_DIM> uinit = (xGoal.subMatrix<U_DIM,1>(0,0) - x0.subMatrix<U_DIM,1>(0,0))/(double)(T-1);
+	Matrix<U_DIM> uinit;
+	uinit[0] = 1;
+	uinit[1] = 1;
 	
 	std::vector<Matrix<U_DIM> > U(T-1, uinit); 
-
 	std::vector<Matrix<B_DIM> > B(T);
 
-	vec(x0, SqrtSigma0, B[0]);
-	for (size_t t = 0; t < T-1; ++t) {
-		B[t+1] = beliefDynamics(B[t], U[t]);
-		//std::cout << ~B[t] << std::endl;
-	}
-
-	/*
-	std::cout << "initial X:" << std::endl;
-	for (int t = 0; t < T; ++t) {
-		std::cout << ~B[t].subMatrix<X_DIM>(0,0);
-	}
-
-	std::cout << "initial U:" << std::endl;
-	for (int t = 0; t < T; ++t) {
-		std::cout << ~U[t];
-	}
-	*/
-
+	// pythonPlotRobot(U, SqrtSigma0, x0, xGoal);
 
 	beliefPenaltyMPC_params problem;
 	beliefPenaltyMPC_output output;
@@ -588,20 +609,42 @@ int main(int argc, char* argv[])
 
 	setupBeliefVars(problem, output);
 
-	util::Timer solveTimer;
-	util::Timer_tic(&solveTimer);
-	
-	// B&U optimized in-place
+	vec(x0, SqrtSigma0, B[0]);
+	for(int h = 0; h < HORIZON; ++h) {
+		for (int t = 0; t < T-1; ++t) {
+			B[t+1] = beliefDynamics(B[t], U[t]);
+		}
 
-	double cost = beliefPenaltyCollocation(B, U, problem, output, info);
-
-	double solvetime = util::Timer_toc(&solveTimer);
-	LOG_INFO("Optimized cost: %4.10f", cost);
-	LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
+		util::Timer solveTimer;
+		util::Timer_tic(&solveTimer);
 	
+		double cost = beliefPenaltyCollocation(B, U, problem, output, info);
+	
+		double solvetime = util::Timer_toc(&solveTimer);
+		LOG_INFO("Optimized cost: %4.10f", cost);
+		LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
+
+		unVec(B[0], x0, SqrtSigma0);
+
+		std::cout << "x0 before control step" << std::endl << ~x0;
+		std::cout << "control u: " << std::endl << ~U[0];
+
+		//pythonDisplayTrajectory(U, SqrtSigma0, x0, xGoal);
+
+		LOG_INFO("Executing control step");
+		B[0] = executeControlStep(x_real, B[0], U[0]);
+		x_real = dynfunc(x_real, U[0]);
+
+		unVec(B[0], x0, SqrtSigma0);
+		std::cout << "x0 after control step" << std::endl << ~x0;
+
+		for(int t = 0; t < T-2; ++t) {
+			U[t] = U[t+1];
+		}
+	}
 	cleanupBeliefMPCVars();
 
-	for (size_t t = 0; t < T; ++t) {
+	for (int t = 0; t < T; ++t) {
 		std::cout << ~B[t].subMatrix<X_DIM,1>(0,0) << std::endl;
 	}
 

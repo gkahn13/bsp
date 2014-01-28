@@ -40,12 +40,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 /* LINEAR ALGEBRA LIBRARY ---------------------------------------------- */
 /*
- * Initializes a vector of length 1920 with a value.
+ * Initializes a vector of length 2590 with a value.
  */
-void beliefPenaltyMPC_LA_INITIALIZEVECTOR_1920(beliefPenaltyMPC_FLOAT* vec, beliefPenaltyMPC_FLOAT value)
+void beliefPenaltyMPC_LA_INITIALIZEVECTOR_2590(beliefPenaltyMPC_FLOAT* vec, beliefPenaltyMPC_FLOAT value)
 {
 	int i;
-	for( i=0; i<1920; i++ )
+	for( i=0; i<2590; i++ )
 	{
 		vec[i] = value;
 	}
@@ -53,12 +53,12 @@ void beliefPenaltyMPC_LA_INITIALIZEVECTOR_1920(beliefPenaltyMPC_FLOAT* vec, beli
 
 
 /*
- * Initializes a vector of length 660 with a value.
+ * Initializes a vector of length 880 with a value.
  */
-void beliefPenaltyMPC_LA_INITIALIZEVECTOR_660(beliefPenaltyMPC_FLOAT* vec, beliefPenaltyMPC_FLOAT value)
+void beliefPenaltyMPC_LA_INITIALIZEVECTOR_880(beliefPenaltyMPC_FLOAT* vec, beliefPenaltyMPC_FLOAT value)
 {
 	int i;
-	for( i=0; i<660; i++ )
+	for( i=0; i<880; i++ )
 	{
 		vec[i] = value;
 	}
@@ -66,12 +66,12 @@ void beliefPenaltyMPC_LA_INITIALIZEVECTOR_660(beliefPenaltyMPC_FLOAT* vec, belie
 
 
 /*
- * Initializes a vector of length 2608 with a value.
+ * Initializes a vector of length 3508 with a value.
  */
-void beliefPenaltyMPC_LA_INITIALIZEVECTOR_2608(beliefPenaltyMPC_FLOAT* vec, beliefPenaltyMPC_FLOAT value)
+void beliefPenaltyMPC_LA_INITIALIZEVECTOR_3508(beliefPenaltyMPC_FLOAT* vec, beliefPenaltyMPC_FLOAT value)
 {
 	int i;
-	for( i=0; i<2608; i++ )
+	for( i=0; i<3508; i++ )
 	{
 		vec[i] = value;
 	}
@@ -80,12 +80,12 @@ void beliefPenaltyMPC_LA_INITIALIZEVECTOR_2608(beliefPenaltyMPC_FLOAT* vec, beli
 
 /* 
  * Calculates a dot product and adds it to a variable: z += x'*y; 
- * This function is for vectors of length 2608.
+ * This function is for vectors of length 3508.
  */
-void beliefPenaltyMPC_LA_DOTACC_2608(beliefPenaltyMPC_FLOAT *x, beliefPenaltyMPC_FLOAT *y, beliefPenaltyMPC_FLOAT *z)
+void beliefPenaltyMPC_LA_DOTACC_3508(beliefPenaltyMPC_FLOAT *x, beliefPenaltyMPC_FLOAT *y, beliefPenaltyMPC_FLOAT *z)
 {
 	int i;
-	for( i=0; i<2608; i++ ){
+	for( i=0; i<3508; i++ ){
 		*z += x[i]*y[i];
 	}
 }
@@ -514,12 +514,12 @@ void beliefPenaltyMPC_LA_INEQ_B_GRAD_44_44_44(beliefPenaltyMPC_FLOAT *lu, belief
 
 /*
  * Addition of three vectors  z = u + w + v
- * of length 1920.
+ * of length 2590.
  */
-void beliefPenaltyMPC_LA_VVADD3_1920(beliefPenaltyMPC_FLOAT *u, beliefPenaltyMPC_FLOAT *v, beliefPenaltyMPC_FLOAT *w, beliefPenaltyMPC_FLOAT *z)
+void beliefPenaltyMPC_LA_VVADD3_2590(beliefPenaltyMPC_FLOAT *u, beliefPenaltyMPC_FLOAT *v, beliefPenaltyMPC_FLOAT *w, beliefPenaltyMPC_FLOAT *z)
 {
 	int i;
-	for( i=0; i<1920; i++ ){
+	for( i=0; i<2590; i++ ){
 		z[i] = u[i] + v[i] + w[i];
 	}
 }
@@ -1412,12 +1412,12 @@ void beliefPenaltyMPC_LA_DENSE_BACKWARDSUB_88(beliefPenaltyMPC_FLOAT *L, beliefP
 
 
 /*
- * Vector subtraction z = -x - y for vectors of length 1920.
+ * Vector subtraction z = -x - y for vectors of length 2590.
  */
-void beliefPenaltyMPC_LA_VSUB2_1920(beliefPenaltyMPC_FLOAT *x, beliefPenaltyMPC_FLOAT *y, beliefPenaltyMPC_FLOAT *z)
+void beliefPenaltyMPC_LA_VSUB2_2590(beliefPenaltyMPC_FLOAT *x, beliefPenaltyMPC_FLOAT *y, beliefPenaltyMPC_FLOAT *z)
 {
 	int i;
-	for( i=0; i<1920; i++){
+	for( i=0; i<2590; i++){
 		z[i] = -x[i] - y[i];
 	}
 }
@@ -1571,7 +1571,7 @@ int beliefPenaltyMPC_LINESEARCH_BACKTRACKING_AFFINE(beliefPenaltyMPC_FLOAT *l, b
          * values might be in registers, so it should be cheaper.
          */
         mymu = 0;
-        for( i=0; i<2608; i++ ){
+        for( i=0; i<3508; i++ ){
             dltemp = l[i] + mya*dl[i];
             dstemp = s[i] + mya*ds[i];
             if( dltemp < 0 || dstemp < 0 ){
@@ -1586,7 +1586,7 @@ int beliefPenaltyMPC_LINESEARCH_BACKTRACKING_AFFINE(beliefPenaltyMPC_FLOAT *l, b
          * If no early termination of the for-loop above occurred, we
          * found the required value of a and we can quit the while loop.
          */
-        if( i == 2608 ){
+        if( i == 3508 ){
             break;
         } else {
             mya *= beliefPenaltyMPC_SET_LS_SCALE_AFF;
@@ -1598,19 +1598,19 @@ int beliefPenaltyMPC_LINESEARCH_BACKTRACKING_AFFINE(beliefPenaltyMPC_FLOAT *l, b
     
     /* return new values and iteration counter */
     *a = mya;
-    *mu_aff = mymu / (beliefPenaltyMPC_FLOAT)2608;
+    *mu_aff = mymu / (beliefPenaltyMPC_FLOAT)3508;
     return lsIt;
 }
 
 
 /*
  * Vector subtraction x = u.*v - a where a is a scalar
-*  and x,u,v are vectors of length 2608.
+*  and x,u,v are vectors of length 3508.
  */
-void beliefPenaltyMPC_LA_VSUB5_2608(beliefPenaltyMPC_FLOAT *u, beliefPenaltyMPC_FLOAT *v, beliefPenaltyMPC_FLOAT a, beliefPenaltyMPC_FLOAT *x)
+void beliefPenaltyMPC_LA_VSUB5_3508(beliefPenaltyMPC_FLOAT *u, beliefPenaltyMPC_FLOAT *v, beliefPenaltyMPC_FLOAT a, beliefPenaltyMPC_FLOAT *x)
 {
 	int i;
-	for( i=0; i<2608; i++){
+	for( i=0; i<3508; i++){
 		x[i] = u[i]*v[i] - a;
 	}
 }
@@ -1733,12 +1733,12 @@ void beliefPenaltyMPC_LA_DENSE_DIAGZERO_2MVMADD_44_134_44(beliefPenaltyMPC_FLOAT
 
 
 /*
- * Vector subtraction z = x - y for vectors of length 1920.
+ * Vector subtraction z = x - y for vectors of length 2590.
  */
-void beliefPenaltyMPC_LA_VSUB_1920(beliefPenaltyMPC_FLOAT *x, beliefPenaltyMPC_FLOAT *y, beliefPenaltyMPC_FLOAT *z)
+void beliefPenaltyMPC_LA_VSUB_2590(beliefPenaltyMPC_FLOAT *x, beliefPenaltyMPC_FLOAT *y, beliefPenaltyMPC_FLOAT *z)
 {
 	int i;
-	for( i=0; i<1920; i++){
+	for( i=0; i<2590; i++){
 		z[i] = x[i] - y[i];
 	}
 }
@@ -1797,48 +1797,48 @@ void beliefPenaltyMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_44(beliefPenaltyMPC_FLOAT *r
 
 
 /*
- * Computes ds = -l.\(r + s.*dl) for vectors of length 2608.
+ * Computes ds = -l.\(r + s.*dl) for vectors of length 3508.
  */
-void beliefPenaltyMPC_LA_VSUB7_2608(beliefPenaltyMPC_FLOAT *l, beliefPenaltyMPC_FLOAT *r, beliefPenaltyMPC_FLOAT *s, beliefPenaltyMPC_FLOAT *dl, beliefPenaltyMPC_FLOAT *ds)
+void beliefPenaltyMPC_LA_VSUB7_3508(beliefPenaltyMPC_FLOAT *l, beliefPenaltyMPC_FLOAT *r, beliefPenaltyMPC_FLOAT *s, beliefPenaltyMPC_FLOAT *dl, beliefPenaltyMPC_FLOAT *ds)
 {
 	int i;
-	for( i=0; i<2608; i++){
+	for( i=0; i<3508; i++){
 		ds[i] = -(r[i] + s[i]*dl[i])/l[i];
 	}
 }
 
 
 /*
- * Vector addition x = x + y for vectors of length 1920.
+ * Vector addition x = x + y for vectors of length 2590.
  */
-void beliefPenaltyMPC_LA_VADD_1920(beliefPenaltyMPC_FLOAT *x, beliefPenaltyMPC_FLOAT *y)
+void beliefPenaltyMPC_LA_VADD_2590(beliefPenaltyMPC_FLOAT *x, beliefPenaltyMPC_FLOAT *y)
 {
 	int i;
-	for( i=0; i<1920; i++){
+	for( i=0; i<2590; i++){
 		x[i] += y[i];
 	}
 }
 
 
 /*
- * Vector addition x = x + y for vectors of length 660.
+ * Vector addition x = x + y for vectors of length 880.
  */
-void beliefPenaltyMPC_LA_VADD_660(beliefPenaltyMPC_FLOAT *x, beliefPenaltyMPC_FLOAT *y)
+void beliefPenaltyMPC_LA_VADD_880(beliefPenaltyMPC_FLOAT *x, beliefPenaltyMPC_FLOAT *y)
 {
 	int i;
-	for( i=0; i<660; i++){
+	for( i=0; i<880; i++){
 		x[i] += y[i];
 	}
 }
 
 
 /*
- * Vector addition x = x + y for vectors of length 2608.
+ * Vector addition x = x + y for vectors of length 3508.
  */
-void beliefPenaltyMPC_LA_VADD_2608(beliefPenaltyMPC_FLOAT *x, beliefPenaltyMPC_FLOAT *y)
+void beliefPenaltyMPC_LA_VADD_3508(beliefPenaltyMPC_FLOAT *x, beliefPenaltyMPC_FLOAT *y)
 {
 	int i;
-	for( i=0; i<2608; i++){
+	for( i=0; i<3508; i++){
 		x[i] += y[i];
 	}
 }
@@ -1860,7 +1860,7 @@ int beliefPenaltyMPC_LINESEARCH_BACKTRACKING_COMBINED(beliefPenaltyMPC_FLOAT *z,
     while( 1 ){                        
 
         /* check whether search criterion is fulfilled */
-        for( i=0; i<2608; i++ ){
+        for( i=0; i<3508; i++ ){
             dltemp = l[i] + (*a)*dl[i];
             dstemp = s[i] + (*a)*ds[i];
             if( dltemp < 0 || dstemp < 0 ){
@@ -1873,7 +1873,7 @@ int beliefPenaltyMPC_LINESEARCH_BACKTRACKING_COMBINED(beliefPenaltyMPC_FLOAT *z,
          * If no early termination of the for-loop above occurred, we
          * found the required value of a and we can quit the while loop.
          */
-        if( i == 2608 ){
+        if( i == 3508 ){
             break;
         } else {
             *a *= beliefPenaltyMPC_SET_LS_SCALE;
@@ -1887,25 +1887,25 @@ int beliefPenaltyMPC_LINESEARCH_BACKTRACKING_COMBINED(beliefPenaltyMPC_FLOAT *z,
     a_gamma = (*a)*beliefPenaltyMPC_SET_LS_MAXSTEP;
     
     /* primal variables */
-    for( i=0; i<1920; i++ ){
+    for( i=0; i<2590; i++ ){
         z[i] += a_gamma*dz[i];
     }
     
     /* equality constraint multipliers */
-    for( i=0; i<660; i++ ){
+    for( i=0; i<880; i++ ){
         v[i] += a_gamma*dv[i];
     }
     
     /* inequality constraint multipliers & slacks, also update mu */
     *mu = 0;
-    for( i=0; i<2608; i++ ){
+    for( i=0; i<3508; i++ ){
         dltemp = l[i] + a_gamma*dl[i]; l[i] = dltemp;
         dstemp = s[i] + a_gamma*ds[i]; s[i] = dstemp;
         *mu += dltemp*dstemp;
     }
     
     *a = a_gamma;
-    *mu /= (beliefPenaltyMPC_FLOAT)2608;
+    *mu /= (beliefPenaltyMPC_FLOAT)3508;
     return lsIt;
 }
 
@@ -1913,24 +1913,24 @@ int beliefPenaltyMPC_LINESEARCH_BACKTRACKING_COMBINED(beliefPenaltyMPC_FLOAT *z,
 
 
 /* VARIABLE DEFINITIONS ------------------------------------------------ */
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_z[1920];
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_v[660];
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_dz_aff[1920];
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_dv_aff[660];
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_grad_cost[1920];
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_grad_eq[1920];
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_rd[1920];
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_l[2608];
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_s[2608];
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_lbys[2608];
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_dl_aff[2608];
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_ds_aff[2608];
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_dz_cc[1920];
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_dv_cc[660];
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_dl_cc[2608];
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_ds_cc[2608];
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_ccrhs[2608];
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_grad_ineq[1920];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_z[2590];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_v[880];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_dz_aff[2590];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_dv_aff[880];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_grad_cost[2590];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_grad_eq[2590];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_rd[2590];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_l[3508];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_s[3508];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_lbys[3508];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_dl_aff[3508];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_ds_aff[3508];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_dz_cc[2590];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_dv_cc[880];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_dl_cc[3508];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_ds_cc[3508];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_ccrhs[3508];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_grad_ineq[2590];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_H00[134] = {0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 2.0000000000000000E+002, 2.0000000000000000E+002, 2.0000000000000000E+002, 2.0000000000000000E+002, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 2.0000000000000000E+002, 2.0000000000000000E+002, 2.0000000000000000E+002, 2.0000000000000000E+002, 0.0000000000000000E+000, 0.0000000000000000E+000, 2.0000000000000000E+002, 2.0000000000000000E+002, 2.0000000000000000E+002, 2.0000000000000000E+002, 0.0000000000000000E+000, 2.0000000000000000E+002, 2.0000000000000000E+002, 2.0000000000000000E+002, 2.0000000000000000E+002, 2.0000000000000000E+002, 4.0000000000000000E+002, 4.0000000000000000E+002, 4.0000000000000000E+002, 2.0000000000000000E+002, 4.0000000000000000E+002, 4.0000000000000000E+002, 2.0000000000000000E+002, 4.0000000000000000E+002, 2.0000000000000000E+002, 2.0000000000000000E+000, 2.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000};
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_z00 = beliefPenaltyMPC_z + 0;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzaff00 = beliefPenaltyMPC_dz_aff + 0;
@@ -2723,39 +2723,259 @@ beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Phi13[134];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_W13[134];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Ysd13[1936];
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Lsd13[1936];
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_H14[44] = {0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 2.0000000000000000E+002, 2.0000000000000000E+002, 2.0000000000000000E+002, 2.0000000000000000E+002, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 2.0000000000000000E+002, 2.0000000000000000E+002, 2.0000000000000000E+002, 2.0000000000000000E+002, 0.0000000000000000E+000, 0.0000000000000000E+000, 2.0000000000000000E+002, 2.0000000000000000E+002, 2.0000000000000000E+002, 2.0000000000000000E+002, 0.0000000000000000E+000, 2.0000000000000000E+002, 2.0000000000000000E+002, 2.0000000000000000E+002, 2.0000000000000000E+002, 2.0000000000000000E+002, 4.0000000000000000E+002, 4.0000000000000000E+002, 4.0000000000000000E+002, 2.0000000000000000E+002, 4.0000000000000000E+002, 4.0000000000000000E+002, 2.0000000000000000E+002, 4.0000000000000000E+002, 2.0000000000000000E+002};
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_f14[44] = {0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000};
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_z14 = beliefPenaltyMPC_z + 1876;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzaff14 = beliefPenaltyMPC_dz_aff + 1876;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzcc14 = beliefPenaltyMPC_dz_cc + 1876;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_rd14 = beliefPenaltyMPC_rd + 1876;
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Lbyrd14[44];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Lbyrd14[134];
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_grad_cost14 = beliefPenaltyMPC_grad_cost + 1876;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_grad_eq14 = beliefPenaltyMPC_grad_eq + 1876;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_grad_ineq14 = beliefPenaltyMPC_grad_ineq + 1876;
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_ctv14[44];
-int beliefPenaltyMPC_lbIdx14[44] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43};
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_ctv14[134];
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_v14 = beliefPenaltyMPC_v + 660;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_re14[44];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_beta14[44];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_betacc14[44];
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dvaff14 = beliefPenaltyMPC_dv_aff + 660;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dvcc14 = beliefPenaltyMPC_dv_cc + 660;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_V14[5896];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Yd14[990];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Ld14[990];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_yy14[44];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_bmy14[44];
+int beliefPenaltyMPC_lbIdx14[134] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133};
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_llb14 = beliefPenaltyMPC_l + 2520;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_slb14 = beliefPenaltyMPC_s + 2520;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_llbbyslb14 = beliefPenaltyMPC_lbys + 2520;
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_rilb14[44];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_rilb14[134];
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dllbaff14 = beliefPenaltyMPC_dl_aff + 2520;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dslbaff14 = beliefPenaltyMPC_ds_aff + 2520;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dllbcc14 = beliefPenaltyMPC_dl_cc + 2520;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dslbcc14 = beliefPenaltyMPC_ds_cc + 2520;
 beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_ccrhsl14 = beliefPenaltyMPC_ccrhs + 2520;
-int beliefPenaltyMPC_ubIdx14[44] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43};
-beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_lub14 = beliefPenaltyMPC_l + 2564;
-beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_sub14 = beliefPenaltyMPC_s + 2564;
-beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_lubbysub14 = beliefPenaltyMPC_lbys + 2564;
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_riub14[44];
-beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dlubaff14 = beliefPenaltyMPC_dl_aff + 2564;
-beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dsubaff14 = beliefPenaltyMPC_ds_aff + 2564;
-beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dlubcc14 = beliefPenaltyMPC_dl_cc + 2564;
-beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dsubcc14 = beliefPenaltyMPC_ds_cc + 2564;
-beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_ccrhsub14 = beliefPenaltyMPC_ccrhs + 2564;
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Phi14[44];
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_D14[44] = {-1.0000000000000000E+000, 
+int beliefPenaltyMPC_ubIdx14[46] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45};
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_lub14 = beliefPenaltyMPC_l + 2654;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_sub14 = beliefPenaltyMPC_s + 2654;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_lubbysub14 = beliefPenaltyMPC_lbys + 2654;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_riub14[46];
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dlubaff14 = beliefPenaltyMPC_dl_aff + 2654;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dsubaff14 = beliefPenaltyMPC_ds_aff + 2654;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dlubcc14 = beliefPenaltyMPC_dl_cc + 2654;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dsubcc14 = beliefPenaltyMPC_ds_cc + 2654;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_ccrhsub14 = beliefPenaltyMPC_ccrhs + 2654;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Phi14[134];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_W14[134];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Ysd14[1936];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Lsd14[1936];
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_z15 = beliefPenaltyMPC_z + 2010;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzaff15 = beliefPenaltyMPC_dz_aff + 2010;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzcc15 = beliefPenaltyMPC_dz_cc + 2010;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_rd15 = beliefPenaltyMPC_rd + 2010;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Lbyrd15[134];
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_grad_cost15 = beliefPenaltyMPC_grad_cost + 2010;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_grad_eq15 = beliefPenaltyMPC_grad_eq + 2010;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_grad_ineq15 = beliefPenaltyMPC_grad_ineq + 2010;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_ctv15[134];
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_v15 = beliefPenaltyMPC_v + 704;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_re15[44];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_beta15[44];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_betacc15[44];
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dvaff15 = beliefPenaltyMPC_dv_aff + 704;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dvcc15 = beliefPenaltyMPC_dv_cc + 704;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_V15[5896];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Yd15[990];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Ld15[990];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_yy15[44];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_bmy15[44];
+int beliefPenaltyMPC_lbIdx15[134] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133};
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_llb15 = beliefPenaltyMPC_l + 2700;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_slb15 = beliefPenaltyMPC_s + 2700;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_llbbyslb15 = beliefPenaltyMPC_lbys + 2700;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_rilb15[134];
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dllbaff15 = beliefPenaltyMPC_dl_aff + 2700;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dslbaff15 = beliefPenaltyMPC_ds_aff + 2700;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dllbcc15 = beliefPenaltyMPC_dl_cc + 2700;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dslbcc15 = beliefPenaltyMPC_ds_cc + 2700;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_ccrhsl15 = beliefPenaltyMPC_ccrhs + 2700;
+int beliefPenaltyMPC_ubIdx15[46] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45};
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_lub15 = beliefPenaltyMPC_l + 2834;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_sub15 = beliefPenaltyMPC_s + 2834;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_lubbysub15 = beliefPenaltyMPC_lbys + 2834;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_riub15[46];
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dlubaff15 = beliefPenaltyMPC_dl_aff + 2834;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dsubaff15 = beliefPenaltyMPC_ds_aff + 2834;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dlubcc15 = beliefPenaltyMPC_dl_cc + 2834;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dsubcc15 = beliefPenaltyMPC_ds_cc + 2834;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_ccrhsub15 = beliefPenaltyMPC_ccrhs + 2834;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Phi15[134];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_W15[134];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Ysd15[1936];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Lsd15[1936];
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_z16 = beliefPenaltyMPC_z + 2144;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzaff16 = beliefPenaltyMPC_dz_aff + 2144;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzcc16 = beliefPenaltyMPC_dz_cc + 2144;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_rd16 = beliefPenaltyMPC_rd + 2144;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Lbyrd16[134];
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_grad_cost16 = beliefPenaltyMPC_grad_cost + 2144;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_grad_eq16 = beliefPenaltyMPC_grad_eq + 2144;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_grad_ineq16 = beliefPenaltyMPC_grad_ineq + 2144;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_ctv16[134];
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_v16 = beliefPenaltyMPC_v + 748;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_re16[44];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_beta16[44];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_betacc16[44];
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dvaff16 = beliefPenaltyMPC_dv_aff + 748;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dvcc16 = beliefPenaltyMPC_dv_cc + 748;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_V16[5896];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Yd16[990];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Ld16[990];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_yy16[44];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_bmy16[44];
+int beliefPenaltyMPC_lbIdx16[134] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133};
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_llb16 = beliefPenaltyMPC_l + 2880;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_slb16 = beliefPenaltyMPC_s + 2880;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_llbbyslb16 = beliefPenaltyMPC_lbys + 2880;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_rilb16[134];
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dllbaff16 = beliefPenaltyMPC_dl_aff + 2880;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dslbaff16 = beliefPenaltyMPC_ds_aff + 2880;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dllbcc16 = beliefPenaltyMPC_dl_cc + 2880;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dslbcc16 = beliefPenaltyMPC_ds_cc + 2880;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_ccrhsl16 = beliefPenaltyMPC_ccrhs + 2880;
+int beliefPenaltyMPC_ubIdx16[46] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45};
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_lub16 = beliefPenaltyMPC_l + 3014;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_sub16 = beliefPenaltyMPC_s + 3014;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_lubbysub16 = beliefPenaltyMPC_lbys + 3014;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_riub16[46];
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dlubaff16 = beliefPenaltyMPC_dl_aff + 3014;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dsubaff16 = beliefPenaltyMPC_ds_aff + 3014;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dlubcc16 = beliefPenaltyMPC_dl_cc + 3014;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dsubcc16 = beliefPenaltyMPC_ds_cc + 3014;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_ccrhsub16 = beliefPenaltyMPC_ccrhs + 3014;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Phi16[134];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_W16[134];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Ysd16[1936];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Lsd16[1936];
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_z17 = beliefPenaltyMPC_z + 2278;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzaff17 = beliefPenaltyMPC_dz_aff + 2278;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzcc17 = beliefPenaltyMPC_dz_cc + 2278;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_rd17 = beliefPenaltyMPC_rd + 2278;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Lbyrd17[134];
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_grad_cost17 = beliefPenaltyMPC_grad_cost + 2278;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_grad_eq17 = beliefPenaltyMPC_grad_eq + 2278;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_grad_ineq17 = beliefPenaltyMPC_grad_ineq + 2278;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_ctv17[134];
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_v17 = beliefPenaltyMPC_v + 792;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_re17[44];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_beta17[44];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_betacc17[44];
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dvaff17 = beliefPenaltyMPC_dv_aff + 792;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dvcc17 = beliefPenaltyMPC_dv_cc + 792;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_V17[5896];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Yd17[990];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Ld17[990];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_yy17[44];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_bmy17[44];
+int beliefPenaltyMPC_lbIdx17[134] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133};
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_llb17 = beliefPenaltyMPC_l + 3060;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_slb17 = beliefPenaltyMPC_s + 3060;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_llbbyslb17 = beliefPenaltyMPC_lbys + 3060;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_rilb17[134];
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dllbaff17 = beliefPenaltyMPC_dl_aff + 3060;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dslbaff17 = beliefPenaltyMPC_ds_aff + 3060;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dllbcc17 = beliefPenaltyMPC_dl_cc + 3060;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dslbcc17 = beliefPenaltyMPC_ds_cc + 3060;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_ccrhsl17 = beliefPenaltyMPC_ccrhs + 3060;
+int beliefPenaltyMPC_ubIdx17[46] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45};
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_lub17 = beliefPenaltyMPC_l + 3194;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_sub17 = beliefPenaltyMPC_s + 3194;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_lubbysub17 = beliefPenaltyMPC_lbys + 3194;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_riub17[46];
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dlubaff17 = beliefPenaltyMPC_dl_aff + 3194;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dsubaff17 = beliefPenaltyMPC_ds_aff + 3194;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dlubcc17 = beliefPenaltyMPC_dl_cc + 3194;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dsubcc17 = beliefPenaltyMPC_ds_cc + 3194;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_ccrhsub17 = beliefPenaltyMPC_ccrhs + 3194;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Phi17[134];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_W17[134];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Ysd17[1936];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Lsd17[1936];
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_z18 = beliefPenaltyMPC_z + 2412;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzaff18 = beliefPenaltyMPC_dz_aff + 2412;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzcc18 = beliefPenaltyMPC_dz_cc + 2412;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_rd18 = beliefPenaltyMPC_rd + 2412;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Lbyrd18[134];
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_grad_cost18 = beliefPenaltyMPC_grad_cost + 2412;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_grad_eq18 = beliefPenaltyMPC_grad_eq + 2412;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_grad_ineq18 = beliefPenaltyMPC_grad_ineq + 2412;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_ctv18[134];
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_v18 = beliefPenaltyMPC_v + 836;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_re18[44];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_beta18[44];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_betacc18[44];
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dvaff18 = beliefPenaltyMPC_dv_aff + 836;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dvcc18 = beliefPenaltyMPC_dv_cc + 836;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_V18[5896];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Yd18[990];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Ld18[990];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_yy18[44];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_bmy18[44];
+int beliefPenaltyMPC_lbIdx18[134] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 65, 66, 67, 68, 69, 70, 71, 72, 73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86, 87, 88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115, 116, 117, 118, 119, 120, 121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133};
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_llb18 = beliefPenaltyMPC_l + 3240;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_slb18 = beliefPenaltyMPC_s + 3240;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_llbbyslb18 = beliefPenaltyMPC_lbys + 3240;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_rilb18[134];
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dllbaff18 = beliefPenaltyMPC_dl_aff + 3240;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dslbaff18 = beliefPenaltyMPC_ds_aff + 3240;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dllbcc18 = beliefPenaltyMPC_dl_cc + 3240;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dslbcc18 = beliefPenaltyMPC_ds_cc + 3240;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_ccrhsl18 = beliefPenaltyMPC_ccrhs + 3240;
+int beliefPenaltyMPC_ubIdx18[46] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45};
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_lub18 = beliefPenaltyMPC_l + 3374;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_sub18 = beliefPenaltyMPC_s + 3374;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_lubbysub18 = beliefPenaltyMPC_lbys + 3374;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_riub18[46];
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dlubaff18 = beliefPenaltyMPC_dl_aff + 3374;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dsubaff18 = beliefPenaltyMPC_ds_aff + 3374;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dlubcc18 = beliefPenaltyMPC_dl_cc + 3374;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dsubcc18 = beliefPenaltyMPC_ds_cc + 3374;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_ccrhsub18 = beliefPenaltyMPC_ccrhs + 3374;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Phi18[134];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_W18[134];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Ysd18[1936];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Lsd18[1936];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_H19[44] = {0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 2.0000000000000000E+002, 2.0000000000000000E+002, 2.0000000000000000E+002, 2.0000000000000000E+002, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 2.0000000000000000E+002, 2.0000000000000000E+002, 2.0000000000000000E+002, 2.0000000000000000E+002, 0.0000000000000000E+000, 0.0000000000000000E+000, 2.0000000000000000E+002, 2.0000000000000000E+002, 2.0000000000000000E+002, 2.0000000000000000E+002, 0.0000000000000000E+000, 2.0000000000000000E+002, 2.0000000000000000E+002, 2.0000000000000000E+002, 2.0000000000000000E+002, 2.0000000000000000E+002, 4.0000000000000000E+002, 4.0000000000000000E+002, 4.0000000000000000E+002, 2.0000000000000000E+002, 4.0000000000000000E+002, 4.0000000000000000E+002, 2.0000000000000000E+002, 4.0000000000000000E+002, 2.0000000000000000E+002};
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_f19[44] = {0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000};
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_z19 = beliefPenaltyMPC_z + 2546;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzaff19 = beliefPenaltyMPC_dz_aff + 2546;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dzcc19 = beliefPenaltyMPC_dz_cc + 2546;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_rd19 = beliefPenaltyMPC_rd + 2546;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Lbyrd19[44];
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_grad_cost19 = beliefPenaltyMPC_grad_cost + 2546;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_grad_eq19 = beliefPenaltyMPC_grad_eq + 2546;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_grad_ineq19 = beliefPenaltyMPC_grad_ineq + 2546;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_ctv19[44];
+int beliefPenaltyMPC_lbIdx19[44] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43};
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_llb19 = beliefPenaltyMPC_l + 3420;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_slb19 = beliefPenaltyMPC_s + 3420;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_llbbyslb19 = beliefPenaltyMPC_lbys + 3420;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_rilb19[44];
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dllbaff19 = beliefPenaltyMPC_dl_aff + 3420;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dslbaff19 = beliefPenaltyMPC_ds_aff + 3420;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dllbcc19 = beliefPenaltyMPC_dl_cc + 3420;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dslbcc19 = beliefPenaltyMPC_ds_cc + 3420;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_ccrhsl19 = beliefPenaltyMPC_ccrhs + 3420;
+int beliefPenaltyMPC_ubIdx19[44] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43};
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_lub19 = beliefPenaltyMPC_l + 3464;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_sub19 = beliefPenaltyMPC_s + 3464;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_lubbysub19 = beliefPenaltyMPC_lbys + 3464;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_riub19[44];
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dlubaff19 = beliefPenaltyMPC_dl_aff + 3464;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dsubaff19 = beliefPenaltyMPC_ds_aff + 3464;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dlubcc19 = beliefPenaltyMPC_dl_cc + 3464;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_dsubcc19 = beliefPenaltyMPC_ds_cc + 3464;
+beliefPenaltyMPC_FLOAT* beliefPenaltyMPC_ccrhsub19 = beliefPenaltyMPC_ccrhs + 3464;
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Phi19[44];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_D19[44] = {-1.0000000000000000E+000, 
 -1.0000000000000000E+000, 
 -1.0000000000000000E+000, 
 -1.0000000000000000E+000, 
@@ -2799,7 +3019,7 @@ beliefPenaltyMPC_FLOAT beliefPenaltyMPC_D14[44] = {-1.0000000000000000E+000,
 -1.0000000000000000E+000, 
 -1.0000000000000000E+000, 
 -1.0000000000000000E+000};
-beliefPenaltyMPC_FLOAT beliefPenaltyMPC_W14[44];
+beliefPenaltyMPC_FLOAT beliefPenaltyMPC_W19[44];
 beliefPenaltyMPC_FLOAT musigma;
 beliefPenaltyMPC_FLOAT sigma_3rdroot;
 beliefPenaltyMPC_FLOAT beliefPenaltyMPC_Diag1_0[134];
@@ -2820,13 +3040,13 @@ int exitcode;
 #endif
 /* FUNCTION CALLS INTO LA LIBRARY -------------------------------------- */
 info->it = 0;
-beliefPenaltyMPC_LA_INITIALIZEVECTOR_1920(beliefPenaltyMPC_z, 0);
-beliefPenaltyMPC_LA_INITIALIZEVECTOR_660(beliefPenaltyMPC_v, 1);
-beliefPenaltyMPC_LA_INITIALIZEVECTOR_2608(beliefPenaltyMPC_l, 1);
-beliefPenaltyMPC_LA_INITIALIZEVECTOR_2608(beliefPenaltyMPC_s, 1);
+beliefPenaltyMPC_LA_INITIALIZEVECTOR_2590(beliefPenaltyMPC_z, 0);
+beliefPenaltyMPC_LA_INITIALIZEVECTOR_880(beliefPenaltyMPC_v, 1);
+beliefPenaltyMPC_LA_INITIALIZEVECTOR_3508(beliefPenaltyMPC_l, 1);
+beliefPenaltyMPC_LA_INITIALIZEVECTOR_3508(beliefPenaltyMPC_s, 1);
 info->mu = 0;
-beliefPenaltyMPC_LA_DOTACC_2608(beliefPenaltyMPC_l, beliefPenaltyMPC_s, &info->mu);
-info->mu /= 2608;
+beliefPenaltyMPC_LA_DOTACC_3508(beliefPenaltyMPC_l, beliefPenaltyMPC_s, &info->mu);
+info->mu /= 3508;
 while( 1 ){
 info->pobj = 0;
 beliefPenaltyMPC_LA_DIAG_QUADFCN_134(beliefPenaltyMPC_H00, params->f1, beliefPenaltyMPC_z00, beliefPenaltyMPC_grad_cost00, &info->pobj);
@@ -2843,7 +3063,12 @@ beliefPenaltyMPC_LA_DIAG_QUADFCN_134(beliefPenaltyMPC_H00, params->f11, beliefPe
 beliefPenaltyMPC_LA_DIAG_QUADFCN_134(beliefPenaltyMPC_H00, params->f12, beliefPenaltyMPC_z11, beliefPenaltyMPC_grad_cost11, &info->pobj);
 beliefPenaltyMPC_LA_DIAG_QUADFCN_134(beliefPenaltyMPC_H00, params->f13, beliefPenaltyMPC_z12, beliefPenaltyMPC_grad_cost12, &info->pobj);
 beliefPenaltyMPC_LA_DIAG_QUADFCN_134(beliefPenaltyMPC_H00, params->f14, beliefPenaltyMPC_z13, beliefPenaltyMPC_grad_cost13, &info->pobj);
-beliefPenaltyMPC_LA_DIAG_QUADFCN_44(beliefPenaltyMPC_H14, beliefPenaltyMPC_f14, beliefPenaltyMPC_z14, beliefPenaltyMPC_grad_cost14, &info->pobj);
+beliefPenaltyMPC_LA_DIAG_QUADFCN_134(beliefPenaltyMPC_H00, params->f15, beliefPenaltyMPC_z14, beliefPenaltyMPC_grad_cost14, &info->pobj);
+beliefPenaltyMPC_LA_DIAG_QUADFCN_134(beliefPenaltyMPC_H00, params->f16, beliefPenaltyMPC_z15, beliefPenaltyMPC_grad_cost15, &info->pobj);
+beliefPenaltyMPC_LA_DIAG_QUADFCN_134(beliefPenaltyMPC_H00, params->f17, beliefPenaltyMPC_z16, beliefPenaltyMPC_grad_cost16, &info->pobj);
+beliefPenaltyMPC_LA_DIAG_QUADFCN_134(beliefPenaltyMPC_H00, params->f18, beliefPenaltyMPC_z17, beliefPenaltyMPC_grad_cost17, &info->pobj);
+beliefPenaltyMPC_LA_DIAG_QUADFCN_134(beliefPenaltyMPC_H00, params->f19, beliefPenaltyMPC_z18, beliefPenaltyMPC_grad_cost18, &info->pobj);
+beliefPenaltyMPC_LA_DIAG_QUADFCN_44(beliefPenaltyMPC_H19, beliefPenaltyMPC_f19, beliefPenaltyMPC_z19, beliefPenaltyMPC_grad_cost19, &info->pobj);
 info->res_eq = 0;
 info->dgap = 0;
 beliefPenaltyMPC_LA_DENSE_MVMSUB3_88_134_134(params->C1, beliefPenaltyMPC_z00, beliefPenaltyMPC_D01, beliefPenaltyMPC_z01, params->e1, beliefPenaltyMPC_v00, beliefPenaltyMPC_re00, &info->dgap, &info->res_eq);
@@ -2859,7 +3084,12 @@ beliefPenaltyMPC_LA_DENSE_DIAGZERO_MVMSUB3_44_134_134(params->C10, beliefPenalty
 beliefPenaltyMPC_LA_DENSE_DIAGZERO_MVMSUB3_44_134_134(params->C11, beliefPenaltyMPC_z10, beliefPenaltyMPC_D02, beliefPenaltyMPC_z11, params->e11, beliefPenaltyMPC_v10, beliefPenaltyMPC_re10, &info->dgap, &info->res_eq);
 beliefPenaltyMPC_LA_DENSE_DIAGZERO_MVMSUB3_44_134_134(params->C12, beliefPenaltyMPC_z11, beliefPenaltyMPC_D02, beliefPenaltyMPC_z12, params->e12, beliefPenaltyMPC_v11, beliefPenaltyMPC_re11, &info->dgap, &info->res_eq);
 beliefPenaltyMPC_LA_DENSE_DIAGZERO_MVMSUB3_44_134_134(params->C13, beliefPenaltyMPC_z12, beliefPenaltyMPC_D02, beliefPenaltyMPC_z13, params->e13, beliefPenaltyMPC_v12, beliefPenaltyMPC_re12, &info->dgap, &info->res_eq);
-beliefPenaltyMPC_LA_DENSE_DIAGZERO_MVMSUB3_44_134_44(params->C14, beliefPenaltyMPC_z13, beliefPenaltyMPC_D14, beliefPenaltyMPC_z14, params->e14, beliefPenaltyMPC_v13, beliefPenaltyMPC_re13, &info->dgap, &info->res_eq);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_MVMSUB3_44_134_134(params->C14, beliefPenaltyMPC_z13, beliefPenaltyMPC_D02, beliefPenaltyMPC_z14, params->e14, beliefPenaltyMPC_v13, beliefPenaltyMPC_re13, &info->dgap, &info->res_eq);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_MVMSUB3_44_134_134(params->C15, beliefPenaltyMPC_z14, beliefPenaltyMPC_D02, beliefPenaltyMPC_z15, params->e15, beliefPenaltyMPC_v14, beliefPenaltyMPC_re14, &info->dgap, &info->res_eq);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_MVMSUB3_44_134_134(params->C16, beliefPenaltyMPC_z15, beliefPenaltyMPC_D02, beliefPenaltyMPC_z16, params->e16, beliefPenaltyMPC_v15, beliefPenaltyMPC_re15, &info->dgap, &info->res_eq);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_MVMSUB3_44_134_134(params->C17, beliefPenaltyMPC_z16, beliefPenaltyMPC_D02, beliefPenaltyMPC_z17, params->e17, beliefPenaltyMPC_v16, beliefPenaltyMPC_re16, &info->dgap, &info->res_eq);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_MVMSUB3_44_134_134(params->C18, beliefPenaltyMPC_z17, beliefPenaltyMPC_D02, beliefPenaltyMPC_z18, params->e18, beliefPenaltyMPC_v17, beliefPenaltyMPC_re17, &info->dgap, &info->res_eq);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_MVMSUB3_44_134_44(params->C19, beliefPenaltyMPC_z18, beliefPenaltyMPC_D19, beliefPenaltyMPC_z19, params->e19, beliefPenaltyMPC_v18, beliefPenaltyMPC_re18, &info->dgap, &info->res_eq);
 beliefPenaltyMPC_LA_DENSE_MTVM_88_134(params->C1, beliefPenaltyMPC_v00, beliefPenaltyMPC_grad_eq00);
 beliefPenaltyMPC_LA_DENSE_MTVM2_44_134_88(params->C2, beliefPenaltyMPC_v01, beliefPenaltyMPC_D01, beliefPenaltyMPC_v00, beliefPenaltyMPC_grad_eq01);
 beliefPenaltyMPC_LA_DENSE_DIAGZERO_MTVM2_44_134_44(params->C3, beliefPenaltyMPC_v02, beliefPenaltyMPC_D02, beliefPenaltyMPC_v01, beliefPenaltyMPC_grad_eq02);
@@ -2874,7 +3104,12 @@ beliefPenaltyMPC_LA_DENSE_DIAGZERO_MTVM2_44_134_44(params->C11, beliefPenaltyMPC
 beliefPenaltyMPC_LA_DENSE_DIAGZERO_MTVM2_44_134_44(params->C12, beliefPenaltyMPC_v11, beliefPenaltyMPC_D02, beliefPenaltyMPC_v10, beliefPenaltyMPC_grad_eq11);
 beliefPenaltyMPC_LA_DENSE_DIAGZERO_MTVM2_44_134_44(params->C13, beliefPenaltyMPC_v12, beliefPenaltyMPC_D02, beliefPenaltyMPC_v11, beliefPenaltyMPC_grad_eq12);
 beliefPenaltyMPC_LA_DENSE_DIAGZERO_MTVM2_44_134_44(params->C14, beliefPenaltyMPC_v13, beliefPenaltyMPC_D02, beliefPenaltyMPC_v12, beliefPenaltyMPC_grad_eq13);
-beliefPenaltyMPC_LA_DIAGZERO_MTVM_44_44(beliefPenaltyMPC_D14, beliefPenaltyMPC_v13, beliefPenaltyMPC_grad_eq14);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_MTVM2_44_134_44(params->C15, beliefPenaltyMPC_v14, beliefPenaltyMPC_D02, beliefPenaltyMPC_v13, beliefPenaltyMPC_grad_eq14);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_MTVM2_44_134_44(params->C16, beliefPenaltyMPC_v15, beliefPenaltyMPC_D02, beliefPenaltyMPC_v14, beliefPenaltyMPC_grad_eq15);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_MTVM2_44_134_44(params->C17, beliefPenaltyMPC_v16, beliefPenaltyMPC_D02, beliefPenaltyMPC_v15, beliefPenaltyMPC_grad_eq16);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_MTVM2_44_134_44(params->C18, beliefPenaltyMPC_v17, beliefPenaltyMPC_D02, beliefPenaltyMPC_v16, beliefPenaltyMPC_grad_eq17);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_MTVM2_44_134_44(params->C19, beliefPenaltyMPC_v18, beliefPenaltyMPC_D02, beliefPenaltyMPC_v17, beliefPenaltyMPC_grad_eq18);
+beliefPenaltyMPC_LA_DIAGZERO_MTVM_44_44(beliefPenaltyMPC_D19, beliefPenaltyMPC_v18, beliefPenaltyMPC_grad_eq19);
 info->res_ineq = 0;
 beliefPenaltyMPC_LA_VSUBADD3_134(params->lb1, beliefPenaltyMPC_z00, beliefPenaltyMPC_lbIdx00, beliefPenaltyMPC_llb00, beliefPenaltyMPC_slb00, beliefPenaltyMPC_rilb00, &info->dgap, &info->res_ineq);
 beliefPenaltyMPC_LA_VSUBADD2_46(beliefPenaltyMPC_z00, beliefPenaltyMPC_ubIdx00, params->ub1, beliefPenaltyMPC_lub00, beliefPenaltyMPC_sub00, beliefPenaltyMPC_riub00, &info->dgap, &info->res_ineq);
@@ -2904,8 +3139,18 @@ beliefPenaltyMPC_LA_VSUBADD3_134(params->lb13, beliefPenaltyMPC_z12, beliefPenal
 beliefPenaltyMPC_LA_VSUBADD2_46(beliefPenaltyMPC_z12, beliefPenaltyMPC_ubIdx12, params->ub13, beliefPenaltyMPC_lub12, beliefPenaltyMPC_sub12, beliefPenaltyMPC_riub12, &info->dgap, &info->res_ineq);
 beliefPenaltyMPC_LA_VSUBADD3_134(params->lb14, beliefPenaltyMPC_z13, beliefPenaltyMPC_lbIdx13, beliefPenaltyMPC_llb13, beliefPenaltyMPC_slb13, beliefPenaltyMPC_rilb13, &info->dgap, &info->res_ineq);
 beliefPenaltyMPC_LA_VSUBADD2_46(beliefPenaltyMPC_z13, beliefPenaltyMPC_ubIdx13, params->ub14, beliefPenaltyMPC_lub13, beliefPenaltyMPC_sub13, beliefPenaltyMPC_riub13, &info->dgap, &info->res_ineq);
-beliefPenaltyMPC_LA_VSUBADD3_44(params->lb15, beliefPenaltyMPC_z14, beliefPenaltyMPC_lbIdx14, beliefPenaltyMPC_llb14, beliefPenaltyMPC_slb14, beliefPenaltyMPC_rilb14, &info->dgap, &info->res_ineq);
-beliefPenaltyMPC_LA_VSUBADD2_44(beliefPenaltyMPC_z14, beliefPenaltyMPC_ubIdx14, params->ub15, beliefPenaltyMPC_lub14, beliefPenaltyMPC_sub14, beliefPenaltyMPC_riub14, &info->dgap, &info->res_ineq);
+beliefPenaltyMPC_LA_VSUBADD3_134(params->lb15, beliefPenaltyMPC_z14, beliefPenaltyMPC_lbIdx14, beliefPenaltyMPC_llb14, beliefPenaltyMPC_slb14, beliefPenaltyMPC_rilb14, &info->dgap, &info->res_ineq);
+beliefPenaltyMPC_LA_VSUBADD2_46(beliefPenaltyMPC_z14, beliefPenaltyMPC_ubIdx14, params->ub15, beliefPenaltyMPC_lub14, beliefPenaltyMPC_sub14, beliefPenaltyMPC_riub14, &info->dgap, &info->res_ineq);
+beliefPenaltyMPC_LA_VSUBADD3_134(params->lb16, beliefPenaltyMPC_z15, beliefPenaltyMPC_lbIdx15, beliefPenaltyMPC_llb15, beliefPenaltyMPC_slb15, beliefPenaltyMPC_rilb15, &info->dgap, &info->res_ineq);
+beliefPenaltyMPC_LA_VSUBADD2_46(beliefPenaltyMPC_z15, beliefPenaltyMPC_ubIdx15, params->ub16, beliefPenaltyMPC_lub15, beliefPenaltyMPC_sub15, beliefPenaltyMPC_riub15, &info->dgap, &info->res_ineq);
+beliefPenaltyMPC_LA_VSUBADD3_134(params->lb17, beliefPenaltyMPC_z16, beliefPenaltyMPC_lbIdx16, beliefPenaltyMPC_llb16, beliefPenaltyMPC_slb16, beliefPenaltyMPC_rilb16, &info->dgap, &info->res_ineq);
+beliefPenaltyMPC_LA_VSUBADD2_46(beliefPenaltyMPC_z16, beliefPenaltyMPC_ubIdx16, params->ub17, beliefPenaltyMPC_lub16, beliefPenaltyMPC_sub16, beliefPenaltyMPC_riub16, &info->dgap, &info->res_ineq);
+beliefPenaltyMPC_LA_VSUBADD3_134(params->lb18, beliefPenaltyMPC_z17, beliefPenaltyMPC_lbIdx17, beliefPenaltyMPC_llb17, beliefPenaltyMPC_slb17, beliefPenaltyMPC_rilb17, &info->dgap, &info->res_ineq);
+beliefPenaltyMPC_LA_VSUBADD2_46(beliefPenaltyMPC_z17, beliefPenaltyMPC_ubIdx17, params->ub18, beliefPenaltyMPC_lub17, beliefPenaltyMPC_sub17, beliefPenaltyMPC_riub17, &info->dgap, &info->res_ineq);
+beliefPenaltyMPC_LA_VSUBADD3_134(params->lb19, beliefPenaltyMPC_z18, beliefPenaltyMPC_lbIdx18, beliefPenaltyMPC_llb18, beliefPenaltyMPC_slb18, beliefPenaltyMPC_rilb18, &info->dgap, &info->res_ineq);
+beliefPenaltyMPC_LA_VSUBADD2_46(beliefPenaltyMPC_z18, beliefPenaltyMPC_ubIdx18, params->ub19, beliefPenaltyMPC_lub18, beliefPenaltyMPC_sub18, beliefPenaltyMPC_riub18, &info->dgap, &info->res_ineq);
+beliefPenaltyMPC_LA_VSUBADD3_44(params->lb20, beliefPenaltyMPC_z19, beliefPenaltyMPC_lbIdx19, beliefPenaltyMPC_llb19, beliefPenaltyMPC_slb19, beliefPenaltyMPC_rilb19, &info->dgap, &info->res_ineq);
+beliefPenaltyMPC_LA_VSUBADD2_44(beliefPenaltyMPC_z19, beliefPenaltyMPC_ubIdx19, params->ub20, beliefPenaltyMPC_lub19, beliefPenaltyMPC_sub19, beliefPenaltyMPC_riub19, &info->dgap, &info->res_ineq);
 beliefPenaltyMPC_LA_INEQ_B_GRAD_134_134_46(beliefPenaltyMPC_lub00, beliefPenaltyMPC_sub00, beliefPenaltyMPC_riub00, beliefPenaltyMPC_llb00, beliefPenaltyMPC_slb00, beliefPenaltyMPC_rilb00, beliefPenaltyMPC_lbIdx00, beliefPenaltyMPC_ubIdx00, beliefPenaltyMPC_grad_ineq00, beliefPenaltyMPC_lubbysub00, beliefPenaltyMPC_llbbyslb00);
 beliefPenaltyMPC_LA_INEQ_B_GRAD_134_134_46(beliefPenaltyMPC_lub01, beliefPenaltyMPC_sub01, beliefPenaltyMPC_riub01, beliefPenaltyMPC_llb01, beliefPenaltyMPC_slb01, beliefPenaltyMPC_rilb01, beliefPenaltyMPC_lbIdx01, beliefPenaltyMPC_ubIdx01, beliefPenaltyMPC_grad_ineq01, beliefPenaltyMPC_lubbysub01, beliefPenaltyMPC_llbbyslb01);
 beliefPenaltyMPC_LA_INEQ_B_GRAD_134_134_46(beliefPenaltyMPC_lub02, beliefPenaltyMPC_sub02, beliefPenaltyMPC_riub02, beliefPenaltyMPC_llb02, beliefPenaltyMPC_slb02, beliefPenaltyMPC_rilb02, beliefPenaltyMPC_lbIdx02, beliefPenaltyMPC_ubIdx02, beliefPenaltyMPC_grad_ineq02, beliefPenaltyMPC_lubbysub02, beliefPenaltyMPC_llbbyslb02);
@@ -2920,7 +3165,12 @@ beliefPenaltyMPC_LA_INEQ_B_GRAD_134_134_46(beliefPenaltyMPC_lub10, beliefPenalty
 beliefPenaltyMPC_LA_INEQ_B_GRAD_134_134_46(beliefPenaltyMPC_lub11, beliefPenaltyMPC_sub11, beliefPenaltyMPC_riub11, beliefPenaltyMPC_llb11, beliefPenaltyMPC_slb11, beliefPenaltyMPC_rilb11, beliefPenaltyMPC_lbIdx11, beliefPenaltyMPC_ubIdx11, beliefPenaltyMPC_grad_ineq11, beliefPenaltyMPC_lubbysub11, beliefPenaltyMPC_llbbyslb11);
 beliefPenaltyMPC_LA_INEQ_B_GRAD_134_134_46(beliefPenaltyMPC_lub12, beliefPenaltyMPC_sub12, beliefPenaltyMPC_riub12, beliefPenaltyMPC_llb12, beliefPenaltyMPC_slb12, beliefPenaltyMPC_rilb12, beliefPenaltyMPC_lbIdx12, beliefPenaltyMPC_ubIdx12, beliefPenaltyMPC_grad_ineq12, beliefPenaltyMPC_lubbysub12, beliefPenaltyMPC_llbbyslb12);
 beliefPenaltyMPC_LA_INEQ_B_GRAD_134_134_46(beliefPenaltyMPC_lub13, beliefPenaltyMPC_sub13, beliefPenaltyMPC_riub13, beliefPenaltyMPC_llb13, beliefPenaltyMPC_slb13, beliefPenaltyMPC_rilb13, beliefPenaltyMPC_lbIdx13, beliefPenaltyMPC_ubIdx13, beliefPenaltyMPC_grad_ineq13, beliefPenaltyMPC_lubbysub13, beliefPenaltyMPC_llbbyslb13);
-beliefPenaltyMPC_LA_INEQ_B_GRAD_44_44_44(beliefPenaltyMPC_lub14, beliefPenaltyMPC_sub14, beliefPenaltyMPC_riub14, beliefPenaltyMPC_llb14, beliefPenaltyMPC_slb14, beliefPenaltyMPC_rilb14, beliefPenaltyMPC_lbIdx14, beliefPenaltyMPC_ubIdx14, beliefPenaltyMPC_grad_ineq14, beliefPenaltyMPC_lubbysub14, beliefPenaltyMPC_llbbyslb14);
+beliefPenaltyMPC_LA_INEQ_B_GRAD_134_134_46(beliefPenaltyMPC_lub14, beliefPenaltyMPC_sub14, beliefPenaltyMPC_riub14, beliefPenaltyMPC_llb14, beliefPenaltyMPC_slb14, beliefPenaltyMPC_rilb14, beliefPenaltyMPC_lbIdx14, beliefPenaltyMPC_ubIdx14, beliefPenaltyMPC_grad_ineq14, beliefPenaltyMPC_lubbysub14, beliefPenaltyMPC_llbbyslb14);
+beliefPenaltyMPC_LA_INEQ_B_GRAD_134_134_46(beliefPenaltyMPC_lub15, beliefPenaltyMPC_sub15, beliefPenaltyMPC_riub15, beliefPenaltyMPC_llb15, beliefPenaltyMPC_slb15, beliefPenaltyMPC_rilb15, beliefPenaltyMPC_lbIdx15, beliefPenaltyMPC_ubIdx15, beliefPenaltyMPC_grad_ineq15, beliefPenaltyMPC_lubbysub15, beliefPenaltyMPC_llbbyslb15);
+beliefPenaltyMPC_LA_INEQ_B_GRAD_134_134_46(beliefPenaltyMPC_lub16, beliefPenaltyMPC_sub16, beliefPenaltyMPC_riub16, beliefPenaltyMPC_llb16, beliefPenaltyMPC_slb16, beliefPenaltyMPC_rilb16, beliefPenaltyMPC_lbIdx16, beliefPenaltyMPC_ubIdx16, beliefPenaltyMPC_grad_ineq16, beliefPenaltyMPC_lubbysub16, beliefPenaltyMPC_llbbyslb16);
+beliefPenaltyMPC_LA_INEQ_B_GRAD_134_134_46(beliefPenaltyMPC_lub17, beliefPenaltyMPC_sub17, beliefPenaltyMPC_riub17, beliefPenaltyMPC_llb17, beliefPenaltyMPC_slb17, beliefPenaltyMPC_rilb17, beliefPenaltyMPC_lbIdx17, beliefPenaltyMPC_ubIdx17, beliefPenaltyMPC_grad_ineq17, beliefPenaltyMPC_lubbysub17, beliefPenaltyMPC_llbbyslb17);
+beliefPenaltyMPC_LA_INEQ_B_GRAD_134_134_46(beliefPenaltyMPC_lub18, beliefPenaltyMPC_sub18, beliefPenaltyMPC_riub18, beliefPenaltyMPC_llb18, beliefPenaltyMPC_slb18, beliefPenaltyMPC_rilb18, beliefPenaltyMPC_lbIdx18, beliefPenaltyMPC_ubIdx18, beliefPenaltyMPC_grad_ineq18, beliefPenaltyMPC_lubbysub18, beliefPenaltyMPC_llbbyslb18);
+beliefPenaltyMPC_LA_INEQ_B_GRAD_44_44_44(beliefPenaltyMPC_lub19, beliefPenaltyMPC_sub19, beliefPenaltyMPC_riub19, beliefPenaltyMPC_llb19, beliefPenaltyMPC_slb19, beliefPenaltyMPC_rilb19, beliefPenaltyMPC_lbIdx19, beliefPenaltyMPC_ubIdx19, beliefPenaltyMPC_grad_ineq19, beliefPenaltyMPC_lubbysub19, beliefPenaltyMPC_llbbyslb19);
 info->dobj = info->pobj - info->dgap;
 info->rdgap = info->pobj ? info->dgap / info->pobj : 1e6;
 if( info->rdgap < 0 ) info->rdgap = -info->rdgap;
@@ -2931,7 +3181,7 @@ if( info->mu < beliefPenaltyMPC_SET_ACC_KKTCOMPL
 exitcode = beliefPenaltyMPC_OPTIMAL; break; }
 if( info->it == beliefPenaltyMPC_SET_MAXIT ){
 exitcode = beliefPenaltyMPC_MAXITREACHED; break; }
-beliefPenaltyMPC_LA_VVADD3_1920(beliefPenaltyMPC_grad_cost, beliefPenaltyMPC_grad_eq, beliefPenaltyMPC_grad_ineq, beliefPenaltyMPC_rd);
+beliefPenaltyMPC_LA_VVADD3_2590(beliefPenaltyMPC_grad_cost, beliefPenaltyMPC_grad_eq, beliefPenaltyMPC_grad_ineq, beliefPenaltyMPC_rd);
 beliefPenaltyMPC_LA_DIAG_CHOL_LBUB_134_134_46(beliefPenaltyMPC_H00, beliefPenaltyMPC_llbbyslb00, beliefPenaltyMPC_lbIdx00, beliefPenaltyMPC_lubbysub00, beliefPenaltyMPC_ubIdx00, beliefPenaltyMPC_Phi00);
 beliefPenaltyMPC_LA_DIAG_MATRIXFORWARDSUB_88_134(beliefPenaltyMPC_Phi00, params->C1, beliefPenaltyMPC_V00);
 beliefPenaltyMPC_LA_DIAG_FORWARDSUB_134(beliefPenaltyMPC_Phi00, beliefPenaltyMPC_rd00, beliefPenaltyMPC_Lbyrd00);
@@ -3000,9 +3250,34 @@ beliefPenaltyMPC_LA_DIAG_MATRIXFORWARDSUB_44_134(beliefPenaltyMPC_Phi13, params-
 beliefPenaltyMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_44_134(beliefPenaltyMPC_Phi13, beliefPenaltyMPC_D02, beliefPenaltyMPC_W13);
 beliefPenaltyMPC_LA_DENSE_DIAGZERO_MMTM_44_134_44(beliefPenaltyMPC_W13, beliefPenaltyMPC_V13, beliefPenaltyMPC_Ysd13);
 beliefPenaltyMPC_LA_DIAG_FORWARDSUB_134(beliefPenaltyMPC_Phi13, beliefPenaltyMPC_rd13, beliefPenaltyMPC_Lbyrd13);
-beliefPenaltyMPC_LA_DIAG_CHOL_ONELOOP_LBUB_44_44_44(beliefPenaltyMPC_H14, beliefPenaltyMPC_llbbyslb14, beliefPenaltyMPC_lbIdx14, beliefPenaltyMPC_lubbysub14, beliefPenaltyMPC_ubIdx14, beliefPenaltyMPC_Phi14);
-beliefPenaltyMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_44_44(beliefPenaltyMPC_Phi14, beliefPenaltyMPC_D14, beliefPenaltyMPC_W14);
-beliefPenaltyMPC_LA_DIAG_FORWARDSUB_44(beliefPenaltyMPC_Phi14, beliefPenaltyMPC_rd14, beliefPenaltyMPC_Lbyrd14);
+beliefPenaltyMPC_LA_DIAG_CHOL_LBUB_134_134_46(beliefPenaltyMPC_H00, beliefPenaltyMPC_llbbyslb14, beliefPenaltyMPC_lbIdx14, beliefPenaltyMPC_lubbysub14, beliefPenaltyMPC_ubIdx14, beliefPenaltyMPC_Phi14);
+beliefPenaltyMPC_LA_DIAG_MATRIXFORWARDSUB_44_134(beliefPenaltyMPC_Phi14, params->C15, beliefPenaltyMPC_V14);
+beliefPenaltyMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_44_134(beliefPenaltyMPC_Phi14, beliefPenaltyMPC_D02, beliefPenaltyMPC_W14);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_MMTM_44_134_44(beliefPenaltyMPC_W14, beliefPenaltyMPC_V14, beliefPenaltyMPC_Ysd14);
+beliefPenaltyMPC_LA_DIAG_FORWARDSUB_134(beliefPenaltyMPC_Phi14, beliefPenaltyMPC_rd14, beliefPenaltyMPC_Lbyrd14);
+beliefPenaltyMPC_LA_DIAG_CHOL_LBUB_134_134_46(beliefPenaltyMPC_H00, beliefPenaltyMPC_llbbyslb15, beliefPenaltyMPC_lbIdx15, beliefPenaltyMPC_lubbysub15, beliefPenaltyMPC_ubIdx15, beliefPenaltyMPC_Phi15);
+beliefPenaltyMPC_LA_DIAG_MATRIXFORWARDSUB_44_134(beliefPenaltyMPC_Phi15, params->C16, beliefPenaltyMPC_V15);
+beliefPenaltyMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_44_134(beliefPenaltyMPC_Phi15, beliefPenaltyMPC_D02, beliefPenaltyMPC_W15);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_MMTM_44_134_44(beliefPenaltyMPC_W15, beliefPenaltyMPC_V15, beliefPenaltyMPC_Ysd15);
+beliefPenaltyMPC_LA_DIAG_FORWARDSUB_134(beliefPenaltyMPC_Phi15, beliefPenaltyMPC_rd15, beliefPenaltyMPC_Lbyrd15);
+beliefPenaltyMPC_LA_DIAG_CHOL_LBUB_134_134_46(beliefPenaltyMPC_H00, beliefPenaltyMPC_llbbyslb16, beliefPenaltyMPC_lbIdx16, beliefPenaltyMPC_lubbysub16, beliefPenaltyMPC_ubIdx16, beliefPenaltyMPC_Phi16);
+beliefPenaltyMPC_LA_DIAG_MATRIXFORWARDSUB_44_134(beliefPenaltyMPC_Phi16, params->C17, beliefPenaltyMPC_V16);
+beliefPenaltyMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_44_134(beliefPenaltyMPC_Phi16, beliefPenaltyMPC_D02, beliefPenaltyMPC_W16);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_MMTM_44_134_44(beliefPenaltyMPC_W16, beliefPenaltyMPC_V16, beliefPenaltyMPC_Ysd16);
+beliefPenaltyMPC_LA_DIAG_FORWARDSUB_134(beliefPenaltyMPC_Phi16, beliefPenaltyMPC_rd16, beliefPenaltyMPC_Lbyrd16);
+beliefPenaltyMPC_LA_DIAG_CHOL_LBUB_134_134_46(beliefPenaltyMPC_H00, beliefPenaltyMPC_llbbyslb17, beliefPenaltyMPC_lbIdx17, beliefPenaltyMPC_lubbysub17, beliefPenaltyMPC_ubIdx17, beliefPenaltyMPC_Phi17);
+beliefPenaltyMPC_LA_DIAG_MATRIXFORWARDSUB_44_134(beliefPenaltyMPC_Phi17, params->C18, beliefPenaltyMPC_V17);
+beliefPenaltyMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_44_134(beliefPenaltyMPC_Phi17, beliefPenaltyMPC_D02, beliefPenaltyMPC_W17);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_MMTM_44_134_44(beliefPenaltyMPC_W17, beliefPenaltyMPC_V17, beliefPenaltyMPC_Ysd17);
+beliefPenaltyMPC_LA_DIAG_FORWARDSUB_134(beliefPenaltyMPC_Phi17, beliefPenaltyMPC_rd17, beliefPenaltyMPC_Lbyrd17);
+beliefPenaltyMPC_LA_DIAG_CHOL_LBUB_134_134_46(beliefPenaltyMPC_H00, beliefPenaltyMPC_llbbyslb18, beliefPenaltyMPC_lbIdx18, beliefPenaltyMPC_lubbysub18, beliefPenaltyMPC_ubIdx18, beliefPenaltyMPC_Phi18);
+beliefPenaltyMPC_LA_DIAG_MATRIXFORWARDSUB_44_134(beliefPenaltyMPC_Phi18, params->C19, beliefPenaltyMPC_V18);
+beliefPenaltyMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_44_134(beliefPenaltyMPC_Phi18, beliefPenaltyMPC_D02, beliefPenaltyMPC_W18);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_MMTM_44_134_44(beliefPenaltyMPC_W18, beliefPenaltyMPC_V18, beliefPenaltyMPC_Ysd18);
+beliefPenaltyMPC_LA_DIAG_FORWARDSUB_134(beliefPenaltyMPC_Phi18, beliefPenaltyMPC_rd18, beliefPenaltyMPC_Lbyrd18);
+beliefPenaltyMPC_LA_DIAG_CHOL_ONELOOP_LBUB_44_44_44(beliefPenaltyMPC_H19, beliefPenaltyMPC_llbbyslb19, beliefPenaltyMPC_lbIdx19, beliefPenaltyMPC_lubbysub19, beliefPenaltyMPC_ubIdx19, beliefPenaltyMPC_Phi19);
+beliefPenaltyMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_44_44(beliefPenaltyMPC_Phi19, beliefPenaltyMPC_D19, beliefPenaltyMPC_W19);
+beliefPenaltyMPC_LA_DIAG_FORWARDSUB_44(beliefPenaltyMPC_Phi19, beliefPenaltyMPC_rd19, beliefPenaltyMPC_Lbyrd19);
 beliefPenaltyMPC_LA_DENSE_MMT2_88_134_134(beliefPenaltyMPC_V00, beliefPenaltyMPC_W01, beliefPenaltyMPC_Yd00);
 beliefPenaltyMPC_LA_DENSE_MVMSUB2_88_134_134(beliefPenaltyMPC_V00, beliefPenaltyMPC_Lbyrd00, beliefPenaltyMPC_W01, beliefPenaltyMPC_Lbyrd01, beliefPenaltyMPC_re00, beliefPenaltyMPC_beta00);
 beliefPenaltyMPC_LA_DENSE_DIAGZERO_MMT2_44_134_134(beliefPenaltyMPC_V01, beliefPenaltyMPC_W02, beliefPenaltyMPC_Yd01);
@@ -3029,8 +3304,18 @@ beliefPenaltyMPC_LA_DENSE_DIAGZERO_MMT2_44_134_134(beliefPenaltyMPC_V11, beliefP
 beliefPenaltyMPC_LA_DENSE_DIAGZERO_2MVMSUB2_44_134_134(beliefPenaltyMPC_V11, beliefPenaltyMPC_Lbyrd11, beliefPenaltyMPC_W12, beliefPenaltyMPC_Lbyrd12, beliefPenaltyMPC_re11, beliefPenaltyMPC_beta11);
 beliefPenaltyMPC_LA_DENSE_DIAGZERO_MMT2_44_134_134(beliefPenaltyMPC_V12, beliefPenaltyMPC_W13, beliefPenaltyMPC_Yd12);
 beliefPenaltyMPC_LA_DENSE_DIAGZERO_2MVMSUB2_44_134_134(beliefPenaltyMPC_V12, beliefPenaltyMPC_Lbyrd12, beliefPenaltyMPC_W13, beliefPenaltyMPC_Lbyrd13, beliefPenaltyMPC_re12, beliefPenaltyMPC_beta12);
-beliefPenaltyMPC_LA_DENSE_DIAGZERO_MMT2_44_134_44(beliefPenaltyMPC_V13, beliefPenaltyMPC_W14, beliefPenaltyMPC_Yd13);
-beliefPenaltyMPC_LA_DENSE_DIAGZERO_2MVMSUB2_44_134_44(beliefPenaltyMPC_V13, beliefPenaltyMPC_Lbyrd13, beliefPenaltyMPC_W14, beliefPenaltyMPC_Lbyrd14, beliefPenaltyMPC_re13, beliefPenaltyMPC_beta13);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_MMT2_44_134_134(beliefPenaltyMPC_V13, beliefPenaltyMPC_W14, beliefPenaltyMPC_Yd13);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_2MVMSUB2_44_134_134(beliefPenaltyMPC_V13, beliefPenaltyMPC_Lbyrd13, beliefPenaltyMPC_W14, beliefPenaltyMPC_Lbyrd14, beliefPenaltyMPC_re13, beliefPenaltyMPC_beta13);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_MMT2_44_134_134(beliefPenaltyMPC_V14, beliefPenaltyMPC_W15, beliefPenaltyMPC_Yd14);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_2MVMSUB2_44_134_134(beliefPenaltyMPC_V14, beliefPenaltyMPC_Lbyrd14, beliefPenaltyMPC_W15, beliefPenaltyMPC_Lbyrd15, beliefPenaltyMPC_re14, beliefPenaltyMPC_beta14);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_MMT2_44_134_134(beliefPenaltyMPC_V15, beliefPenaltyMPC_W16, beliefPenaltyMPC_Yd15);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_2MVMSUB2_44_134_134(beliefPenaltyMPC_V15, beliefPenaltyMPC_Lbyrd15, beliefPenaltyMPC_W16, beliefPenaltyMPC_Lbyrd16, beliefPenaltyMPC_re15, beliefPenaltyMPC_beta15);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_MMT2_44_134_134(beliefPenaltyMPC_V16, beliefPenaltyMPC_W17, beliefPenaltyMPC_Yd16);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_2MVMSUB2_44_134_134(beliefPenaltyMPC_V16, beliefPenaltyMPC_Lbyrd16, beliefPenaltyMPC_W17, beliefPenaltyMPC_Lbyrd17, beliefPenaltyMPC_re16, beliefPenaltyMPC_beta16);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_MMT2_44_134_134(beliefPenaltyMPC_V17, beliefPenaltyMPC_W18, beliefPenaltyMPC_Yd17);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_2MVMSUB2_44_134_134(beliefPenaltyMPC_V17, beliefPenaltyMPC_Lbyrd17, beliefPenaltyMPC_W18, beliefPenaltyMPC_Lbyrd18, beliefPenaltyMPC_re17, beliefPenaltyMPC_beta17);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_MMT2_44_134_44(beliefPenaltyMPC_V18, beliefPenaltyMPC_W19, beliefPenaltyMPC_Yd18);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_2MVMSUB2_44_134_44(beliefPenaltyMPC_V18, beliefPenaltyMPC_Lbyrd18, beliefPenaltyMPC_W19, beliefPenaltyMPC_Lbyrd19, beliefPenaltyMPC_re18, beliefPenaltyMPC_beta18);
 beliefPenaltyMPC_LA_DENSE_CHOL_88(beliefPenaltyMPC_Yd00, beliefPenaltyMPC_Ld00);
 beliefPenaltyMPC_LA_DENSE_FORWARDSUB_88(beliefPenaltyMPC_Ld00, beliefPenaltyMPC_beta00, beliefPenaltyMPC_yy00);
 beliefPenaltyMPC_LA_DENSE_MATRIXTFORWARDSUB_44_88(beliefPenaltyMPC_Ld00, beliefPenaltyMPC_Ysd01, beliefPenaltyMPC_Lsd01);
@@ -3098,7 +3383,42 @@ beliefPenaltyMPC_LA_DENSE_MMTSUB_44_44(beliefPenaltyMPC_Lsd13, beliefPenaltyMPC_
 beliefPenaltyMPC_LA_DENSE_CHOL_44(beliefPenaltyMPC_Yd13, beliefPenaltyMPC_Ld13);
 beliefPenaltyMPC_LA_DENSE_MVMSUB1_44_44(beliefPenaltyMPC_Lsd13, beliefPenaltyMPC_yy12, beliefPenaltyMPC_beta13, beliefPenaltyMPC_bmy13);
 beliefPenaltyMPC_LA_DENSE_FORWARDSUB_44(beliefPenaltyMPC_Ld13, beliefPenaltyMPC_bmy13, beliefPenaltyMPC_yy13);
-beliefPenaltyMPC_LA_DENSE_BACKWARDSUB_44(beliefPenaltyMPC_Ld13, beliefPenaltyMPC_yy13, beliefPenaltyMPC_dvaff13);
+beliefPenaltyMPC_LA_DENSE_MATRIXTFORWARDSUB_44_44(beliefPenaltyMPC_Ld13, beliefPenaltyMPC_Ysd14, beliefPenaltyMPC_Lsd14);
+beliefPenaltyMPC_LA_DENSE_MMTSUB_44_44(beliefPenaltyMPC_Lsd14, beliefPenaltyMPC_Yd14);
+beliefPenaltyMPC_LA_DENSE_CHOL_44(beliefPenaltyMPC_Yd14, beliefPenaltyMPC_Ld14);
+beliefPenaltyMPC_LA_DENSE_MVMSUB1_44_44(beliefPenaltyMPC_Lsd14, beliefPenaltyMPC_yy13, beliefPenaltyMPC_beta14, beliefPenaltyMPC_bmy14);
+beliefPenaltyMPC_LA_DENSE_FORWARDSUB_44(beliefPenaltyMPC_Ld14, beliefPenaltyMPC_bmy14, beliefPenaltyMPC_yy14);
+beliefPenaltyMPC_LA_DENSE_MATRIXTFORWARDSUB_44_44(beliefPenaltyMPC_Ld14, beliefPenaltyMPC_Ysd15, beliefPenaltyMPC_Lsd15);
+beliefPenaltyMPC_LA_DENSE_MMTSUB_44_44(beliefPenaltyMPC_Lsd15, beliefPenaltyMPC_Yd15);
+beliefPenaltyMPC_LA_DENSE_CHOL_44(beliefPenaltyMPC_Yd15, beliefPenaltyMPC_Ld15);
+beliefPenaltyMPC_LA_DENSE_MVMSUB1_44_44(beliefPenaltyMPC_Lsd15, beliefPenaltyMPC_yy14, beliefPenaltyMPC_beta15, beliefPenaltyMPC_bmy15);
+beliefPenaltyMPC_LA_DENSE_FORWARDSUB_44(beliefPenaltyMPC_Ld15, beliefPenaltyMPC_bmy15, beliefPenaltyMPC_yy15);
+beliefPenaltyMPC_LA_DENSE_MATRIXTFORWARDSUB_44_44(beliefPenaltyMPC_Ld15, beliefPenaltyMPC_Ysd16, beliefPenaltyMPC_Lsd16);
+beliefPenaltyMPC_LA_DENSE_MMTSUB_44_44(beliefPenaltyMPC_Lsd16, beliefPenaltyMPC_Yd16);
+beliefPenaltyMPC_LA_DENSE_CHOL_44(beliefPenaltyMPC_Yd16, beliefPenaltyMPC_Ld16);
+beliefPenaltyMPC_LA_DENSE_MVMSUB1_44_44(beliefPenaltyMPC_Lsd16, beliefPenaltyMPC_yy15, beliefPenaltyMPC_beta16, beliefPenaltyMPC_bmy16);
+beliefPenaltyMPC_LA_DENSE_FORWARDSUB_44(beliefPenaltyMPC_Ld16, beliefPenaltyMPC_bmy16, beliefPenaltyMPC_yy16);
+beliefPenaltyMPC_LA_DENSE_MATRIXTFORWARDSUB_44_44(beliefPenaltyMPC_Ld16, beliefPenaltyMPC_Ysd17, beliefPenaltyMPC_Lsd17);
+beliefPenaltyMPC_LA_DENSE_MMTSUB_44_44(beliefPenaltyMPC_Lsd17, beliefPenaltyMPC_Yd17);
+beliefPenaltyMPC_LA_DENSE_CHOL_44(beliefPenaltyMPC_Yd17, beliefPenaltyMPC_Ld17);
+beliefPenaltyMPC_LA_DENSE_MVMSUB1_44_44(beliefPenaltyMPC_Lsd17, beliefPenaltyMPC_yy16, beliefPenaltyMPC_beta17, beliefPenaltyMPC_bmy17);
+beliefPenaltyMPC_LA_DENSE_FORWARDSUB_44(beliefPenaltyMPC_Ld17, beliefPenaltyMPC_bmy17, beliefPenaltyMPC_yy17);
+beliefPenaltyMPC_LA_DENSE_MATRIXTFORWARDSUB_44_44(beliefPenaltyMPC_Ld17, beliefPenaltyMPC_Ysd18, beliefPenaltyMPC_Lsd18);
+beliefPenaltyMPC_LA_DENSE_MMTSUB_44_44(beliefPenaltyMPC_Lsd18, beliefPenaltyMPC_Yd18);
+beliefPenaltyMPC_LA_DENSE_CHOL_44(beliefPenaltyMPC_Yd18, beliefPenaltyMPC_Ld18);
+beliefPenaltyMPC_LA_DENSE_MVMSUB1_44_44(beliefPenaltyMPC_Lsd18, beliefPenaltyMPC_yy17, beliefPenaltyMPC_beta18, beliefPenaltyMPC_bmy18);
+beliefPenaltyMPC_LA_DENSE_FORWARDSUB_44(beliefPenaltyMPC_Ld18, beliefPenaltyMPC_bmy18, beliefPenaltyMPC_yy18);
+beliefPenaltyMPC_LA_DENSE_BACKWARDSUB_44(beliefPenaltyMPC_Ld18, beliefPenaltyMPC_yy18, beliefPenaltyMPC_dvaff18);
+beliefPenaltyMPC_LA_DENSE_MTVMSUB_44_44(beliefPenaltyMPC_Lsd18, beliefPenaltyMPC_dvaff18, beliefPenaltyMPC_yy17, beliefPenaltyMPC_bmy17);
+beliefPenaltyMPC_LA_DENSE_BACKWARDSUB_44(beliefPenaltyMPC_Ld17, beliefPenaltyMPC_bmy17, beliefPenaltyMPC_dvaff17);
+beliefPenaltyMPC_LA_DENSE_MTVMSUB_44_44(beliefPenaltyMPC_Lsd17, beliefPenaltyMPC_dvaff17, beliefPenaltyMPC_yy16, beliefPenaltyMPC_bmy16);
+beliefPenaltyMPC_LA_DENSE_BACKWARDSUB_44(beliefPenaltyMPC_Ld16, beliefPenaltyMPC_bmy16, beliefPenaltyMPC_dvaff16);
+beliefPenaltyMPC_LA_DENSE_MTVMSUB_44_44(beliefPenaltyMPC_Lsd16, beliefPenaltyMPC_dvaff16, beliefPenaltyMPC_yy15, beliefPenaltyMPC_bmy15);
+beliefPenaltyMPC_LA_DENSE_BACKWARDSUB_44(beliefPenaltyMPC_Ld15, beliefPenaltyMPC_bmy15, beliefPenaltyMPC_dvaff15);
+beliefPenaltyMPC_LA_DENSE_MTVMSUB_44_44(beliefPenaltyMPC_Lsd15, beliefPenaltyMPC_dvaff15, beliefPenaltyMPC_yy14, beliefPenaltyMPC_bmy14);
+beliefPenaltyMPC_LA_DENSE_BACKWARDSUB_44(beliefPenaltyMPC_Ld14, beliefPenaltyMPC_bmy14, beliefPenaltyMPC_dvaff14);
+beliefPenaltyMPC_LA_DENSE_MTVMSUB_44_44(beliefPenaltyMPC_Lsd14, beliefPenaltyMPC_dvaff14, beliefPenaltyMPC_yy13, beliefPenaltyMPC_bmy13);
+beliefPenaltyMPC_LA_DENSE_BACKWARDSUB_44(beliefPenaltyMPC_Ld13, beliefPenaltyMPC_bmy13, beliefPenaltyMPC_dvaff13);
 beliefPenaltyMPC_LA_DENSE_MTVMSUB_44_44(beliefPenaltyMPC_Lsd13, beliefPenaltyMPC_dvaff13, beliefPenaltyMPC_yy12, beliefPenaltyMPC_bmy12);
 beliefPenaltyMPC_LA_DENSE_BACKWARDSUB_44(beliefPenaltyMPC_Ld12, beliefPenaltyMPC_bmy12, beliefPenaltyMPC_dvaff12);
 beliefPenaltyMPC_LA_DENSE_MTVMSUB_44_44(beliefPenaltyMPC_Lsd12, beliefPenaltyMPC_dvaff12, beliefPenaltyMPC_yy11, beliefPenaltyMPC_bmy11);
@@ -3139,8 +3459,13 @@ beliefPenaltyMPC_LA_DENSE_DIAGZERO_MTVM2_44_134_44(params->C11, beliefPenaltyMPC
 beliefPenaltyMPC_LA_DENSE_DIAGZERO_MTVM2_44_134_44(params->C12, beliefPenaltyMPC_dvaff11, beliefPenaltyMPC_D02, beliefPenaltyMPC_dvaff10, beliefPenaltyMPC_grad_eq11);
 beliefPenaltyMPC_LA_DENSE_DIAGZERO_MTVM2_44_134_44(params->C13, beliefPenaltyMPC_dvaff12, beliefPenaltyMPC_D02, beliefPenaltyMPC_dvaff11, beliefPenaltyMPC_grad_eq12);
 beliefPenaltyMPC_LA_DENSE_DIAGZERO_MTVM2_44_134_44(params->C14, beliefPenaltyMPC_dvaff13, beliefPenaltyMPC_D02, beliefPenaltyMPC_dvaff12, beliefPenaltyMPC_grad_eq13);
-beliefPenaltyMPC_LA_DIAGZERO_MTVM_44_44(beliefPenaltyMPC_D14, beliefPenaltyMPC_dvaff13, beliefPenaltyMPC_grad_eq14);
-beliefPenaltyMPC_LA_VSUB2_1920(beliefPenaltyMPC_rd, beliefPenaltyMPC_grad_eq, beliefPenaltyMPC_rd);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_MTVM2_44_134_44(params->C15, beliefPenaltyMPC_dvaff14, beliefPenaltyMPC_D02, beliefPenaltyMPC_dvaff13, beliefPenaltyMPC_grad_eq14);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_MTVM2_44_134_44(params->C16, beliefPenaltyMPC_dvaff15, beliefPenaltyMPC_D02, beliefPenaltyMPC_dvaff14, beliefPenaltyMPC_grad_eq15);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_MTVM2_44_134_44(params->C17, beliefPenaltyMPC_dvaff16, beliefPenaltyMPC_D02, beliefPenaltyMPC_dvaff15, beliefPenaltyMPC_grad_eq16);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_MTVM2_44_134_44(params->C18, beliefPenaltyMPC_dvaff17, beliefPenaltyMPC_D02, beliefPenaltyMPC_dvaff16, beliefPenaltyMPC_grad_eq17);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_MTVM2_44_134_44(params->C19, beliefPenaltyMPC_dvaff18, beliefPenaltyMPC_D02, beliefPenaltyMPC_dvaff17, beliefPenaltyMPC_grad_eq18);
+beliefPenaltyMPC_LA_DIAGZERO_MTVM_44_44(beliefPenaltyMPC_D19, beliefPenaltyMPC_dvaff18, beliefPenaltyMPC_grad_eq19);
+beliefPenaltyMPC_LA_VSUB2_2590(beliefPenaltyMPC_rd, beliefPenaltyMPC_grad_eq, beliefPenaltyMPC_rd);
 beliefPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_134(beliefPenaltyMPC_Phi00, beliefPenaltyMPC_rd00, beliefPenaltyMPC_dzaff00);
 beliefPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_134(beliefPenaltyMPC_Phi01, beliefPenaltyMPC_rd01, beliefPenaltyMPC_dzaff01);
 beliefPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_134(beliefPenaltyMPC_Phi02, beliefPenaltyMPC_rd02, beliefPenaltyMPC_dzaff02);
@@ -3155,7 +3480,12 @@ beliefPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_134(beliefPenaltyMPC_Phi10, beliefPe
 beliefPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_134(beliefPenaltyMPC_Phi11, beliefPenaltyMPC_rd11, beliefPenaltyMPC_dzaff11);
 beliefPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_134(beliefPenaltyMPC_Phi12, beliefPenaltyMPC_rd12, beliefPenaltyMPC_dzaff12);
 beliefPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_134(beliefPenaltyMPC_Phi13, beliefPenaltyMPC_rd13, beliefPenaltyMPC_dzaff13);
-beliefPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_44(beliefPenaltyMPC_Phi14, beliefPenaltyMPC_rd14, beliefPenaltyMPC_dzaff14);
+beliefPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_134(beliefPenaltyMPC_Phi14, beliefPenaltyMPC_rd14, beliefPenaltyMPC_dzaff14);
+beliefPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_134(beliefPenaltyMPC_Phi15, beliefPenaltyMPC_rd15, beliefPenaltyMPC_dzaff15);
+beliefPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_134(beliefPenaltyMPC_Phi16, beliefPenaltyMPC_rd16, beliefPenaltyMPC_dzaff16);
+beliefPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_134(beliefPenaltyMPC_Phi17, beliefPenaltyMPC_rd17, beliefPenaltyMPC_dzaff17);
+beliefPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_134(beliefPenaltyMPC_Phi18, beliefPenaltyMPC_rd18, beliefPenaltyMPC_dzaff18);
+beliefPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_44(beliefPenaltyMPC_Phi19, beliefPenaltyMPC_rd19, beliefPenaltyMPC_dzaff19);
 beliefPenaltyMPC_LA_VSUB_INDEXED_134(beliefPenaltyMPC_dzaff00, beliefPenaltyMPC_lbIdx00, beliefPenaltyMPC_rilb00, beliefPenaltyMPC_dslbaff00);
 beliefPenaltyMPC_LA_VSUB3_134(beliefPenaltyMPC_llbbyslb00, beliefPenaltyMPC_dslbaff00, beliefPenaltyMPC_llb00, beliefPenaltyMPC_dllbaff00);
 beliefPenaltyMPC_LA_VSUB2_INDEXED_46(beliefPenaltyMPC_riub00, beliefPenaltyMPC_dzaff00, beliefPenaltyMPC_ubIdx00, beliefPenaltyMPC_dsubaff00);
@@ -3212,10 +3542,30 @@ beliefPenaltyMPC_LA_VSUB_INDEXED_134(beliefPenaltyMPC_dzaff13, beliefPenaltyMPC_
 beliefPenaltyMPC_LA_VSUB3_134(beliefPenaltyMPC_llbbyslb13, beliefPenaltyMPC_dslbaff13, beliefPenaltyMPC_llb13, beliefPenaltyMPC_dllbaff13);
 beliefPenaltyMPC_LA_VSUB2_INDEXED_46(beliefPenaltyMPC_riub13, beliefPenaltyMPC_dzaff13, beliefPenaltyMPC_ubIdx13, beliefPenaltyMPC_dsubaff13);
 beliefPenaltyMPC_LA_VSUB3_46(beliefPenaltyMPC_lubbysub13, beliefPenaltyMPC_dsubaff13, beliefPenaltyMPC_lub13, beliefPenaltyMPC_dlubaff13);
-beliefPenaltyMPC_LA_VSUB_INDEXED_44(beliefPenaltyMPC_dzaff14, beliefPenaltyMPC_lbIdx14, beliefPenaltyMPC_rilb14, beliefPenaltyMPC_dslbaff14);
-beliefPenaltyMPC_LA_VSUB3_44(beliefPenaltyMPC_llbbyslb14, beliefPenaltyMPC_dslbaff14, beliefPenaltyMPC_llb14, beliefPenaltyMPC_dllbaff14);
-beliefPenaltyMPC_LA_VSUB2_INDEXED_44(beliefPenaltyMPC_riub14, beliefPenaltyMPC_dzaff14, beliefPenaltyMPC_ubIdx14, beliefPenaltyMPC_dsubaff14);
-beliefPenaltyMPC_LA_VSUB3_44(beliefPenaltyMPC_lubbysub14, beliefPenaltyMPC_dsubaff14, beliefPenaltyMPC_lub14, beliefPenaltyMPC_dlubaff14);
+beliefPenaltyMPC_LA_VSUB_INDEXED_134(beliefPenaltyMPC_dzaff14, beliefPenaltyMPC_lbIdx14, beliefPenaltyMPC_rilb14, beliefPenaltyMPC_dslbaff14);
+beliefPenaltyMPC_LA_VSUB3_134(beliefPenaltyMPC_llbbyslb14, beliefPenaltyMPC_dslbaff14, beliefPenaltyMPC_llb14, beliefPenaltyMPC_dllbaff14);
+beliefPenaltyMPC_LA_VSUB2_INDEXED_46(beliefPenaltyMPC_riub14, beliefPenaltyMPC_dzaff14, beliefPenaltyMPC_ubIdx14, beliefPenaltyMPC_dsubaff14);
+beliefPenaltyMPC_LA_VSUB3_46(beliefPenaltyMPC_lubbysub14, beliefPenaltyMPC_dsubaff14, beliefPenaltyMPC_lub14, beliefPenaltyMPC_dlubaff14);
+beliefPenaltyMPC_LA_VSUB_INDEXED_134(beliefPenaltyMPC_dzaff15, beliefPenaltyMPC_lbIdx15, beliefPenaltyMPC_rilb15, beliefPenaltyMPC_dslbaff15);
+beliefPenaltyMPC_LA_VSUB3_134(beliefPenaltyMPC_llbbyslb15, beliefPenaltyMPC_dslbaff15, beliefPenaltyMPC_llb15, beliefPenaltyMPC_dllbaff15);
+beliefPenaltyMPC_LA_VSUB2_INDEXED_46(beliefPenaltyMPC_riub15, beliefPenaltyMPC_dzaff15, beliefPenaltyMPC_ubIdx15, beliefPenaltyMPC_dsubaff15);
+beliefPenaltyMPC_LA_VSUB3_46(beliefPenaltyMPC_lubbysub15, beliefPenaltyMPC_dsubaff15, beliefPenaltyMPC_lub15, beliefPenaltyMPC_dlubaff15);
+beliefPenaltyMPC_LA_VSUB_INDEXED_134(beliefPenaltyMPC_dzaff16, beliefPenaltyMPC_lbIdx16, beliefPenaltyMPC_rilb16, beliefPenaltyMPC_dslbaff16);
+beliefPenaltyMPC_LA_VSUB3_134(beliefPenaltyMPC_llbbyslb16, beliefPenaltyMPC_dslbaff16, beliefPenaltyMPC_llb16, beliefPenaltyMPC_dllbaff16);
+beliefPenaltyMPC_LA_VSUB2_INDEXED_46(beliefPenaltyMPC_riub16, beliefPenaltyMPC_dzaff16, beliefPenaltyMPC_ubIdx16, beliefPenaltyMPC_dsubaff16);
+beliefPenaltyMPC_LA_VSUB3_46(beliefPenaltyMPC_lubbysub16, beliefPenaltyMPC_dsubaff16, beliefPenaltyMPC_lub16, beliefPenaltyMPC_dlubaff16);
+beliefPenaltyMPC_LA_VSUB_INDEXED_134(beliefPenaltyMPC_dzaff17, beliefPenaltyMPC_lbIdx17, beliefPenaltyMPC_rilb17, beliefPenaltyMPC_dslbaff17);
+beliefPenaltyMPC_LA_VSUB3_134(beliefPenaltyMPC_llbbyslb17, beliefPenaltyMPC_dslbaff17, beliefPenaltyMPC_llb17, beliefPenaltyMPC_dllbaff17);
+beliefPenaltyMPC_LA_VSUB2_INDEXED_46(beliefPenaltyMPC_riub17, beliefPenaltyMPC_dzaff17, beliefPenaltyMPC_ubIdx17, beliefPenaltyMPC_dsubaff17);
+beliefPenaltyMPC_LA_VSUB3_46(beliefPenaltyMPC_lubbysub17, beliefPenaltyMPC_dsubaff17, beliefPenaltyMPC_lub17, beliefPenaltyMPC_dlubaff17);
+beliefPenaltyMPC_LA_VSUB_INDEXED_134(beliefPenaltyMPC_dzaff18, beliefPenaltyMPC_lbIdx18, beliefPenaltyMPC_rilb18, beliefPenaltyMPC_dslbaff18);
+beliefPenaltyMPC_LA_VSUB3_134(beliefPenaltyMPC_llbbyslb18, beliefPenaltyMPC_dslbaff18, beliefPenaltyMPC_llb18, beliefPenaltyMPC_dllbaff18);
+beliefPenaltyMPC_LA_VSUB2_INDEXED_46(beliefPenaltyMPC_riub18, beliefPenaltyMPC_dzaff18, beliefPenaltyMPC_ubIdx18, beliefPenaltyMPC_dsubaff18);
+beliefPenaltyMPC_LA_VSUB3_46(beliefPenaltyMPC_lubbysub18, beliefPenaltyMPC_dsubaff18, beliefPenaltyMPC_lub18, beliefPenaltyMPC_dlubaff18);
+beliefPenaltyMPC_LA_VSUB_INDEXED_44(beliefPenaltyMPC_dzaff19, beliefPenaltyMPC_lbIdx19, beliefPenaltyMPC_rilb19, beliefPenaltyMPC_dslbaff19);
+beliefPenaltyMPC_LA_VSUB3_44(beliefPenaltyMPC_llbbyslb19, beliefPenaltyMPC_dslbaff19, beliefPenaltyMPC_llb19, beliefPenaltyMPC_dllbaff19);
+beliefPenaltyMPC_LA_VSUB2_INDEXED_44(beliefPenaltyMPC_riub19, beliefPenaltyMPC_dzaff19, beliefPenaltyMPC_ubIdx19, beliefPenaltyMPC_dsubaff19);
+beliefPenaltyMPC_LA_VSUB3_44(beliefPenaltyMPC_lubbysub19, beliefPenaltyMPC_dsubaff19, beliefPenaltyMPC_lub19, beliefPenaltyMPC_dlubaff19);
 info->lsit_aff = beliefPenaltyMPC_LINESEARCH_BACKTRACKING_AFFINE(beliefPenaltyMPC_l, beliefPenaltyMPC_s, beliefPenaltyMPC_dl_aff, beliefPenaltyMPC_ds_aff, &info->step_aff, &info->mu_aff);
 if( info->lsit_aff == beliefPenaltyMPC_NOPROGRESS ){
 exitcode = beliefPenaltyMPC_NOPROGRESS; break;
@@ -3223,7 +3573,7 @@ exitcode = beliefPenaltyMPC_NOPROGRESS; break;
 sigma_3rdroot = info->mu_aff / info->mu;
 info->sigma = sigma_3rdroot*sigma_3rdroot*sigma_3rdroot;
 musigma = info->mu * info->sigma;
-beliefPenaltyMPC_LA_VSUB5_2608(beliefPenaltyMPC_ds_aff, beliefPenaltyMPC_dl_aff, musigma, beliefPenaltyMPC_ccrhs);
+beliefPenaltyMPC_LA_VSUB5_3508(beliefPenaltyMPC_ds_aff, beliefPenaltyMPC_dl_aff, musigma, beliefPenaltyMPC_ccrhs);
 beliefPenaltyMPC_LA_VSUB6_INDEXED_134_46_134(beliefPenaltyMPC_ccrhsub00, beliefPenaltyMPC_sub00, beliefPenaltyMPC_ubIdx00, beliefPenaltyMPC_ccrhsl00, beliefPenaltyMPC_slb00, beliefPenaltyMPC_lbIdx00, beliefPenaltyMPC_rd00);
 beliefPenaltyMPC_LA_VSUB6_INDEXED_134_46_134(beliefPenaltyMPC_ccrhsub01, beliefPenaltyMPC_sub01, beliefPenaltyMPC_ubIdx01, beliefPenaltyMPC_ccrhsl01, beliefPenaltyMPC_slb01, beliefPenaltyMPC_lbIdx01, beliefPenaltyMPC_rd01);
 beliefPenaltyMPC_LA_DIAG_FORWARDSUB_134(beliefPenaltyMPC_Phi00, beliefPenaltyMPC_rd00, beliefPenaltyMPC_Lbyrd00);
@@ -3290,12 +3640,47 @@ beliefPenaltyMPC_LA_DIAG_FORWARDSUB_134(beliefPenaltyMPC_Phi13, beliefPenaltyMPC
 beliefPenaltyMPC_LA_DENSE_DIAGZERO_2MVMADD_44_134_134(beliefPenaltyMPC_V12, beliefPenaltyMPC_Lbyrd12, beliefPenaltyMPC_W13, beliefPenaltyMPC_Lbyrd13, beliefPenaltyMPC_beta12);
 beliefPenaltyMPC_LA_DENSE_MVMSUB1_44_44(beliefPenaltyMPC_Lsd12, beliefPenaltyMPC_yy11, beliefPenaltyMPC_beta12, beliefPenaltyMPC_bmy12);
 beliefPenaltyMPC_LA_DENSE_FORWARDSUB_44(beliefPenaltyMPC_Ld12, beliefPenaltyMPC_bmy12, beliefPenaltyMPC_yy12);
-beliefPenaltyMPC_LA_VSUB6_INDEXED_44_44_44(beliefPenaltyMPC_ccrhsub14, beliefPenaltyMPC_sub14, beliefPenaltyMPC_ubIdx14, beliefPenaltyMPC_ccrhsl14, beliefPenaltyMPC_slb14, beliefPenaltyMPC_lbIdx14, beliefPenaltyMPC_rd14);
-beliefPenaltyMPC_LA_DIAG_FORWARDSUB_44(beliefPenaltyMPC_Phi14, beliefPenaltyMPC_rd14, beliefPenaltyMPC_Lbyrd14);
-beliefPenaltyMPC_LA_DENSE_DIAGZERO_2MVMADD_44_134_44(beliefPenaltyMPC_V13, beliefPenaltyMPC_Lbyrd13, beliefPenaltyMPC_W14, beliefPenaltyMPC_Lbyrd14, beliefPenaltyMPC_beta13);
+beliefPenaltyMPC_LA_VSUB6_INDEXED_134_46_134(beliefPenaltyMPC_ccrhsub14, beliefPenaltyMPC_sub14, beliefPenaltyMPC_ubIdx14, beliefPenaltyMPC_ccrhsl14, beliefPenaltyMPC_slb14, beliefPenaltyMPC_lbIdx14, beliefPenaltyMPC_rd14);
+beliefPenaltyMPC_LA_DIAG_FORWARDSUB_134(beliefPenaltyMPC_Phi14, beliefPenaltyMPC_rd14, beliefPenaltyMPC_Lbyrd14);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_2MVMADD_44_134_134(beliefPenaltyMPC_V13, beliefPenaltyMPC_Lbyrd13, beliefPenaltyMPC_W14, beliefPenaltyMPC_Lbyrd14, beliefPenaltyMPC_beta13);
 beliefPenaltyMPC_LA_DENSE_MVMSUB1_44_44(beliefPenaltyMPC_Lsd13, beliefPenaltyMPC_yy12, beliefPenaltyMPC_beta13, beliefPenaltyMPC_bmy13);
 beliefPenaltyMPC_LA_DENSE_FORWARDSUB_44(beliefPenaltyMPC_Ld13, beliefPenaltyMPC_bmy13, beliefPenaltyMPC_yy13);
-beliefPenaltyMPC_LA_DENSE_BACKWARDSUB_44(beliefPenaltyMPC_Ld13, beliefPenaltyMPC_yy13, beliefPenaltyMPC_dvcc13);
+beliefPenaltyMPC_LA_VSUB6_INDEXED_134_46_134(beliefPenaltyMPC_ccrhsub15, beliefPenaltyMPC_sub15, beliefPenaltyMPC_ubIdx15, beliefPenaltyMPC_ccrhsl15, beliefPenaltyMPC_slb15, beliefPenaltyMPC_lbIdx15, beliefPenaltyMPC_rd15);
+beliefPenaltyMPC_LA_DIAG_FORWARDSUB_134(beliefPenaltyMPC_Phi15, beliefPenaltyMPC_rd15, beliefPenaltyMPC_Lbyrd15);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_2MVMADD_44_134_134(beliefPenaltyMPC_V14, beliefPenaltyMPC_Lbyrd14, beliefPenaltyMPC_W15, beliefPenaltyMPC_Lbyrd15, beliefPenaltyMPC_beta14);
+beliefPenaltyMPC_LA_DENSE_MVMSUB1_44_44(beliefPenaltyMPC_Lsd14, beliefPenaltyMPC_yy13, beliefPenaltyMPC_beta14, beliefPenaltyMPC_bmy14);
+beliefPenaltyMPC_LA_DENSE_FORWARDSUB_44(beliefPenaltyMPC_Ld14, beliefPenaltyMPC_bmy14, beliefPenaltyMPC_yy14);
+beliefPenaltyMPC_LA_VSUB6_INDEXED_134_46_134(beliefPenaltyMPC_ccrhsub16, beliefPenaltyMPC_sub16, beliefPenaltyMPC_ubIdx16, beliefPenaltyMPC_ccrhsl16, beliefPenaltyMPC_slb16, beliefPenaltyMPC_lbIdx16, beliefPenaltyMPC_rd16);
+beliefPenaltyMPC_LA_DIAG_FORWARDSUB_134(beliefPenaltyMPC_Phi16, beliefPenaltyMPC_rd16, beliefPenaltyMPC_Lbyrd16);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_2MVMADD_44_134_134(beliefPenaltyMPC_V15, beliefPenaltyMPC_Lbyrd15, beliefPenaltyMPC_W16, beliefPenaltyMPC_Lbyrd16, beliefPenaltyMPC_beta15);
+beliefPenaltyMPC_LA_DENSE_MVMSUB1_44_44(beliefPenaltyMPC_Lsd15, beliefPenaltyMPC_yy14, beliefPenaltyMPC_beta15, beliefPenaltyMPC_bmy15);
+beliefPenaltyMPC_LA_DENSE_FORWARDSUB_44(beliefPenaltyMPC_Ld15, beliefPenaltyMPC_bmy15, beliefPenaltyMPC_yy15);
+beliefPenaltyMPC_LA_VSUB6_INDEXED_134_46_134(beliefPenaltyMPC_ccrhsub17, beliefPenaltyMPC_sub17, beliefPenaltyMPC_ubIdx17, beliefPenaltyMPC_ccrhsl17, beliefPenaltyMPC_slb17, beliefPenaltyMPC_lbIdx17, beliefPenaltyMPC_rd17);
+beliefPenaltyMPC_LA_DIAG_FORWARDSUB_134(beliefPenaltyMPC_Phi17, beliefPenaltyMPC_rd17, beliefPenaltyMPC_Lbyrd17);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_2MVMADD_44_134_134(beliefPenaltyMPC_V16, beliefPenaltyMPC_Lbyrd16, beliefPenaltyMPC_W17, beliefPenaltyMPC_Lbyrd17, beliefPenaltyMPC_beta16);
+beliefPenaltyMPC_LA_DENSE_MVMSUB1_44_44(beliefPenaltyMPC_Lsd16, beliefPenaltyMPC_yy15, beliefPenaltyMPC_beta16, beliefPenaltyMPC_bmy16);
+beliefPenaltyMPC_LA_DENSE_FORWARDSUB_44(beliefPenaltyMPC_Ld16, beliefPenaltyMPC_bmy16, beliefPenaltyMPC_yy16);
+beliefPenaltyMPC_LA_VSUB6_INDEXED_134_46_134(beliefPenaltyMPC_ccrhsub18, beliefPenaltyMPC_sub18, beliefPenaltyMPC_ubIdx18, beliefPenaltyMPC_ccrhsl18, beliefPenaltyMPC_slb18, beliefPenaltyMPC_lbIdx18, beliefPenaltyMPC_rd18);
+beliefPenaltyMPC_LA_DIAG_FORWARDSUB_134(beliefPenaltyMPC_Phi18, beliefPenaltyMPC_rd18, beliefPenaltyMPC_Lbyrd18);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_2MVMADD_44_134_134(beliefPenaltyMPC_V17, beliefPenaltyMPC_Lbyrd17, beliefPenaltyMPC_W18, beliefPenaltyMPC_Lbyrd18, beliefPenaltyMPC_beta17);
+beliefPenaltyMPC_LA_DENSE_MVMSUB1_44_44(beliefPenaltyMPC_Lsd17, beliefPenaltyMPC_yy16, beliefPenaltyMPC_beta17, beliefPenaltyMPC_bmy17);
+beliefPenaltyMPC_LA_DENSE_FORWARDSUB_44(beliefPenaltyMPC_Ld17, beliefPenaltyMPC_bmy17, beliefPenaltyMPC_yy17);
+beliefPenaltyMPC_LA_VSUB6_INDEXED_44_44_44(beliefPenaltyMPC_ccrhsub19, beliefPenaltyMPC_sub19, beliefPenaltyMPC_ubIdx19, beliefPenaltyMPC_ccrhsl19, beliefPenaltyMPC_slb19, beliefPenaltyMPC_lbIdx19, beliefPenaltyMPC_rd19);
+beliefPenaltyMPC_LA_DIAG_FORWARDSUB_44(beliefPenaltyMPC_Phi19, beliefPenaltyMPC_rd19, beliefPenaltyMPC_Lbyrd19);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_2MVMADD_44_134_44(beliefPenaltyMPC_V18, beliefPenaltyMPC_Lbyrd18, beliefPenaltyMPC_W19, beliefPenaltyMPC_Lbyrd19, beliefPenaltyMPC_beta18);
+beliefPenaltyMPC_LA_DENSE_MVMSUB1_44_44(beliefPenaltyMPC_Lsd18, beliefPenaltyMPC_yy17, beliefPenaltyMPC_beta18, beliefPenaltyMPC_bmy18);
+beliefPenaltyMPC_LA_DENSE_FORWARDSUB_44(beliefPenaltyMPC_Ld18, beliefPenaltyMPC_bmy18, beliefPenaltyMPC_yy18);
+beliefPenaltyMPC_LA_DENSE_BACKWARDSUB_44(beliefPenaltyMPC_Ld18, beliefPenaltyMPC_yy18, beliefPenaltyMPC_dvcc18);
+beliefPenaltyMPC_LA_DENSE_MTVMSUB_44_44(beliefPenaltyMPC_Lsd18, beliefPenaltyMPC_dvcc18, beliefPenaltyMPC_yy17, beliefPenaltyMPC_bmy17);
+beliefPenaltyMPC_LA_DENSE_BACKWARDSUB_44(beliefPenaltyMPC_Ld17, beliefPenaltyMPC_bmy17, beliefPenaltyMPC_dvcc17);
+beliefPenaltyMPC_LA_DENSE_MTVMSUB_44_44(beliefPenaltyMPC_Lsd17, beliefPenaltyMPC_dvcc17, beliefPenaltyMPC_yy16, beliefPenaltyMPC_bmy16);
+beliefPenaltyMPC_LA_DENSE_BACKWARDSUB_44(beliefPenaltyMPC_Ld16, beliefPenaltyMPC_bmy16, beliefPenaltyMPC_dvcc16);
+beliefPenaltyMPC_LA_DENSE_MTVMSUB_44_44(beliefPenaltyMPC_Lsd16, beliefPenaltyMPC_dvcc16, beliefPenaltyMPC_yy15, beliefPenaltyMPC_bmy15);
+beliefPenaltyMPC_LA_DENSE_BACKWARDSUB_44(beliefPenaltyMPC_Ld15, beliefPenaltyMPC_bmy15, beliefPenaltyMPC_dvcc15);
+beliefPenaltyMPC_LA_DENSE_MTVMSUB_44_44(beliefPenaltyMPC_Lsd15, beliefPenaltyMPC_dvcc15, beliefPenaltyMPC_yy14, beliefPenaltyMPC_bmy14);
+beliefPenaltyMPC_LA_DENSE_BACKWARDSUB_44(beliefPenaltyMPC_Ld14, beliefPenaltyMPC_bmy14, beliefPenaltyMPC_dvcc14);
+beliefPenaltyMPC_LA_DENSE_MTVMSUB_44_44(beliefPenaltyMPC_Lsd14, beliefPenaltyMPC_dvcc14, beliefPenaltyMPC_yy13, beliefPenaltyMPC_bmy13);
+beliefPenaltyMPC_LA_DENSE_BACKWARDSUB_44(beliefPenaltyMPC_Ld13, beliefPenaltyMPC_bmy13, beliefPenaltyMPC_dvcc13);
 beliefPenaltyMPC_LA_DENSE_MTVMSUB_44_44(beliefPenaltyMPC_Lsd13, beliefPenaltyMPC_dvcc13, beliefPenaltyMPC_yy12, beliefPenaltyMPC_bmy12);
 beliefPenaltyMPC_LA_DENSE_BACKWARDSUB_44(beliefPenaltyMPC_Ld12, beliefPenaltyMPC_bmy12, beliefPenaltyMPC_dvcc12);
 beliefPenaltyMPC_LA_DENSE_MTVMSUB_44_44(beliefPenaltyMPC_Lsd12, beliefPenaltyMPC_dvcc12, beliefPenaltyMPC_yy11, beliefPenaltyMPC_bmy11);
@@ -3336,8 +3721,13 @@ beliefPenaltyMPC_LA_DENSE_DIAGZERO_MTVM2_44_134_44(params->C11, beliefPenaltyMPC
 beliefPenaltyMPC_LA_DENSE_DIAGZERO_MTVM2_44_134_44(params->C12, beliefPenaltyMPC_dvcc11, beliefPenaltyMPC_D02, beliefPenaltyMPC_dvcc10, beliefPenaltyMPC_grad_eq11);
 beliefPenaltyMPC_LA_DENSE_DIAGZERO_MTVM2_44_134_44(params->C13, beliefPenaltyMPC_dvcc12, beliefPenaltyMPC_D02, beliefPenaltyMPC_dvcc11, beliefPenaltyMPC_grad_eq12);
 beliefPenaltyMPC_LA_DENSE_DIAGZERO_MTVM2_44_134_44(params->C14, beliefPenaltyMPC_dvcc13, beliefPenaltyMPC_D02, beliefPenaltyMPC_dvcc12, beliefPenaltyMPC_grad_eq13);
-beliefPenaltyMPC_LA_DIAGZERO_MTVM_44_44(beliefPenaltyMPC_D14, beliefPenaltyMPC_dvcc13, beliefPenaltyMPC_grad_eq14);
-beliefPenaltyMPC_LA_VSUB_1920(beliefPenaltyMPC_rd, beliefPenaltyMPC_grad_eq, beliefPenaltyMPC_rd);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_MTVM2_44_134_44(params->C15, beliefPenaltyMPC_dvcc14, beliefPenaltyMPC_D02, beliefPenaltyMPC_dvcc13, beliefPenaltyMPC_grad_eq14);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_MTVM2_44_134_44(params->C16, beliefPenaltyMPC_dvcc15, beliefPenaltyMPC_D02, beliefPenaltyMPC_dvcc14, beliefPenaltyMPC_grad_eq15);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_MTVM2_44_134_44(params->C17, beliefPenaltyMPC_dvcc16, beliefPenaltyMPC_D02, beliefPenaltyMPC_dvcc15, beliefPenaltyMPC_grad_eq16);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_MTVM2_44_134_44(params->C18, beliefPenaltyMPC_dvcc17, beliefPenaltyMPC_D02, beliefPenaltyMPC_dvcc16, beliefPenaltyMPC_grad_eq17);
+beliefPenaltyMPC_LA_DENSE_DIAGZERO_MTVM2_44_134_44(params->C19, beliefPenaltyMPC_dvcc18, beliefPenaltyMPC_D02, beliefPenaltyMPC_dvcc17, beliefPenaltyMPC_grad_eq18);
+beliefPenaltyMPC_LA_DIAGZERO_MTVM_44_44(beliefPenaltyMPC_D19, beliefPenaltyMPC_dvcc18, beliefPenaltyMPC_grad_eq19);
+beliefPenaltyMPC_LA_VSUB_2590(beliefPenaltyMPC_rd, beliefPenaltyMPC_grad_eq, beliefPenaltyMPC_rd);
 beliefPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_134(beliefPenaltyMPC_Phi00, beliefPenaltyMPC_rd00, beliefPenaltyMPC_dzcc00);
 beliefPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_134(beliefPenaltyMPC_Phi01, beliefPenaltyMPC_rd01, beliefPenaltyMPC_dzcc01);
 beliefPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_134(beliefPenaltyMPC_Phi02, beliefPenaltyMPC_rd02, beliefPenaltyMPC_dzcc02);
@@ -3352,7 +3742,12 @@ beliefPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_134(beliefPenaltyMPC_Phi10, beliefPe
 beliefPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_134(beliefPenaltyMPC_Phi11, beliefPenaltyMPC_rd11, beliefPenaltyMPC_dzcc11);
 beliefPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_134(beliefPenaltyMPC_Phi12, beliefPenaltyMPC_rd12, beliefPenaltyMPC_dzcc12);
 beliefPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_134(beliefPenaltyMPC_Phi13, beliefPenaltyMPC_rd13, beliefPenaltyMPC_dzcc13);
-beliefPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_44(beliefPenaltyMPC_Phi14, beliefPenaltyMPC_rd14, beliefPenaltyMPC_dzcc14);
+beliefPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_134(beliefPenaltyMPC_Phi14, beliefPenaltyMPC_rd14, beliefPenaltyMPC_dzcc14);
+beliefPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_134(beliefPenaltyMPC_Phi15, beliefPenaltyMPC_rd15, beliefPenaltyMPC_dzcc15);
+beliefPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_134(beliefPenaltyMPC_Phi16, beliefPenaltyMPC_rd16, beliefPenaltyMPC_dzcc16);
+beliefPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_134(beliefPenaltyMPC_Phi17, beliefPenaltyMPC_rd17, beliefPenaltyMPC_dzcc17);
+beliefPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_134(beliefPenaltyMPC_Phi18, beliefPenaltyMPC_rd18, beliefPenaltyMPC_dzcc18);
+beliefPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_44(beliefPenaltyMPC_Phi19, beliefPenaltyMPC_rd19, beliefPenaltyMPC_dzcc19);
 beliefPenaltyMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_134(beliefPenaltyMPC_ccrhsl00, beliefPenaltyMPC_slb00, beliefPenaltyMPC_llbbyslb00, beliefPenaltyMPC_dzcc00, beliefPenaltyMPC_lbIdx00, beliefPenaltyMPC_dllbcc00);
 beliefPenaltyMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_46(beliefPenaltyMPC_ccrhsub00, beliefPenaltyMPC_sub00, beliefPenaltyMPC_lubbysub00, beliefPenaltyMPC_dzcc00, beliefPenaltyMPC_ubIdx00, beliefPenaltyMPC_dlubcc00);
 beliefPenaltyMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_134(beliefPenaltyMPC_ccrhsl01, beliefPenaltyMPC_slb01, beliefPenaltyMPC_llbbyslb01, beliefPenaltyMPC_dzcc01, beliefPenaltyMPC_lbIdx01, beliefPenaltyMPC_dllbcc01);
@@ -3381,13 +3776,23 @@ beliefPenaltyMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_134(beliefPenaltyMPC_ccrhsl12, be
 beliefPenaltyMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_46(beliefPenaltyMPC_ccrhsub12, beliefPenaltyMPC_sub12, beliefPenaltyMPC_lubbysub12, beliefPenaltyMPC_dzcc12, beliefPenaltyMPC_ubIdx12, beliefPenaltyMPC_dlubcc12);
 beliefPenaltyMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_134(beliefPenaltyMPC_ccrhsl13, beliefPenaltyMPC_slb13, beliefPenaltyMPC_llbbyslb13, beliefPenaltyMPC_dzcc13, beliefPenaltyMPC_lbIdx13, beliefPenaltyMPC_dllbcc13);
 beliefPenaltyMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_46(beliefPenaltyMPC_ccrhsub13, beliefPenaltyMPC_sub13, beliefPenaltyMPC_lubbysub13, beliefPenaltyMPC_dzcc13, beliefPenaltyMPC_ubIdx13, beliefPenaltyMPC_dlubcc13);
-beliefPenaltyMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_44(beliefPenaltyMPC_ccrhsl14, beliefPenaltyMPC_slb14, beliefPenaltyMPC_llbbyslb14, beliefPenaltyMPC_dzcc14, beliefPenaltyMPC_lbIdx14, beliefPenaltyMPC_dllbcc14);
-beliefPenaltyMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_44(beliefPenaltyMPC_ccrhsub14, beliefPenaltyMPC_sub14, beliefPenaltyMPC_lubbysub14, beliefPenaltyMPC_dzcc14, beliefPenaltyMPC_ubIdx14, beliefPenaltyMPC_dlubcc14);
-beliefPenaltyMPC_LA_VSUB7_2608(beliefPenaltyMPC_l, beliefPenaltyMPC_ccrhs, beliefPenaltyMPC_s, beliefPenaltyMPC_dl_cc, beliefPenaltyMPC_ds_cc);
-beliefPenaltyMPC_LA_VADD_1920(beliefPenaltyMPC_dz_cc, beliefPenaltyMPC_dz_aff);
-beliefPenaltyMPC_LA_VADD_660(beliefPenaltyMPC_dv_cc, beliefPenaltyMPC_dv_aff);
-beliefPenaltyMPC_LA_VADD_2608(beliefPenaltyMPC_dl_cc, beliefPenaltyMPC_dl_aff);
-beliefPenaltyMPC_LA_VADD_2608(beliefPenaltyMPC_ds_cc, beliefPenaltyMPC_ds_aff);
+beliefPenaltyMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_134(beliefPenaltyMPC_ccrhsl14, beliefPenaltyMPC_slb14, beliefPenaltyMPC_llbbyslb14, beliefPenaltyMPC_dzcc14, beliefPenaltyMPC_lbIdx14, beliefPenaltyMPC_dllbcc14);
+beliefPenaltyMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_46(beliefPenaltyMPC_ccrhsub14, beliefPenaltyMPC_sub14, beliefPenaltyMPC_lubbysub14, beliefPenaltyMPC_dzcc14, beliefPenaltyMPC_ubIdx14, beliefPenaltyMPC_dlubcc14);
+beliefPenaltyMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_134(beliefPenaltyMPC_ccrhsl15, beliefPenaltyMPC_slb15, beliefPenaltyMPC_llbbyslb15, beliefPenaltyMPC_dzcc15, beliefPenaltyMPC_lbIdx15, beliefPenaltyMPC_dllbcc15);
+beliefPenaltyMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_46(beliefPenaltyMPC_ccrhsub15, beliefPenaltyMPC_sub15, beliefPenaltyMPC_lubbysub15, beliefPenaltyMPC_dzcc15, beliefPenaltyMPC_ubIdx15, beliefPenaltyMPC_dlubcc15);
+beliefPenaltyMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_134(beliefPenaltyMPC_ccrhsl16, beliefPenaltyMPC_slb16, beliefPenaltyMPC_llbbyslb16, beliefPenaltyMPC_dzcc16, beliefPenaltyMPC_lbIdx16, beliefPenaltyMPC_dllbcc16);
+beliefPenaltyMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_46(beliefPenaltyMPC_ccrhsub16, beliefPenaltyMPC_sub16, beliefPenaltyMPC_lubbysub16, beliefPenaltyMPC_dzcc16, beliefPenaltyMPC_ubIdx16, beliefPenaltyMPC_dlubcc16);
+beliefPenaltyMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_134(beliefPenaltyMPC_ccrhsl17, beliefPenaltyMPC_slb17, beliefPenaltyMPC_llbbyslb17, beliefPenaltyMPC_dzcc17, beliefPenaltyMPC_lbIdx17, beliefPenaltyMPC_dllbcc17);
+beliefPenaltyMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_46(beliefPenaltyMPC_ccrhsub17, beliefPenaltyMPC_sub17, beliefPenaltyMPC_lubbysub17, beliefPenaltyMPC_dzcc17, beliefPenaltyMPC_ubIdx17, beliefPenaltyMPC_dlubcc17);
+beliefPenaltyMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_134(beliefPenaltyMPC_ccrhsl18, beliefPenaltyMPC_slb18, beliefPenaltyMPC_llbbyslb18, beliefPenaltyMPC_dzcc18, beliefPenaltyMPC_lbIdx18, beliefPenaltyMPC_dllbcc18);
+beliefPenaltyMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_46(beliefPenaltyMPC_ccrhsub18, beliefPenaltyMPC_sub18, beliefPenaltyMPC_lubbysub18, beliefPenaltyMPC_dzcc18, beliefPenaltyMPC_ubIdx18, beliefPenaltyMPC_dlubcc18);
+beliefPenaltyMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_44(beliefPenaltyMPC_ccrhsl19, beliefPenaltyMPC_slb19, beliefPenaltyMPC_llbbyslb19, beliefPenaltyMPC_dzcc19, beliefPenaltyMPC_lbIdx19, beliefPenaltyMPC_dllbcc19);
+beliefPenaltyMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_44(beliefPenaltyMPC_ccrhsub19, beliefPenaltyMPC_sub19, beliefPenaltyMPC_lubbysub19, beliefPenaltyMPC_dzcc19, beliefPenaltyMPC_ubIdx19, beliefPenaltyMPC_dlubcc19);
+beliefPenaltyMPC_LA_VSUB7_3508(beliefPenaltyMPC_l, beliefPenaltyMPC_ccrhs, beliefPenaltyMPC_s, beliefPenaltyMPC_dl_cc, beliefPenaltyMPC_ds_cc);
+beliefPenaltyMPC_LA_VADD_2590(beliefPenaltyMPC_dz_cc, beliefPenaltyMPC_dz_aff);
+beliefPenaltyMPC_LA_VADD_880(beliefPenaltyMPC_dv_cc, beliefPenaltyMPC_dv_aff);
+beliefPenaltyMPC_LA_VADD_3508(beliefPenaltyMPC_dl_cc, beliefPenaltyMPC_dl_aff);
+beliefPenaltyMPC_LA_VADD_3508(beliefPenaltyMPC_ds_cc, beliefPenaltyMPC_ds_aff);
 info->lsit_cc = beliefPenaltyMPC_LINESEARCH_BACKTRACKING_COMBINED(beliefPenaltyMPC_z, beliefPenaltyMPC_v, beliefPenaltyMPC_l, beliefPenaltyMPC_s, beliefPenaltyMPC_dz_cc, beliefPenaltyMPC_dv_cc, beliefPenaltyMPC_dl_cc, beliefPenaltyMPC_ds_cc, &info->step_cc, &info->mu);
 if( info->lsit_cc == beliefPenaltyMPC_NOPROGRESS ){
 exitcode = beliefPenaltyMPC_NOPROGRESS; break;
@@ -4082,6 +4487,236 @@ output->z15[40] = beliefPenaltyMPC_z14[40];
 output->z15[41] = beliefPenaltyMPC_z14[41];
 output->z15[42] = beliefPenaltyMPC_z14[42];
 output->z15[43] = beliefPenaltyMPC_z14[43];
+output->z15[44] = beliefPenaltyMPC_z14[44];
+output->z15[45] = beliefPenaltyMPC_z14[45];
+output->z16[0] = beliefPenaltyMPC_z15[0];
+output->z16[1] = beliefPenaltyMPC_z15[1];
+output->z16[2] = beliefPenaltyMPC_z15[2];
+output->z16[3] = beliefPenaltyMPC_z15[3];
+output->z16[4] = beliefPenaltyMPC_z15[4];
+output->z16[5] = beliefPenaltyMPC_z15[5];
+output->z16[6] = beliefPenaltyMPC_z15[6];
+output->z16[7] = beliefPenaltyMPC_z15[7];
+output->z16[8] = beliefPenaltyMPC_z15[8];
+output->z16[9] = beliefPenaltyMPC_z15[9];
+output->z16[10] = beliefPenaltyMPC_z15[10];
+output->z16[11] = beliefPenaltyMPC_z15[11];
+output->z16[12] = beliefPenaltyMPC_z15[12];
+output->z16[13] = beliefPenaltyMPC_z15[13];
+output->z16[14] = beliefPenaltyMPC_z15[14];
+output->z16[15] = beliefPenaltyMPC_z15[15];
+output->z16[16] = beliefPenaltyMPC_z15[16];
+output->z16[17] = beliefPenaltyMPC_z15[17];
+output->z16[18] = beliefPenaltyMPC_z15[18];
+output->z16[19] = beliefPenaltyMPC_z15[19];
+output->z16[20] = beliefPenaltyMPC_z15[20];
+output->z16[21] = beliefPenaltyMPC_z15[21];
+output->z16[22] = beliefPenaltyMPC_z15[22];
+output->z16[23] = beliefPenaltyMPC_z15[23];
+output->z16[24] = beliefPenaltyMPC_z15[24];
+output->z16[25] = beliefPenaltyMPC_z15[25];
+output->z16[26] = beliefPenaltyMPC_z15[26];
+output->z16[27] = beliefPenaltyMPC_z15[27];
+output->z16[28] = beliefPenaltyMPC_z15[28];
+output->z16[29] = beliefPenaltyMPC_z15[29];
+output->z16[30] = beliefPenaltyMPC_z15[30];
+output->z16[31] = beliefPenaltyMPC_z15[31];
+output->z16[32] = beliefPenaltyMPC_z15[32];
+output->z16[33] = beliefPenaltyMPC_z15[33];
+output->z16[34] = beliefPenaltyMPC_z15[34];
+output->z16[35] = beliefPenaltyMPC_z15[35];
+output->z16[36] = beliefPenaltyMPC_z15[36];
+output->z16[37] = beliefPenaltyMPC_z15[37];
+output->z16[38] = beliefPenaltyMPC_z15[38];
+output->z16[39] = beliefPenaltyMPC_z15[39];
+output->z16[40] = beliefPenaltyMPC_z15[40];
+output->z16[41] = beliefPenaltyMPC_z15[41];
+output->z16[42] = beliefPenaltyMPC_z15[42];
+output->z16[43] = beliefPenaltyMPC_z15[43];
+output->z16[44] = beliefPenaltyMPC_z15[44];
+output->z16[45] = beliefPenaltyMPC_z15[45];
+output->z17[0] = beliefPenaltyMPC_z16[0];
+output->z17[1] = beliefPenaltyMPC_z16[1];
+output->z17[2] = beliefPenaltyMPC_z16[2];
+output->z17[3] = beliefPenaltyMPC_z16[3];
+output->z17[4] = beliefPenaltyMPC_z16[4];
+output->z17[5] = beliefPenaltyMPC_z16[5];
+output->z17[6] = beliefPenaltyMPC_z16[6];
+output->z17[7] = beliefPenaltyMPC_z16[7];
+output->z17[8] = beliefPenaltyMPC_z16[8];
+output->z17[9] = beliefPenaltyMPC_z16[9];
+output->z17[10] = beliefPenaltyMPC_z16[10];
+output->z17[11] = beliefPenaltyMPC_z16[11];
+output->z17[12] = beliefPenaltyMPC_z16[12];
+output->z17[13] = beliefPenaltyMPC_z16[13];
+output->z17[14] = beliefPenaltyMPC_z16[14];
+output->z17[15] = beliefPenaltyMPC_z16[15];
+output->z17[16] = beliefPenaltyMPC_z16[16];
+output->z17[17] = beliefPenaltyMPC_z16[17];
+output->z17[18] = beliefPenaltyMPC_z16[18];
+output->z17[19] = beliefPenaltyMPC_z16[19];
+output->z17[20] = beliefPenaltyMPC_z16[20];
+output->z17[21] = beliefPenaltyMPC_z16[21];
+output->z17[22] = beliefPenaltyMPC_z16[22];
+output->z17[23] = beliefPenaltyMPC_z16[23];
+output->z17[24] = beliefPenaltyMPC_z16[24];
+output->z17[25] = beliefPenaltyMPC_z16[25];
+output->z17[26] = beliefPenaltyMPC_z16[26];
+output->z17[27] = beliefPenaltyMPC_z16[27];
+output->z17[28] = beliefPenaltyMPC_z16[28];
+output->z17[29] = beliefPenaltyMPC_z16[29];
+output->z17[30] = beliefPenaltyMPC_z16[30];
+output->z17[31] = beliefPenaltyMPC_z16[31];
+output->z17[32] = beliefPenaltyMPC_z16[32];
+output->z17[33] = beliefPenaltyMPC_z16[33];
+output->z17[34] = beliefPenaltyMPC_z16[34];
+output->z17[35] = beliefPenaltyMPC_z16[35];
+output->z17[36] = beliefPenaltyMPC_z16[36];
+output->z17[37] = beliefPenaltyMPC_z16[37];
+output->z17[38] = beliefPenaltyMPC_z16[38];
+output->z17[39] = beliefPenaltyMPC_z16[39];
+output->z17[40] = beliefPenaltyMPC_z16[40];
+output->z17[41] = beliefPenaltyMPC_z16[41];
+output->z17[42] = beliefPenaltyMPC_z16[42];
+output->z17[43] = beliefPenaltyMPC_z16[43];
+output->z17[44] = beliefPenaltyMPC_z16[44];
+output->z17[45] = beliefPenaltyMPC_z16[45];
+output->z18[0] = beliefPenaltyMPC_z17[0];
+output->z18[1] = beliefPenaltyMPC_z17[1];
+output->z18[2] = beliefPenaltyMPC_z17[2];
+output->z18[3] = beliefPenaltyMPC_z17[3];
+output->z18[4] = beliefPenaltyMPC_z17[4];
+output->z18[5] = beliefPenaltyMPC_z17[5];
+output->z18[6] = beliefPenaltyMPC_z17[6];
+output->z18[7] = beliefPenaltyMPC_z17[7];
+output->z18[8] = beliefPenaltyMPC_z17[8];
+output->z18[9] = beliefPenaltyMPC_z17[9];
+output->z18[10] = beliefPenaltyMPC_z17[10];
+output->z18[11] = beliefPenaltyMPC_z17[11];
+output->z18[12] = beliefPenaltyMPC_z17[12];
+output->z18[13] = beliefPenaltyMPC_z17[13];
+output->z18[14] = beliefPenaltyMPC_z17[14];
+output->z18[15] = beliefPenaltyMPC_z17[15];
+output->z18[16] = beliefPenaltyMPC_z17[16];
+output->z18[17] = beliefPenaltyMPC_z17[17];
+output->z18[18] = beliefPenaltyMPC_z17[18];
+output->z18[19] = beliefPenaltyMPC_z17[19];
+output->z18[20] = beliefPenaltyMPC_z17[20];
+output->z18[21] = beliefPenaltyMPC_z17[21];
+output->z18[22] = beliefPenaltyMPC_z17[22];
+output->z18[23] = beliefPenaltyMPC_z17[23];
+output->z18[24] = beliefPenaltyMPC_z17[24];
+output->z18[25] = beliefPenaltyMPC_z17[25];
+output->z18[26] = beliefPenaltyMPC_z17[26];
+output->z18[27] = beliefPenaltyMPC_z17[27];
+output->z18[28] = beliefPenaltyMPC_z17[28];
+output->z18[29] = beliefPenaltyMPC_z17[29];
+output->z18[30] = beliefPenaltyMPC_z17[30];
+output->z18[31] = beliefPenaltyMPC_z17[31];
+output->z18[32] = beliefPenaltyMPC_z17[32];
+output->z18[33] = beliefPenaltyMPC_z17[33];
+output->z18[34] = beliefPenaltyMPC_z17[34];
+output->z18[35] = beliefPenaltyMPC_z17[35];
+output->z18[36] = beliefPenaltyMPC_z17[36];
+output->z18[37] = beliefPenaltyMPC_z17[37];
+output->z18[38] = beliefPenaltyMPC_z17[38];
+output->z18[39] = beliefPenaltyMPC_z17[39];
+output->z18[40] = beliefPenaltyMPC_z17[40];
+output->z18[41] = beliefPenaltyMPC_z17[41];
+output->z18[42] = beliefPenaltyMPC_z17[42];
+output->z18[43] = beliefPenaltyMPC_z17[43];
+output->z18[44] = beliefPenaltyMPC_z17[44];
+output->z18[45] = beliefPenaltyMPC_z17[45];
+output->z19[0] = beliefPenaltyMPC_z18[0];
+output->z19[1] = beliefPenaltyMPC_z18[1];
+output->z19[2] = beliefPenaltyMPC_z18[2];
+output->z19[3] = beliefPenaltyMPC_z18[3];
+output->z19[4] = beliefPenaltyMPC_z18[4];
+output->z19[5] = beliefPenaltyMPC_z18[5];
+output->z19[6] = beliefPenaltyMPC_z18[6];
+output->z19[7] = beliefPenaltyMPC_z18[7];
+output->z19[8] = beliefPenaltyMPC_z18[8];
+output->z19[9] = beliefPenaltyMPC_z18[9];
+output->z19[10] = beliefPenaltyMPC_z18[10];
+output->z19[11] = beliefPenaltyMPC_z18[11];
+output->z19[12] = beliefPenaltyMPC_z18[12];
+output->z19[13] = beliefPenaltyMPC_z18[13];
+output->z19[14] = beliefPenaltyMPC_z18[14];
+output->z19[15] = beliefPenaltyMPC_z18[15];
+output->z19[16] = beliefPenaltyMPC_z18[16];
+output->z19[17] = beliefPenaltyMPC_z18[17];
+output->z19[18] = beliefPenaltyMPC_z18[18];
+output->z19[19] = beliefPenaltyMPC_z18[19];
+output->z19[20] = beliefPenaltyMPC_z18[20];
+output->z19[21] = beliefPenaltyMPC_z18[21];
+output->z19[22] = beliefPenaltyMPC_z18[22];
+output->z19[23] = beliefPenaltyMPC_z18[23];
+output->z19[24] = beliefPenaltyMPC_z18[24];
+output->z19[25] = beliefPenaltyMPC_z18[25];
+output->z19[26] = beliefPenaltyMPC_z18[26];
+output->z19[27] = beliefPenaltyMPC_z18[27];
+output->z19[28] = beliefPenaltyMPC_z18[28];
+output->z19[29] = beliefPenaltyMPC_z18[29];
+output->z19[30] = beliefPenaltyMPC_z18[30];
+output->z19[31] = beliefPenaltyMPC_z18[31];
+output->z19[32] = beliefPenaltyMPC_z18[32];
+output->z19[33] = beliefPenaltyMPC_z18[33];
+output->z19[34] = beliefPenaltyMPC_z18[34];
+output->z19[35] = beliefPenaltyMPC_z18[35];
+output->z19[36] = beliefPenaltyMPC_z18[36];
+output->z19[37] = beliefPenaltyMPC_z18[37];
+output->z19[38] = beliefPenaltyMPC_z18[38];
+output->z19[39] = beliefPenaltyMPC_z18[39];
+output->z19[40] = beliefPenaltyMPC_z18[40];
+output->z19[41] = beliefPenaltyMPC_z18[41];
+output->z19[42] = beliefPenaltyMPC_z18[42];
+output->z19[43] = beliefPenaltyMPC_z18[43];
+output->z19[44] = beliefPenaltyMPC_z18[44];
+output->z19[45] = beliefPenaltyMPC_z18[45];
+output->z20[0] = beliefPenaltyMPC_z19[0];
+output->z20[1] = beliefPenaltyMPC_z19[1];
+output->z20[2] = beliefPenaltyMPC_z19[2];
+output->z20[3] = beliefPenaltyMPC_z19[3];
+output->z20[4] = beliefPenaltyMPC_z19[4];
+output->z20[5] = beliefPenaltyMPC_z19[5];
+output->z20[6] = beliefPenaltyMPC_z19[6];
+output->z20[7] = beliefPenaltyMPC_z19[7];
+output->z20[8] = beliefPenaltyMPC_z19[8];
+output->z20[9] = beliefPenaltyMPC_z19[9];
+output->z20[10] = beliefPenaltyMPC_z19[10];
+output->z20[11] = beliefPenaltyMPC_z19[11];
+output->z20[12] = beliefPenaltyMPC_z19[12];
+output->z20[13] = beliefPenaltyMPC_z19[13];
+output->z20[14] = beliefPenaltyMPC_z19[14];
+output->z20[15] = beliefPenaltyMPC_z19[15];
+output->z20[16] = beliefPenaltyMPC_z19[16];
+output->z20[17] = beliefPenaltyMPC_z19[17];
+output->z20[18] = beliefPenaltyMPC_z19[18];
+output->z20[19] = beliefPenaltyMPC_z19[19];
+output->z20[20] = beliefPenaltyMPC_z19[20];
+output->z20[21] = beliefPenaltyMPC_z19[21];
+output->z20[22] = beliefPenaltyMPC_z19[22];
+output->z20[23] = beliefPenaltyMPC_z19[23];
+output->z20[24] = beliefPenaltyMPC_z19[24];
+output->z20[25] = beliefPenaltyMPC_z19[25];
+output->z20[26] = beliefPenaltyMPC_z19[26];
+output->z20[27] = beliefPenaltyMPC_z19[27];
+output->z20[28] = beliefPenaltyMPC_z19[28];
+output->z20[29] = beliefPenaltyMPC_z19[29];
+output->z20[30] = beliefPenaltyMPC_z19[30];
+output->z20[31] = beliefPenaltyMPC_z19[31];
+output->z20[32] = beliefPenaltyMPC_z19[32];
+output->z20[33] = beliefPenaltyMPC_z19[33];
+output->z20[34] = beliefPenaltyMPC_z19[34];
+output->z20[35] = beliefPenaltyMPC_z19[35];
+output->z20[36] = beliefPenaltyMPC_z19[36];
+output->z20[37] = beliefPenaltyMPC_z19[37];
+output->z20[38] = beliefPenaltyMPC_z19[38];
+output->z20[39] = beliefPenaltyMPC_z19[39];
+output->z20[40] = beliefPenaltyMPC_z19[40];
+output->z20[41] = beliefPenaltyMPC_z19[41];
+output->z20[42] = beliefPenaltyMPC_z19[42];
+output->z20[43] = beliefPenaltyMPC_z19[43];
 
 #if beliefPenaltyMPC_SET_TIMING == 1
 info->solvetime = beliefPenaltyMPC_toc(&solvertimer);

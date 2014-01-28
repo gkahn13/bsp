@@ -22,13 +22,13 @@ Matrix<X_DIM> x0, xGoal;
 
 inline Matrix<X_DIM> f(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u)
 {
-	return dynfunc(x, u, zeros<U_DIM,1>());
+	return dynfunc(x, u);
 }
 
 // Observation model
 inline Matrix<Z_DIM> h(const Matrix<X_DIM>& x)
 {
-	return obsfunc(x, zeros<Z_DIM,1>());
+	return obsfunc(x);
 }
 
 // Jacobian df/dx(x,u)

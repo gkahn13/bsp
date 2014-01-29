@@ -35,32 +35,39 @@ dir:
 $(OBJ_DIR)/logging.o : util/logging.cpp
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) -c -o $@ $^
 	
-	
-	
-	
 ###### ARM ############
 
 # share arm functions
 ARM_SETUP_FILE = arm/setupFiles.sh
 
-ARM_HEADERS = arm/arm.h
-
-# make arm-belief
+ARM_HEADERS = arm/arm.h arm/matrix.h
 ARM_BELIEF_DIR = arm/belief
-ARM_BELIEF_FILES = armBeliefPenaltyMPC arm-belief logging
-ARM_BELIEF_OBJS = $(ARM_BELIEF_FILES:%=$(OBJ_DIR)/%.o)
 
-arm-belief-setup:
-	bash $(ARM_SETUP_FILE) belief $(T)
+# make arm-belief-joint
+ARM_BELIEF_JOINT_FILES = arm-belief-joint-goal arm-belief-joint logging
+ARM_BELIEF_JOINT_OBJS = $(ARM_BELIEF_JOINT_FILES:%=$(OBJ_DIR)/%.o)
 
-arm-belief: | arm-belief-setup $(ARM_BELIEF_OBJS)
-	$(CXX) $(BFLAGS) $(ARM_BELIEF_OBJS) -o $(BIN_DIR)/arm-belief $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
+arm-belief-joint: $(ARM_BELIEF_JOINT_OBJS)
+	$(CXX) $(BFLAGS) $(ARM_BELIEF_JOINT_OBJS) -o $(BIN_DIR)/arm-belief-joint $(BOOST_FLAGS) $(LINKER_FLAGS)
 	
-$(OBJ_DIR)/armBeliefPenaltyMPC.o : $(ARM_BELIEF_DIR)/beliefPenaltyMPC.c
+$(OBJ_DIR)/arm-belief-joint-goal.o : $(ARM_BELIEF_DIR)/arm-belief-joint-goal-MPC.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
 	
-$(OBJ_DIR)/arm-belief.o : $(ARM_BELIEF_DIR)/arm-belief.cpp $(ARM_HEADERS)
-	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
+$(OBJ_DIR)/arm-belief-joint.o : $(ARM_BELIEF_DIR)/arm-belief-joint-goal.cpp $(ARM_HEADERS)
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) -c -o $@ $<
+
+# make arm-belief-pos
+ARM_BELIEF_POS_FILES = arm-belief-pos-goal arm-belief-pos logging
+ARM_BELIEF_POS_OBJS = $(ARM_BELIEF_POS_FILES:%=$(OBJ_DIR)/%.o)
+
+arm-belief-pos: $(ARM_BELIEF_POS_OBJS)
+	$(CXX) $(BFLAGS) $(ARM_BELIEF_POS_OBJS) -o $(BIN_DIR)/arm-belief-pos $(BOOST_FLAGS) $(LINKER_FLAGS)
+	
+$(OBJ_DIR)/arm-belief-pos-goal.o : $(ARM_BELIEF_DIR)/arm-belief-pos-goal-MPC.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+	
+$(OBJ_DIR)/arm-belief-pos.o : $(ARM_BELIEF_DIR)/arm-belief-pos-goal.cpp $(ARM_HEADERS)
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) -c -o $@ $<
 
 # make arm-state
 ARM_STATE_DIR = arm/state

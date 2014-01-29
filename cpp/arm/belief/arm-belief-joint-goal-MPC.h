@@ -17,8 +17,8 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#ifndef __beliefPenaltyMPC_H__
-#define __beliefPenaltyMPC_H__
+#ifndef __ARM_BELIEF_JOINT_GOAL_MPC_H__
+#define __ARM_BELIEF_JOINT_GOAL_MPC_H__
 
 
 /* DATA TYPE ------------------------------------------------------------*/

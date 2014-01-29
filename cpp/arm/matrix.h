@@ -23,20 +23,20 @@ public:
 	}
 
 	// Subscript operator
-	__forceinline double& operator () (size_t row, size_t column) {
+	inline double& operator () (size_t row, size_t column) {
 		assert(row < _numRows && column < _numColumns);
 		return _elems[row * _numColumns + column]; 
 	}
-	__forceinline double  operator () (size_t row, size_t column) const {
+	inline double  operator () (size_t row, size_t column) const {
 		assert(row < _numRows && column < _numColumns);
 		return _elems[row * _numColumns + column]; 
 	}
 
-	__forceinline double& operator [] (size_t elt) {
+	inline double& operator [] (size_t elt) {
 		assert(elt < _numRows * _numColumns);
 		return _elems[elt]; 
 	}
-	__forceinline double  operator [] (size_t elt) const {
+	inline double  operator [] (size_t elt) const {
 		assert(elt < _numRows * _numColumns);
 		return _elems[elt]; 
 	}
@@ -147,7 +147,7 @@ public:
 	}
 
 	// Subscript operator
-	__forceinline double& operator () (size_t row, size_t column) {
+	inline double& operator () (size_t row, size_t column) {
 		assert(row < _size && column < _size);
 		if (row >= column) {
 			return _elems[_size * column + row - ((column + 1)*column) / 2];
@@ -155,7 +155,7 @@ public:
 			return _elems[_size * row + column - ((row + 1)*row) / 2];
 		}
 	}
-	__forceinline double operator () (size_t row, size_t column) const {
+	inline double operator () (size_t row, size_t column) const {
 		assert(row < _size && column < _size);
 		if (row >= column) {
 			return _elems[_size * column + row - ((column + 1)*column) / 2];
@@ -164,11 +164,11 @@ public:
 		}
 	}
 
-	__forceinline double& operator [] (size_t elt) {
+	inline double& operator [] (size_t elt) {
 		assert(elt < ((_size+1)*_size)/2);
 		return _elems[elt]; 
 	}
-	__forceinline double  operator [] (size_t elt) const {
+	inline double  operator [] (size_t elt) const {
 		assert(elt < ((_size+1)*_size)/2);
 		return _elems[elt]; 
 	}
@@ -302,7 +302,7 @@ inline void jacobi2(const Matrix<_size, _size>&	q, Matrix<_size, _size>& V, Matr
 		h=scale=0.0;
 		if (l > 0) {
 			for (k=0;k<i;k++)
-				scale += abs(z(i,k));
+				scale += fabs(z(i,k));
 			if (scale == 0.0)
 				e[i]=z(i,l);
 			else {
@@ -364,8 +364,8 @@ inline void jacobi2(const Matrix<_size, _size>&	q, Matrix<_size, _size>& V, Matr
 		iter=0;
 		do {
 			for (m=l;m<_size-1;m++) {
-				dd=abs(d[m])+abs(d[m+1]);
-				if (abs(e[m]) <= std::numeric_limits<double>::epsilon()*dd) break;
+				dd=fabs(d[m])+fabs(d[m+1]);
+				if (fabs(e[m]) <= std::numeric_limits<double>::epsilon()*dd) break;
 			}
 			if (m != l) {
 				if (iter++ == 30) { 
@@ -373,7 +373,7 @@ inline void jacobi2(const Matrix<_size, _size>&	q, Matrix<_size, _size>& V, Matr
 					std::exit(-1);
 				}
 				g=(d[l+1]-d[l])/(2.0*e[l]);
-				absg=abs(g);
+				absg=fabs(g);
 				r = ( (absg > 1.0) ? absg*sqrt(1.0+(1.0/absg)*(1.0/absg)) : sqrt(1.0+absg*absg));
 				g=d[m]-d[l]+e[l]/(g+((g>=0.0) ? fabs(r):-fabs(r)));
 				s=c=1.0;
@@ -381,8 +381,8 @@ inline void jacobi2(const Matrix<_size, _size>&	q, Matrix<_size, _size>& V, Matr
 				for (i=m-1;i>=l;i--) {
 					f=s*e[i];
 					b=c*e[i];
-					absf=abs(f);
-					absg=abs(g);
+					absf=fabs(f);
+					absg=fabs(g);
 					pfg = (absf > absg ? absf*sqrt(1.0+(absg/absf)*(absg/absf)) : (absg == 0.0 ? 0.0 : absg*sqrt(1.0+(absf/absg)*(absf/absg))));
 					e[i+1]=(r=pfg); 
 					if (r == 0.0) {
@@ -467,7 +467,7 @@ inline double norm(const Matrix<_numRows, _numColumns>& q) {
 	for (size_t j = 0; j < _numColumns; ++j) {
 		double colabssum = double(0);
 		for (size_t i = 0; i < _numRows; ++i) {
-			colabssum += abs(q(i,j));
+			colabssum += fabs(q(i,j));
 		}
 		if (colabssum > norm1) {
 			norm1 = colabssum;
@@ -528,7 +528,7 @@ inline double det(const Matrix<_size, _size>& q) {
 		double maximum = double(0); size_t max_row = k; size_t max_col = k;
 		for (size_t i = k; i < _size; ++i) {
 			for (size_t j = k; j < _size; ++j) {
-				double abs_ij = std::abs(m(row_p[i], col_p[j]));
+				double abs_ij = fabs(m(row_p[i], col_p[j]));
 				if (abs_ij > maximum) {
 					maximum = abs_ij; max_row = i; max_col = j;
 				}
@@ -605,7 +605,7 @@ inline Matrix<_size, _numColumns> operator%(const Matrix<_size, _size>& p, const
 		double maximum = double(0); size_t max_row = k; size_t max_col = k;
 		for (size_t i = k; i < _size; ++i) {
 			for (size_t j = k; j < _size; ++j) {
-				double abs_ij = abs(m(row_p[i], col_p[j]));
+				double abs_ij = fabs(m(row_p[i], col_p[j]));
 				if (abs_ij > maximum) {
 					maximum = abs_ij; max_row = i; max_col = j;
 				}
@@ -724,7 +724,7 @@ inline Matrix<_numColumns, _numRows> pseudoInverse(const Matrix<_numRows, _numCo
 		jacobi(SymProd(~q,q), Vec, Val);
 
 		for (size_t i = 0; i < _numColumns; ++i) {
-			if (abs(Val(i,i)) <= sqrt(DBL_EPSILON)) {
+			if (fabs(Val(i,i)) <= sqrt(DBL_EPSILON)) {
 				Val(i,i) = 0.0;
 			} else {
 				Val(i,i) = 1.0 / Val(i,i);
@@ -737,7 +737,7 @@ inline Matrix<_numColumns, _numRows> pseudoInverse(const Matrix<_numRows, _numCo
 		jacobi(SymProd(q,~q), Vec, Val);
 
 		for (size_t i = 0; i < _numRows; ++i) {
-			if (abs(Val(i,i)) <= sqrt(DBL_EPSILON)) {
+			if (fabs(Val(i,i)) <= sqrt(DBL_EPSILON)) {
 				Val(i,i) = 0.0;
 			} else {
 				Val(i,i) = 1.0 / Val(i,i);
@@ -765,7 +765,7 @@ inline Matrix<_size, _size> operator!(const Matrix<_size, _size>& q) {
 		double maximum = double(0); size_t max_row = k; size_t max_col = k;
 		for (size_t i = k; i < _size; ++i) {
 			for (size_t j = k; j < _size; ++j) {
-				double abs_ij = abs(m(row_p[i], col_p[j]));
+				double abs_ij = fabs(m(row_p[i], col_p[j]));
 				if (abs_ij > maximum) {
 					maximum = abs_ij; max_row = i; max_col = j;
 				}
@@ -913,7 +913,7 @@ inline void chol(const SymmetricMatrix<_size>& q, Matrix<_size, _size>& z)
 				// Matrix, with rounding errors, is not positive-definite.
 				if (sum <= 0.0) {
 					std::cerr << "Cholesky failed, matrix not positive definite" << std::endl;
-					std::exit(-1);
+					exit(-1);
 				}
 				z(i,i) = sqrt(sum);
 			} else {
@@ -949,7 +949,7 @@ inline void jacobi(const SymmetricMatrix<_size>& q, Matrix<_size, _size>& z, Sym
 		h=scale=0.0;
 		if (l > 0) {
 			for (k=0;k<i;k++)
-				scale += abs(z(i,k));
+				scale += fabs(z(i,k));
 			if (scale == 0.0)
 				e[i]=z(i,l);
 			else {
@@ -1011,16 +1011,16 @@ inline void jacobi(const SymmetricMatrix<_size>& q, Matrix<_size, _size>& z, Sym
 		iter=0;
 		do {
 			for (m=l;m<_size-1;m++) {
-				dd=abs(d[m])+abs(d[m+1]);
-				if (abs(e[m]) <= std::numeric_limits<double>::epsilon()*dd) break;
+				dd=fabs(d[m])+fabs(d[m+1]);
+				if (fabs(e[m]) <= std::numeric_limits<double>::epsilon()*dd) break;
 			}
 			if (m != l) {
 				if (iter++ == 30) { 
 					std::cerr << "Too many iterations in tqli" << std::endl;
-					std::exit(-1);
+					exit(-1);
 				}
 				g=(d[l+1]-d[l])/(2.0*e[l]);
-				absg=abs(g);
+				absg=fabs(g);
 				r = ( (absg > 1.0) ? absg*sqrt(1.0+(1.0/absg)*(1.0/absg)) : sqrt(1.0+absg*absg));
 				g=d[m]-d[l]+e[l]/(g+((g>=0.0) ? fabs(r):-fabs(r)));
 				s=c=1.0;
@@ -1028,8 +1028,8 @@ inline void jacobi(const SymmetricMatrix<_size>& q, Matrix<_size, _size>& z, Sym
 				for (i=m-1;i>=l;i--) {
 					f=s*e[i];
 					b=c*e[i];
-					absf=abs(f);
-					absg=abs(g);
+					absf=fabs(f);
+					absg=fabs(g);
 					pfg = (absf > absg ? absf*sqrt(1.0+(absg/absf)*(absg/absf)) : (absg == 0.0 ? 0.0 : absg*sqrt(1.0+(absf/absg)*(absf/absg))));
 					e[i+1]=(r=pfg); 
 					if (r == 0.0) {
@@ -1307,8 +1307,8 @@ inline void jacobi(const Matrix<_size, _size>& q, Matrix<_size, _size>& V, Matri
 		double maximum = 0; size_t max_row = 0; size_t max_col = 0;
 		for (size_t i = 0; i < _size; ++i) {
 			for (size_t j = i + 1; j < _size; ++j) {
-				if (abs(D(i,j)) > maximum) {
-					maximum = abs(D(i,j));
+				if (fabs(D(i,j)) > maximum) {
+					maximum = fabs(D(i,j));
 					max_row = i;
 					max_col = j;
 				}
@@ -1320,7 +1320,7 @@ inline void jacobi(const Matrix<_size, _size>& q, Matrix<_size, _size>& V, Matri
 		}
 
 		double theta = (D(max_col, max_col) - D(max_row, max_row)) / (2 * D(max_row, max_col));
-		double t = 1 / (abs(theta) + sqrt(theta*theta+1));
+		double t = 1 / (fabs(theta) + sqrt(theta*theta+1));
 		if (theta < 0) t = -t;
 		double c = 1 / sqrt(t*t+1); 
 		double s = c*t;

@@ -1,13 +1,13 @@
-#ifndef __POINT_H__
-#define __POINT_H__
+#ifndef __SLAM_H__
+#define __SLAM_H__
 
 #include <fstream>
 #include <math.h>
 
+#define _USE_MATH_DEFINES
+
 #include "../util/matrix.h"
-//extern "C" {
 #include "../util/utils.h"
-//}
 //#include "util/Timer.h"
 #include "../util/logging.h"
 
@@ -22,11 +22,15 @@ namespace py = boost::python;
 #define TIMESTEPS 30
 #define DT 1.0
 #define NUM_LANDMARKS 3
-#define X_DIM 3+NUM_LANDMARKS*2
+
+#define C_DIM 3 // car dimension [x, y, theta]
+#define L_DIM 2*NUM_LANDMARKS
+
+#define X_DIM C_DIM+L_DIM
 #define U_DIM 2
-#define Z_DIM 2*NUM_LANDMARKS
+#define Z_DIM L_DIM
 #define Q_DIM 2
-#define R_DIM 2*NUM_LANDMARKS
+#define R_DIM L_DIM
 
 #define S_DIM (((X_DIM+1)*(X_DIM))/2)
 #define B_DIM (X_DIM+S_DIM)
@@ -54,106 +58,65 @@ const double INFTY = 1e10;
 
 const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 1, alpha_goal_state = 1;
 
+namespace config {
+const double V = 3;
+const double MAXG = 30*M_PI/180.;
+const double RATEG = 20*M_PI/180.;
+const double WHEELBASE = 4;
+const double DT_CONTROLS = 0.025;
+
+const double VELOCITY_NOISE = 0.3;
+const double TURNING_NOISE = 3.0*M_PI/180.;
+
+const double MAX_RANGE = 10.0;
+const double DT_OBSERVE = 8*DT_CONTROLS;
+
+const double OBS_DIST_NOISE = 0.1;
+const double OBS_ANGLE_NOISE = 1.0*M_PI/180.;
+}
+
+
 double *inputVars, *vars;
 std::vector<int> maskIndices;
 
 Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<Q_DIM>& q)
 {
-  Matrix<X_DIM> xAdd = zeros<X_DIM,1>();
+	Matrix<X_DIM> xAdd = zeros<X_DIM,1>();
   
-  xAdd[0] = (u[0]+q[0]) * DT * cos(x[2]+u[1]+q[0]);//+ noise 
-  xAdd[1] = (u[0]+q[0]) * DT * sin(x[2]+u[1]+q[1]);//+ noise 
-  xAdd[2] = (u[0]+q[0]) * DT * sin(u[1]+q[1])/length;//+ noise 
-  Matrix<X_DIM> xNew = x + xAdd;
-  return xNew;
-}
-double line_point_signed_dist(const Matrix<2> p1, const Matrix<2> p2, const Matrix<2> pt)
-{
-  double a = p2[1] - p1[1];
-  double b = p1[0] - p2[0];
-  double c = p2[0] * p1[1] - p1[0] * p2[1];
-  return (a*pt[0] + b*pt[1] + c)/std::sqrt(a*a + b*b);
-}
+	xAdd[0] = (u[0]+q[0]) * DT * cos(x[2]+u[1]+q[0]);//+ noise
+	xAdd[1] = (u[0]+q[0]) * DT * sin(x[2]+u[1]+q[1]);//+ noise
+	xAdd[2] = (u[0]+q[0]) * DT * sin(u[1]+q[1])/config::WHEELBASE;//+ noise
 
-double segment_point_dist(const Matrix<2> p1, const Matrix<2> p2, const Matrix<2> pt)
-{
-  double len = std::pow((p2[0]-p1[0]), 2) + std::pow((p2[1] - p1[1]), 2);
-  double t = (~(pt - p1) * (p2 - p1)/len)[0];
-  t = std::max(t,0.0);
-  t = std::min(t,1.0);
-
-  Matrix<2> pn = p1 + t*(p2-p1);
-  double result = std::pow(pn[0] - pt[0], 2);
-  result += std::pow(pn[1] - pt[1], 2);
-  return std::sqrt(result);
-}
-/*
-function T = shrink_camera(T)
-n13 = [T(2,1) - T(2,3); T(1,3) - T(1,1)];
-n32 = [T(2,3) - T(2,2); T(1,2) - T(1,3)];
-n21 = [T(2,2) - T(2,1); T(1,1) - T(1,2)];
-T(:,1) = T(:,1) + 0.75*n32/norm(n32);
-T(:,2) = T(:,2) + 0.75*n13/norm(n13);
-T(:,3) = T(:,3) + 0.75*n21/norm(n21);
-end
-*/
-
-double signedDist(const Matrix<2> pt, const std::vector<Matrix<2>> camera_region)
-{
-  
-  //camera_region = shrink_camera(camera_region);
-  double d12 = line_point_signed_dist(camera_region[0],camera_region[1],pt);
-  double d23 = line_point_signed_dist(camera_region[1],camera_region[2],pt);
-  double d31 = line_point_signed_dist(camera_region[2],camera_region[0],pt);
-  if (d12 <= 0.0 && d23 <= 0.0 && d31 <= 0.0) {
-    return std::max({d12, d23, d31});
-    } else {
-    d12 = segment_point_dist(camera_region[0],camera_region[1], pt);
-    d23 = segment_point_dist(camera_region[1],camera_region[2], pt);
-    d31 = segment_point_dist(camera_region[2],camera_region[0], pt);
-    return std::min({d12, d23, d31});
-  }
+	Matrix<X_DIM> xNew = x + xAdd;
+    return xNew;
 }
 
 
-// Observation model
 Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r)
-{ 
-  Matrix<Z_DIM> z;
-  int idz=0;
-  for (size_t i =0; i < NUM_LANDMARKS; ++i) {
+{
+	Matrix<L_DIM,1> landmarks = x.subMatrix<L_DIM,1>(P_DIM, 0);
+	double xPos = x[0], yPos = x[1], angle = x[2];
+	double l0, l1;
+	double dx, dy;
 
-    std::vector<Matrix<2>> camera_region(3);
-    //Points form a triangle with height = sensing_range
-    //First point is on the robots center position
-    camera_region[0][0] = x[0];
-    camera_region[0][1] = x[1];
+	Matrix<Z_DIM> obs = zeros<Z_DIM,1>();
 
-    double side_length = camera_range / cos(camera_view_angle);
+	for(int i = 0; i < L_DIM; i += 2) {
+		dx = l0 - xPos;
+		dy = l1 - yPos;
 
-    camera_region[1][0] = x[0] + side_length*cos(x[2]-camera_view_angle);
-    camera_region[1][1] = x[1] + side_length*sin(x[2]-camera_view_angle);
+		if ((fabs(dx) < config::MAX_RANGE) &&
+			(fabs(dy) < config::MAX_RANGE) &&
+			(dx*cos(angle) + dy*sin(angle) > 0) &&
+			(dx*dx + dy*dy < config::MAX_RANGE*config::MAX_RANGE))
+		{
+			// TODO: is noise being added ocrrectly? (check add_observation_noise.m)
+			obs[i] = sqrt(dx*dx + dy*dy) + r[i];
+			obs[i+1] = atan2(dy, dx) - angle + r[i+1];
+		}
+	}
 
-    camera_region[2][0] = x[0] + side_length*cos(x[2]+camera_view_angle);
-    camera_region[2][1] = x[1] + side_length*sin(x[2]+camera_view_angle);
-
-    Matrix<2> landmarkPoint = x.subMatrix<2>(3+2*i,0);
-    double sd = signedDist(landmarkPoint, camera_region);
-
-    //double dist = std::sqrt(std::pow(landmarkPoint[0]-x[0], 2) + std::pow(landmarkPoint[1]-x[1],2));
-    //double ang = atan2(landmarkPoint[1]-x[1], landmarkPoint[0]-x[0]);
-    
-    //z[2*i] = dist + r[2*i]/std::pow(1+(exp(-sd)),20);
-    //z[2*i+1] = ang - x[2] + r[2*i+1]/ std::pow(1+(exp(-sd)),20);
-
-    //jferguson -update this
-    //New observation model -> observe a distance and an angle
-    //Dynamics model stays more or less the same
-
-    z[2*i] = (x[0] - x[3+2*i]) + r[2*i]/ std::pow(1+(exp(-sd)),20);
-    z[2*i+1] = (x[1] - x[4+2*i]) + r[2*i+1]/ std::pow(1+(exp(-sd)),20);
-  }
-  return z;
+	return obs;
 }
 
 

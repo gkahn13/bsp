@@ -220,25 +220,27 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	Matrix<R_DIM,R_DIM> RC = .1*identity<R_DIM>();
 
 	Matrix<Z_DIM,Z_DIM> delta = deltaMatrix(x);
-	std::cout << "delta" << std::endl;
-	for(int i = 0; i < Z_DIM; ++i) {
-		std::cout << delta(i,i) << " ";
-	}
-	std::cout << std::endl << std::endl;
+	//std::cout << "delta" << std::endl;
+	//for(int i = 0; i < Z_DIM; ++i) {
+	//	std::cout << delta(i,i) << " ";
+	//}
+	//std::cout << std::endl << std::endl;
 
 	//Matrix<X_DIM,Z_DIM> K = ((Sigma*~H)/(H*Sigma*~H+ N*RC*~N));
 	Matrix<X_DIM,Z_DIM> K = ((Sigma*~H*delta)/(delta*H*Sigma*~H*delta + N*RC*~N))*delta;
 
 	SymmetricMatrix<Z_DIM> RCSym = identity<Z_DIM>()*.1;
-	Matrix<Z_DIM> obsDiff = obsfunc(x, sampleGaussian(zeros<Z_DIM,1>(),RCSym)) - obsfunc(x, zeros<R_DIM,1>());
-	x = x + K*obsDiff;
+	Matrix<Z_DIM> obsDiffPrint = obsfunc(x, zeros<R_DIM,1>()) - x.subMatrix<L_DIM>(P_DIM,0);
+	std::cout << "obsDiffPrint" << ~obsDiffPrint << std::endl;
+	//Matrix<Z_DIM> obsDiff = obsfunc(x, sampleGaussian(zeros<Z_DIM,1>(),RCSym)) - obsfunc(x, zeros<R_DIM,1>());
+	//x = x + K*obsDiff;
 
 	//std::cout << "I - KH" << std::endl << identity<X_DIM>() - K*H << std::endl;
 
 	Sigma = (identity<X_DIM>() - K*H)*Sigma;
 	
 	Matrix<B_DIM> g;
-	vec(x, sqrt(Sigma), g);
+	vec(x, sqrtm(Sigma), g);
 
 	return g;
 }

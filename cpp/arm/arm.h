@@ -15,6 +15,7 @@
 #define Q_DIM 6
 #define R_DIM 4
 #define G_DIM 3 // dimension of g(x) function, which is 3d position
+#define XU_DIM (X_DIM*T+U_DIM*(T-1))
 
 #define S_DIM (((X_DIM+1)*X_DIM)/2)
 #define B_DIM (X_DIM+S_DIM)

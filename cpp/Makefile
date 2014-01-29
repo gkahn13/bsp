@@ -5,7 +5,7 @@ C_FLAGS = -std=gnu99
 CPP_FLAGS = -std=c++0x -fpermissive -I.
 PYTHON_FLAGS = -I/usr/include/python2.7 -lpython2.7
 BOOST_FLAGS = -lboost_python -lboost_filesystem -lboost_system
-LINKER_FLAGS = -lrt
+LINKER_FLAGS = -lrt -lm
 ADOLC_FLAGS = -I/home/gkahn/adolc_base/include -L/home/gkahn/adolc_base/lib64 -ladolc -lColPack
 #ADOLC_FLAGS = -I/usr/include/adolc -ladolc -lColPack
 EIGEN_FLAGS = -I/usr/include/eigen3
@@ -80,10 +80,16 @@ arm-ilqg: | $(ARM_ILQG_OBJS)
 $(OBJ_DIR)/arm-ilqg.o : $(ARM_ILQG_DIR)/arm-ilqg-pos-goal.cpp $(ARM_ILQG_DIR)/ilqg.h
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) -c -o $@ $<
 	
+	
+point-slam-test: | touch-file $(PT_SLAM_TEST_OBJS)
+	
 # make arm-state
 ARM_STATE_DIR = arm/state
-ARM_STATE_FILES = arm-state-pos-goal arm-state-cost arm-state-grad arm-state logging
+ARM_STATE_FILES = arm-state-cost arm-state-grad arm-state-pos-goal arm-state logging
 ARM_STATE_OBJS = $(ARM_STATE_FILES:%=$(OBJ_DIR)/%.o)
+
+#touch-arm-state:
+#	touch $(ARM_STATE_DIR)/arm-state-pos-goal.cpp
 
 arm-state: | $(ARM_STATE_OBJS)
 	$(CXX) $(BFLAGS) $(ARM_STATE_OBJS) -o $(BIN_DIR)/arm-state $(BOOST_FLAGS) $(LINKER_FLAGS)

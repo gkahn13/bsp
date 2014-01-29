@@ -41,6 +41,10 @@ public:
 		return _elems[elt]; 
 	}
 
+	inline double* getPtr() const {
+		return &_elems[0];
+	}
+
 	// Reset to zeros
 	inline void reset() { 
 		for (size_t i = 0; i < _numRows * _numColumns; ++i) {

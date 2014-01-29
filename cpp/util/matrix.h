@@ -43,6 +43,10 @@ public:
 		return _elems[elt];
 	}
 
+	inline double* getPtr() {
+		return &_elems[0];
+	}
+
 	// Reset to zeros
 	inline void reset() {
 		for (size_t i = 0; i < _numRows * _numColumns; ++i) {
@@ -761,7 +765,7 @@ inline void chol(const SymmetricMatrix<_size>& q, Matrix<_size, _size>& z)
 				// Matrix, with rounding errors, is not positive-definite.
 				if (sum <= 0.0) {
 					std::cerr << "Cholesky failed, matrix not positive definite" << std::endl;
-					std::exit(-1);
+					exit(-1);
 				}
 				z(i,i) = sqrt(sum);
 			} else {
@@ -865,7 +869,7 @@ inline void jacobi(const SymmetricMatrix<_size>& q, Matrix<_size, _size>& z, Sym
 			if (m != l) {
 				if (iter++ == 30) {
 					std::cerr << "Too many iterations in tqli" << std::endl;
-					std::exit(-1);
+					exit(-1);
 				}
 				g=(d[l+1]-d[l])/(2.0*e[l]);
 				absg=fabs(g);

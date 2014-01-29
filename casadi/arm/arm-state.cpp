@@ -90,9 +90,8 @@ void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, cons
 		QC(i,i) = 0.01;
 	}
 
-	//Sigma_tp1 = mul(mul(A,Sigma_t),trans(A)) + mul(M,trans(M));
-	// because we know that A is identity
-	Sigma_tp1 = A*Sigma_t*trans(A) + M*QC*trans(M);
+	//Sigma_tp1 = mul(mul(A,Sigma_t),trans(A)) + mul(mul(M,QC),trans(M));
+	Sigma_tp1 = mul(mul(A,Sigma_t),trans(A)) + M*QC*trans(M);
 
 	x_tp1 = dynfunc(x_t, u_t);
 
@@ -141,6 +140,8 @@ SXMatrix costfunc(const SXMatrix& XU, const SXMatrix& Sigma_0, const SXMatrix& p
 	SXMatrix J(G_DIM,X_DIM);
 
 	int offset = 0;
+	SXMatrix cost2 = 0;
+
 	for (int t = 0; t < (T-1); ++t)
 	{
 		x_t = XU(Slice(offset,offset+X_DIM));
@@ -159,6 +160,7 @@ SXMatrix costfunc(const SXMatrix& XU, const SXMatrix& Sigma_0, const SXMatrix& p
 	x_t = XU(Slice(offset,offset+X_DIM));
 	J = linearizeg(x_t);
 	cost += params[2]*trace(mul(mul(J,Sigma_t),trans(J)));
+
 	return cost;
 }
 
@@ -182,7 +184,7 @@ int main()
 	int nXU = T*X_DIM+(T-1)*U_DIM;
 	SXMatrix XU = ssym("XU",nXU,1);
 	SXMatrix Sigma_0 = ssym("S0",X_DIM,X_DIM);
-	SXMatrix params = ssym("p",3);
+	SXMatrix params = ssym("params",3);
 	SXMatrix cam0 = ssym("cam0",G_DIM);
 	SXMatrix cam1 = ssym("cam1",G_DIM);
 
@@ -209,7 +211,10 @@ int main()
 	SXFunction f_fcn(inp,f);
 	f_fcn.init();
 
-	SXFunction grad_f_fcn(inp,grad_f);
+	vector<SXMatrix> out;
+	out.push_back(f);
+	out.push_back(grad_f);
+	SXFunction grad_f_fcn(inp,out);
 	grad_f_fcn.init();
 
 	//SXFunction hess_f_fcn(inp,diag_hess_f);
@@ -220,5 +225,128 @@ int main()
 	generateCode(grad_f_fcn,"grad_f");
 	//generateCode(hess_f_fcn,"hess_f");
 
+	// test evaluate function
+	double c0[3], c1[3];
+	double x0[6], xGoal[6];
+	double Sigma0[6][6];
+
+	c0[0] = -4;  c0[1] = 30; c0[2] = 0;
+	c1[0] = 4;  c1[1] = 30; c1[2] = 0;
+
+	x0[0] = .5*M_PI; x0[1] = -1.5431281995798991; x0[2] = -0.047595544887998331;
+	x0[3] = 1.4423058659586809; x0[4] = 1.5334368368992011; x0[5] = -1.1431255223182604;
+
+	xGoal[0] = -1.4846950311433709; xGoal[1] = -2.2314918647565389; xGoal[2] = 1.4680882089972564;
+	xGoal[3] = 0.37654505159140872; xGoal[4] = 1.660179950900027; xGoal[5] = -2.718448168983489;
+
+	for(int i = 0; i < 6; ++i) {
+		Sigma0[i][i] = 0.01;
+	}
+
+	double t_x0[174];
+	double t_x1[36];
+	double t_x2[3];
+	double t_x3[3];
+	double t_x4[3];
+	//double t_r0[1];
+	int T = 15;
+	double DT = 1;
+
+	double u[6];
+	for(int i = 0; i < 6; ++i) {
+		t_x0[i] = x0[i];
+		u[i] = (xGoal[i] - x0[i])/(double)(T-1);
+		//cout << u[i] << endl;
+	}
+	//cout << endl;
+
+	int offset = 6;
+	for(int t = 0; t < (T-1); ++t) {
+		for(int i = 0; i < 6; ++i) {
+			t_x0[offset++] = u[i];
+		}
+		offset += 6;
+	}
+
+	offset = 12;
+	for(int i = 0; i < (T-1); ++i) {
+		for(int i = 0; i < 6; ++i) {
+			t_x0[offset] = t_x0[offset-12] + u[i]*DT;
+			offset++;
+		}
+		offset += 6;
+	}
+
+	for(int i = 0; i < 6; ++i) {
+		for(int j = 0; j < 6; ++j) {
+			t_x1[6*i+j] = Sigma0[i][j];
+		}
+	}
+
+	t_x2[0] = 10; t_x2[1] = 0.1; t_x2[2] = 100;
+	for(int i = 0; i < 3; ++i) {
+		t_x3[i] = c0[i];
+		t_x4[i] = c1[i];
+	}
+
+	/*
+	for(int i = 0; i < 174; ++i) {
+		cout << t_x0[i] << " ";
+		if ((i+1)%12 == 0) {
+			cout << endl;
+		}
+	}
+	cout << endl;
+	*/
+
+	for(int i = 0; i < 3; ++i) {
+		double val = (fabs(t_x4[i]) < 1e-10)? 0 : t_x4[i];
+		cout << val << " ";
+	}
+	cout << "\n\n";
+
+	f_fcn.setInput(t_x0,0);
+	f_fcn.setInput(t_x1,1);
+	f_fcn.setInput(t_x2,2);
+	f_fcn.setInput(t_x3,3);
+	f_fcn.setInput(t_x4,4);
+	f_fcn.evaluate();
+
+	double cost;
+	f_fcn.getOutput(&cost,0);
+	cout << "cost: " << setprecision(12) << cost << endl;
+
+	grad_f_fcn.setInput(t_x0,0);
+	grad_f_fcn.setInput(t_x1,1);
+	grad_f_fcn.setInput(t_x2,2);
+	grad_f_fcn.setInput(t_x3,3);
+	grad_f_fcn.setInput(t_x4,4);
+	grad_f_fcn.evaluate();
+
+	//std::vector<double> costgrad(174);
+	double costgrad[174];
+	grad_f_fcn.getOutput(&cost, 0);
+	grad_f_fcn.getOutput(&costgrad[0], 1);
+
+	//for(int i = 0; i < (int)costgrad.size(); ++i) {
+	for(int i = 0; i < 174; ++i) {
+		cout << "grad: " << setprecision(12) << costgrad[i] << endl;
+	}
+
+	/*
+	hess_f_fcn.setInput(t_x0,0);
+	hess_f_fcn.setInput(t_x1,1);
+	hess_f_fcn.setInput(t_x2,2);
+	hess_f_fcn.setInput(t_x3,3);
+	hess_f_fcn.setInput(t_x4,4);
+	hess_f_fcn.evaluate();
+
+	std::vector<double> costdiaghess(174);
+	hess_f_fcn.getOutput(costdiaghess, 0);
+
+	for(int i = 0; i < (int)costdiaghess.size(); ++i) {
+		cout << "hess: " << setprecision(12) << costdiaghess[i] << endl;
+	}
+	*/
 	return 0;
 }

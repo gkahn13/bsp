@@ -43,12 +43,9 @@ double computeLQGMPcost(const std::vector<Matrix<X_DIM> >& X, const std::vector<
 	return cost;
 }
 
-double casadiComputeCost(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matrix<U_DIM> >& U)
+void setupCasadiVars(const std::vector<Matrix<X_DIM> >& X, const std::vector<Matrix<U_DIM> >& U, double* XU_arr, double* Sigma0_arr, double* params_arr, double* cam0_arr, double* cam1_arr)
 {
-	double cost = 0;
-
 	int index = 0;
-	double *XU_arr = new double[X_DIM*T + U_DIM*(T-1)];
 	for(int t = 0; t < T-1; ++t) {
 		for(int i=0; i < X_DIM; ++i) {
 			XU_arr[index++] = X[t][i];
@@ -63,7 +60,6 @@ double casadiComputeCost(const std::vector< Matrix<X_DIM> >& X, const std::vecto
 	}
 
 	Matrix<X_DIM,X_DIM> Sigma0 = SqrtSigma0*SqrtSigma0;
-	double *Sigma0_arr = new double[X_DIM*X_DIM];
 	index = 0;
 	for(int i=0; i < X_DIM; ++i) {
 		for(int j=0; j < X_DIM; ++j) {
@@ -71,28 +67,37 @@ double casadiComputeCost(const std::vector< Matrix<X_DIM> >& X, const std::vecto
 		}
 	}
 
-	double *params_arr = new double[3];
 	params_arr[0] = alpha_belief;
 	params_arr[1] = alpha_control;
 	params_arr[2] = alpha_final_belief;
 
-	double *cam0_arr = new double[3];
 	cam0_arr[0] = cam0(0,0);
 	cam0_arr[1] = cam0(1,0);
 	cam0_arr[2] = cam0(2,0);
 
-	double *cam1_arr = new double[3];
 	cam1_arr[0] = cam1(0,0);
 	cam1_arr[1] = cam1(1,0);
 	cam1_arr[2] = cam1(2,0);
+}
 
-	const double **casadi_input = new double*[5];
+double casadiComputeCost(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matrix<U_DIM> >& U)
+{
+	double XU_arr[X_DIM*T + U_DIM*(T-1)];
+	double Sigma0_arr[X_DIM*X_DIM];
+	double params_arr[3];
+	double cam0_arr[3];
+	double cam1_arr[3];
+
+	setupCasadiVars(X, U, XU_arr, Sigma0_arr, params_arr, cam0_arr, cam1_arr);
+
+	const double **casadi_input = new const double*[5];
 	casadi_input[0] = XU_arr;
 	casadi_input[1] = Sigma0_arr;
 	casadi_input[2] = params_arr;
 	casadi_input[3] = cam0_arr;
 	casadi_input[4] = cam1_arr;
 
+	double cost = 0;
 	double **cost_arr = new double*[1];
 	cost_arr[0] = &cost;
 
@@ -101,7 +106,29 @@ double casadiComputeCost(const std::vector< Matrix<X_DIM> >& X, const std::vecto
 	return cost;
 }
 
+void casadiComputeCostGrad(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matrix<U_DIM> >& U, double& cost, Matrix<XU_DIM>& G)
+{
+	double XU_arr[X_DIM*T + U_DIM*(T-1)];
+	double Sigma0_arr[X_DIM*X_DIM];
+	double params_arr[3];
+	double cam0_arr[3];
+	double cam1_arr[3];
 
+	setupCasadiVars(X, U, XU_arr, Sigma0_arr, params_arr, cam0_arr, cam1_arr);
+
+	const double **casadi_input = new const double*[5];
+	casadi_input[0] = XU_arr;
+	casadi_input[1] = Sigma0_arr;
+	casadi_input[2] = params_arr;
+	casadi_input[3] = cam0_arr;
+	casadi_input[4] = cam1_arr;
+
+	double **cost_arr = new double*[2];
+	cost_arr[0] = &cost;
+	cost_arr[1] = G.getPtr();
+
+	evaluateCostGradWrap(casadi_input, cost_arr);
+}
 
 double computeCost(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matrix<U_DIM> >& U)
 {
@@ -115,19 +142,21 @@ double computeCost(const std::vector< Matrix<X_DIM> >& X, const std::vector< Mat
 	for(int t = 0; t < T-1; ++t) {
 		unVec(b, x, SqrtSigma);
 		linearizeg(x, J);
-
 		cost += alpha_belief*tr(J*SqrtSigma*SqrtSigma*~J) + alpha_control*tr(~U[t]*U[t]);
 		b = beliefDynamics(b, U[t]);
 	}
 	unVec(b, x, SqrtSigma);
 	linearizeg(x, J);
 	cost += alpha_final_belief*tr(J*SqrtSigma*SqrtSigma*~J);
+
 	return cost;
 }
 
 double computeMerit(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matrix<U_DIM> >& U, double penalty_coeff)
 {
 	double merit = 0;
+
+	/*
 	Matrix<B_DIM> b;
 	Matrix<X_DIM> x;
 	Matrix<X_DIM,X_DIM> SqrtSigma;
@@ -144,13 +173,16 @@ double computeMerit(const std::vector< Matrix<X_DIM> >& X, const std::vector< Ma
 	unVec(b, x, SqrtSigma);
 	linearizeg(x, J);
 	merit += alpha_final_belief*tr(J*SqrtSigma*SqrtSigma*~J);
+	*/
+
+	merit = casadiComputeCost(X, U);
 
 	Matrix<G_DIM> delta;
 	delta[0] = delta[1] = delta[2] = goaldelta;
 
 	Matrix<2*G_DIM> goalposviol;
-	goalposviol.insert<G_DIM,1>(0,0,g(x) - posGoal - delta);
-	goalposviol.insert<G_DIM,1>(G_DIM,0, -g(x) + posGoal - delta);
+	goalposviol.insert<G_DIM,1>(0,0,g(X[T-1]) - posGoal - delta);
+	goalposviol.insert<G_DIM,1>(G_DIM,0, -g(X[T-1]) + posGoal - delta);
 
 	for(int i = 0; i < 2*G_DIM; ++i) {
 		merit += penalty_coeff*MAX(goalposviol[i],0);
@@ -159,7 +191,7 @@ double computeMerit(const std::vector< Matrix<X_DIM> >& X, const std::vector< Ma
 	return merit;
 }
 
-void setupBeliefVars(statePenaltyMPC_params& problem, statePenaltyMPC_output& output)
+void setupStateVars(statePenaltyMPC_params& problem, statePenaltyMPC_output& output)
 {
 	// problem inputs
 	Q = new statePenaltyMPC_FLOAT*[T];
@@ -199,7 +231,7 @@ void setupBeliefVars(statePenaltyMPC_params& problem, statePenaltyMPC_output& ou
 
 }
 
-void cleanupBeliefMPCVars()
+void cleanupStateMPCVars()
 {
 	delete[] Q;
 	delete[] f;
@@ -239,7 +271,6 @@ bool isValidInputs()
 	return true;
 }
 
-/*
 bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >& U, statePenaltyMPC_params& problem, statePenaltyMPC_output& output, statePenaltyMPC_info& info, double penalty_coeff, double trust_box_size)
 {
 	//LOG_DEBUG("Solving sqp problem with penalty parameter: %2.4f", penalty_coeff);
@@ -264,21 +295,32 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 	Matrix<X_DIM+U_DIM, X_DIM+U_DIM> QMat;
 	Matrix<X_DIM+2*G_DIM,X_DIM+2*G_DIM> QfMat;
 	Matrix<X_DIM> eVec;
-	Matrix<S_DIM,S_DIM> Hess;
 	Matrix<2*G_DIM,X_DIM+2*G_DIM> AMat;
 	Matrix<2*G_DIM,1> bVec;
+
+	double Hzbar[X_DIM+U_DIM];
+	for(int i=0; i < (X_DIM+U_DIM); ++i) { Hzbar[i] = 0; }
+
+	// full Hessian from current timstep and prev
+	Matrix<XU_DIM,XU_DIM> B = identity<XU_DIM>();
+	Matrix<XU_DIM,XU_DIM> B_tp1 = identity<XU_DIM>();
+
+	Matrix<XU_DIM> G, G_tp1;
+	double cost;
+	int idx = 0;
 
 	// sqp loop
 	while(true)
 	{
 		// In this loop, we repeatedly construct a linear approximation to the nonlinear belief dynamics constraint
-		//LOG_DEBUG("  sqp iter: %d", sqp_iter);
-		std::cout << "  sqp iter: " << sqp_iter << std::endl;
+		LOG_DEBUG("  sqp iter: %d", sqp_iter);
 
 		merit = computeMerit(X, U, penalty_coeff);
 		
-		//LOG_DEBUG("  merit: %4.10f", merit);
-		std::cout << "  merit: " << merit << std::endl;
+		LOG_DEBUG("  merit: %4.10f", merit);
+
+		// Compute gradients
+		casadiComputeCostGrad(X, U, cost, G);
 
 		// Problem linearization and definition
 		// fill in Q, f, C, e
@@ -288,11 +330,11 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			Matrix<B_DIM>& xt = X[t];
 			Matrix<U_DIM>& ut = U[t];
 
-			constructHessian(bt, Hess);
-
 			QMat.reset();
-			QMat.insert<S_DIM,S_DIM>(X_DIM,X_DIM,2*alpha_belief*Hess);
-			QMat.insert<U_DIM,U_DIM>(B_DIM,B_DIM,2*alpha_control*identity<U_DIM>());
+			idx = t*(X_DIM+U_DIM);
+			for(int i = 0; i < (X_DIM+U_DIM); ++i) {
+				QMat(i,i) = B(idx+i,idx+i);
+			}
 			
 			fillColMajor(Q[t], QMat);
 
@@ -414,71 +456,56 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 				}
 			}
 			else {
-				//LOG_ERROR("Some problem in solver");
-				std::cerr << "Some problem in solver" << std::endl;
-				std::exit(-1);
+				LOG_ERROR("Some problem in solver");
+				exit(-1);
 			}
 
-			//LOG_DEBUG("Optimized cost: %4.10f", optcost);
-			std::cout << "       Optimized cost: " << optcost << std::endl;
+			LOG_DEBUG("       Optimized cost: %4.10f", optcost);
 
 			model_merit = optcost;
-			new_merit = computeMerit(Bopt, Uopt, penalty_coeff);
+			new_merit = computeMerit(Xopt, Uopt, penalty_coeff);
 
-			//LOG_DEBUG("merit: %4.10f", merit);
-			//LOG_DEBUG("model_merit: %4.10f", model_merit);
-			//LOG_DEBUG("new_merit: %4.10f", new_merit);
-			//std::cout << "       merit: " << merit << std::endl;
-			//std::cout << "       model_merit: " << model_merit << std::endl;
-			//std::cout << "       new_merit: " << new_merit << std::endl;
+			LOG_DEBUG("       merit: %4.10f", merit);
+			LOG_DEBUG("       model_merit: %4.10f", model_merit);
+			LOG_DEBUG("       new_merit: %4.10f", new_merit);
 			
 			approx_merit_improve = merit - model_merit;
 			exact_merit_improve = merit - new_merit;
 			merit_improve_ratio = exact_merit_improve / approx_merit_improve;
 
-			//LOG_DEBUG("approx_merit_improve: %1.6f", approx_merit_improve);
-			//LOG_DEBUG("exact_merit_improve: %1.6f", exact_merit_improve);
-			//LOG_DEBUG("merit_improve_ratio: %1.6f", merit_improve_ratio);
-			//std::cout << "       approx_merit_improve: " << approx_merit_improve << std::endl;
-			//std::cout << "       exact_merit_improve: " << exact_merit_improve << std::endl;
-			std::cout << "       merit_improve_ratio: " << merit_improve_ratio << std::endl;
+			LOG_DEBUG("       approx_merit_improve: %1.6f", approx_merit_improve);
+			LOG_DEBUG("       exact_merit_improve: %1.6f", exact_merit_improve);
+			LOG_DEBUG("       merit_improve_ratio: %1.6f", merit_improve_ratio);
 			
 			//std::cout << "PAUSED INSIDE minimizeMeritFunction" << std::endl;
 			//int num;
 			//std::cin >> num;
 
 			if (approx_merit_improve < -1e-5) {
-				//LOG_ERROR("Approximate merit function got worse: %1.6f", approx_merit_improve);
-				//LOG_ERROR("Either convexification is wrong to zeroth order, or you are in numerical trouble");
-				//LOG_ERROR("Failure!");
-				std::cerr << "Approximate merit function got worse: " << approx_merit_improve << std::endl;
-				std::cerr << "Either convexification is wrong to zeroth order, or you are in numerical trouble" << std::endl;
-				std::cerr << "Failure!" << std::endl;
+				LOG_ERROR("Approximate merit function got worse: %1.6f", approx_merit_improve);
+				LOG_ERROR("Either convexification is wrong to zeroth order, or you are in numerical trouble");
+				LOG_ERROR("Failure!");
 
 				success = false;
 			} else if (approx_merit_improve < cfg::min_approx_improve) {
-				//LOG_DEBUG("Converged: improvement small enough");
-				std::cout << "  Converged: improvement small enough" << std::endl;
-				B = Bopt; U = Uopt;
+				LOG_DEBUG("Converged: improvement small enough");
+				X = Xopt; U = Uopt;
 				return true;
 			} else if ((exact_merit_improve < 0) || (merit_improve_ratio < cfg::improve_ratio_threshold)) {
 				Xeps *= cfg::trust_shrink_ratio;
 				Ueps *= cfg::trust_shrink_ratio;
-				//LOG_DEBUG("Shrinking trust region size to: %2.6f %2.6f", Xeps, Ueps);
-				std::cout << "  Shrinking trust region size to: " << Xeps << ", " << Ueps << std::endl;
+				LOG_DEBUG("Shrinking trust region size to: %2.6f %2.6f", Xeps, Ueps);
 			} else {
 				Xeps *= cfg::trust_expand_ratio;
 				Ueps *= cfg::trust_expand_ratio;
-				B = Bopt; U = Uopt;
+				X = Xopt; U = Uopt;
 				prevcost = optcost;
-				//LOG_DEBUG("Accepted, Increasing trust region size to:  %2.6f %2.6f", Xeps, Ueps);
-				std::cout << "  Accepted, Increasing trust region size to:  " << Xeps << ", " << Ueps << std::endl;
+				LOG_DEBUG("Accepted, Increasing trust region size to:  %2.6f %2.6f", Xeps, Ueps);
 				break;
 			}
 
 			if (Xeps < cfg::min_trust_box_size && Ueps < cfg::min_trust_box_size) {
-			    //LOG_DEBUG("Converged: x tolerance");
-				std::cout << "  Converged: x tolerance" << std::endl;
+			    LOG_DEBUG("Converged: x tolerance");
 			    return true;
 			}
 
@@ -504,7 +531,7 @@ double statePenaltyCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Mat
 	// penalty loop
 	while(penalty_increases < cfg::max_penalty_coeff_increases)
 	{
-		bool success = minimizeMeritFunction(B, U, problem, output, info, penalty_coeff, trust_box_size);
+		bool success = minimizeMeritFunction(X, U, problem, output, info, penalty_coeff, trust_box_size);
 
 		double cntviol = 0;
 	
@@ -529,12 +556,13 @@ double statePenaltyCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Mat
 	        trust_box_size = cfg::initial_trust_box_size;
 	    }
 	    else {
-	    	return computeCost(X, U);
+	    	//return computeCost(X, U);
+	    	return casadiComputeCost(X, U);
 	    }
 	}
-	return computeCost(X, U);
+	//return computeCost(X, U);
+	return casadiComputeCost(X, U);
 }
-*/
 
 bool testInitializationFeasibility(const std::vector<Matrix<X_DIM> >& X, const std::vector<Matrix<U_DIM> >& U)
 {
@@ -577,6 +605,7 @@ int main(int argc, char* argv[])
 	std::vector<Matrix<U_DIM> > U(T-1, uinit);
 
 	std::vector<Matrix<X_DIM> > X(T);
+	X[0] = x0;
 
 	for (size_t t = 0; t < T-1; ++t) {
 		X[t+1] = dynfunc(X[t], U[t], zeros<Q_DIM,1>());
@@ -589,12 +618,10 @@ int main(int argc, char* argv[])
 		exit(-1);
 	}
 
-
-
 	double initTrajCost = computeCost(X, U);
-	LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
-
 	double casadiInitCost = casadiComputeCost(X, U);
+
+	LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
 	LOG_INFO("Initial casadi cost: %4.10f", casadiInitCost);
 
 	//readTrajectoryFromFile("data\\trajectory.txt", X);
@@ -604,28 +631,31 @@ int main(int argc, char* argv[])
 
 	//displayStateTrajectory(X, U, false);
 
-	/*
 	statePenaltyMPC_params problem;
 	statePenaltyMPC_output output;
 	statePenaltyMPC_info info;
 
-	setupBeliefVars(problem, output);
+	setupStateVars(problem, output);
+	double cost;
+	Matrix<XU_DIM> G;
 
 	util::Timer solveTimer;
 	Timer_tic(&solveTimer);
 
-	double cost = statePenaltyCollocation(X, U, problem, output, info);
+	//double cost = statePenaltyCollocation(X, U, problem, output, info);
+	casadiComputeCostGrad(X, U, cost, G);
 
 	double solvetime = util::Timer_toc(&solveTimer);
 
 	LOG_INFO("Optimized cost: %4.10f", cost);
-	LOG_INFO("Actual cost: %4.10f", computeCost(X, U));
+	//LOG_INFO("Actual cost: %4.10f", computeCost(X, U));
 	LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 	
+	std::cout << ~G << std::endl;
+
 	std::cout << "Actual cost: " << computeCost(X, U) << std::endl;
 	
-	cleanupBeliefMPCVars();
-	*/
+	cleanupStateMPCVars();
 
 	//double finalLQGMPcost = computeLQGMPcost(X, U);
 	//LOG_DEBUG("Final trajectory LQG-MP cost: %4.10f",finalLQGMPcost);

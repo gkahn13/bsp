@@ -282,160 +282,6 @@ inline Matrix<_numColumns, _numRows> operator~(const Matrix<_numRows, _numColumn
 }
 
 
-// Eigen decomposition of a real symmetric matrix by converting to tridiagonal form followed by QL iteration
-// From: Numerical recipes in C++ (3rd edition)
-template <size_t _size>
-inline void jacobi2(const Matrix<_size, _size>&	q, Matrix<_size, _size>& V, Matrix<_size, _size>& D)
-{
-	// Initializations
-	Matrix<_size, _size> z = q;
-	Matrix<_size> d, e;
-	d.reset();
-	e.reset();
-
-	int l,k,j,i,m,iter;
-	double scale,hh,h,g,f,s,r,p,dd,c,b,absf,absg,pfg;
-
-	//Convert to tridiagonal form
-	for (i=_size-1;i>0;i--)
-	{
-		l=i-1;
-		h=scale=0.0;
-		if (l > 0) {
-			for (k=0;k<i;k++)
-				scale += fabs(z(i,k));
-			if (scale == 0.0)
-				e[i]=z(i,l);
-			else {
-				for (k=0;k<i;k++) {
-					z(i,k) /= scale;
-					h += z(i,k)*z(i,k);
-				}
-				f=z(i,l);
-				g=(f >= 0.0 ? -sqrt(h) : sqrt(h));
-				e[i]=scale*g;
-				h -= f*g;
-				z(i,l)=f-g;
-				f=0.0;
-				for (j=0;j<i;j++) {
-					z(j,i)=z(i,j)/h;
-					g=0.0;
-					for (k=0;k<j+1;k++)
-						g += z(j,k)*z(i,k);
-					for (k=j+1;k<i;k++)
-						g += z(k,j)*z(i,k);
-					e[j]=g/h;
-					f += e[j]*z(i,j);
-				}
-				hh=f/(h+h);
-				for (j=0;j<i;j++) {
-					f=z(i,j);
-					e[j]=g=e[j]-hh*f;
-					for (k=0;k<j+1;k++)
-						z(j,k) -= (f*e[k]+g*z(i,k));
-				}
-			}
-		} else {
-			e[i]=z(i,l);
-		}
-		d[i]=h;
-	}
-	d[0]=0.0;
-
-	e[0]=0.0;
-	for (i=0;i<_size;i++) {
-		if (d[i] != 0.0) {
-			for (j=0;j<i;j++) {
-				g=0.0;
-				for (k=0;k<i;k++)
-					g += z(i,k)*z(k,j);
-				for (k=0;k<i;k++)
-					z(k,j) -= g*z(k,i);
-			}
-		}
-		d[i]=z(i,i);
-		z(i,i)=1.0;
-		for (j=0;j<i;j++) z(j,i)=z(i,j)=0.0;
-	}
-
-	// QL iteration
-	for (i=1;i<_size;i++) e[i-1]=e[i];
-	e[_size-1]=0.0;
-	for (l=0;l<_size;l++) {
-		iter=0;
-		do {
-			for (m=l;m<_size-1;m++) {
-				dd=fabs(d[m])+fabs(d[m+1]);
-				if (fabs(e[m]) <= std::numeric_limits<double>::epsilon()*dd) break;
-			}
-			if (m != l) {
-				if (iter++ == 30) {
-					std::cerr << "Too many iterations in tqli" << std::endl;
-					std::exit(-1);
-				}
-				g=(d[l+1]-d[l])/(2.0*e[l]);
-				absg=fabs(g);
-				r = ( (absg > 1.0) ? absg*sqrt(1.0+(1.0/absg)*(1.0/absg)) : sqrt(1.0+absg*absg));
-				g=d[m]-d[l]+e[l]/(g+((g>=0.0) ? fabs(r):-fabs(r)));
-				s=c=1.0;
-				p=0.0;
-				for (i=m-1;i>=l;i--) {
-					f=s*e[i];
-					b=c*e[i];
-					absf=fabs(f);
-					absg=fabs(g);
-					pfg = (absf > absg ? absf*sqrt(1.0+(absg/absf)*(absg/absf)) : (absg == 0.0 ? 0.0 : absg*sqrt(1.0+(absf/absg)*(absf/absg))));
-					e[i+1]=(r=pfg);
-					if (r == 0.0) {
-						d[i+1] -= p;
-						e[m]=0.0;
-						break;
-					}
-					s=f/r;
-					c=g/r;
-					g=d[i+1]-p;
-					r=(d[i]-g)*s+2.0*c*b;
-					d[i+1]=g+(p=s*r);
-					g=c*r-b;
-					for (k=0;k<_size;k++) {
-						f=z(k,i+1);
-						z(k,i+1)=s*z(k,i)+c*f;
-						z(k,i)=c*z(k,i)-s*f;
-					}
-				}
-				if (r == 0.0 && i >= l) continue;
-				d[l] -= p;
-				e[l]=g;
-				e[m]=0.0;
-			}
-		} while (m != l);
-	}
-
-	// Sort eigenvalues and reorder eigenvectors
-	/*
-	for (int i=0;i<_size-1;i++) {
-		double p=d[k=i];
-		for (int j=i;j<_size;j++)
-			if (d[j] >= p) p=d[k=j];
-		if (k != i) {
-			d[k]=d[i];
-			d[i]=p;
-			for (int j=0;j<_size;j++) {
-				p=z(j,i);
-				z(j,i)=z(j,k);
-				z(j,k)=p;
-			}
-		}
-	}
-	*/
-
-	//Copy over data
-	V = z;
-	D.reset();
-	for(size_t i=0;i<_size;++i) {
-		D(i,i) = d[i];
-	}
-}
 
 template <size_t _size>
 inline const SymmetricMatrix<_size>& operator~(const SymmetricMatrix<_size>& M) {
@@ -1066,6 +912,66 @@ inline void jacobi(const SymmetricMatrix<_size>& q, Matrix<_size, _size>& z, Sym
 	}
 }
 
+// Principal square root
+
+template <size_t _size>
+inline void jacobi(const Matrix<_size, _size>& q, Matrix<_size, _size>& V, Matrix<_size, _size>& D) {
+	D = q;
+	V = identity<_size>();
+
+	while (true) {
+		double maximum = 0; size_t max_row = 0; size_t max_col = 0;
+		for (size_t i = 0; i < _size; ++i) {
+			for (size_t j = i + 1; j < _size; ++j) {
+				if (fabs(D(i,j)) > maximum) {
+					maximum = fabs(D(i,j));
+					max_row = i;
+					max_col = j;
+				}
+			}
+		}
+
+		if (maximum <= DBL_EPSILON) {
+			break;
+		}
+
+		double theta = (D(max_col, max_col) - D(max_row, max_row)) / (2 * D(max_row, max_col));
+		double t = 1 / (fabs(theta) + sqrt(theta*theta+1));
+		if (theta < 0) t = -t;
+		double c = 1 / sqrt(t*t+1);
+		double s = c*t;
+
+		Matrix<_size, _size> R = identity<_size>();
+		R(max_row,max_row) = c;
+		R(max_col,max_col) = c;
+		R(max_row,max_col) = s;
+		R(max_col,max_row) = -s;
+
+		// update D //
+		//std::cout << D << std::endl;
+		//D = ~R * D * R;
+
+		double temp1 = c*c*D(max_row, max_row) + s*s*D(max_col, max_col) - 2*c*s*D(max_row, max_col);
+		double temp2 = s*s*D(max_row, max_row) + c*c*D(max_col, max_col) + 2*c*s*D(max_row, max_col);
+		D(max_row, max_col) = 0;
+		D(max_col, max_row) = 0;
+		D(max_row, max_row) = temp1;
+		D(max_col, max_col) = temp2;
+		for (int j = 0; j < _size; ++j) {
+			if ((j != max_row) && (j != max_col)) {
+				temp1 = c * D(j, max_row) - s * D(j, max_col);
+				temp2 = c * D(j, max_col) + s * D(j, max_row);
+				D(j, max_row) = (D(max_row, j) = temp1);
+				D(j, max_col) = (D(max_col, j) = temp2);
+			}
+		}
+		//std::cout << D << std::endl << std::endl;
+
+
+		V = V * R;
+	}
+}
+
 // Matrix addition
 template <size_t _numRows, size_t _numColumns>
 inline Matrix<_numRows, _numColumns> operator+(const Matrix<_numRows, _numColumns>& M, const Matrix<_numRows, _numColumns>& N) {
@@ -1297,21 +1203,6 @@ inline double scalar(const Matrix<1,1>& M) {
 	return M[0];
 }
 
-// Principal square root
-template <size_t _size>
-inline Matrix<_size, _size> sqrt(const Matrix<_size, _size>& X) {
-  Matrix<_size,_size> V;
-  Matrix<_size,_size> D;
-  jacobi2(X, V, D);
-  for (size_t i = 0; i < _size; ++i) {
-		if (D(i,i) > 0) {
-			D(i,i) = sqrt(D(i,i));
-		} else {
-			D(i,i) = 0;
-		}
-	}
-	return (V*D*~V);
-}
 
 
 // Principal square root
@@ -1328,6 +1219,22 @@ inline SymmetricMatrix<_size> sqrt(const SymmetricMatrix<_size>& X) {
 		}
 	}
 	return (SymProd(V,D*~V));
+}
+
+
+template <size_t _size>
+inline Matrix<_size, _size> sqrtm(const Matrix<_size, _size>& X) {
+  Matrix<_size,_size> V;
+  Matrix<_size,_size> D;
+  jacobi(X, V, D);
+  for (size_t i = 0; i < _size; ++i) {
+		if (D(i,i) > 0) {
+			D(i,i) = sqrt(D(i,i));
+		} else {
+			D(i,i) = 0;
+		}
+	}
+	return (V*D*~V);
 }
 
 

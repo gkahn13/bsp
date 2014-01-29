@@ -1,8 +1,8 @@
 #include <vector>
 #include <iomanip>
 
-#include "../matrix.h"
-#include "../../util/Timer.h"
+#include "util/matrix.h"
+#include "util/Timer.h"
 
 extern "C" {
 #include "arm-state-pos-goal-MPC.h"
@@ -42,6 +42,66 @@ double computeLQGMPcost(const std::vector<Matrix<X_DIM> >& X, const std::vector<
 	cost += alpha_final_belief*tr(J[T-1]*Sigma[T-1]*~J[T-1]);
 	return cost;
 }
+
+double casadiComputeCost(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matrix<U_DIM> >& U)
+{
+	double cost = 0;
+
+	int index = 0;
+	double *XU_arr = new double[X_DIM*T + U_DIM*(T-1)];
+	for(int t = 0; t < T-1; ++t) {
+		for(int i=0; i < X_DIM; ++i) {
+			XU_arr[index++] = X[t][i];
+		}
+
+		for(int i=0; i < U_DIM; ++i) {
+			XU_arr[index++] = U[t][i];
+		}
+	}
+	for(int i=0; i < X_DIM; ++i) {
+		XU_arr[index++] = X[T-1][i];
+	}
+
+	Matrix<X_DIM,X_DIM> Sigma0 = SqrtSigma0*SqrtSigma0;
+	double *Sigma0_arr = new double[X_DIM*X_DIM];
+	index = 0;
+	for(int i=0; i < X_DIM; ++i) {
+		for(int j=0; j < X_DIM; ++j) {
+			Sigma0_arr[index++] = Sigma0(i,j);
+		}
+	}
+
+	double *params_arr = new double[3];
+	params_arr[0] = alpha_belief;
+	params_arr[1] = alpha_control;
+	params_arr[2] = alpha_final_belief;
+
+	double *cam0_arr = new double[3];
+	cam0_arr[0] = cam0(0,0);
+	cam0_arr[1] = cam0(1,0);
+	cam0_arr[2] = cam0(2,0);
+
+	double *cam1_arr = new double[3];
+	cam1_arr[0] = cam1(0,0);
+	cam1_arr[1] = cam1(1,0);
+	cam1_arr[2] = cam1(2,0);
+
+	const double **casadi_input = new double*[5];
+	casadi_input[0] = XU_arr;
+	casadi_input[1] = Sigma0_arr;
+	casadi_input[2] = params_arr;
+	casadi_input[3] = cam0_arr;
+	casadi_input[4] = cam1_arr;
+
+	double **cost_arr = new double*[1];
+	cost_arr[0] = &cost;
+
+	evaluateCostWrap(casadi_input, cost_arr);
+
+	return cost;
+}
+
+
 
 double computeCost(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matrix<U_DIM> >& U)
 {
@@ -529,13 +589,18 @@ int main(int argc, char* argv[])
 		exit(-1);
 	}
 
+
+
 	double initTrajCost = computeCost(X, U);
 	LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
 
+	double casadiInitCost = casadiComputeCost(X, U);
+	LOG_INFO("Initial casadi cost: %4.10f", casadiInitCost);
+
 	//readTrajectoryFromFile("data\\trajectory.txt", X);
 
-	double initLQGMPcost = computeLQGMPcost(X, U);
-	LOG_DEBUG("Initial trajectory LQG-MP cost: %4.10f", initLQGMPcost);
+	//double initLQGMPcost = computeLQGMPcost(X, U);
+	//LOG_DEBUG("Initial trajectory LQG-MP cost: %4.10f", initLQGMPcost);
 
 	//displayStateTrajectory(X, U, false);
 
@@ -562,8 +627,8 @@ int main(int argc, char* argv[])
 	cleanupBeliefMPCVars();
 	*/
 
-	double finalLQGMPcost = computeLQGMPcost(X, U);
-	LOG_DEBUG("Final trajectory LQG-MP cost: %4.10f",finalLQGMPcost);
+	//double finalLQGMPcost = computeLQGMPcost(X, U);
+	//LOG_DEBUG("Final trajectory LQG-MP cost: %4.10f",finalLQGMPcost);
 
 	//saveOptimizedTrajectory(U);
 	//readOptimizedTrajectory(U);

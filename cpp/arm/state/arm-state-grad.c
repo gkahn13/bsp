@@ -71102,6 +71102,6 @@ void evaluateGrad(const double* x0,const double* x1,const double* x2,const doubl
 }
 
 int evaluateGradWrap(const double** x, double** r){
-  evaluate(x[0],x[1],x[2],x[3],x[4],r[0]); 
+  evaluateGrad(x[0],x[1],x[2],x[3],x[4],r[0]);
   return 0;
 }

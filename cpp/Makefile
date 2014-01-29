@@ -82,11 +82,17 @@ $(OBJ_DIR)/arm-ilqg.o : $(ARM_ILQG_DIR)/arm-ilqg-pos-goal.cpp $(ARM_ILQG_DIR)/il
 	
 # make arm-state
 ARM_STATE_DIR = arm/state
-ARM_STATE_FILES = arm-state-pos-goal arm-state logging
+ARM_STATE_FILES = arm-state-pos-goal arm-state-cost arm-state-grad arm-state logging
 ARM_STATE_OBJS = $(ARM_STATE_FILES:%=$(OBJ_DIR)/%.o)
 
 arm-state: | $(ARM_STATE_OBJS)
 	$(CXX) $(BFLAGS) $(ARM_STATE_OBJS) -o $(BIN_DIR)/arm-state $(BOOST_FLAGS) $(LINKER_FLAGS)
+
+$(OBJ_DIR)/arm-state-cost.o : $(ARM_STATE_DIR)/arm-state-cost.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+
+$(OBJ_DIR)/arm-state-grad.o : $(ARM_STATE_DIR)/arm-state-grad.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
 
 $(OBJ_DIR)/arm-state-pos-goal.o : $(ARM_STATE_DIR)/arm-state-pos-goal-MPC.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^

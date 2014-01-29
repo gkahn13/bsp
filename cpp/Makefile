@@ -80,32 +80,19 @@ arm-ilqg: | $(ARM_ILQG_OBJS)
 $(OBJ_DIR)/arm-ilqg.o : $(ARM_ILQG_DIR)/arm-ilqg-pos-goal.cpp $(ARM_ILQG_DIR)/ilqg.h
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) -c -o $@ $<
 	
-	
-# make parameter-ilqg
-PARAM_ILQG_DIR = parameter/ilqg
-PARAM_ILQG_FILES = parameter-ilqg
-PARAM_ILQG_OBJS = $(PARAM_ILQG_FILES:%=$(OBJ_DIR)/%.o)
-
-parameter-ilqg: $(PARAM_ILQG_OBJS)
-	$(CXX) $(BFLAGS) $(PARAM_ILQG_OBJS) -o $(BIN_DIR)/parameter-ilqg $(PYTHON_FLAGS) $(BOOST_FLAGS) $(LINKER_FLAGS)
-	
-$(OBJ_DIR)/parameter-ilqg.o : $(PARAM_ILQG_DIR)/parameter-ilqg.cpp $(PARAM_ILQG_DIR)/ilqg.h
-	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) -c -o $@ $<
-	
-
 # make arm-state
 ARM_STATE_DIR = arm/state
-ARM_STATE_FILES = armStateMPC arm-state logging
+ARM_STATE_FILES = arm-state-pos-goal arm-state logging
 ARM_STATE_OBJS = $(ARM_STATE_FILES:%=$(OBJ_DIR)/%.o)
 
 arm-state: | $(ARM_STATE_OBJS)
-	$(CXX) $(BFLAGS) $(ARM_STATE_OBJS) -o $(BIN_DIR)/arm-state $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS) $(ADOLC_FLAGS)
+	$(CXX) $(BFLAGS) $(ARM_STATE_OBJS) -o $(BIN_DIR)/arm-state $(BOOST_FLAGS) $(LINKER_FLAGS)
 
-$(OBJ_DIR)/armStateMPC.o : $(ARM_STATE_DIR)/armStateMPC.c
+$(OBJ_DIR)/arm-state-pos-goal.o : $(ARM_STATE_DIR)/arm-state-pos-goal-MPC.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
 	
-$(OBJ_DIR)/arm-state.o : $(ARM_STATE_DIR)/arm-state.cpp $(ARM_HEADERS)
-	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) $(ADOLC_FLAGS) -c -o $@ $<
+$(OBJ_DIR)/arm-state.o : $(ARM_STATE_DIR)/arm-state-pos-goal.cpp $(ARM_HEADERS)
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) -c -o $@ $<
 	
 
 
@@ -300,26 +287,6 @@ point-slam-test: | $(PT_SLAM_TEST_OBJS)
 	
 $(OBJ_DIR)/point-slam-test.o : $(PT_SLAM_TEST_DIR)/point-slam-test.cpp
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) -c -o $@ $<
-	
-# make point-belief
-PT_BELIEF_DIR = point/belief
-PT_BELIEF_FILES = pointBeliefMPC pointBeliefPenaltyMPC point-belief logging
-PT_BELIEF_OBJS = $(PT_BELIEF_FILES:%=$(OBJ_DIR)/%.o)
-
-point-belief-setup:
-	bash $(POINT_SETUP_FILE) belief $(T)
-
-point-belief: | point-belief-setup $(PT_BELIEF_OBJS)
-	$(CXX) $(BFLAGS) $(PT_BELIEF_OBJS) -o $(BIN_DIR)/point-belief $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
-	
-$(OBJ_DIR)/pointBeliefMPC.o : $(PT_BELIEF_DIR)/beliefMPC.c
-	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
-
-$(OBJ_DIR)/pointBeliefPenaltyMPC.o : $(PT_BELIEF_DIR)/beliefPenaltyMPC.c
-	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
-	
-$(OBJ_DIR)/point-belief.o : $(PT_BELIEF_DIR)/point-belief.cpp $(POINT_HEADERS)
-	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
 
 
 ###### CLEAN ########

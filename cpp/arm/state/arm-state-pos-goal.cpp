@@ -1,9 +1,8 @@
 #include <vector>
 #include <iomanip>
 
-#include "callisto.h"
-#include "matrix.h"
-#include "utils.h"
+#include "../matrix.h"
+#include "../../util/Timer.h"
 
 extern "C" {
 #include "arm-state-pos-goal-MPC.h"
@@ -14,7 +13,7 @@ statePenaltyMPC_FLOAT *A, *b, *e;
 
 #include "boost/preprocessor.hpp"
 
-#include "arm.h"
+#include "../arm.h"
 
 namespace cfg {
 const double improve_ratio_threshold = .1;
@@ -475,44 +474,44 @@ double statePenaltyCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Mat
 	}
 	return computeCost(X, U);
 }
+*/
 
-bool testInitializationFeasibility(std::vector<Matrix<X_DIM> >& X, std::vector<Matrix<U_DIM> >& U)
+bool testInitializationFeasibility(const std::vector<Matrix<X_DIM> >& X, const std::vector<Matrix<U_DIM> >& U)
 {
-	std::cout << "X initial" << std::endl;
+	LOG_DEBUG("X initial");
 	for (int t = 0; t < T; ++t) { 
-		Matrix<U_DIM>& xt = B[t].subMatrix<X_DIM,1>(0,0);
+		const Matrix<X_DIM>& xt = X[t];
 		for (int i = 0; i < X_DIM; ++i) {
 			if (xt[i] > xMax[i] || xt[i] < xMin[i]) {
-				std::cerr << "Joint angle limit violated at joint " << i << " and time " << t << std::endl;
+				LOG_ERROR("Joint angle limit violated at joint %d and time %d", i,t);
 				return false;
 			}
 		}
 
-		std::cout << std::setprecision(8) << ~xt; 
+		//std::cout << std::setprecision(8) << ~xt;
 	}
 
-	std::cout << "U initial" << std::endl;
+	LOG_DEBUG("U initial");
 	for (int t = 0; t < T-1; ++t) { 
-		Matrix<U_DIM>& ut = U[t];
+		const Matrix<U_DIM>& ut = U[t];
 		for (int i = 0; i < U_DIM; ++i) {
 			if (ut[i] > uMax[i] || ut[i] < uMin[i]) {
-				std::cerr << "Control limit violated at joint " << i << " and time " << t << std::endl;
+				LOG_ERROR("Control limit violated at joint %d and time %d", i,t);
 				return false;
 			}
 		}
-		std::cout << std::setprecision(8) << ~ut; 
+		//std::cout << std::setprecision(8) << ~ut;
 	}
 
 	return true;
 }
-*/
 
 int main(int argc, char* argv[])
 {
 	
 	initProblemParams();
 
-	std::cout << "init problem params" << std::endl;
+	LOG_INFO("init problem params");
 
 	Matrix<U_DIM> uinit = (xGoal - x0) / (double)((T-1)*DT);
 	std::vector<Matrix<U_DIM> > U(T-1, uinit);
@@ -524,23 +523,19 @@ int main(int argc, char* argv[])
 		//std::cout << ~X[t] << std::endl;
 	}
 
-	//bool feasible = testInitializationFeasibility(X, U);
-	//if (!feasible) {
-	//	std::cerr << "Infeasible trajectory initialization detected" << std::endl;
-	//	std::exit(-1);
-	//}
+	bool feasible = testInitializationFeasibility(X, U);
+	if (!feasible) {
+		LOG_ERROR("Infeasible trajectory initialization detected");
+		exit(-1);
+	}
 
 	double initTrajCost = computeCost(X, U);
-	std::cout << "Initial trajectory cost: " << initTrajCost << std::endl;
-
-	// Create Obstacles in Callisto
-	CAL_Initialisation (true,true,true);
-	initEnvironment();
+	LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
 
 	//readTrajectoryFromFile("data\\trajectory.txt", X);
 
 	double initLQGMPcost = computeLQGMPcost(X, U);
-	std::cout << "Initial trajectory LQG-MP cost: " << initLQGMPcost << std::endl;
+	LOG_DEBUG("Initial trajectory LQG-MP cost: %4.10f", initLQGMPcost);
 
 	//displayStateTrajectory(X, U, false);
 
@@ -551,27 +546,24 @@ int main(int argc, char* argv[])
 
 	setupBeliefVars(problem, output);
 
-	Timer solveTimer;
-	//Timer_tic(&solveTimer);
-	solveTimer.start();
+	util::Timer solveTimer;
+	Timer_tic(&solveTimer);
 
 	double cost = statePenaltyCollocation(X, U, problem, output, info);
 
-	solveTimer.stop();
-	//double solvetime = util::Timer_toc(&solveTimer);
+	double solvetime = util::Timer_toc(&solveTimer);
 
-	//LOG_INFO("Optimized cost: %4.10f", cost);
-	//LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
+	LOG_INFO("Optimized cost: %4.10f", cost);
+	LOG_INFO("Actual cost: %4.10f", computeCost(X, U));
+	LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 	
-	std::cout << "Optimized cost: " << cost << std::endl;
 	std::cout << "Actual cost: " << computeCost(X, U) << std::endl;
-	std::cout << "Optimization time: " << solveTimer.interval_mS() << " mS" << std::endl;
 	
 	cleanupBeliefMPCVars();
 	*/
 
 	double finalLQGMPcost = computeLQGMPcost(X, U);
-	std::cout << "Final trajectory LQG-MP cost: " << finalLQGMPcost << std::endl;
+	LOG_DEBUG("Final trajectory LQG-MP cost: %4.10f",finalLQGMPcost);
 
 	//saveOptimizedTrajectory(U);
 	//readOptimizedTrajectory(U);
@@ -583,12 +575,9 @@ int main(int argc, char* argv[])
 	}
 	*/
 	
-	displayStateTrajectory(X, U);
-
+	LOG_INFO("Finished");
 	int k;
 	std::cin >> k;
-
-	CAL_End();
 
 	return 0;
 }

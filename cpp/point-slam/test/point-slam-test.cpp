@@ -42,7 +42,7 @@ int main(int argc, char* argv[])
 	waypoints[1][0] = 60; waypoints[1][1] = 0;
 	waypoints[2][0] = 60; waypoints[2][1] = 40;
 	waypoints[3][0] = 35; waypoints[3][1] = 25;
-	waypoints[4][0] = 20; waypoints[4][1] = 40;
+	waypoints[4][0] = 0; waypoints[4][1] = 40;
 
 	//testPlotting(waypoints);
 
@@ -63,6 +63,7 @@ int main(int argc, char* argv[])
 	}
 
 	Matrix<X_DIM,X_DIM> SqrtSigma0 = initial_sigma_factor*identity<X_DIM>();
+	for(int i = 0; i < L_DIM; ++i) { SqrtSigma0(P_DIM+i,P_DIM+i) = 1; }
 	std::vector<Matrix<B_DIM> > B(T*NUM_WAYPOINTS);
 
 	Matrix<P_DIM> pGoal;
@@ -87,11 +88,11 @@ int main(int argc, char* argv[])
 		for(int t = 0; t < T - 1; ++t) {
 			B[index+1] = beliefDynamics(B[index], uinit);
 			unVec(B[index+1], xtmp, stmp);
-			std::cout << tr(stmp) << ": "<<xtmp[0] << ", "<<xtmp[1] << std::endl;
+			//std::cout << tr(stmp) << ": "<<xtmp[0] << ", "<<xtmp[1] << std::endl;
 			index++;
 		}
-		std::cout << "index " << index << std::endl;
-		std::cout << "----------" << std::endl;
+		//std::cout << "index " << index << std::endl;
+		//std::cout << "----------" << std::endl;
 		//pythonDisplayTrajectory(B, waypoints, (i+1)*T);
 
 		// special last case
@@ -101,12 +102,18 @@ int main(int argc, char* argv[])
 		}
 	}
 
+	Matrix<X_DIM> xtmp;
+	Matrix<X_DIM, X_DIM> stmp;
+
 	for(int t = 0; t < T*NUM_WAYPOINTS; ++t) {
-		Matrix<X_DIM> xtmp;
-		Matrix<X_DIM, X_DIM> stmp;
 		unVec(B[t], xtmp, stmp);
-		std::cout << stmp.subMatrix<P_DIM,P_DIM>(0,0) << std::endl;
+		//std::cout << stmp.subMatrix<P_DIM,P_DIM>(0,0) << std::endl;
+		std::cout << stmp << std::endl;
 	}
+
+
+	//unVec(B[14], xtmp, stmp);
+	//obsfunc(xtmp,zeros<R_DIM,1>());
 
 	pythonDisplayTrajectory(B, waypoints, T*NUM_WAYPOINTS);
 

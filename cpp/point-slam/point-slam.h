@@ -36,19 +36,17 @@ namespace py = boost::python;
 #define XU_DIM (X_DIM*T+U_DIM*(T-1))
 
 const double step = 0.0078125*0.0078125;
-const double range = 10;
+const double range = 5;
 
 const int T = TIMESTEPS;
 const double INFTY = 1e10;
 
-#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MIN(a,b) (*((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
 const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 1, alpha_goal_state = 1;
 
-const double initial_sigma_factor = .5;
-const double dyn_noise_factor = .6; // affects maximum covariance size
-const double obs_noise_factor = 15;
+const double initial_sigma_factor = 1;
 
 double *inputVars, *vars;
 std::vector<int> maskIndices;
@@ -59,7 +57,7 @@ Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matr
 	Matrix<P_DIM> pNew;
 	Matrix<X_DIM> xNew;
 
-	pNew = x.subMatrix<P_DIM>(0,0) + u*DT + dyn_noise_factor*q;
+	pNew = x.subMatrix<P_DIM>(0,0) + u*DT + q;
 	xNew.insert(0, 0, pNew);
 	xNew.insert(P_DIM, 0, x.subMatrix<L_DIM>(P_DIM,0));
 
@@ -73,15 +71,20 @@ Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r)
 	Matrix<L_DIM> l = x.subMatrix<L_DIM>(P_DIM,0);
 	double x0 = x[0], x1 = x[1], l0, l1, dist;
 
+	double alpha = 10;
 	for(int i = 0; i < L_DIM; i += 2) {
 		l0 = l[i];
 		l1 = l[i+1];
 
-		dist = sqrt(std::pow(x0 - l0, 2) + std::pow(x1 - l1, 2));
+		dist = sqrt((x0 - l0)*(x0 - l0) + (x1 - l1)*(x1 - l1));
 
-		z[i] = (x0 - l0) + obs_noise_factor*(r[i])/ std::pow(1+exp(range-dist),2);
-		z[i+1] = (x1 - l1) + obs_noise_factor*(r[i+1])/ std::pow(1+exp(range-dist),2);
+		z[i] = (x0 - l0) + (8*abs(range-dist)*r[i])/ (1+exp(alpha*(range-dist)));
+		z[i+1] = (x1 - l1) + (8*abs(range-dist)*r[i+1])/ (1+exp(alpha*(range-dist)));
+
+		std::cout << 1/(1+exp(alpha*(range-dist))) << " " << std::endl;
 	}
+
+	//exit(0);
 
 	return z;
 }
@@ -164,16 +167,22 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	Matrix<X_DIM,X_DIM> A;
 	Matrix<X_DIM,Q_DIM> M;
 
+	Matrix<Q_DIM,Q_DIM> QC = identity<Q_DIM>();
+
 	linearizeDynamics(x, u, zeros<Q_DIM,1>(), A, M);
 	x = dynfunc(x, u, zeros<Q_DIM,1>());
 
-	Sigma = A*Sigma*~A + M*~M;
+	Sigma = A*Sigma*~A + M*QC*~M;
 
 	Matrix<Z_DIM,X_DIM> H = zeros<Z_DIM,X_DIM>();
 	Matrix<Z_DIM,R_DIM> N = zeros<Z_DIM,R_DIM>();
 	linearizeObservation(x, zeros<R_DIM,1>(), H, N);
 
-	Matrix<X_DIM,Z_DIM> K = Sigma*~H/(H*Sigma*~H + N*~N);
+	Matrix<R_DIM,R_DIM> RC = 10*identity<R_DIM>();
+
+	Matrix<X_DIM,Z_DIM> K = Sigma*~H/(H*Sigma*~H + N*RC*~N);
+
+	std::cout << "I - KH" << std::endl << identity<X_DIM>() - K*H << std::endl;
 
 	Sigma = (identity<X_DIM>() - K*H)*Sigma;
 	

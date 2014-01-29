@@ -28,7 +28,6 @@ def plot_point_trajectory(B, waypoints, T):
     waypoints = waypoints.reshape(2, numWaypoints)
     
     #plt.axis([-10,70,-10,50])
-    #IPython.embed()
     plt.axis('equal')
     
     # plot mean of trajectory

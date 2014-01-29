@@ -1,5 +1,5 @@
-#ifndef __POINT_H__
-#define __POINT_H__
+#ifndef __POINT_SLAM_H__
+#define __POINT__SLAM_H__
 
 #include <fstream>
 
@@ -19,7 +19,7 @@ namespace py = boost::python;
 #define TIMESTEPS 15
 #define DT 1.0
 
-#define NUM_LANDMARKS 4
+#define NUM_LANDMARKS 3
 #define NUM_WAYPOINTS 5
 
 #define P_DIM 2 // robot state size (x, y)
@@ -36,7 +36,7 @@ namespace py = boost::python;
 #define XU_DIM (X_DIM*T+U_DIM*(T-1))
 
 const double step = 0.0078125*0.0078125;
-const double range = 5;
+const double range = 10;
 
 const int T = TIMESTEPS;
 const double INFTY = 1e10;
@@ -57,7 +57,7 @@ Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matr
 	Matrix<P_DIM> pNew;
 	Matrix<X_DIM> xNew;
 
-	pNew = x.subMatrix<P_DIM>(0,0) + u*DT + q;
+	pNew = x.subMatrix<P_DIM>(0,0) + u*DT + .1*q;
 	xNew.insert(0, 0, pNew);
 	xNew.insert(P_DIM, 0, x.subMatrix<L_DIM>(P_DIM,0));
 
@@ -75,7 +75,7 @@ Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matr
 			xNew[P_DIM+i] += q[0];
 			xNew[P_DIM+i+1] += q[1];
 		}
-	}
+0.999994	}
 	*/
 
 	return xNew;
@@ -95,16 +95,38 @@ Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r)
 
 		dist = sqrt((x0 - l0)*(x0 - l0) + (x1 - l1)*(x1 - l1));
 
-		z[i] = (x0 - l0) + (8*abs(range-dist)*r[i])/ (1+exp(alpha*(range-dist)));
-		z[i+1] = (x1 - l1) + (8*abs(range-dist)*r[i+1])/ (1+exp(alpha*(range-dist)));
+		//z[i] = (x0 - l0) + (8*fabs(range-dist)*r[i])/ (1+exp(alpha*(range-dist)));
+		//z[i+1] = (x1 - l1) + (8*fabs(range-dist)*r[i+1])/ (1+exp(alpha*(range-dist)));
+		z[i] = (x0 - l0) + r[i];
+		z[i+1] = (x1 - l1) + r[i+1];
 
-		std::cout << 1/(1+exp(alpha*(range-dist))) << " " << std::endl;
+
+		//std::cout << 1/(1+exp(alpha*(range-dist))) << " " << std::endl;
 	}
 
 	//exit(0);
 
 	return z;
 }
+
+Matrix<Z_DIM,Z_DIM> deltaMatrix(const Matrix<X_DIM>& x) {
+	Matrix<Z_DIM,Z_DIM> delta = zeros<Z_DIM,Z_DIM>();
+	double l0, l1, dist;
+	double alpha = 100;
+	for(int i=P_DIM; i < X_DIM; i += 2) {
+		l0 = x[i];
+		l1 = x[i+1];
+
+		dist = sqrt((x[0] - l0)*(x[0] - l0) + (x[1] - l1)*(x[1] - l1));
+
+		double signed_dist = 1/(1+exp(-alpha*(range-dist)));
+		delta(i-P_DIM,i-P_DIM) = signed_dist;
+		delta(i-P_DIM+1,i-P_DIM+1) = signed_dist;
+	}
+
+	return delta;
+}
+
 
 // Jacobians: df(x,u,q)/dx, df(x,u,q)/dq
 void linearizeDynamics(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<Q_DIM>& q, Matrix<X_DIM,X_DIM>& A, Matrix<X_DIM,Q_DIM>& M)
@@ -195,11 +217,23 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	Matrix<Z_DIM,R_DIM> N = zeros<Z_DIM,R_DIM>();
 	linearizeObservation(x, zeros<R_DIM,1>(), H, N);
 
-	Matrix<R_DIM,R_DIM> RC = 10*identity<R_DIM>();
+	Matrix<R_DIM,R_DIM> RC = .1*identity<R_DIM>();
 
-	Matrix<X_DIM,Z_DIM> K = Sigma*~H/(H*Sigma*~H + N*RC*~N);
+	Matrix<Z_DIM,Z_DIM> delta = deltaMatrix(x);
+	std::cout << "delta" << std::endl;
+	for(int i = 0; i < Z_DIM; ++i) {
+		std::cout << delta(i,i) << " ";
+	}
+	std::cout << std::endl << std::endl;
 
-	std::cout << "I - KH" << std::endl << identity<X_DIM>() - K*H << std::endl;
+	//Matrix<X_DIM,Z_DIM> K = ((Sigma*~H)/(H*Sigma*~H+ N*RC*~N));
+	Matrix<X_DIM,Z_DIM> K = ((Sigma*~H*delta)/(delta*H*Sigma*~H*delta + N*RC*~N))*delta;
+
+	SymmetricMatrix<Z_DIM> RCSym = identity<Z_DIM>()*.1;
+	Matrix<Z_DIM> obsDiff = obsfunc(x, sampleGaussian(zeros<Z_DIM,1>(),RCSym)) - obsfunc(x, zeros<R_DIM,1>());
+	x = x + K*obsDiff;
+
+	//std::cout << "I - KH" << std::endl << identity<X_DIM>() - K*H << std::endl;
 
 	Sigma = (identity<X_DIM>() - K*H)*Sigma;
 	
@@ -229,11 +263,11 @@ void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matri
 	}
 	for(int i=0; i < time_steps; i++) {
 		unVec(B[i], x, SqrtSigma);
-		B_vec.append(SqrtSigma[1,0]);
+		B_vec.append(SqrtSigma[1,1]);
 	}
 	for(int i=0; i < time_steps; i++) {
 		unVec(B[i], x, SqrtSigma);
-		B_vec.append(SqrtSigma[1,1]);
+		B_vec.append(SqrtSigma[1,0]);
 	}
 
 	py::list waypoints_vec;

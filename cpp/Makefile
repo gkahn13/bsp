@@ -264,31 +264,15 @@ PT_SLAM_TEST_DIR = point-slam/test
 PT_SLAM_TEST_FILES = point-slam-test
 PT_SLAM_TEST_OBJS = $(PT_SLAM_TEST_FILES:%=$(OBJ_DIR)/%.o)
 
-point-slam-test: | $(PT_SLAM_TEST_OBJS)
+touch-file:
+	touch point-slam/test/point-slam-test.cpp
+
+point-slam-test: | touch-file $(PT_SLAM_TEST_OBJS)
 	$(CXX) $(BFLAGS) $(PT_SLAM_TEST_OBJS) -o $(BIN_DIR)/point-slam-test $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
 	
 $(OBJ_DIR)/point-slam-test.o : $(PT_SLAM_TEST_DIR)/point-slam-test.cpp
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) -c -o $@ $<
 	
-# make point-belief
-PT_BELIEF_DIR = point/belief
-PT_BELIEF_FILES = pointBeliefMPC pointBeliefPenaltyMPC point-belief logging
-PT_BELIEF_OBJS = $(PT_BELIEF_FILES:%=$(OBJ_DIR)/%.o)
-
-point-belief-setup:
-	bash $(POINT_SETUP_FILE) belief $(T)
-
-point-belief: | point-belief-setup $(PT_BELIEF_OBJS)
-	$(CXX) $(BFLAGS) $(PT_BELIEF_OBJS) -o $(BIN_DIR)/point-belief $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
-	
-$(OBJ_DIR)/pointBeliefMPC.o : $(PT_BELIEF_DIR)/beliefMPC.c
-	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
-
-$(OBJ_DIR)/pointBeliefPenaltyMPC.o : $(PT_BELIEF_DIR)/beliefPenaltyMPC.c
-	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
-	
-$(OBJ_DIR)/point-belief.o : $(PT_BELIEF_DIR)/point-belief.cpp $(POINT_HEADERS)
-	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
 
 
 ###### CLEAN ########

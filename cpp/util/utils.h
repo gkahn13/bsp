@@ -407,6 +407,56 @@ inline double cdf(double x) {
 	//return 0.5*(1.0 + erf(x*M_SQRT1_2));
 }
 
+
+/*!
+ *  @brief       Randomly samples from the uniform distribution over range [0,1].
+ *  @returns     A uniform random number in [0,1].
+ *  \ingroup globalfunc
+ */
+inline double random_highprecision() {
+  return ((rand() << 15) + rand()) / 1073741823.0;
+}
+
+/*!
+ *  @brief       Randomly samples from the univariate standard Gaussian distribution N(0,1).
+ *  @returns     A random number from the univariate standard Gaussian distribution N(0,1).
+ *  \ingroup globalfunc
+ */
+inline std::pair<double, double> normal() {
+  double u, v, s;
+
+  do {
+    u = 2.0*random_highprecision()-1.0;
+    v = 2.0*random_highprecision()-1.0;
+    s = u*u + v*v;
+  } while (s > 1.0 || s == 0.0);
+
+  double r = sqrt(-2.0*log(s)/s);
+
+  return std::make_pair(u*r, v*r);
+}
+
+
+/*!
+ *  @brief       Randomly samples from the multivariate standard Gaussian distribution N(0,I).
+ *  @tparam      dim     The dimension of the distribution.
+ *  @returns     A random vector from the multivariate standard Gaussian distribution N(0,I).
+ *  \ingroup globalfunc
+ */
+template <size_t dim>
+inline Matrix<dim> sampleGaussian() {
+  Matrix<dim> sample;
+  for (int j = 0; j < dim / 2; ++j) {
+	std::pair<double,double> n = normal();
+    sample[j*2] = n.first;
+	sample[j*2+1] = n.second;
+  }
+  if (dim % 2 == 1) {
+    sample[dim - 1] = normal().first;
+  }
+  return sample;
+}
+
 /*!
  *  @brief       Randomly samples from the multivariate Gaussian distribution with specified
  *               mean and variance.

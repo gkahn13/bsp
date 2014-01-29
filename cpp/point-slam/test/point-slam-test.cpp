@@ -105,7 +105,7 @@ int main(int argc, char* argv[])
 	Matrix<X_DIM> xtmp;
 	Matrix<X_DIM, X_DIM> stmp;
 
-	for(int t = 0; t < T*NUM_WAYPOINTS; ++t) {
+	for(int t = 0; t < T; ++t) {
 		unVec(B[t], xtmp, stmp);
 		//std::cout << stmp.subMatrix<P_DIM,P_DIM>(0,0) << std::endl;
 		std::cout << stmp << std::endl;

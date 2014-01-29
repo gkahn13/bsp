@@ -61,6 +61,23 @@ Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matr
 	xNew.insert(0, 0, pNew);
 	xNew.insert(P_DIM, 0, x.subMatrix<L_DIM>(P_DIM,0));
 
+	/*
+	Matrix<L_DIM> l = x.subMatrix<L_DIM>(P_DIM,0);
+	double x0 = x[0], x1 = x[1], l0, l1, dist;
+
+	for(int i = 0; i < L_DIM; i += 2) {
+		l0 = l[i];
+		l1 = l[i+1];
+
+		dist = sqrt((x0 - l0)*(x0 - l0) + (x1 - l1)*(x1 - l1));
+
+		if (dist > range) {
+			xNew[P_DIM+i] += q[0];
+			xNew[P_DIM+i+1] += q[1];
+		}
+	}
+	*/
+
 	return xNew;
 }
 

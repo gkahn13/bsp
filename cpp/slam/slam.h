@@ -19,11 +19,13 @@
 
 namespace py = boost::python;
 
-#define TIMESTEPS 30
+#define TIMESTEPS 10
 #define DT 1.0
 #define NUM_LANDMARKS 3
+#define NUM_WAYPOINTS 5
 
 #define C_DIM 3 // car dimension [x, y, theta]
+#define P_DIM 2 // Position dimension [x,y]
 #define L_DIM 2*NUM_LANDMARKS
 
 #define X_DIM C_DIM+L_DIM
@@ -83,9 +85,9 @@ Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matr
 {
 	Matrix<X_DIM> xAdd = zeros<X_DIM,1>();
   
-	xAdd[0] = (u[0]+q[0]) * DT * cos(x[2]+u[1]+q[0]);//+ noise
-	xAdd[1] = (u[0]+q[0]) * DT * sin(x[2]+u[1]+q[1]);//+ noise
-	xAdd[2] = (u[0]+q[0]) * DT * sin(u[1]+q[1])/config::WHEELBASE;//+ noise
+	xAdd[0] = (u[0]+q[0]) * DT * cos(x[2]+u[1]+q[0]);
+	xAdd[1] = (u[0]+q[0]) * DT * sin(x[2]+u[1]+q[1]);
+	xAdd[2] = (u[0]+q[0]) * DT * sin(u[1]+q[1])/config::WHEELBASE;
 
 	Matrix<X_DIM> xNew = x + xAdd;
     return xNew;
@@ -94,7 +96,7 @@ Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matr
 
 Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r)
 {
-	Matrix<L_DIM,1> landmarks = x.subMatrix<L_DIM,1>(P_DIM, 0);
+  //Matrix<L_DIM,1> landmarks = x.subMatrix<L_DIM,1>(P_DIM, 0);
 	double xPos = x[0], yPos = x[1], angle = x[2];
 	double l0, l1;
 	double dx, dy;
@@ -110,7 +112,8 @@ Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r)
 			(dx*cos(angle) + dy*sin(angle) > 0) &&
 			(dx*dx + dy*dy < config::MAX_RANGE*config::MAX_RANGE))
 		{
-			// TODO: is noise being added ocrrectly? (check add_observation_noise.m)
+		  // TODO: is noise being added ocrrectly? (check add_observation_noise.m)
+		  // This is correct
 			obs[i] = sqrt(dx*dx + dy*dy) + r[i];
 			obs[i+1] = atan2(dy, dx) - angle + r[i+1];
 		}
@@ -123,7 +126,6 @@ Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r)
 // Jacobians: df(x,u,q)/dx, df(x,u,q)/dq
 void linearizeDynamics(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<Q_DIM>& q, Matrix<3,3>& A, Matrix<3,2>& M)
 {
-  //jferguson -- hardcode this
   //g is control input steer angle
   double s= sin(u[1]+x[2]); double c= cos(u[1]+x[2]);
   double vts= u[0]*DT*s; double vtc= u[0]*DT*c;
@@ -164,7 +166,6 @@ void linearizeDynamics(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Mat
 // Jacobians: df(x,u,q)/dx, df(x,u,q)/du
 void linearizeDynamicsFunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, Matrix<X_DIM,X_DIM>& A, Matrix<X_DIM,Q_DIM>& M, const Matrix<X_DIM>& h)
 {
-  //jferguson -- hardcode this
 	A.reset();
 	Matrix<X_DIM> xr(x), xl(x);
 	for (size_t i = 0; i < X_DIM; ++i) {
@@ -188,7 +189,7 @@ void linearizeDynamicsFunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, Matri
 // Jacobians: dh(x,r)/dx, dh(x,r)/dr
 void linearizeObservation(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r, Matrix<Z_DIM,X_DIM>& H, Matrix<Z_DIM,R_DIM>& N)
 {
-
+  //Approximate only setting H for 
   H.reset();
   for (int i=0; i<NUM_LANDMARKS; ++i) {
     double dx = x[3+2*i] - x[0];
@@ -198,21 +199,24 @@ void linearizeObservation(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r, Matrix
     double xd = dx/d;
     double yd = dy/d;
     double xd2 = dx/d2;
-    double yd2 = dy/2;
+    double yd2 = dy/d2;
   
-    H(i, 0) = -xd;
-    H(i, 1) = -yd;
+    //Approximate H being 0 for observations out of range
+    //Currently full circle, should only be half circle
+    double range_scale = (1+exp(10*(d-config::MAX_RANGE)));
+
+    H(i, 0) = -xd / range_scale;
+    H(i, 1) = -yd / range_scale;
     H(i, 2) = 0;
-    H(i+1, 0) = yd2;
-    H(i+1, 1) = -xd2;
-    H(i+1, 2) = -1;
-    H(i, 3+i) = xd;
-    H(i, 3+i+1) = yd;
-    H(i+1, 3+i) = -yd2;
-    H(i+1, 3+i+1) = xd2;
+    H(i+1, 0) = yd2 / range_scale;
+    H(i+1, 1) = -xd2 / range_scale;
+    H(i+1, 2) = -1 / range_scale;
+    H(i, 3+i) = xd / range_scale;
+    H(i, 3+i+1) = yd / range_scale;
+    H(i+1, 3+i) = -yd2 / range_scale;
+    H(i+1, 3+i+1) = xd2 / range_scale;
   }
   
-  //jferguson -- hardcode this
   /*
 	H.reset();
 	Matrix<X_DIM> xr(x), xl(x);
@@ -259,6 +263,8 @@ void vec(const Matrix<X_DIM>& x, const Matrix<X_DIM,X_DIM>& SqrtSigma, Matrix<B_
 
 // Belief dynamics
 Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
+  //Need to approximate not recieving observations for landmarks out of range
+  //Is it necessary to approximate augment somehow?
 	Matrix<X_DIM> x;
 	Matrix<X_DIM,X_DIM> SqrtSigma;
 	unVec(b, x, SqrtSigma);
@@ -284,7 +290,7 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	Sigma = (identity<X_DIM>() - K*H)*Sigma;
 
 	Matrix<B_DIM> g;
-	vec(x, sqrt(Sigma), g);
+	vec(x, sqrtm(Sigma), g);
 
 	return g;
 }
@@ -303,7 +309,63 @@ void setupDstarInterface(std::string mask) {
 	inputVars = new double[i];
 }
 
-void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B)
+void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<P_DIM> >& waypoints, int time_steps)
+{
+
+	// B_vec is only for the robot, not the landmarks
+	py::list B_vec;
+	for(int j=0; j < P_DIM; j++) {
+		for(int i=0; i < time_steps; i++) {
+			B_vec.append(B[i][j]);
+		}
+	}
+
+	Matrix<X_DIM> x;
+	Matrix<X_DIM,X_DIM> SqrtSigma;
+	for(int i=0; i < time_steps; i++) {
+		unVec(B[i], x, SqrtSigma);
+		B_vec.append(SqrtSigma[0,0]);
+	}
+	for(int i=0; i < time_steps; i++) {
+		unVec(B[i], x, SqrtSigma);
+		B_vec.append(SqrtSigma[1,1]);
+	}
+	for(int i=0; i < time_steps; i++) {
+		unVec(B[i], x, SqrtSigma);
+		B_vec.append(SqrtSigma[1,0]);
+	}
+
+	py::list waypoints_vec;
+	for(int j=0; j < 2; j++) {
+		for(int i=0; i < NUM_WAYPOINTS; i++) {
+			waypoints_vec.append(waypoints[i][j]);
+		}
+	}
+
+	std::string workingDir = boost::filesystem::current_path().normalize().string();
+
+	try
+	{
+		Py_Initialize();
+		py::object main_module = py::import("__main__");
+		py::object main_namespace = main_module.attr("__dict__");
+		py::exec("import sys, os", main_namespace);
+		py::exec(py::str("sys.path.append('"+workingDir+"/point-slam')"), main_namespace);
+		py::object plot_mod = py::import("plot_point_slam");
+		py::object plot_traj = plot_mod.attr("plot_point_trajectory");
+
+		plot_traj(B_vec, waypoints_vec, time_steps);
+	}
+	catch(py::error_already_set const &)
+	{
+		PyErr_Print();
+	}
+
+}
+
+
+
+void pythonDisplayTrajectory2(std::vector< Matrix<B_DIM> >& B)
 {
 	py::list Bvec;
 	for(int j=0; j < B_DIM; j++) {
@@ -332,7 +394,7 @@ void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B)
 		//py::exec(py::str("sys.path.append('"+bspDir+"bsp/python')"), main_namespace);
 		//py::exec("from bsp_light_dark import LightDarkModel", main_namespace);
 		//py::object model = py::eval("LightDarkModel()", main_namespace);
-		py::object plot_mod = py::import("plot_slam");
+		py::object plot_mod = py::import("plot_point_slam");
 		py::object plot_traj = plot_mod.attr("plot_belief_trajectory");
 
 		plot_traj(Bvec, B_DIM, X_DIM, T, camera_range, camera_view_angle);

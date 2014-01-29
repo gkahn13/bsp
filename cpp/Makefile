@@ -297,6 +297,24 @@ point-slam-test: | touch-file $(PT_SLAM_TEST_OBJS)
 $(OBJ_DIR)/point-slam-test.o : $(PT_SLAM_TEST_DIR)/point-slam-test.cpp
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) -c -o $@ $<
 
+###### SLAM ##########
+
+# share point functions
+SLAM_HEADERS = slam/slam.h
+
+# make point-slam-test
+SLAM_TEST_DIR = slam/test
+SLAM_TEST_FILES = test-slam
+SLAM_TEST_OBJS = $(SLAM_TEST_FILES:%=$(OBJ_DIR)/%.o)
+
+touch-file-slam:
+	touch slam/test/test-slam.cpp
+
+test-slam: | touch-file-slam $(SLAM_TEST_OBJS)
+	$(CXX) $(BFLAGS) $(SLAM_TEST_OBJS) -o $(BIN_DIR)/test-slam $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
+	
+$(OBJ_DIR)/test-slam.o : $(SLAM_TEST_DIR)/test-slam.cpp
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) -c -o $@ $<
 
 
 ###### CLEAN ########

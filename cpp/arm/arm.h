@@ -5,8 +5,7 @@
 
 #include "matrix.h"
 
-//#include "utils.h"
-#include "util/logging.h"
+#include "../util/logging.h"
 
 #define TIMESTEPS 15
 #define DT 1

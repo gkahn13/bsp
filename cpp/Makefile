@@ -69,6 +69,30 @@ $(OBJ_DIR)/arm-belief-pos-goal.o : $(ARM_BELIEF_DIR)/arm-belief-pos-goal-MPC.c
 $(OBJ_DIR)/arm-belief-pos.o : $(ARM_BELIEF_DIR)/arm-belief-pos-goal.cpp $(ARM_HEADERS)
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) -c -o $@ $<
 
+# make arm-ilqg
+ARM_ILQG_DIR = arm/ilqg
+ARM_ILQG_FILES = arm-ilqg logging
+ARM_ILQG_OBJS = $(ARM_ILQG_FILES:%=$(OBJ_DIR)/%.o)
+
+arm-ilqg: | $(ARM_ILQG_OBJS)
+	$(CXX) $(BFLAGS) $(ARM_ILQG_OBJS) -o $(BIN_DIR)/arm-ilqg $(BOOST_FLAGS) $(LINKER_FLAGS)
+
+$(OBJ_DIR)/arm-ilqg.o : $(ARM_ILQG_DIR)/arm-ilqg-pos-goal.cpp $(ARM_ILQG_DIR)/ilqg.h
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) -c -o $@ $<
+	
+	
+# make parameter-ilqg
+PARAM_ILQG_DIR = parameter/ilqg
+PARAM_ILQG_FILES = parameter-ilqg
+PARAM_ILQG_OBJS = $(PARAM_ILQG_FILES:%=$(OBJ_DIR)/%.o)
+
+parameter-ilqg: $(PARAM_ILQG_OBJS)
+	$(CXX) $(BFLAGS) $(PARAM_ILQG_OBJS) -o $(BIN_DIR)/parameter-ilqg $(PYTHON_FLAGS) $(BOOST_FLAGS) $(LINKER_FLAGS)
+	
+$(OBJ_DIR)/parameter-ilqg.o : $(PARAM_ILQG_DIR)/parameter-ilqg.cpp $(PARAM_ILQG_DIR)/ilqg.h
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) -c -o $@ $<
+	
+
 # make arm-state
 ARM_STATE_DIR = arm/state
 ARM_STATE_FILES = armStateMPC arm-state logging

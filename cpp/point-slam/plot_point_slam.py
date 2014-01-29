@@ -27,8 +27,12 @@ def plot_point_trajectory(B, waypoints, T):
     waypoints = np.matrix(waypoints)
     waypoints = waypoints.reshape(2, numWaypoints)
     
-    plt.axis([-1,5,-1,5])
-
+    #plt.axis([-500,4500,-500,4500])
+    #IPython.embed()
+    #plt.axis([waypoints[:,0].min()-200, waypoints[:,0].max()+200, 
+    #          waypoints[:,1].min()-200, waypoints[:,1].max()+200])
+    plt.axis('equal')
+    
     # plot mean of trajectory
     plot_mean(B[0:2,:])
     
@@ -42,12 +46,12 @@ def plot_point_trajectory(B, waypoints, T):
         Xt[:,t], SqrtSigma_t = decompose_belief(B[:,t], bDim, xDim)
         Sigma_t = SqrtSigma_t*SqrtSigma_t
 
-        #plot_cov(Xt[0:2,t], Sigma_t[0:2,0:2])
+        plot_cov(Xt[0:2,t], Sigma_t[0:2,0:2])
 
     Xt[:,T-1], SqrtSigma_T = decompose_belief(B[:,T-1], bDim, xDim)
     Sigma_T = SqrtSigma_T*SqrtSigma_T
 
-    #plot_cov(Xt[0:2,T-1], Sigma_T[0:2,0:2])
+    plot_cov(Xt[0:2,T-1], Sigma_T[0:2,0:2])
     
     plt.show(block=False)
     plt.pause(.05)

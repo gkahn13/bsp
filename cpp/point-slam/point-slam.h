@@ -19,8 +19,8 @@ namespace py = boost::python;
 #define TIMESTEPS 15
 #define DT 1.0
 
-#define NUM_LANDMARKS 5
-#define NUM_WAYPOINTS 5
+#define NUM_LANDMARKS 4
+#define NUM_WAYPOINTS 4
 
 #define P_DIM 2 // robot state size (x, y)
 #define L_DIM (2*NUM_LANDMARKS) // landmark state size (x, y)
@@ -36,7 +36,7 @@ namespace py = boost::python;
 #define XU_DIM (X_DIM*T+U_DIM*(T-1))
 
 const double step = 0.0078125*0.0078125;
-const double range = 500;
+const double range = 10;
 
 const int T = TIMESTEPS;
 const double INFTY = 1e10;
@@ -45,6 +45,10 @@ const double INFTY = 1e10;
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
 const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 1, alpha_goal_state = 1;
+
+const double initial_sigma_factor = .5;
+const double dyn_noise_factor = 1; // 2
+const double obs_noise_factor = 30;
 
 double *inputVars, *vars;
 std::vector<int> maskIndices;
@@ -55,7 +59,7 @@ Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matr
 	Matrix<P_DIM> pNew;
 	Matrix<X_DIM> xNew;
 
-	pNew = x.subMatrix<P_DIM>(0,0) + u*DT + .01*q;
+	pNew = x.subMatrix<P_DIM>(0,0) + u*DT + dyn_noise_factor*q;
 	xNew.insert(0, 0, pNew);
 	xNew.insert(P_DIM, 0, x.subMatrix<L_DIM>(P_DIM,0));
 
@@ -75,8 +79,8 @@ Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r)
 
 		dist = sqrt(std::pow(x0 - l0, 2) + std::pow(x1 - l1, 2));
 
-		z[i] = (x0 - l0) + (r[i])/ std::pow(1+exp(range-dist),2);
-		z[i+1] = (x1 - l1) + (r[i+1])/ std::pow(1+exp(range-dist),2);
+		z[i] = (x0 - l0) + obs_noise_factor*(r[i])/ std::pow(1+exp(range-dist),2);
+		z[i+1] = (x1 - l1) + obs_noise_factor*(r[i+1])/ std::pow(1+exp(range-dist),2);
 	}
 
 	return z;
@@ -180,28 +184,28 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 }
 
 
-void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<P_DIM> >& waypoints)
+void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<P_DIM> >& waypoints, int time_steps)
 {
 
 	// B_vec is only for the robot, not the landmarks
 	py::list B_vec;
 	for(int j=0; j < P_DIM; j++) {
-		for(int i=0; i < T*NUM_WAYPOINTS; i++) {
+		for(int i=0; i < time_steps; i++) {
 			B_vec.append(B[i][j]);
 		}
 	}
 
 	Matrix<X_DIM> x;
 	Matrix<X_DIM,X_DIM> SqrtSigma;
-	for(int i=0; i < T*NUM_WAYPOINTS; i++) {
+	for(int i=0; i < time_steps; i++) {
 		unVec(B[i], x, SqrtSigma);
 		B_vec.append(SqrtSigma[0,0]);
 	}
-	for(int i=0; i < T*NUM_WAYPOINTS; i++) {
+	for(int i=0; i < time_steps; i++) {
 		unVec(B[i], x, SqrtSigma);
 		B_vec.append(SqrtSigma[1,0]);
 	}
-	for(int i=0; i < T*NUM_WAYPOINTS; i++) {
+	for(int i=0; i < time_steps; i++) {
 		unVec(B[i], x, SqrtSigma);
 		B_vec.append(SqrtSigma[1,1]);
 	}
@@ -225,7 +229,7 @@ void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matri
 		py::object plot_mod = py::import("plot_point_slam");
 		py::object plot_traj = plot_mod.attr("plot_point_trajectory");
 
-		plot_traj(B_vec, waypoints_vec, T*NUM_WAYPOINTS);
+		plot_traj(B_vec, waypoints_vec, time_steps);
 	}
 	catch(py::error_already_set const &)
 	{

@@ -1,9 +1,8 @@
 #include <vector>
 #include <iomanip>
 
-#include "callisto.h"
-#include "matrix.h"
-#include "utils.h"
+#include "../matrix.h"
+#include "../../util/Timer.h"
 
 extern "C" {
 #include "arm-belief-joint-goal-MPC.h"
@@ -13,7 +12,7 @@ beliefPenaltyMPC_FLOAT *b;
 
 #include "boost/preprocessor.hpp"
 
-#include "arm.h"
+#include "../arm.h"
 
 namespace cfg {
 const double improve_ratio_threshold = .1;
@@ -32,7 +31,7 @@ const int max_sqp_iterations = 50;
 void constructHessian(const Matrix<B_DIM>& b, Matrix<S_DIM,S_DIM>& Hess) {
 
 	Matrix<X_DIM> x = b.subMatrix<X_DIM,1>(0,0);
-	Matrix<S_DIM> SqrtSigma = b.subMatrix<S_DIM,1>(X_DIM,0);
+	//Matrix<S_DIM> SqrtSigma = b.subMatrix<S_DIM,1>(X_DIM,0);
 
 	Matrix<G_DIM,X_DIM> J;
 	linearizeg(x,J);
@@ -201,31 +200,31 @@ bool isValidInputs()
 	return true;
 }
 
-bool testInitializationFeasibility(std::vector<Matrix<B_DIM> >& B, std::vector<Matrix<U_DIM> >& U)
+bool testInitializationFeasibility(const std::vector<Matrix<B_DIM> >& B, const std::vector<Matrix<U_DIM> >& U)
 {
-	std::cout << "X initial" << std::endl;
+	LOG_DEBUG("X initial");
 	for (int t = 0; t < T; ++t) { 
-		Matrix<U_DIM>& xt = B[t].subMatrix<X_DIM,1>(0,0);
+		const Matrix<X_DIM>& xt = B[t].subMatrix<X_DIM,1>(0,0);
 		for (int i = 0; i < X_DIM; ++i) {
 			if (xt[i] > xMax[i] || xt[i] < xMin[i]) {
-				std::cerr << "Joint angle limit violated at joint " << i << " and time " << t << std::endl;
+				LOG_ERROR("Joint angle limit violated at joint %d and time %d", i,t);
 				return false;
 			}
 		}
 
-		std::cout << std::setprecision(8) << ~xt; 
+		//std::cout << std::setprecision(8) << ~xt;
 	}
 
-	std::cout << "U initial" << std::endl;
+	LOG_DEBUG("U initial");
 	for (int t = 0; t < T-1; ++t) { 
-		Matrix<U_DIM>& ut = U[t];
+		const Matrix<U_DIM>& ut = U[t];
 		for (int i = 0; i < U_DIM; ++i) {
 			if (ut[i] > uMax[i] || ut[i] < uMin[i]) {
-				std::cerr << "Control limit violated at joint " << i << " and time " << t << std::endl;
+				LOG_ERROR("Control limit violated at joint %d and time %d", i,t);
 				return false;
 			}
 		}
-		std::cout << std::setprecision(8) << ~ut; 
+		//std::cout << std::setprecision(8) << ~ut;
 	}
 
 	return true;
@@ -233,10 +232,7 @@ bool testInitializationFeasibility(std::vector<Matrix<B_DIM> >& B, std::vector<M
 
 bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U, beliefPenaltyMPC_params& problem, beliefPenaltyMPC_output& output, beliefPenaltyMPC_info& info, double penalty_coeff, double trust_box_size)
 {
-	//LOG_DEBUG("Solving sqp problem with penalty parameter: %2.4f", penalty_coeff);
-	std::cout << "Solving sqp problem with penalty parameter: " << penalty_coeff << std::endl;
-
-	Matrix<B_DIM,1> b0 = B[0];
+	LOG_DEBUG("Solving sqp problem with penalty parameter: %2.4f", penalty_coeff);
 
 	std::vector< Matrix<B_DIM,B_DIM> > F(T-1);
 	std::vector< Matrix<B_DIM,U_DIM> > G(T-1);
@@ -245,7 +241,7 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 	double Beps = trust_box_size;
 	double Ueps = trust_box_size;
 
-	double prevcost, optcost;
+	double optcost;
 
 	std::vector<Matrix<B_DIM> > Bopt(T);
 	std::vector<Matrix<U_DIM> > Uopt(T-1);
@@ -272,13 +268,11 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 	while(true)
 	{
 		// In this loop, we repeatedly construct a linear approximation to the nonlinear belief dynamics constraint
-		//LOG_DEBUG("  sqp iter: %d", sqp_iter);
-		std::cout << "  sqp iter: " << sqp_iter << std::endl;
+		LOG_DEBUG("  sqp iter: %d", sqp_iter);
 
 		merit = computeMerit(B, U, penalty_coeff);
 		
-		//LOG_DEBUG("  merit: %4.10f", merit);
-		std::cout << "  merit: " << merit << std::endl;
+		LOG_DEBUG("  merit: %4.10f", merit);
 
 		// Problem linearization and definition
 		// fill in Q, f, C, e
@@ -342,7 +336,6 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			b[X_DIM+i] = -xGoal[i] + delta;
 		}
 
-		
 		//std::cout << "PAUSED INSIDE MINIMIZEMERITFUNCTION" << std::endl;
 		//int k;
 		//std::cin >> k;
@@ -351,8 +344,7 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 		// trust region size adjustment
 		while(true)
 		{
-			//LOG_DEBUG("       trust region size: %2.6f %2.6f", Beps, Ueps);
-			std::cout << "       trust region size: " << Beps << ", " << Ueps << std::endl;
+			LOG_DEBUG("       trust region size: %2.6f %2.6f", Beps, Ueps);
 
 			// solve the innermost QP here
 			for(int t = 0; t < T-1; ++t)
@@ -428,71 +420,55 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 				}
 			}
 			else {
-				//LOG_ERROR("Some problem in solver");
-				std::cerr << "Some problem in solver" << std::endl;
-				std::exit(-1);
+				LOG_ERROR("Some problem in solver");
+				exit(-1);
 			}
 
-			//LOG_DEBUG("Optimized cost: %4.10f", optcost);
-			std::cout << "       Optimized cost: " << optcost << std::endl;
+			LOG_DEBUG("Optimized cost: %4.10f", optcost);
 
 			model_merit = optcost;
 			new_merit = computeMerit(Bopt, Uopt, penalty_coeff);
 
-			//LOG_DEBUG("merit: %4.10f", merit);
-			//LOG_DEBUG("model_merit: %4.10f", model_merit);
-			//LOG_DEBUG("new_merit: %4.10f", new_merit);
-			//std::cout << "       merit: " << merit << std::endl;
-			//std::cout << "       model_merit: " << model_merit << std::endl;
-			//std::cout << "       new_merit: " << new_merit << std::endl;
+			LOG_DEBUG("merit: %4.10f", merit);
+			LOG_DEBUG("model_merit: %4.10f", model_merit);
+			LOG_DEBUG("new_merit: %4.10f", new_merit);
 			
 			approx_merit_improve = merit - model_merit;
 			exact_merit_improve = merit - new_merit;
 			merit_improve_ratio = exact_merit_improve / approx_merit_improve;
 
-			//LOG_DEBUG("approx_merit_improve: %1.6f", approx_merit_improve);
-			//LOG_DEBUG("exact_merit_improve: %1.6f", exact_merit_improve);
-			//LOG_DEBUG("merit_improve_ratio: %1.6f", merit_improve_ratio);
-			//std::cout << "       approx_merit_improve: " << approx_merit_improve << std::endl;
-			//std::cout << "       exact_merit_improve: " << exact_merit_improve << std::endl;
-			std::cout << "       merit_improve_ratio: " << merit_improve_ratio << std::endl;
+			LOG_DEBUG("approx_merit_improve: %1.6f", approx_merit_improve);
+			LOG_DEBUG("exact_merit_improve: %1.6f", exact_merit_improve);
+			LOG_DEBUG("merit_improve_ratio: %1.6f", merit_improve_ratio);
 			
 			//std::cout << "PAUSED INSIDE minimizeMeritFunction" << std::endl;
 			//int num;
 			//std::cin >> num;
 
 			if (approx_merit_improve < -1e-5) {
-				//LOG_ERROR("Approximate merit function got worse: %1.6f", approx_merit_improve);
-				//LOG_ERROR("Either convexification is wrong to zeroth order, or you are in numerical trouble");
-				//LOG_ERROR("Failure!");
-				std::cerr << "Approximate merit function got worse: " << approx_merit_improve << std::endl;
-				std::cerr << "Either convexification is wrong to zeroth order, or you are in numerical trouble" << std::endl;
-				std::cerr << "Failure!" << std::endl;
+				LOG_ERROR("Approximate merit function got worse: %1.6f", approx_merit_improve);
+				LOG_ERROR("Either convexification is wrong to zeroth order, or you are in numerical trouble");
+				LOG_ERROR("Failure!");
 
 				success = false;
 			} else if (approx_merit_improve < cfg::min_approx_improve) {
-				//LOG_DEBUG("Converged: improvement small enough");
-				std::cout << "  Converged: improvement small enough" << std::endl;
+				LOG_DEBUG("Converged: improvement small enough");
 				B = Bopt; U = Uopt;
 				return true;
 			} else if ((exact_merit_improve < 0) || (merit_improve_ratio < cfg::improve_ratio_threshold)) {
 				Beps *= cfg::trust_shrink_ratio;
 				Ueps *= cfg::trust_shrink_ratio;
-				//LOG_DEBUG("Shrinking trust region size to: %2.6f %2.6f", Beps, Ueps);
-				std::cout << "  Shrinking trust region size to: " << Beps << ", " << Ueps << std::endl;
+				LOG_DEBUG("Shrinking trust region size to: %2.6f %2.6f", Beps, Ueps);
 			} else {
 				Beps *= cfg::trust_expand_ratio;
 				Ueps *= cfg::trust_expand_ratio;
 				B = Bopt; U = Uopt;
-				prevcost = optcost;
-				//LOG_DEBUG("Accepted, Increasing trust region size to:  %2.6f %2.6f", Beps, Ueps);
-				std::cout << "  Accepted, Increasing trust region size to:  " << Beps << ", " << Ueps << std::endl;
+				LOG_DEBUG("Accepted, Increasing trust region size to:  %2.6f %2.6f", Beps, Ueps);
 				break;
 			}
 
 			if (Beps < cfg::min_trust_box_size && Ueps < cfg::min_trust_box_size) {
-			    //LOG_DEBUG("Converged: x tolerance");
-				std::cout << "  Converged: x tolerance" << std::endl;
+			    LOG_DEBUG("Converged: x tolerance");
 			    return true;
 			}
 
@@ -505,8 +481,6 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 
 double beliefPenaltyCollocation(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U, beliefPenaltyMPC_params& problem, beliefPenaltyMPC_output& output, beliefPenaltyMPC_info& info)
 {
-	double costTime = 0;
-
 	double penalty_coeff = cfg::initial_penalty_coeff;
 	double trust_box_size = cfg::initial_trust_box_size;
 
@@ -537,8 +511,7 @@ double beliefPenaltyCollocation(std::vector< Matrix<B_DIM> >& B, std::vector< Ma
 	
 	    success = success && (cntviol < cfg::cnt_tolerance);
 	    
-		//LOG_DEBUG("Constraint violations: %2.10f",cntviol);
-		std::cout << "Constraint violations: " << cntviol << std::endl;
+		LOG_DEBUG("Constraint violations: %2.10f",cntviol);
 
 	    if (!success) {
 	        penalty_increases++;
@@ -557,7 +530,7 @@ int main(int argc, char* argv[])
 	
 	initProblemParams();
 
-	std::cout << "init problem params" << std::endl;
+	LOG_INFO("init problem params");
 
 	Matrix<U_DIM> uinit = (xGoal - x0) / (double)((T-1)*DT);
 	std::vector<Matrix<U_DIM> > U(T-1, uinit);
@@ -572,16 +545,12 @@ int main(int argc, char* argv[])
 
 	bool feasible = testInitializationFeasibility(B, U);
 	if (!feasible) {
-		std::cerr << "Infeasible trajectory initialization detected" << std::endl;
-		std::exit(-1);
+		LOG_ERROR("Infeasible trajectory initialization detected");
+		exit(-1);
 	}
 
 	double initTrajCost = computeCost(B, U);
-	std::cout << "Initial trajectory cost: " << initTrajCost << std::endl;
-
-	// Create Obstacles in Callisto
-	CAL_Initialisation (true,true,true);
-	initEnvironment();
+	LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
 
 	std::vector<Matrix<X_DIM> > X;
 	
@@ -592,44 +561,33 @@ int main(int argc, char* argv[])
 	}
 
 	double initLQGMPcost = computeLQGMPcost(X, U);
-	std::cout << "Initial trajectory LQG-MP cost: " << initLQGMPcost << std::endl;
-
-	//displayTrajectory(X, U, B);
+	LOG_DEBUG("Initial trajectory LQG-MP cost: %4.10f", initLQGMPcost);
 	
-	/*
 	beliefPenaltyMPC_params problem;
 	beliefPenaltyMPC_output output;
 	beliefPenaltyMPC_info info;
 
 	setupBeliefVars(problem, output);
 
-	Timer solveTimer;
-	//Timer_tic(&solveTimer);
-	solveTimer.start();
+	util::Timer solveTimer;
+	util::Timer_tic(&solveTimer);
 
 	double cost = beliefPenaltyCollocation(B, U, problem, output, info);
 
-	solveTimer.stop();
-	//double solvetime = util::Timer_toc(&solveTimer);
+	double solvetime = util::Timer_toc(&solveTimer);
 
-	//LOG_INFO("Optimized cost: %4.10f", cost);
-	//LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
-	
-	std::cout << "Optimized cost: " << cost << std::endl;
-	std::cout << "Actual cost: " << computeCost(B, U) << std::endl;
-	std::cout << "Optimization time: " << solveTimer.interval_mS() << " mS" << std::endl;
+	LOG_INFO("Optimized cost: %4.10f", cost);
+	LOG_INFO("Actual cost: %4.10f", computeCost(B,U));
+	LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 	
 	cleanupBeliefMPCVars();
-	*/
 
 	double finalLQGMPcost = computeLQGMPcost(X, U);
-	std::cout << "Final trajectory LQG-MP cost: " << finalLQGMPcost << std::endl;
+	LOG_DEBUG("Final trajectory LQG-MP cost: %4.10f",finalLQGMPcost);
 
 	//saveOptimizedTrajectory(U);
 	readOptimizedTrajectory(U);
 	
-	//displayTrajectory(X, U, B);
-
 	vec(x0, SqrtSigma0, B[0]);
 	for (size_t t = 0; t < T-1; ++t) {
 		B[t+1] = beliefDynamics(B[t], U[t]);
@@ -639,12 +597,8 @@ int main(int argc, char* argv[])
 		X.push_back(B[t].subMatrix<X_DIM,1>(0,0));
 	}
 
-	displayTrajectory(X, U, B, true);
-
 	int k;
 	std::cin >> k;
-
-	CAL_End();
 
 	return 0;
 }

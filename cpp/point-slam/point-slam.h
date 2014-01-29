@@ -20,7 +20,7 @@ namespace py = boost::python;
 #define DT 1.0
 
 #define NUM_LANDMARKS 4
-#define NUM_WAYPOINTS 4
+#define NUM_WAYPOINTS 5
 
 #define P_DIM 2 // robot state size (x, y)
 #define L_DIM (2*NUM_LANDMARKS) // landmark state size (x, y)
@@ -47,8 +47,8 @@ const double INFTY = 1e10;
 const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 1, alpha_goal_state = 1;
 
 const double initial_sigma_factor = .5;
-const double dyn_noise_factor = 1; // 2
-const double obs_noise_factor = 30;
+const double dyn_noise_factor = .6; // affects maximum covariance size
+const double obs_noise_factor = 15;
 
 double *inputVars, *vars;
 std::vector<int> maskIndices;

@@ -41,8 +41,8 @@ int main(int argc, char* argv[])
 	waypoints[0][0] = 30; waypoints[0][1] = 0;
 	waypoints[1][0] = 60; waypoints[1][1] = 0;
 	waypoints[2][0] = 60; waypoints[2][1] = 40;
-	//waypoints[3][0] = 30; waypoints[3][1] = 20;
-	waypoints[3][0] = 20; waypoints[3][1] = 40;
+	waypoints[3][0] = 35; waypoints[3][1] = 25;
+	waypoints[4][0] = 20; waypoints[4][1] = 40;
 
 	//testPlotting(waypoints);
 
@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
 	landmarks[0][0] = 30; landmarks[0][1] = 0;
 	landmarks[1][0] = 60; landmarks[1][1] = 0;
 	landmarks[2][0] = 60; landmarks[2][1] = 40;
-	landmarks[3][0] = 30; landmarks[3][1] = 20;
+	landmarks[3][0] = 35; landmarks[3][1] = 25;
 
 	//landmarks[4][0] = 0; landmarks[4][1] = 40;
 

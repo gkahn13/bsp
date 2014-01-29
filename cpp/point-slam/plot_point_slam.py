@@ -27,11 +27,9 @@ def plot_point_trajectory(B, waypoints, T):
     waypoints = np.matrix(waypoints)
     waypoints = waypoints.reshape(2, numWaypoints)
     
-    #plt.axis([-500,4500,-500,4500])
+    plt.axis([-10,70,-10,50])
     #IPython.embed()
-    #plt.axis([waypoints[:,0].min()-200, waypoints[:,0].max()+200, 
-    #          waypoints[:,1].min()-200, waypoints[:,1].max()+200])
-    plt.axis('equal')
+    #plt.axis('equal')
     
     # plot mean of trajectory
     plot_mean(B[0:2,:])

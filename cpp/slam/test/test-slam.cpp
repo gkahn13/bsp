@@ -33,10 +33,11 @@ int main(int argc, char* argv[])
 	//testPlotting(waypoints);
 
 	std::vector< Matrix<P_DIM> > landmarks(NUM_LANDMARKS);
-	landmarks[0][0] = 30; landmarks[0][1] = 0;
-	landmarks[1][0] = 60; landmarks[1][1] = 0;
-	landmarks[2][0] = 60; landmarks[2][1] = 20;
-	//landmarks[3][0] = 30; landmarks[3][1] = 20;
+	landmarks[0][0] = 0; landmarks[0][1] = 0;
+	landmarks[1][0] = 30; landmarks[1][1] = 0;
+	landmarks[2][0] = 60; landmarks[2][1] = 0;
+	landmarks[3][0] = 60; landmarks[3][1] = 20;
+	//landmarks[4][0] = 30; landmarks[4][1] = 20;
 
 	//landmarks[4][0] = 0; landmarks[4][1] = 40;
 
@@ -58,6 +59,19 @@ int main(int argc, char* argv[])
 	vec(x0, SqrtSigma0, B[0]);
 	int index = 0;
 
+	int num_controls = 55;
+	double heading_control[55] = { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+			         0, 0, 0, 0, 0, 0, 0, 0, 0.3491, 0.5236, 0.5236, 0.5236,
+			    0.5236, 0.3833, 0.1028, 0.0258, 0.3749, 0.5236, 0.5236, 0.5236, 0.3964, 0.1068, 0.0269, 0.0067,
+			    0.0017, 0.0004, 0.0001, 0.0000, 0.0000, -0.3491, -0.5236, -0.5236, -0.5114, -0.1623, -0.0209, -0.0052,
+			   -0.0013, -0.0003, -0.0001, -0.0000, -0.0000, -0.0000, -0.0000 };
+
+	std::vector<Matrix<U_DIM> > U(num_controls);
+	for(int t=0; t < num_controls; ++t) {
+		Matrix<U_DIM> u = zeros<U_DIM,1>();
+		u[1] = heading_control[t];
+		U[t] = u;
+	}
 
 	/*
 Controls used when running openslam on our example set up and DT=1, V=3 (~10 timesteps per waypoint)
@@ -88,7 +102,7 @@ Controls used when running openslam on our example set up and DT=1, V=3 (~10 tim
 		Matrix<X_DIM> xtmp;
 		Matrix<X_DIM, X_DIM> stmp;
 		std::cout << " " << i << std::endl;
-		for(int t = 0; t < T - 1; ++t) {
+		for(int t = 0; t <= num_controls; ++t) {
 			B[index+1] = beliefDynamics(B[index], U[index]);
 			unVec(B[index+1], xtmp, stmp);
 			//std::cout << tr(stmp) << ": "<<xtmp[0] << ", "<<xtmp[1] << std::endl;

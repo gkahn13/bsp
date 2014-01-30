@@ -21,7 +21,7 @@ namespace py = boost::python;
 
 #define TIMESTEPS 10
 #define DT 1.0
-#define NUM_LANDMARKS 3
+#define NUM_LANDMARKS 4
 #define NUM_WAYPOINTS 5
 
 #define C_DIM 3 // car dimension [x, y, theta]
@@ -37,7 +37,6 @@ namespace py = boost::python;
 #define S_DIM (((X_DIM+1)*(X_DIM))/2)
 #define B_DIM (X_DIM+S_DIM)
 
-const double length = 4;
 const double camera_range = 3;
 const double camera_view_angle = 3.1415926535/4;
 
@@ -112,14 +111,30 @@ Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r)
 			(dx*cos(angle) + dy*sin(angle) > 0) &&
 			(dx*dx + dy*dy < config::MAX_RANGE*config::MAX_RANGE))
 		{
-		  // TODO: is noise being added ocrrectly? (check add_observation_noise.m)
-		  // This is correct
 			obs[i] = sqrt(dx*dx + dy*dy) + r[i];
 			obs[i+1] = atan2(dy, dx) - angle + r[i+1];
 		}
 	}
 
 	return obs;
+}
+
+Matrix<Z_DIM,Z_DIM> deltaMatrix(const Matrix<X_DIM>& x) {
+	Matrix<Z_DIM,Z_DIM> delta = zeros<Z_DIM,Z_DIM>();
+	double l0, l1, dist;
+	double alpha = 100;
+	for(int i=C_DIM; i < X_DIM; i += 2) {
+		l0 = x[i];
+		l1 = x[i+1];
+
+		dist = sqrt((x[0] - l0)*(x[0] - l0) + (x[1] - l1)*(x[1] - l1));
+
+		double signed_dist = 1/(1+exp(-alpha*(config::MAX_RANGE-dist)));
+		delta(i-P_DIM,i-P_DIM) = signed_dist;
+		delta(i-P_DIM+1,i-P_DIM+1) = signed_dist;
+	}
+
+	return delta;
 }
 
 
@@ -135,8 +150,8 @@ void linearizeDynamics(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Mat
   M(0, 1) = -vts;
   M(1, 0) = DT*s;
   M(1, 1) = vtc;
-  M(2, 0) = DT*sin(u[1])/length;
-  M(2, 1) = u[0]*DT*cos(u[1])/length;
+  M(2, 0) = DT*sin(u[1])/config::WHEELBASE;
+  M(2, 1) = u[0]*DT*cos(u[1])/config::WHEELBASE;
 
   A.reset();
   A(0,0) = 1;
@@ -189,21 +204,24 @@ void linearizeDynamicsFunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, Matri
 // Jacobians: dh(x,r)/dx, dh(x,r)/dr
 void linearizeObservation(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r, Matrix<Z_DIM,X_DIM>& H, Matrix<Z_DIM,R_DIM>& N)
 {
+
   //Approximate only setting H for 
   H.reset();
   for (int i=0; i<NUM_LANDMARKS; ++i) {
     double dx = x[3+2*i] - x[0];
     double dy = x[4+2*i] - x[1];
-    double d2 = std::pow(dx,2) + std::pow(dy, 2);
-    double d = std::sqrt(d2);
+    double d2 = dx*dx + dy*dy;
+    double d = sqrt(d2);
     double xd = dx/d;
     double yd = dy/d;
     double xd2 = dx/d2;
     double yd2 = dy/d2;
   
-    //Approximate H being 0 for observations out of range
-    //Currently full circle, should only be half circle
-    double range_scale = (1+exp(10*(d-config::MAX_RANGE)));
+    // Approximate H being 0 for observations out of range
+    // Currently full circle, should only be half circle
+    // double range_scale = (1+exp(10*(d-config::MAX_RANGE)));
+    // GREG: trying delta matrix for now
+    double range_scale = 1;
 
     H(i, 0) = -xd / range_scale;
     H(i, 1) = -yd / range_scale;
@@ -216,8 +234,9 @@ void linearizeObservation(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r, Matrix
     H(i+1, 3+i) = -yd2 / range_scale;
     H(i+1, 3+i+1) = xd2 / range_scale;
   }
-  
-  /*
+
+
+  	 /*
 	H.reset();
 	Matrix<X_DIM> xr(x), xl(x);
 	for (size_t i = 0; i < X_DIM; ++i) {
@@ -225,6 +244,7 @@ void linearizeObservation(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r, Matrix
 	  H.insert(0,i, (obsfunc(xr, r) - obsfunc(xl, r)) / (xr[i] - xl[i]));
 	  xr[i] = x[i]; xl[i] = x[i];
 	}
+	*/
   
 	N.reset();
 	Matrix<R_DIM> rr(r), rl(r);
@@ -234,7 +254,7 @@ void linearizeObservation(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r, Matrix
 		rr[i] = r[i]; rl[i] = r[i];
 
 	}
-  */
+
 }
 
 // Switch between belief vector and matrices
@@ -265,18 +285,26 @@ void vec(const Matrix<X_DIM>& x, const Matrix<X_DIM,X_DIM>& SqrtSigma, Matrix<B_
 Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
   //Need to approximate not recieving observations for landmarks out of range
   //Is it necessary to approximate augment somehow?
+	// we can try adding the binary matrix
 	Matrix<X_DIM> x;
 	Matrix<X_DIM,X_DIM> SqrtSigma;
 	unVec(b, x, SqrtSigma);
 
 	Matrix<X_DIM,X_DIM> Sigma = SqrtSigma*SqrtSigma;
 
-	Matrix<3,3> A;
-	Matrix<3,2> M;
-	linearizeDynamics(x, u, zeros<Q_DIM,1>(), A, M);
-	Sigma.insert<3,3>(0,0, A*Sigma.subMatrix<3,3>(0,0)*~A + M*Q*~M);
+	Matrix<C_DIM,C_DIM> Acar;
+	Matrix<C_DIM,Q_DIM> Mcar;
+	linearizeDynamics(x, u, zeros<Q_DIM,1>(), Acar, Mcar);
 
-	Sigma.insert<3,X_DIM-3>(0,3, A*(Sigma.subMatrix<3,X_DIM-3>(0,3)));
+	Matrix<X_DIM,X_DIM> A = zeros<X_DIM,X_DIM>();
+	A.insert<C_DIM,C_DIM>(0, 0, Acar);
+	Matrix<X_DIM,Q_DIM> M = zeros<X_DIM,Q_DIM>();
+	M.insert<C_DIM,U_DIM>(0, 0, Mcar);
+
+	//Sigma.insert<3,3>(0,0, A*Sigma.subMatrix<3,3>(0,0)*~A + M*Q*~M);
+	//Sigma.insert<3,X_DIM-3>(0,3, A*(Sigma.subMatrix<3,X_DIM-3>(0,3)));
+	Sigma = A*Sigma*~A + M*Q*~M;
+
 	x = dynfunc(x, u, zeros<Q_DIM,1>());
 
 	//Should include a Q here
@@ -285,7 +313,9 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	Matrix<Z_DIM,R_DIM> N;
 	linearizeObservation(x, zeros<R_DIM,1>(), H, N);
 	//Should include an R here
-	Matrix<X_DIM,Z_DIM> K = Sigma*~H/(H*Sigma*~H + R);//N*R*~N);
+
+	Matrix<Z_DIM,Z_DIM> delta = deltaMatrix(x);
+	Matrix<X_DIM,Z_DIM> K = ((Sigma*~H*delta)/(delta*H*Sigma*~H*delta + N*~N))*delta;//N*R*~N);
 
 	Sigma = (identity<X_DIM>() - K*H)*Sigma;
 
@@ -295,19 +325,6 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	return g;
 }
 
-
-void setupDstarInterface(std::string mask) {
-	std::stringstream ss(mask);
-	int val, i=0;
-	while (ss >> val) {
-		if (val == 1) {
-			maskIndices.push_back(i);
-		}
-		i++;
-	}
-
-	inputVars = new double[i];
-}
 
 void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<P_DIM> >& waypoints, int time_steps)
 {

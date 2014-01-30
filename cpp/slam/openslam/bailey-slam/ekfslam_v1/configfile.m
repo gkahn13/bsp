@@ -16,7 +16,8 @@ Q= [sigmaV^2 0; 0 sigmaG^2];
 
 % observation parameters
 MAX_RANGE= 10.0; % metres
-DT_OBSERVE= 8*DT_CONTROLS; % seconds, time interval between observations
+%DT_OBSERVE= 8*DT_CONTROLS; % seconds, time interval between observations
+DT_OBSERVE= 8*DT_CONTROLS;
 
 % observation noises
 sigmaR= 0.1; % metres

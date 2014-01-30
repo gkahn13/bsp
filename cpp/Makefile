@@ -81,8 +81,6 @@ $(OBJ_DIR)/arm-ilqg.o : $(ARM_ILQG_DIR)/arm-ilqg-pos-goal.cpp $(ARM_ILQG_DIR)/il
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) -c -o $@ $<
 	
 	
-point-slam-test: | touch-file $(PT_SLAM_TEST_OBJS)
-	
 # make arm-state
 ARM_STATE_DIR = arm/state
 ARM_STATE_FILES = arm-state-cost arm-state-grad arm-state-pos-goal arm-state logging
@@ -308,7 +306,7 @@ $(OBJ_DIR)/point-slam-test.o : $(PT_SLAM_TEST_DIR)/point-slam-test.cpp
 # share point functions
 SLAM_HEADERS = slam/slam.h
 
-# make point-slam-test
+# make slam-test
 SLAM_TEST_DIR = slam/test
 SLAM_TEST_FILES = test-slam
 SLAM_TEST_OBJS = $(SLAM_TEST_FILES:%=$(OBJ_DIR)/%.o)

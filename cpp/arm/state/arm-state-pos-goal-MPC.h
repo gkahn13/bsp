@@ -28,25 +28,25 @@ typedef double statePenaltyMPC_FLOAT;
 /* SOLVER SETTINGS ------------------------------------------------------*/
 /* print level */
 #ifndef statePenaltyMPC_SET_PRINTLEVEL
-#define statePenaltyMPC_SET_PRINTLEVEL    (2)
+#define statePenaltyMPC_SET_PRINTLEVEL    (0)
 #endif
 
 /* timing */
 #ifndef statePenaltyMPC_SET_TIMING
-#define statePenaltyMPC_SET_TIMING    (1)
+#define statePenaltyMPC_SET_TIMING    (0)
 #endif
 
 /* Numeric Warnings */
 /* #define PRINTNUMERICALWARNINGS */
 
 /* maximum number of iterations  */
-#define statePenaltyMPC_SET_MAXIT         (40)	
+#define statePenaltyMPC_SET_MAXIT         (40)
 
 /* scaling factor of line search (affine direction) */
-#define statePenaltyMPC_SET_LS_SCALE_AFF  (0.9)      
+#define statePenaltyMPC_SET_LS_SCALE_AFF  (0.9)
 
 /* scaling factor of line search (combined direction) */
-#define statePenaltyMPC_SET_LS_SCALE      (0.95)  
+#define statePenaltyMPC_SET_LS_SCALE      (0.95)
 
 /* minimum required step size in each iteration */
 #define statePenaltyMPC_SET_LS_MINSTEP    (1E-08)
@@ -267,11 +267,11 @@ typedef struct statePenaltyMPC_params
     /* vector of size 6 */
     statePenaltyMPC_FLOAT ub15[6];
 
-    /* matrix of size [12 x 12] (column major format) */
-    statePenaltyMPC_FLOAT A15[144];
+    /* matrix of size [6 x 12] (column major format) */
+    statePenaltyMPC_FLOAT A15[72];
 
-    /* vector of size 12 */
-    statePenaltyMPC_FLOAT b15[12];
+    /* vector of size 6 */
+    statePenaltyMPC_FLOAT b15[6];
 
 } statePenaltyMPC_params;
 
@@ -334,48 +334,48 @@ typedef struct statePenaltyMPC_info
 {
     /* iteration number */
     int it;
-	
+
     /* inf-norm of equality constraint residuals */
     statePenaltyMPC_FLOAT res_eq;
-	
+
     /* inf-norm of inequality constraint residuals */
     statePenaltyMPC_FLOAT res_ineq;
 
     /* primal objective */
-    statePenaltyMPC_FLOAT pobj;	
-	
+    statePenaltyMPC_FLOAT pobj;
+
     /* dual objective */
-    statePenaltyMPC_FLOAT dobj;	
+    statePenaltyMPC_FLOAT dobj;
 
     /* duality gap := pobj - dobj */
-    statePenaltyMPC_FLOAT dgap;		
-	
+    statePenaltyMPC_FLOAT dgap;
+
     /* relative duality gap := |dgap / pobj | */
-    statePenaltyMPC_FLOAT rdgap;		
+    statePenaltyMPC_FLOAT rdgap;
 
     /* duality measure */
     statePenaltyMPC_FLOAT mu;
 
 	/* duality measure (after affine step) */
     statePenaltyMPC_FLOAT mu_aff;
-	
+
     /* centering parameter */
     statePenaltyMPC_FLOAT sigma;
-	
+
     /* number of backtracking line search steps (affine direction) */
     int lsit_aff;
-    
+
     /* number of backtracking line search steps (combined direction) */
     int lsit_cc;
-    
+
     /* step size (affine direction) */
     statePenaltyMPC_FLOAT step_aff;
-    
+
     /* step size (combined direction) */
-    statePenaltyMPC_FLOAT step_cc;    
+    statePenaltyMPC_FLOAT step_cc;
 
 	/* solvertime */
-	statePenaltyMPC_FLOAT solvetime;   
+	statePenaltyMPC_FLOAT solvetime;
 
 } statePenaltyMPC_info;
 

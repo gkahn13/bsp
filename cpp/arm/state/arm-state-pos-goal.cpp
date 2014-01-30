@@ -17,10 +17,10 @@ statePenaltyMPC_FLOAT *A, *b, *e;
 
 namespace cfg {
 const double improve_ratio_threshold = .1;
-const double min_approx_improve = 1e-4;
-const double min_trust_box_size = 1e-3;
-const double trust_shrink_ratio = .5;
-const double trust_expand_ratio = 1.5;
+const double min_approx_improve = 1e-3;
+const double min_trust_box_size = 1e-2;
+const double trust_shrink_ratio = .1;
+const double trust_expand_ratio = 2;
 const double cnt_tolerance = 1e-4;
 const double penalty_coeff_increase_ratio = 5;
 const double initial_penalty_coeff = 5;
@@ -82,7 +82,7 @@ void setupCasadiVars(const std::vector<Matrix<X_DIM> >& X, const std::vector<Mat
 
 double casadiComputeCost(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matrix<U_DIM> >& U)
 {
-	double XU_arr[X_DIM*T + U_DIM*(T-1)];
+	double XU_arr[XU_DIM];
 	double Sigma0_arr[X_DIM*X_DIM];
 	double params_arr[3];
 	double cam0_arr[3];
@@ -108,7 +108,7 @@ double casadiComputeCost(const std::vector< Matrix<X_DIM> >& X, const std::vecto
 
 void casadiComputeCostGrad(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matrix<U_DIM> >& U, double& cost, Matrix<XU_DIM>& G)
 {
-	double XU_arr[X_DIM*T + U_DIM*(T-1)];
+	double XU_arr[XU_DIM];
 	double Sigma0_arr[X_DIM*X_DIM];
 	double params_arr[3];
 	double cam0_arr[3];
@@ -123,11 +123,19 @@ void casadiComputeCostGrad(const std::vector< Matrix<X_DIM> >& X, const std::vec
 	casadi_input[3] = cam0_arr;
 	casadi_input[4] = cam1_arr;
 
-	double **cost_arr = new double*[2];
-	cost_arr[0] = &cost;
-	cost_arr[1] = G.getPtr();
+	double **costgrad_arr = new double*[2];
+	costgrad_arr[0] = &cost;
+	costgrad_arr[1] = G.getPtr();
 
-	evaluateCostGradWrap(casadi_input, cost_arr);
+	evaluateCostGradWrap(casadi_input, costgrad_arr);
+
+	/*
+	double jac_cost = 0;
+	for(int i = 0; i < XU_DIM; ++i) {
+		jac_cost += G[i]*XU_arr[i];
+	}
+	LOG_DEBUG("jac cost: %4.10f",jac_cost);
+	*/
 }
 
 double computeCost(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matrix<U_DIM> >& U)
@@ -243,40 +251,56 @@ void cleanupStateMPCVars()
 // TODO: Check if all inputs are valid, Q, f, lb, ub, A, b at last time step
 bool isValidInputs()
 {
-	for(int t = 0; t < T-1; ++t) {
-
-		// check if Q, f, lb, ub, C, e, b are valid!
-
-		//std::cout << std::endl << std::endl;
+	// check if Q, f, lb, ub, e are valid!
+	for(int t = 0; t < T-1; ++t)
+	{
+		//for(int i = 0; i < 144; ++i) {
+		//	std::cout << Q[t][i] << " ";
+		//}
+		for(int i = 0; i < 12; ++i) {
+			std::cout << lb[t][i] << " ";
+		}
+		std::cout << std::endl;
+		for(int i = 0; i < 12; ++i) {
+			std::cout << ub[t][i] << " ";
+		}
+		std::cout << "\n\n";
 	}
-
 	for(int i = 0; i < 12; ++i) {
 		std::cout << lb[T-1][i] << " ";
 	}
-	std::cout << "\n\n";
-
+	std::cout << std::endl;
 	for(int i = 0; i < 6; ++i) {
 		std::cout << ub[T-1][i] << " ";
 	}
+	std::cout << "\n\n";
 
-	//for(int i = 0; i < 198; ++i) {
-	//	std::cout << A[i] << " ";
-	//}
+	for(int i = 0; i < 72; ++i) {
+		std::cout << A[i] << " ";
+	}
+	std::cout << "\n\n";
+	for(int i = 0; i < 6; ++i) {
+		std::cout << b[i] << "  ";
+	}
+	std::cout << "\n\n";
 
-	//for(int i = 0; i < 6; ++i) {
-	//	std::cout << b[i] << "  ";
-	//}
-	std::cout << std::endl;
+	int magic;
+	std::cin >> magic;
 
 	return true;
 }
 
 bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >& U, statePenaltyMPC_params& problem, statePenaltyMPC_output& output, statePenaltyMPC_info& info, double penalty_coeff, double trust_box_size)
 {
-	//LOG_DEBUG("Solving sqp problem with penalty parameter: %2.4f", penalty_coeff);
-	std::cout << "Solving sqp problem with penalty parameter: " << penalty_coeff << std::endl;
+	LOG_DEBUG("Solving sqp problem with penalty parameter: %2.4f", penalty_coeff);
+	//std::cout << "Solving sqp problem with penalty parameter: " << penalty_coeff << std::endl;
 
 	Matrix<X_DIM,1> x0 = X[0];
+
+	// constrain initial state
+	for(int i = 0; i < X_DIM; ++i) {
+		e[i] = x0[i];
+	}
 
 	double Xeps = trust_box_size;
 	double Ueps = trust_box_size;
@@ -288,6 +312,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 
 	double merit, model_merit, new_merit;
 	double approx_merit_improve, exact_merit_improve, merit_improve_ratio;
+	double constant_cost, hessian_constant, jac_constant;
 
 	int sqp_iter = 1, index = 0;
 	bool success;
@@ -298,14 +323,12 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 	Matrix<2*G_DIM,X_DIM+2*G_DIM> AMat;
 	Matrix<2*G_DIM,1> bVec;
 
-	double Hzbar[X_DIM+U_DIM];
-	for(int i=0; i < (X_DIM+U_DIM); ++i) { Hzbar[i] = 0; }
+	Matrix<X_DIM+U_DIM> zbar;
 
-	// full Hessian from current timstep and prev
+	// full Hessian from current timstep
 	Matrix<XU_DIM,XU_DIM> B = identity<XU_DIM>();
-	Matrix<XU_DIM,XU_DIM> B_tp1 = identity<XU_DIM>();
 
-	Matrix<XU_DIM> G, G_tp1;
+	Matrix<XU_DIM> G, Gopt;
 	double cost;
 	int idx = 0;
 
@@ -323,47 +346,62 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 		casadiComputeCostGrad(X, U, cost, G);
 
 		// Problem linearization and definition
-		// fill in Q, f, C, e
-		
+		// fill in Q, f
+
+		hessian_constant = 0;
+		jac_constant = 0;
+		idx = 0;
+
 		for (int t = 0; t < T-1; ++t) 
 		{
-			Matrix<B_DIM>& xt = X[t];
+			Matrix<X_DIM>& xt = X[t];
 			Matrix<U_DIM>& ut = U[t];
 
-			QMat.reset();
 			idx = t*(X_DIM+U_DIM);
+			//LOG_DEBUG("idx: %d",idx);
+
+			QMat.reset();
 			for(int i = 0; i < (X_DIM+U_DIM); ++i) {
-				QMat(i,i) = B(idx+i,idx+i);
+				double val = B(idx+i,idx+i);
+				QMat(i,i) = (val < 0) ? 0 : val;
 			}
 			
 			fillColMajor(Q[t], QMat);
 
-			for(int i = 0; i < (B_DIM+U_DIM); ++i) {
-				f[t][i] = 0;
-			}
-			for(int i = 0; i < 2*B_DIM; ++i) {
-				f[t][B_DIM+U_DIM+i] = penalty_coeff;
+			zbar.insert(0,0,xt);
+			zbar.insert(X_DIM,0,ut);
+
+			for(int i = 0; i < (X_DIM+U_DIM); ++i) {
+				hessian_constant += QMat(i,i)*zbar[i]*zbar[i];
+				jac_constant -= G[idx+i]*zbar[i];
+				f[t][i] = G[idx+i] - QMat(i,i)*zbar[i];
 			}
 		}
 		
-		// For last stage, fill in Q, f, D, e
-		constructHessian(B[T-1], Hess);
+		// For last stage, fill in Q, f, A, b
+		Matrix<X_DIM>& xT = X[T-1];
+
+		idx = (T-1)*(X_DIM+U_DIM);
+		//LOG_DEBUG("idx: %d",idx);
 
 		QfMat.reset();
-		QfMat.insert<S_DIM,S_DIM>(X_DIM,X_DIM,2*alpha_final_belief*Hess);
-		
+		for(int i = 0; i < X_DIM; ++i) {
+			double val = B(idx+i,idx+i);
+			QfMat(i,i) = (val < 0) ? 0 : val;
+		}
+
 		fillColMajor(Q[T-1], QfMat);
-				
-		for(int i = 0; i < B_DIM; ++i) {
-			f[T-1][i] = 0;
+
+		for(int i = 0; i < X_DIM; ++i) {
+			hessian_constant += QfMat(i,i)*xT[i]*xT[i];
+			jac_constant -= G[idx+i]*xT[i];
+			f[T-1][i] = G[idx+i] - QfMat(i,i)*xT[i];
 		}
 		for(int i = 0; i < 2*G_DIM; ++i) {
-			f[T-1][B_DIM+i] = penalty_coeff;
+			f[T-1][X_DIM+i] = penalty_coeff;
 		}
 
 		// fill in A and b
-		Matrix<X_DIM> xT = X[T-1];
-		
 		Matrix<G_DIM,X_DIM> J;
 		linearizeg(xT, J);
 
@@ -381,6 +419,11 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 
 		fillColMajor(b, bVec);
 		
+		constant_cost = 0.5*hessian_constant + jac_constant + cost;
+		LOG_DEBUG("  hessian cost: %4.10f", 0.5*hessian_constant);
+		LOG_DEBUG("  jacobian cost: %4.10f", jac_constant);
+		LOG_DEBUG("  constant cost: %4.10f", constant_cost);
+
 		//std::cout << "PAUSED INSIDE MINIMIZEMERITFUNCTION" << std::endl;
 		//int k;
 		//std::cin >> k;
@@ -389,8 +432,8 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 		// trust region size adjustment
 		while(true)
 		{
-			//LOG_DEBUG("       trust region size: %2.6f %2.6f", Xeps, Ueps);
-			std::cout << "       trust region size: " << Xeps << ", " << Ueps << std::endl;
+			LOG_DEBUG("       trust region size: %2.6f %2.6f", Xeps, Ueps);
+			//std::cout << "       trust region size: " << Xeps << ", " << Ueps << std::endl;
 
 			// solve the innermost QP here
 			for(int t = 0; t < T-1; ++t)
@@ -462,7 +505,8 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 
 			LOG_DEBUG("       Optimized cost: %4.10f", optcost);
 
-			model_merit = optcost;
+			model_merit = optcost + constant_cost;
+
 			new_merit = computeMerit(Xopt, Uopt, penalty_coeff);
 
 			LOG_DEBUG("       merit: %4.10f", merit);
@@ -477,16 +521,16 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			LOG_DEBUG("       exact_merit_improve: %1.6f", exact_merit_improve);
 			LOG_DEBUG("       merit_improve_ratio: %1.6f", merit_improve_ratio);
 			
-			//std::cout << "PAUSED INSIDE minimizeMeritFunction" << std::endl;
+			//std::cout << "PAUSED INSIDE minimizeMeritFunction AFTER OPTIMIZATION" << std::endl;
 			//int num;
 			//std::cin >> num;
 
 			if (approx_merit_improve < -1e-5) {
-				LOG_ERROR("Approximate merit function got worse: %1.6f", approx_merit_improve);
-				LOG_ERROR("Either convexification is wrong to zeroth order, or you are in numerical trouble");
-				LOG_ERROR("Failure!");
+				//LOG_ERROR("Approximate merit function got worse: %1.6f", approx_merit_improve);
+				//LOG_ERROR("Either convexification is wrong to zeroth order, or you are in numerical trouble");
+				//LOG_ERROR("Failure!");
 
-				success = false;
+				return false;
 			} else if (approx_merit_improve < cfg::min_approx_improve) {
 				LOG_DEBUG("Converged: improvement small enough");
 				X = Xopt; U = Uopt;
@@ -498,8 +542,56 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			} else {
 				Xeps *= cfg::trust_expand_ratio;
 				Ueps *= cfg::trust_expand_ratio;
+
+				casadiComputeCostGrad(Xopt, Uopt, cost, Gopt);
+
+				Matrix<XU_DIM> s, y;
+
+				idx = 0;
+				for(int t = 0; t < T-1; ++t) {
+					for(int i=0; i < X_DIM; ++i) {
+						s[idx+i] = Xopt[t][i] - X[t][i];
+						y[idx+i] = Gopt[idx+i] - G[idx+i];
+					}
+					idx += X_DIM;
+
+					for(int i=0; i < U_DIM; ++i) {
+						s[idx+i] = Uopt[t][i] - U[t][i];
+						y[idx+i] = Gopt[idx+i] - G[idx+i];
+					}
+					idx += U_DIM;
+				}
+				for(int i=0; i < X_DIM; ++i) {
+					s[idx+i] = Xopt[T-1][i] - X[T-1][i];
+					y[idx+i] = Gopt[idx+i] - G[idx+i];
+				}
+
+				double theta;
+				Matrix<XU_DIM> Bs = B*s;
+
+				bool decision = ((~s*y)[0] >= .2*(~s*Bs)[0]);
+				if (decision) {
+					theta = 1;
+				} else {
+					theta = (.8*(~s*Bs)[0])/((~s*Bs-~s*y)[0]);
+				}
+
+				//std::cout << "theta: " << theta << std::endl;
+
+				Matrix<XU_DIM> r = theta*y + (1-theta)*Bs;
+				Matrix<XU_DIM> rBs = theta*(y -Bs);
+
+				// SR1 update
+				//B = B + (rBs*~rBs)/((~rBs*s)[0]);
+
+				// L-BFGS update
+				B = B - (Bs*~Bs)/((~s*Bs)[0]) + (r*~r)/((~s*r)[0]);
+
+				// Do not update B
+				//B = identity<XU_DIM>();
+
 				X = Xopt; U = Uopt;
-				prevcost = optcost;
+
 				LOG_DEBUG("Accepted, Increasing trust region size to:  %2.6f %2.6f", Xeps, Ueps);
 				break;
 			}
@@ -508,6 +600,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			    LOG_DEBUG("Converged: x tolerance");
 			    return true;
 			}
+
 
 		} // trust region loop
 		sqp_iter++;
@@ -547,8 +640,8 @@ double statePenaltyCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Mat
 	
 	    success = success && (cntviol < cfg::cnt_tolerance);
 	    
-		//LOG_DEBUG("Constraint violations: %2.10f",cntviol);
-		std::cout << "Constraint violations: " << cntviol << std::endl;
+		LOG_DEBUG("Constraint violations: %2.10f",cntviol);
+		//std::cout << "Constraint violations: " << cntviol << std::endl;
 
 	    if (!success) {
 	        penalty_increases++;
@@ -642,25 +735,20 @@ int main(int argc, char* argv[])
 	util::Timer solveTimer;
 	Timer_tic(&solveTimer);
 
-	//double cost = statePenaltyCollocation(X, U, problem, output, info);
-	casadiComputeCostGrad(X, U, cost, G);
+	cost = statePenaltyCollocation(X, U, problem, output, info);
 
 	double solvetime = util::Timer_toc(&solveTimer);
 
 	LOG_INFO("Optimized cost: %4.10f", cost);
-	//LOG_INFO("Actual cost: %4.10f", computeCost(X, U));
+	LOG_INFO("Actual cost: %4.10f", computeCost(X, U));
 	LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
-	
-	std::cout << ~G << std::endl;
 
-	std::cout << "Actual cost: " << computeCost(X, U) << std::endl;
-	
 	cleanupStateMPCVars();
 
 	//double finalLQGMPcost = computeLQGMPcost(X, U);
 	//LOG_DEBUG("Final trajectory LQG-MP cost: %4.10f",finalLQGMPcost);
 
-	//saveOptimizedTrajectory(U);
+	saveOptimizedTrajectory(U);
 	//readOptimizedTrajectory(U);
 	
 	/*

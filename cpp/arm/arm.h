@@ -20,6 +20,7 @@
 #define S_DIM (((X_DIM+1)*X_DIM)/2)
 #define B_DIM (X_DIM+S_DIM)
 #define XU_DIM (X_DIM*T+U_DIM*(T-1))
+#define OPT_DIM (X_DIM*T+U_DIM*(T-1)+2*G_DIM)
 
 const double l4 = 2.375;
 const double l3 = 10.375;
@@ -54,7 +55,7 @@ SymmetricMatrix<X_DIM> Qint;
 SymmetricMatrix<X_DIM> QGoal;
 SymmetricMatrix<X_DIM> Sigma0;
 
-const double alpha_belief = 10, alpha_final_belief = 100, alpha_control = 0.1, alpha_goal_state = 1;
+const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 1, alpha_goal_state = 1;
 
 // callisto visualization stuff
 int cal_environment, cal_paths, cal_objects, cal_ellipse;
@@ -259,6 +260,9 @@ void initProblemParams()
 	posGoal[0] = 11.5; posGoal[1] = 11.5; posGoal[2] = 0;
 	//posGoal = g(xGoal);
 
+	//xMin[0] = -M_PI; xMin[1] = -0.75*M_PI; xMin[2] = -0.75*M_PI; xMin[3] = -M_PI; xMin[4] = -0.75*M_PI; xMin[5] = -M_PI;
+	//xMax[0] = M_PI;  xMax[1] = 0.75*M_PI;  xMax[2] = 0.75*M_PI;  xMax[3] = M_PI;  xMax[4] =  0.75*M_PI; xMax[5] = M_PI;
+
 	xMin[0] = -M_PI; xMin[1] = -0.75*M_PI; xMin[2] = -0.75*M_PI; xMin[3] = -M_PI; xMin[4] = -0.75*M_PI; xMin[5] = -M_PI;
 	xMax[0] = M_PI;  xMax[1] = 0.75*M_PI;  xMax[2] = 0.75*M_PI;  xMax[3] = M_PI;  xMax[4] =  0.75*M_PI; xMax[5] = M_PI;
 
@@ -456,7 +460,7 @@ Matrix<4,1> quatFromRot(const Matrix<3,3>& R) {
 
 
 inline void saveOptimizedTrajectory(std::vector<Matrix<U_DIM> >& Uopt) {
-	std::ofstream fptr("data\\optimized-controls.txt", std::ios::out);
+	std::ofstream fptr("optimized-controls.txt", std::ios::out);
 	fptr << T << std::endl;
 	for(int t = 0; t < T-1; ++t) {
 		fptr << ~Uopt[t];
@@ -465,7 +469,7 @@ inline void saveOptimizedTrajectory(std::vector<Matrix<U_DIM> >& Uopt) {
 }
 
 inline void readOptimizedTrajectory(std::vector<Matrix<U_DIM> >& U) {
-	std::ifstream fptr("data\\optimized-controls.txt", std::ios::in);
+	std::ifstream fptr("optimized-controls.txt", std::ios::in);
 	int nsteps;
 	fptr >> nsteps;
 	//std::cout << "nsteps: " << nsteps << std::endl;

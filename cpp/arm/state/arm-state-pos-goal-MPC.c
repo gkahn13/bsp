@@ -20,12 +20,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #include "arm-state-pos-goal-MPC.h"
 
 /* for square root */
-#include <math.h> 
+#include <math.h>
 
 /* SAFE DIVISION ------------------------------------------------------- */
 #define MAX(X,Y)  ((X) < (Y) ? (Y) : (X))
 #define MIN(X,Y)  ((X) < (Y) ? (X) : (Y))
-/*#define SAFEDIV_POS(X,Y)  ( (Y) < EPS ? ((X)/EPS) : (X)/(Y) ) 
+/*#define SAFEDIV_POS(X,Y)  ( (Y) < EPS ? ((X)/EPS) : (X)/(Y) )
 #define EPS (1.0000E-013) */
 #define BIGM (1E30)
 #define BIGMM (1E60)
@@ -34,153 +34,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 /* SYSTEM INCLUDES FOR PRINTING ---------------------------------------- */
-#ifndef USEMEXPRINTS
-#include <stdio.h>
-#define PRINTTEXT printf
-#else
-#include "mex.h"
-#define PRINTTEXT mexPrintf
-#endif
-
-/* TIMING LIBRARY ------------------------------------------------- */
-
-/* ARE WE ON WINDOWS? */
-#if (defined WIN32 || defined _WIN64 || defined _WIN32)
-
-/* Use Windows QueryPerformanceCounter for timing */
-
-#include <windows.h>
-
-typedef struct statePenaltyMPC_timer{
-	LARGE_INTEGER tic;
-	LARGE_INTEGER toc;
-	LARGE_INTEGER freq;
-} statePenaltyMPC_timer;
-
-
-void statePenaltyMPC_tic(statePenaltyMPC_timer* t)
-{
-	QueryPerformanceFrequency(&t->freq);
-	QueryPerformanceCounter(&t->tic);
-}
 
 
 
-statePenaltyMPC_FLOAT statePenaltyMPC_toc(statePenaltyMPC_timer* t)
-{
-	QueryPerformanceCounter(&t->toc);
-	return ((t->toc.QuadPart - t->tic.QuadPart) / (statePenaltyMPC_FLOAT)t->freq.QuadPart);
-}
-
-
-/* WE ARE ON THE MAC */
-#elif (defined __APPLE__)
-#include <mach/mach_time.h>
-
-
-/* Use MAC OSX  mach_time for timing */
-typedef struct statePenaltyMPC_timer{
-	uint64_t tic;
-	uint64_t toc;
-	mach_timebase_info_data_t tinfo;
-
-} statePenaltyMPC_timer;
-
-
-void statePenaltyMPC_tic(statePenaltyMPC_timer* t)
-{
-    /* read current clock cycles */
-    t->tic = mach_absolute_time();
-}
-
-
-
-statePenaltyMPC_FLOAT statePenaltyMPC_toc(statePenaltyMPC_timer* t)
-{
-    uint64_t duration; /* elapsed time in clock cycles*/
-    t->toc = mach_absolute_time();
-	duration = t->toc - t->tic;
-
-    /*conversion from clock cycles to nanoseconds*/
-    mach_timebase_info(&(t->tinfo));
-    duration *= t->tinfo.numer;
-    duration /= t->tinfo.denom;
-
-    return (statePenaltyMPC_FLOAT)duration / 1000000000;
-}
-
-/* WE ARE ON SOME TEXAS INSTRUMENTS PLATFORM */
-#elif (defined __TI_COMPILER_VERSION__)
-
-/* TimeStamps */
-#include <c6x.h> /* make use of TSCL, TSCH */
-
-
-typedef struct statePenaltyMPC_timer{
-	unsigned long long tic;
-	unsigned long long toc;
-} statePenaltyMPC_timer;
-
-
-void statePenaltyMPC_tic(statePenaltyMPC_timer* t)
-{
-	TSCL = 0;	/* Initiate CPU timer by writing any val to TSCL */
-	t->tic = _itoll( TSCH, TSCL );
-}
-
-
-
-statePenaltyMPC_FLOAT statePenaltyMPC_toc(statePenaltyMPC_timer* t)
-{
-	t->toc = _itoll( TSCH, TSCL );
-	unsigned long long t0;
-	unsigned long long overhead;
-	t0 = _itoll( TSCH, TSCL );
-	overhead = _itoll( TSCH, TSCL )  - t0;
-
-	return (statePenaltyMPC_FLOAT)(t->toc - t->tic - overhead) / 1000000000;
-}
-
-
-
-/* WE ARE ON SOME OTHER UNIX/LINUX SYSTEM */
-#else
-
-/* Use POSIX clocl_gettime() for timing on non-Windows machines */
-#include <time.h>
-typedef struct statePenaltyMPC_timer{
-	struct timespec tic;
-	struct timespec toc;
-} statePenaltyMPC_timer;
-
-
-/* read current time */
-void statePenaltyMPC_tic(statePenaltyMPC_timer* t)
-{
-	clock_gettime(CLOCK_MONOTONIC, &t->tic);
-}
-
-
-
-/* return time passed since last call to tic on this timer */
-double statePenaltyMPC_toc(statePenaltyMPC_timer* t)
-{
-	struct timespec temp;
-	clock_gettime(CLOCK_MONOTONIC, &t->toc);	
-
-	if ((t->toc.tv_nsec - t->tic.tv_nsec)<0) {
-		temp.tv_sec = t->toc.tv_sec - t->tic.tv_sec-1;
-		temp.tv_nsec = 1000000000+t->toc.tv_nsec - t->tic.tv_nsec;
-	} else {
-		temp.tv_sec = t->toc.tv_sec - t->tic.tv_sec;
-		temp.tv_nsec = t->toc.tv_nsec - t->tic.tv_nsec;
-	}
-
-	return (statePenaltyMPC_FLOAT)temp.tv_sec + (statePenaltyMPC_FLOAT)temp.tv_nsec / 1000000000;
-}
-
-
-#endif
 
 /* LINEAR ALGEBRA LIBRARY ---------------------------------------------- */
 /*
@@ -210,26 +66,26 @@ void statePenaltyMPC_LA_INITIALIZEVECTOR_90(statePenaltyMPC_FLOAT* vec, statePen
 
 
 /*
- * Initializes a vector of length 366 with a value.
+ * Initializes a vector of length 360 with a value.
  */
-void statePenaltyMPC_LA_INITIALIZEVECTOR_366(statePenaltyMPC_FLOAT* vec, statePenaltyMPC_FLOAT value)
+void statePenaltyMPC_LA_INITIALIZEVECTOR_360(statePenaltyMPC_FLOAT* vec, statePenaltyMPC_FLOAT value)
 {
 	int i;
-	for( i=0; i<366; i++ )
+	for( i=0; i<360; i++ )
 	{
 		vec[i] = value;
 	}
 }
 
 
-/* 
- * Calculates a dot product and adds it to a variable: z += x'*y; 
- * This function is for vectors of length 366.
+/*
+ * Calculates a dot product and adds it to a variable: z += x'*y;
+ * This function is for vectors of length 360.
  */
-void statePenaltyMPC_LA_DOTACC_366(statePenaltyMPC_FLOAT *x, statePenaltyMPC_FLOAT *y, statePenaltyMPC_FLOAT *z)
+void statePenaltyMPC_LA_DOTACC_360(statePenaltyMPC_FLOAT *x, statePenaltyMPC_FLOAT *y, statePenaltyMPC_FLOAT *z)
 {
 	int i;
-	for( i=0; i<366; i++ ){
+	for( i=0; i<360; i++ ){
 		*z += x[i]*y[i];
 	}
 }
@@ -250,7 +106,7 @@ void statePenaltyMPC_LA_DENSE_QUADFCN_12(statePenaltyMPC_FLOAT* H, statePenaltyM
 	int i;
 	int j;
 	int k = 0;
-	statePenaltyMPC_FLOAT hz;	
+	statePenaltyMPC_FLOAT hz;
 	for( i=0; i<12; i++){
 		hz = 0;
 		for( j=0; j<12; j++ )
@@ -263,7 +119,7 @@ void statePenaltyMPC_LA_DENSE_QUADFCN_12(statePenaltyMPC_FLOAT* H, statePenaltyM
 }
 
 
-/* 
+/*
  * Computes r = B*u - b
  * and      y = max([norm(r,inf), y])
  * and      z -= l'*r
@@ -279,7 +135,7 @@ void statePenaltyMPC_LA_DIAGZERO_MVMSUB6_6(statePenaltyMPC_FLOAT *B, statePenalt
 	/* do A*x + B*u first */
 	for( i=0; i<6; i++ ){
 		Bu[i] = B[i]*u[i];
-	}	
+	}
 
 	for( i=0; i<6; i++ ){
 		r[i] = Bu[i] - b[i];
@@ -296,7 +152,7 @@ void statePenaltyMPC_LA_DIAGZERO_MVMSUB6_6(statePenaltyMPC_FLOAT *B, statePenalt
 }
 
 
-/* 
+/*
  * Computes r = A*x + B*u - b
  * and      y = max([norm(r,inf), y])
  * and      z -= l'*r
@@ -314,9 +170,9 @@ void statePenaltyMPC_LA_DENSE_DIAGZERO_MVMSUB3_6_12_12(statePenaltyMPC_FLOAT *A,
 	/* do A*x + B*u first */
 	for( i=0; i<6; i++ ){
 		AxBu[i] = A[k++]*x[0] + B[i]*u[i];
-	}	
+	}
 
-	for( j=1; j<12; j++ ){		
+	for( j=1; j<12; j++ ){
 		for( i=0; i<6; i++ ){
 			AxBu[i] += A[k++]*x[j];
 		}
@@ -338,7 +194,7 @@ void statePenaltyMPC_LA_DENSE_DIAGZERO_MVMSUB3_6_12_12(statePenaltyMPC_FLOAT *A,
 
 
 /*
- * Matrix vector multiplication z = A'*x + B'*y 
+ * Matrix vector multiplication z = A'*x + B'*y
  * where A is of size [6 x 12] and stored in column major format.
  * and B is of size [6 x 12] and stored in diagzero format
  * Note the transposes of A and B!
@@ -467,33 +323,33 @@ void statePenaltyMPC_LA_VSUBADD2_6(statePenaltyMPC_FLOAT* t, int* tidx, statePen
 }
 
 
-/* 
+/*
  * Computes r = A*x - b + s
  * and      y = max([norm(r,inf), y])
  * and      z -= l'*(Ax-b)
  * where A is stored in column major format
  */
-void statePenaltyMPC_LA_MVSUBADD_12_12(statePenaltyMPC_FLOAT *A, statePenaltyMPC_FLOAT *x, statePenaltyMPC_FLOAT *b, statePenaltyMPC_FLOAT *s, statePenaltyMPC_FLOAT *l, statePenaltyMPC_FLOAT *r, statePenaltyMPC_FLOAT *z, statePenaltyMPC_FLOAT *y)
+void statePenaltyMPC_LA_MVSUBADD_6_12(statePenaltyMPC_FLOAT *A, statePenaltyMPC_FLOAT *x, statePenaltyMPC_FLOAT *b, statePenaltyMPC_FLOAT *s, statePenaltyMPC_FLOAT *l, statePenaltyMPC_FLOAT *r, statePenaltyMPC_FLOAT *z, statePenaltyMPC_FLOAT *y)
 {
 	int i;
 	int j;
 	int k = 0;
-	statePenaltyMPC_FLOAT Ax[12];
+	statePenaltyMPC_FLOAT Ax[6];
 	statePenaltyMPC_FLOAT Axlessb;
 	statePenaltyMPC_FLOAT norm = *y;
 	statePenaltyMPC_FLOAT lAxlessb = 0;
 
 	/* do A*x first */
-	for( i=0; i<12; i++ ){
-		Ax[i] = A[k++]*x[0];				
-	}	
-	for( j=1; j<12; j++ ){		
-		for( i=0; i<12; i++ ){
+	for( i=0; i<6; i++ ){
+		Ax[i] = A[k++]*x[0];
+	}
+	for( j=1; j<12; j++ ){
+		for( i=0; i<6; i++ ){
 			Ax[i] += A[k++]*x[j];
 		}
 	}
 
-	for( i=0; i<12; i++ ){
+	for( i=0; i<6; i++ ){
 		Axlessb = Ax[i] - b[i];
 		r[i] = Axlessb + s[i];
 		lAxlessb += l[i]*Axlessb;
@@ -520,7 +376,7 @@ void statePenaltyMPC_LA_INEQ_B_GRAD_12_12_12(statePenaltyMPC_FLOAT *lu, statePen
 	for( i=0; i<12; i++ ){
 		grad[i] = 0;
 	}
-	for( i=0; i<12; i++ ){		
+	for( i=0; i<12; i++ ){
 		llbysl[i] = ll[i] / sl[i];
 		grad[lbIdx[i]] -= llbysl[i]*rl[i];
 	}
@@ -542,7 +398,7 @@ void statePenaltyMPC_LA_INEQ_B_GRAD_12_12_6(statePenaltyMPC_FLOAT *lu, statePena
 	for( i=0; i<12; i++ ){
 		grad[i] = 0;
 	}
-	for( i=0; i<12; i++ ){		
+	for( i=0; i<12; i++ ){
 		llbysl[i] = ll[i] / sl[i];
 		grad[lbIdx[i]] -= llbysl[i]*rl[i];
 	}
@@ -557,22 +413,22 @@ void statePenaltyMPC_LA_INEQ_B_GRAD_12_12_6(statePenaltyMPC_FLOAT *lu, statePena
  * Special function for gradient of inequality constraints
  * Calculates grad += A'*(L/S)*rI
  */
-void statePenaltyMPC_LA_INEQ_P_12_12(statePenaltyMPC_FLOAT *A, statePenaltyMPC_FLOAT *lp, statePenaltyMPC_FLOAT *sp, statePenaltyMPC_FLOAT *rip, statePenaltyMPC_FLOAT *grad, statePenaltyMPC_FLOAT *lpbysp)
+void statePenaltyMPC_LA_INEQ_P_6_12(statePenaltyMPC_FLOAT *A, statePenaltyMPC_FLOAT *lp, statePenaltyMPC_FLOAT *sp, statePenaltyMPC_FLOAT *rip, statePenaltyMPC_FLOAT *grad, statePenaltyMPC_FLOAT *lpbysp)
 {
 	int i;
 	int j;
 	int k = 0;
 
-	statePenaltyMPC_FLOAT lsr[12];
-	
+	statePenaltyMPC_FLOAT lsr[6];
+
 	/* do (L/S)*ri first */
-	for( j=0; j<12; j++ ){
+	for( j=0; j<6; j++ ){
 		lpbysp[j] = lp[j] / sp[j];
 		lsr[j] = lpbysp[j]*rip[j];
 	}
 
-	for( i=0; i<12; i++ ){		
-		for( j=0; j<12; j++ ){
+	for( i=0; i<12; i++ ){
+		for( j=0; j<6; j++ ){
 			grad[i] += A[k++]*lsr[j];
 		}
 	}
@@ -593,7 +449,7 @@ void statePenaltyMPC_LA_VVADD3_180(statePenaltyMPC_FLOAT *u, statePenaltyMPC_FLO
 
 
 /*
- * Special function to compute the Dense positive definite 
+ * Special function to compute the Dense positive definite
  * augmented Hessian for block size 12.
  *
  * Inputs: - H = dense cost Hessian in column major storage format
@@ -608,12 +464,12 @@ void statePenaltyMPC_LA_INEQ_DENSE_HESS_12_12_12(statePenaltyMPC_FLOAT *H, state
 	int i;
 	int j;
 	int k = 0;
-	
+
 	/* copy lower triangular part of H into PHI */
 	for( i=0; i<12; i++ ){
 		for( j=0; j<=i; j++ ){
 			Phi[k++] = H[i*12+j];
-		}		
+		}
 	}
 
 	/* add llbysl onto Phi where necessary */
@@ -632,7 +488,7 @@ void statePenaltyMPC_LA_INEQ_DENSE_HESS_12_12_12(statePenaltyMPC_FLOAT *H, state
 
 
 /**
- * Cholesky factorization as above, but working on a matrix in 
+ * Cholesky factorization as above, but working on a matrix in
  * lower triangular storage format of size 12.
  */
 void statePenaltyMPC_LA_DENSE_CHOL2_12(statePenaltyMPC_FLOAT *A)
@@ -641,16 +497,16 @@ void statePenaltyMPC_LA_DENSE_CHOL2_12(statePenaltyMPC_FLOAT *A)
 	 int ii, jj;
     statePenaltyMPC_FLOAT l;
     statePenaltyMPC_FLOAT Mii;
-    
+
 	ii=0; di=0;
     for( i=0; i<12; i++ ){
         l = 0;
         for( k=0; k<i; k++ ){
             l += A[ii+k]*A[ii+k];
-        }        
-        
+        }
+
         Mii = A[ii+i] - l;
-        
+
 #if statePenaltyMPC_SET_PRINTLEVEL > 0 && defined PRINTNUMERICALWARNINGS
         if( Mii < 1.0000000000000000E-013 ){
              PRINTTEXT("WARNING (CHOL2): small %d-th pivot in Cholesky fact. (=%3.1e < eps=%3.1e), regularizing to %3.1e\n",i,Mii,1.0000000000000000E-013,4.0000000000000002E-004);
@@ -662,10 +518,10 @@ void statePenaltyMPC_LA_DENSE_CHOL2_12(statePenaltyMPC_FLOAT *A)
 #else
 		A[ii+i] = Mii < 1.0000000000000000E-013 ? 2.0000000000000000E-002 : sqrt(Mii);
 #endif
-                    
+
 		jj = ((i+1)*(i+2))/2; dj = i+1;
         for( j=i+1; j<12; j++ ){
-            l = 0;            
+            l = 0;
             for( k=0; k<i; k++ ){
                 l += A[jj+k]*A[ii+k];
             }
@@ -674,7 +530,7 @@ void statePenaltyMPC_LA_DENSE_CHOL2_12(statePenaltyMPC_FLOAT *A)
 			l = MIN(l,  BIGMM);
 			l = MAX(l, -BIGMM);
 
-            A[jj+i] = (A[jj+i] - l)/A[ii+i];            
+            A[jj+i] = (A[jj+i] - l)/A[ii+i];
 			jj += ++dj;
         }
 		ii += ++di;
@@ -686,7 +542,7 @@ void statePenaltyMPC_LA_DENSE_CHOL2_12(statePenaltyMPC_FLOAT *A)
  * Forward substitution for the matrix equation A*L' = B
  * where A is to be computed and is of size [6 x 12],
  * B is given and of size [6 x 12], L is a lower tri-
- * angular matrix of size 12 stored in lower triangular 
+ * angular matrix of size 12 stored in lower triangular
  * storage format. Note the transpose of L!
  *
  * Result: A in column major storage format.
@@ -697,9 +553,9 @@ void statePenaltyMPC_LA_DENSE_MATRIXFORWARDSUB_6_12(statePenaltyMPC_FLOAT *L, st
     int i,j,k,di;
 	 int ii;
     statePenaltyMPC_FLOAT a;
-    
+
     ii=0; di=0;
-    for( j=0; j<12; j++ ){        
+    for( j=0; j<12; j++ ){
         for( i=0; i<6; i++ ){
             a = B[j*6+i];
             for( k=0; k<j; k++ ){
@@ -708,7 +564,7 @@ void statePenaltyMPC_LA_DENSE_MATRIXFORWARDSUB_6_12(statePenaltyMPC_FLOAT *L, st
 
 			/* saturate for numerical stability */
 			a = MIN(a, BIGM);
-			a = MAX(a, -BIGM); 
+			a = MAX(a, -BIGM);
 
             A[j*6+i] = a/L[ii+j];
         }
@@ -720,9 +576,9 @@ void statePenaltyMPC_LA_DENSE_MATRIXFORWARDSUB_6_12(statePenaltyMPC_FLOAT *L, st
 /**
  * Forward substitution for the matrix equation A*L' = B
  * where A is to be computed and is of size [6 x 12],
- * B is given and of size [6 x 12] stored in 
+ * B is given and of size [6 x 12] stored in
  * diagzero storage format, L is a lower tri-
- * angular matrix of size 12 stored in lower triangular 
+ * angular matrix of size 12 stored in lower triangular
  * storage format. Note the transpose of L!
  *
  * Result: A in column major storage format.
@@ -733,31 +589,31 @@ void statePenaltyMPC_LA_DENSE_DIAGZERO_MATRIXFORWARDSUB_6_12(statePenaltyMPC_FLO
     int i,j,k,di;
 	 int ii;
     statePenaltyMPC_FLOAT a;
-	
+
 	/*
 	* The matrix A has the form
 	*
-	* d u u u r r r r r 
-	* 0 d u u r r r r r 
-	* 0 0 d u r r r r r 
+	* d u u u r r r r r
+	* 0 d u u r r r r r
+	* 0 0 d u r r r r r
 	* 0 0 0 d r r r r r
 	*
 	* |Part1|| Part 2 |
-	* 
+	*
 	* d: diagonal
 	* u: upper
 	* r: right
 	*/
-	
-	
+
+
     /* Part 1 */
     ii=0; di=0;
-    for( j=0; j<6; j++ ){        
+    for( j=0; j<6; j++ ){
         for( i=0; i<j; i++ ){
             /* Calculate part of A which is non-zero and not diagonal "u"
              * i < j */
             a = 0;
-			
+
             for( k=i; k<j; k++ ){
                 a -= A[k*6+i]*L[ii+k];
             }
@@ -766,60 +622,60 @@ void statePenaltyMPC_LA_DENSE_DIAGZERO_MATRIXFORWARDSUB_6_12(statePenaltyMPC_FLO
         /* do the diagonal "d"
          * i = j */
         A[j*6+j] = B[i]/L[ii+j];
-        
+
         /* fill lower triangular part with zeros "0"
          * n > i > j */
         for( i=j+1     ; i < 6; i++ ){
             A[j*6+i] = 0;
         }
-        
+
         /* increment index of L */
-        ii += ++di;	
+        ii += ++di;
     }
-	
-	/* Part 2 */ 
-	for( j=6; j<12; j++ ){        
+
+	/* Part 2 */
+	for( j=6; j<12; j++ ){
         for( i=0; i<6; i++ ){
             /* Calculate part of A which is non-zero and not diagonal "r" */
             a = 0;
-			
+
             for( k=i; k<j; k++ ){
                 a -= A[k*6+i]*L[ii+k];
             }
             A[j*6+i] = a/L[ii+j];
         }
-        
+
         /* increment index of L */
-        ii += ++di;	
+        ii += ++di;
     }
-	
-	
-	
+
+
+
 }
 
 
 /**
- * Compute C = A*B' where 
+ * Compute C = A*B' where
  *
  *	size(A) = [6 x 12]
  *  size(B) = [6 x 12]
- * 
+ *
  * and all matrices are stored in column major format.
  *
- * THIS ONE HAS THE WORST ACCES PATTERN POSSIBLE.  
- * 
+ * THIS ONE HAS THE WORST ACCES PATTERN POSSIBLE.
+ *
  */
 void statePenaltyMPC_LA_DENSE_MMTM_6_12_6(statePenaltyMPC_FLOAT *A, statePenaltyMPC_FLOAT *B, statePenaltyMPC_FLOAT *C)
 {
     int i, j, k;
     statePenaltyMPC_FLOAT temp;
-    
-    for( i=0; i<6; i++ ){        
+
+    for( i=0; i<6; i++ ){
         for( j=0; j<6; j++ ){
-            temp = 0; 
+            temp = 0;
             for( k=0; k<12; k++ ){
                 temp += A[k*6+i]*B[k*6+j];
-            }						
+            }
             C[j*6+i] = temp;
         }
     }
@@ -829,17 +685,17 @@ void statePenaltyMPC_LA_DENSE_MMTM_6_12_6(statePenaltyMPC_FLOAT *A, statePenalty
 /**
  * Forward substitution to solve L*y = b where L is a
  * lower triangular matrix in triangular storage format.
- * 
+ *
  * The dimensions involved are 12.
  */
 void statePenaltyMPC_LA_DENSE_FORWARDSUB_12(statePenaltyMPC_FLOAT *L, statePenaltyMPC_FLOAT *b, statePenaltyMPC_FLOAT *y)
 {
     int i,j,ii,di;
     statePenaltyMPC_FLOAT yel;
-            
+
     ii = 0; di = 0;
     for( i=0; i<12; i++ ){
-        yel = b[i];        
+        yel = b[i];
         for( j=0; j<i; j++ ){
             yel -= y[j]*L[ii+j];
         }
@@ -855,7 +711,7 @@ void statePenaltyMPC_LA_DENSE_FORWARDSUB_12(statePenaltyMPC_FLOAT *L, statePenal
 
 
 /*
- * Special function to compute the Dense positive definite 
+ * Special function to compute the Dense positive definite
  * augmented Hessian for block size 12.
  *
  * Inputs: - H = dense cost Hessian in column major storage format
@@ -870,12 +726,12 @@ void statePenaltyMPC_LA_INEQ_DENSE_HESS_12_12_6(statePenaltyMPC_FLOAT *H, stateP
 	int i;
 	int j;
 	int k = 0;
-	
+
 	/* copy lower triangular part of H into PHI */
 	for( i=0; i<12; i++ ){
 		for( j=0; j<=i; j++ ){
 			Phi[k++] = H[i*12+j];
-		}		
+		}
 	}
 
 	/* add llbysl onto Phi where necessary */
@@ -896,21 +752,21 @@ void statePenaltyMPC_LA_INEQ_DENSE_HESS_12_12_6(statePenaltyMPC_FLOAT *H, stateP
 /**
  * Compute X = X + A'*D*A, where A is a general full matrix, D is
  * is a diagonal matrix stored in the vector d and X is a symmetric
- * positive definite matrix in lower triangular storage format. 
- * A is stored in column major format and is of size [12 x 12]
+ * positive definite matrix in lower triangular storage format.
+ * A is stored in column major format and is of size [6 x 12]
  * Phi is of size [12 x 12].
  */
-void statePenaltyMPC_LA_DENSE_ADDMTDM_12_12(statePenaltyMPC_FLOAT *A, statePenaltyMPC_FLOAT *d, statePenaltyMPC_FLOAT *X)
-{    
+void statePenaltyMPC_LA_DENSE_ADDMTDM_6_12(statePenaltyMPC_FLOAT *A, statePenaltyMPC_FLOAT *d, statePenaltyMPC_FLOAT *X)
+{
     int i,j,k,ii,di;
     statePenaltyMPC_FLOAT x;
-    
+
     di = 0; ii = 0;
-    for( i=0; i<12; i++ ){        
+    for( i=0; i<12; i++ ){
         for( j=0; j<=i; j++ ){
             x = 0;
-            for( k=0; k<12; k++ ){
-                x += A[i*12+k]*A[j*12+k]*d[k];
+            for( k=0; k<6; k++ ){
+                x += A[i*6+k]*A[j*6+k]*d[k];
             }
             X[ii+j] += x;
         }
@@ -923,20 +779,20 @@ void statePenaltyMPC_LA_DENSE_ADDMTDM_12_12(statePenaltyMPC_FLOAT *A, statePenal
  * Compute L = B*B', where L is lower triangular of size NXp1
  * and B is a diagzero matrix of size [6 x 12] in column
  * storage format.
- * 
- * THIS ONE HAS THE WORST ACCES PATTERN POSSIBLE. 
+ *
+ * THIS ONE HAS THE WORST ACCES PATTERN POSSIBLE.
  * POSSIBKE FIX: PUT A AND B INTO ROW MAJOR FORMAT FIRST.
- * 
+ *
  */
 void statePenaltyMPC_LA_DENSE_MMT_6_12(statePenaltyMPC_FLOAT *B, statePenaltyMPC_FLOAT *L)
 {
     int i, j, k, ii, di;
     statePenaltyMPC_FLOAT ltemp;
-    
+
     ii = 0; di = 0;
-    for( i=0; i<6; i++ ){        
+    for( i=0; i<6; i++ ){
         for( j=0; j<=i; j++ ){
-            ltemp = 0; 		
+            ltemp = 0;
 			for( k=0; k<12; k++ ){
                 ltemp += B[k*6+i]*B[k*6+j];
             }
@@ -947,7 +803,7 @@ void statePenaltyMPC_LA_DENSE_MMT_6_12(statePenaltyMPC_FLOAT *B, statePenaltyMPC
 }
 
 
-/* 
+/*
  * Computes r = b - B*u
  * where B is stored in column major format
  */
@@ -959,12 +815,12 @@ void statePenaltyMPC_LA_DENSE_MVMSUB7_6_12(statePenaltyMPC_FLOAT *B, statePenalt
 
 	for( i=0; i<6; i++ ){
 		r[i] = b[i] - B[m++]*u[0];
-	}	
-	
+	}
+
 	for( n=1; n<12; n++ ){
 		for( i=0; i<6; i++ ){
 			r[i] -= B[m++]*u[n];
-		}		
+		}
 	}
 }
 
@@ -974,23 +830,23 @@ void statePenaltyMPC_LA_DENSE_MVMSUB7_6_12(statePenaltyMPC_FLOAT *B, statePenalt
  * and A is a dense matrix of size [6 x 12] in column
  * storage format, and B is of size [6 x 12] also in column
  * storage format.
- * 
- * THIS ONE HAS THE WORST ACCES PATTERN POSSIBLE. 
+ *
+ * THIS ONE HAS THE WORST ACCES PATTERN POSSIBLE.
  * POSSIBKE FIX: PUT A AND B INTO ROW MAJOR FORMAT FIRST.
- * 
+ *
  */
 void statePenaltyMPC_LA_DENSE_MMT2_6_12_12(statePenaltyMPC_FLOAT *A, statePenaltyMPC_FLOAT *B, statePenaltyMPC_FLOAT *L)
 {
     int i, j, k, ii, di;
     statePenaltyMPC_FLOAT ltemp;
-    
+
     ii = 0; di = 0;
-    for( i=0; i<6; i++ ){        
+    for( i=0; i<6; i++ ){
         for( j=0; j<=i; j++ ){
-            ltemp = 0; 
+            ltemp = 0;
             for( k=0; k<12; k++ ){
                 ltemp += A[k*6+i]*A[k*6+j];
-            }			
+            }
 			for( k=0; k<12; k++ ){
                 ltemp += B[k*6+i]*B[k*6+j];
             }
@@ -1001,7 +857,7 @@ void statePenaltyMPC_LA_DENSE_MMT2_6_12_12(statePenaltyMPC_FLOAT *A, statePenalt
 }
 
 
-/* 
+/*
  * Computes r = b - A*x - B*u
  * where A an B are stored in column major format
  */
@@ -1015,23 +871,23 @@ void statePenaltyMPC_LA_DENSE_MVMSUB2_6_12_12(statePenaltyMPC_FLOAT *A, statePen
 
 	for( i=0; i<6; i++ ){
 		r[i] = b[i] - A[k++]*x[0] - B[m++]*u[0];
-	}	
-	for( j=1; j<12; j++ ){		
+	}
+	for( j=1; j<12; j++ ){
 		for( i=0; i<6; i++ ){
 			r[i] -= A[k++]*x[j];
 		}
 	}
-	
+
 	for( n=1; n<12; n++ ){
 		for( i=0; i<6; i++ ){
 			r[i] -= B[m++]*u[n];
-		}		
+		}
 	}
 }
 
 
 /**
- * Cholesky factorization as above, but working on a matrix in 
+ * Cholesky factorization as above, but working on a matrix in
  * lower triangular storage format of size 6 and outputting
  * the Cholesky factor to matrix L in lower triangular format.
  */
@@ -1051,18 +907,18 @@ void statePenaltyMPC_LA_DENSE_CHOL_6(statePenaltyMPC_FLOAT *A, statePenaltyMPC_F
 			L[ii+j] = A[ii+j];
 		}
 		ii += ++di;
-	}    
-	
+	}
+
 	/* factor L */
 	ii=0; di=0;
     for( i=0; i<6; i++ ){
         l = 0;
         for( k=0; k<i; k++ ){
             l += L[ii+k]*L[ii+k];
-        }        
-        
+        }
+
         Mii = L[ii+i] - l;
-        
+
 #if statePenaltyMPC_SET_PRINTLEVEL > 0 && defined PRINTNUMERICALWARNINGS
         if( Mii < 1.0000000000000000E-013 ){
              PRINTTEXT("WARNING (CHOL): small %d-th pivot in Cholesky fact. (=%3.1e < eps=%3.1e), regularizing to %3.1e\n",i,Mii,1.0000000000000000E-013,4.0000000000000002E-004);
@@ -1077,7 +933,7 @@ void statePenaltyMPC_LA_DENSE_CHOL_6(statePenaltyMPC_FLOAT *A, statePenaltyMPC_F
 
 		jj = ((i+1)*(i+2))/2; dj = i+1;
         for( j=i+1; j<6; j++ ){
-            l = 0;            
+            l = 0;
             for( k=0; k<i; k++ ){
                 l += L[jj+k]*L[ii+k];
             }
@@ -1086,28 +942,28 @@ void statePenaltyMPC_LA_DENSE_CHOL_6(statePenaltyMPC_FLOAT *A, statePenaltyMPC_F
 			l = MIN(l,  BIGMM);
 			l = MAX(l, -BIGMM);
 
-            L[jj+i] = (L[jj+i] - l)/L[ii+i];            
+            L[jj+i] = (L[jj+i] - l)/L[ii+i];
 			jj += ++dj;
         }
 		ii += ++di;
-    }	
+    }
 }
 
 
 /**
  * Forward substitution to solve L*y = b where L is a
  * lower triangular matrix in triangular storage format.
- * 
+ *
  * The dimensions involved are 6.
  */
 void statePenaltyMPC_LA_DENSE_FORWARDSUB_6(statePenaltyMPC_FLOAT *L, statePenaltyMPC_FLOAT *b, statePenaltyMPC_FLOAT *y)
 {
     int i,j,ii,di;
     statePenaltyMPC_FLOAT yel;
-            
+
     ii = 0; di = 0;
     for( i=0; i<6; i++ ){
-        yel = b[i];        
+        yel = b[i];
         for( j=0; j<i; j++ ){
             yel -= y[j]*L[ii+j];
         }
@@ -1122,11 +978,11 @@ void statePenaltyMPC_LA_DENSE_FORWARDSUB_6(statePenaltyMPC_FLOAT *L, statePenalt
 }
 
 
-/** 
+/**
  * Forward substitution for the matrix equation A*L' = B'
  * where A is to be computed and is of size [6 x 6],
  * B is given and of size [6 x 6], L is a lower tri-
- * angular matrix of size 6 stored in lower triangular 
+ * angular matrix of size 6 stored in lower triangular
  * storage format. Note the transpose of L AND B!
  *
  * Result: A in column major storage format.
@@ -1136,20 +992,20 @@ void statePenaltyMPC_LA_DENSE_MATRIXTFORWARDSUB_6_6(statePenaltyMPC_FLOAT *L, st
 {
     int i,j,k,ii,di;
     statePenaltyMPC_FLOAT a;
-    
+
     ii=0; di=0;
-    for( j=0; j<6; j++ ){        
+    for( j=0; j<6; j++ ){
         for( i=0; i<6; i++ ){
             a = B[i*6+j];
             for( k=0; k<j; k++ ){
                 a -= A[k*6+i]*L[ii+k];
-            }    
+            }
 
 			/* saturate for numerical stability */
 			a = MIN(a, BIGM);
-			a = MAX(a, -BIGM); 
+			a = MAX(a, -BIGM);
 
-			A[j*6+i] = a/L[ii+j];			
+			A[j*6+i] = a/L[ii+j];
         }
         ii += ++di;
     }
@@ -1160,23 +1016,23 @@ void statePenaltyMPC_LA_DENSE_MATRIXTFORWARDSUB_6_6(statePenaltyMPC_FLOAT *L, st
  * Compute L = L - A*A', where L is lower triangular of size 6
  * and A is a dense matrix of size [6 x 6] in column
  * storage format.
- * 
- * THIS ONE HAS THE WORST ACCES PATTERN POSSIBLE. 
+ *
+ * THIS ONE HAS THE WORST ACCES PATTERN POSSIBLE.
  * POSSIBKE FIX: PUT A INTO ROW MAJOR FORMAT FIRST.
- * 
+ *
  */
 void statePenaltyMPC_LA_DENSE_MMTSUB_6_6(statePenaltyMPC_FLOAT *A, statePenaltyMPC_FLOAT *L)
 {
     int i, j, k, ii, di;
     statePenaltyMPC_FLOAT ltemp;
-    
+
     ii = 0; di = 0;
-    for( i=0; i<6; i++ ){        
+    for( i=0; i<6; i++ ){
         for( j=0; j<=i; j++ ){
-            ltemp = 0; 
+            ltemp = 0;
             for( k=0; k<6; k++ ){
                 ltemp += A[k*6+i]*A[k*6+j];
-            }						
+            }
             L[ii+j] -= ltemp;
         }
         ii += ++di;
@@ -1184,7 +1040,7 @@ void statePenaltyMPC_LA_DENSE_MMTSUB_6_6(statePenaltyMPC_FLOAT *A, statePenaltyM
 }
 
 
-/* 
+/*
  * Computes r = b - A*x
  * where A is stored in column major format
  */
@@ -1196,8 +1052,8 @@ void statePenaltyMPC_LA_DENSE_MVMSUB1_6_6(statePenaltyMPC_FLOAT *A, statePenalty
 
 	for( i=0; i<6; i++ ){
 		r[i] = b[i] - A[k++]*x[0];
-	}	
-	for( j=1; j<6; j++ ){		
+	}
+	for( j=1; j<6; j++ ){
 		for( i=0; i<6; i++ ){
 			r[i] -= A[k++]*x[j];
 		}
@@ -1208,19 +1064,19 @@ void statePenaltyMPC_LA_DENSE_MVMSUB1_6_6(statePenaltyMPC_FLOAT *A, statePenalty
 /**
  * Backward Substitution to solve L^T*x = y where L is a
  * lower triangular matrix in triangular storage format.
- * 
+ *
  * All involved dimensions are 6.
  */
 void statePenaltyMPC_LA_DENSE_BACKWARDSUB_6(statePenaltyMPC_FLOAT *L, statePenaltyMPC_FLOAT *y, statePenaltyMPC_FLOAT *x)
 {
     int i, ii, di, j, jj, dj;
-    statePenaltyMPC_FLOAT xel;    
+    statePenaltyMPC_FLOAT xel;
 	int start = 15;
-    
+
     /* now solve L^T*x = y by backward substitution */
     ii = start; di = 5;
-    for( i=5; i>=0; i-- ){        
-        xel = y[i];        
+    for( i=5; i>=0; i-- ){
+        xel = y[i];
         jj = start; dj = 5;
         for( j=5; j>i; j-- ){
             xel -= x[j]*L[jj+i];
@@ -1229,7 +1085,7 @@ void statePenaltyMPC_LA_DENSE_BACKWARDSUB_6(statePenaltyMPC_FLOAT *L, statePenal
 
 		/* saturate for numerical stability */
 		xel = MIN(xel, BIGM);
-		xel = MAX(xel, -BIGM); 
+		xel = MAX(xel, -BIGM);
 
         x[i] = xel / L[ii+i];
         ii -= di--;
@@ -1245,7 +1101,7 @@ void statePenaltyMPC_LA_DENSE_MTVMSUB_6_6(statePenaltyMPC_FLOAT *A, statePenalty
 {
 	int i;
 	int j;
-	int k = 0; 
+	int k = 0;
 	for( i=0; i<6; i++ ){
 		r[i] = b[i];
 		for( j=0; j<6; j++ ){
@@ -1278,27 +1134,27 @@ void statePenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(statePenaltyMPC_FLOAT *L, st
     statePenaltyMPC_FLOAT y[12];
     statePenaltyMPC_FLOAT yel,xel;
 	int start = 66;
-            
+
     /* first solve Ly = b by forward substitution */
      ii = 0; di = 0;
     for( i=0; i<12; i++ ){
-        yel = b[i];        
+        yel = b[i];
         for( j=0; j<i; j++ ){
             yel -= y[j]*L[ii+j];
         }
 
 		/* saturate for numerical stability */
 		yel = MIN(yel, BIGM);
-		yel = MAX(yel, -BIGM); 
+		yel = MAX(yel, -BIGM);
 
         y[i] = yel / L[ii+i];
         ii += ++di;
     }
-    
+
     /* now solve L^T*x = y by backward substitution */
     ii = start; di = 11;
-    for( i=11; i>=0; i-- ){        
-        xel = y[i];        
+    for( i=11; i>=0; i-- ){
+        xel = y[i];
         jj = start; dj = 11;
         for( j=11; j>i; j-- ){
             xel -= x[j]*L[jj+i];
@@ -1307,7 +1163,7 @@ void statePenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(statePenaltyMPC_FLOAT *L, st
 
 		/* saturate for numerical stability */
 		xel = MIN(xel, BIGM);
-		xel = MAX(xel, -BIGM); 
+		xel = MAX(xel, -BIGM);
 
         x[i] = xel / L[ii+i];
         ii -= di--;
@@ -1378,21 +1234,21 @@ void statePenaltyMPC_LA_VSUB3_6(statePenaltyMPC_FLOAT *u, statePenaltyMPC_FLOAT 
 }
 
 
-/* 
+/*
  * Computes r = -b - A*x
  * where A is stored in column major format
  */
-void statePenaltyMPC_LA_DENSE_MVMSUB4_12_12(statePenaltyMPC_FLOAT *A, statePenaltyMPC_FLOAT *x, statePenaltyMPC_FLOAT *b, statePenaltyMPC_FLOAT *r)
+void statePenaltyMPC_LA_DENSE_MVMSUB4_6_12(statePenaltyMPC_FLOAT *A, statePenaltyMPC_FLOAT *x, statePenaltyMPC_FLOAT *b, statePenaltyMPC_FLOAT *r)
 {
 	int i;
 	int j;
 	int k = 0;
 
-	for( i=0; i<12; i++ ){
+	for( i=0; i<6; i++ ){
 		r[i] = -b[i] - A[k++]*x[0];
-	}	
-	for( j=1; j<12; j++ ){		
-		for( i=0; i<12; i++ ){
+	}
+	for( j=1; j<12; j++ ){
+		for( i=0; i<6; i++ ){
 			r[i] -= A[k++]*x[j];
 		}
 	}
@@ -1401,7 +1257,7 @@ void statePenaltyMPC_LA_DENSE_MVMSUB4_12_12(statePenaltyMPC_FLOAT *A, statePenal
 
 /**
  * Backtracking line search.
- * 
+ *
  * First determine the maximum line length by a feasibility line
  * search, i.e. a ~= argmax{ a \in [0...1] s.t. l+a*dl >= 0 and s+a*ds >= 0}.
  *
@@ -1411,36 +1267,36 @@ void statePenaltyMPC_LA_DENSE_MVMSUB4_12_12(statePenaltyMPC_FLOAT *A, statePenal
 int statePenaltyMPC_LINESEARCH_BACKTRACKING_AFFINE(statePenaltyMPC_FLOAT *l, statePenaltyMPC_FLOAT *s, statePenaltyMPC_FLOAT *dl, statePenaltyMPC_FLOAT *ds, statePenaltyMPC_FLOAT *a, statePenaltyMPC_FLOAT *mu_aff)
 {
     int i;
-	int lsIt=1;    
+	int lsIt=1;
     statePenaltyMPC_FLOAT dltemp;
     statePenaltyMPC_FLOAT dstemp;
     statePenaltyMPC_FLOAT mya = 1.0;
     statePenaltyMPC_FLOAT mymu;
-        
-    while( 1 ){                        
 
-        /* 
+    while( 1 ){
+
+        /*
          * Compute both snew and wnew together.
          * We compute also mu_affine along the way here, as the
          * values might be in registers, so it should be cheaper.
          */
         mymu = 0;
-        for( i=0; i<366; i++ ){
+        for( i=0; i<360; i++ ){
             dltemp = l[i] + mya*dl[i];
             dstemp = s[i] + mya*ds[i];
             if( dltemp < 0 || dstemp < 0 ){
                 lsIt++;
                 break;
-            } else {                
+            } else {
                 mymu += dstemp*dltemp;
             }
         }
-        
-        /* 
+
+        /*
          * If no early termination of the for-loop above occurred, we
          * found the required value of a and we can quit the while loop.
          */
-        if( i == 366 ){
+        if( i == 360 ){
             break;
         } else {
             mya *= statePenaltyMPC_SET_LS_SCALE_AFF;
@@ -1449,22 +1305,22 @@ int statePenaltyMPC_LINESEARCH_BACKTRACKING_AFFINE(statePenaltyMPC_FLOAT *l, sta
             }
         }
     }
-    
+
     /* return new values and iteration counter */
     *a = mya;
-    *mu_aff = mymu / (statePenaltyMPC_FLOAT)366;
+    *mu_aff = mymu / (statePenaltyMPC_FLOAT)360;
     return lsIt;
 }
 
 
 /*
  * Vector subtraction x = u.*v - a where a is a scalar
-*  and x,u,v are vectors of length 366.
+*  and x,u,v are vectors of length 360.
  */
-void statePenaltyMPC_LA_VSUB5_366(statePenaltyMPC_FLOAT *u, statePenaltyMPC_FLOAT *v, statePenaltyMPC_FLOAT a, statePenaltyMPC_FLOAT *x)
+void statePenaltyMPC_LA_VSUB5_360(statePenaltyMPC_FLOAT *u, statePenaltyMPC_FLOAT *v, statePenaltyMPC_FLOAT a, statePenaltyMPC_FLOAT *x)
 {
 	int i;
-	for( i=0; i<366; i++){
+	for( i=0; i<360; i++){
 		x[i] = u[i]*v[i] - a;
 	}
 }
@@ -1489,7 +1345,7 @@ void statePenaltyMPC_LA_VSUB6_INDEXED_12_12_12(statePenaltyMPC_FLOAT *u, statePe
 }
 
 
-/* 
+/*
  * Computes r = B*u
  * where B is stored in column major format
  */
@@ -1501,17 +1357,17 @@ void statePenaltyMPC_LA_DENSE_MVM_6_12(statePenaltyMPC_FLOAT *B, statePenaltyMPC
 
 	for( i=0; i<6; i++ ){
 		r[i] = B[m++]*u[0];
-	}	
-	
+	}
+
 	for( n=1; n<12; n++ ){
 		for( i=0; i<6; i++ ){
 			r[i] += B[m++]*u[n];
-		}		
+		}
 	}
 }
 
 
-/* 
+/*
  * Computes r = A*x + B*u
  * where A an B are stored in column major format
  */
@@ -1525,18 +1381,18 @@ void statePenaltyMPC_LA_DENSE_2MVMADD_6_12_12(statePenaltyMPC_FLOAT *A, statePen
 
 	for( i=0; i<6; i++ ){
 		r[i] = A[k++]*x[0] + B[m++]*u[0];
-	}	
+	}
 
-	for( j=1; j<12; j++ ){		
+	for( j=1; j<12; j++ ){
 		for( i=0; i<6; i++ ){
 			r[i] += A[k++]*x[j];
 		}
 	}
-	
+
 	for( n=1; n<12; n++ ){
 		for( i=0; i<6; i++ ){
 			r[i] += B[m++]*u[n];
-		}		
+		}
 	}
 }
 
@@ -1561,22 +1417,22 @@ void statePenaltyMPC_LA_VSUB6_INDEXED_12_6_12(statePenaltyMPC_FLOAT *u, statePen
 
 
 /*
- * Matrix vector multiplication z = z + A'*(x./s) where A is of size [12 x 12]
+ * Matrix vector multiplication z = z + A'*(x./s) where A is of size [6 x 12]
  * and stored in column major format. Note the transpose of M!
  */
-void statePenaltyMPC_LA_DENSE_MTVMADD2_12_12(statePenaltyMPC_FLOAT *A, statePenaltyMPC_FLOAT *x, statePenaltyMPC_FLOAT *s, statePenaltyMPC_FLOAT *z)
+void statePenaltyMPC_LA_DENSE_MTVMADD2_6_12(statePenaltyMPC_FLOAT *A, statePenaltyMPC_FLOAT *x, statePenaltyMPC_FLOAT *s, statePenaltyMPC_FLOAT *z)
 {
 	int i;
 	int j;
-	int k = 0; 
-	statePenaltyMPC_FLOAT temp[12];
+	int k = 0;
+	statePenaltyMPC_FLOAT temp[6];
 
-	for( j=0; j<12; j++ ){
+	for( j=0; j<6; j++ ){
 		temp[j] = x[j] / s[j];
 	}
 
 	for( i=0; i<12; i++ ){
-		for( j=0; j<12; j++ ){
+		for( j=0; j<6; j++ ){
 			z[i] += A[k++]*temp[j];
 		}
 	}
@@ -1595,7 +1451,7 @@ void statePenaltyMPC_LA_VSUB_180(statePenaltyMPC_FLOAT *x, statePenaltyMPC_FLOAT
 }
 
 
-/** 
+/**
  * Computes z = -r./s - u.*y(y)
  * where all vectors except of y are of length 12 (length of y >= 12).
  */
@@ -1608,7 +1464,7 @@ void statePenaltyMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_12(statePenaltyMPC_FLOAT *r, 
 }
 
 
-/** 
+/**
  * Computes z = -r./s + u.*y(y)
  * where all vectors except of y are of length 12 (length of y >= 12).
  */
@@ -1621,7 +1477,7 @@ void statePenaltyMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_12(statePenaltyMPC_FLOAT *r, 
 }
 
 
-/** 
+/**
  * Computes z = -r./s + u.*y(y)
  * where all vectors except of y are of length 6 (length of y >= 6).
  */
@@ -1634,44 +1490,44 @@ void statePenaltyMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_6(statePenaltyMPC_FLOAT *r, s
 }
 
 
-/* 
+/*
  * Computes r = (-b + l.*(A*x))./s
  * where A is stored in column major format
  */
-void statePenaltyMPC_LA_DENSE_MVMSUB5_12_12(statePenaltyMPC_FLOAT *A, statePenaltyMPC_FLOAT *x, statePenaltyMPC_FLOAT *b, statePenaltyMPC_FLOAT *s, statePenaltyMPC_FLOAT *l, statePenaltyMPC_FLOAT *r)
+void statePenaltyMPC_LA_DENSE_MVMSUB5_6_12(statePenaltyMPC_FLOAT *A, statePenaltyMPC_FLOAT *x, statePenaltyMPC_FLOAT *b, statePenaltyMPC_FLOAT *s, statePenaltyMPC_FLOAT *l, statePenaltyMPC_FLOAT *r)
 {
 	int i;
 	int j;
 	int k = 0;
 
-	statePenaltyMPC_FLOAT temp[12];
+	statePenaltyMPC_FLOAT temp[6];
 
-	
-	for( i=0; i<12; i++ ){
+
+	for( i=0; i<6; i++ ){
 		temp[i] = A[k++]*x[0];
 	}
-	
 
-	for( j=1; j<12; j++ ){		
-		for( i=0; i<12; i++ ){
+
+	for( j=1; j<12; j++ ){
+		for( i=0; i<6; i++ ){
 			temp[i] += A[k++]*x[j];
 		}
 	}
 
-	for( i=0; i<12; i++ ){
-		r[i] = (-b[i] + l[i]*temp[i])/s[i]; 
-	}	
-	
+	for( i=0; i<6; i++ ){
+		r[i] = (-b[i] + l[i]*temp[i])/s[i];
+	}
+
 }
 
 
 /*
- * Computes ds = -l.\(r + s.*dl) for vectors of length 366.
+ * Computes ds = -l.\(r + s.*dl) for vectors of length 360.
  */
-void statePenaltyMPC_LA_VSUB7_366(statePenaltyMPC_FLOAT *l, statePenaltyMPC_FLOAT *r, statePenaltyMPC_FLOAT *s, statePenaltyMPC_FLOAT *dl, statePenaltyMPC_FLOAT *ds)
+void statePenaltyMPC_LA_VSUB7_360(statePenaltyMPC_FLOAT *l, statePenaltyMPC_FLOAT *r, statePenaltyMPC_FLOAT *s, statePenaltyMPC_FLOAT *dl, statePenaltyMPC_FLOAT *ds)
 {
 	int i;
-	for( i=0; i<366; i++){
+	for( i=0; i<360; i++){
 		ds[i] = -(r[i] + s[i]*dl[i])/l[i];
 	}
 }
@@ -1702,12 +1558,12 @@ void statePenaltyMPC_LA_VADD_90(statePenaltyMPC_FLOAT *x, statePenaltyMPC_FLOAT 
 
 
 /*
- * Vector addition x = x + y for vectors of length 366.
+ * Vector addition x = x + y for vectors of length 360.
  */
-void statePenaltyMPC_LA_VADD_366(statePenaltyMPC_FLOAT *x, statePenaltyMPC_FLOAT *y)
+void statePenaltyMPC_LA_VADD_360(statePenaltyMPC_FLOAT *x, statePenaltyMPC_FLOAT *y)
 {
 	int i;
-	for( i=0; i<366; i++){
+	for( i=0; i<360; i++){
 		x[i] += y[i];
 	}
 }
@@ -1720,16 +1576,16 @@ void statePenaltyMPC_LA_VADD_366(statePenaltyMPC_FLOAT *x, statePenaltyMPC_FLOAT
  */
 int statePenaltyMPC_LINESEARCH_BACKTRACKING_COMBINED(statePenaltyMPC_FLOAT *z, statePenaltyMPC_FLOAT *v, statePenaltyMPC_FLOAT *l, statePenaltyMPC_FLOAT *s, statePenaltyMPC_FLOAT *dz, statePenaltyMPC_FLOAT *dv, statePenaltyMPC_FLOAT *dl, statePenaltyMPC_FLOAT *ds, statePenaltyMPC_FLOAT *a, statePenaltyMPC_FLOAT *mu)
 {
-    int i, lsIt=1;       
+    int i, lsIt=1;
     statePenaltyMPC_FLOAT dltemp;
-    statePenaltyMPC_FLOAT dstemp;    
+    statePenaltyMPC_FLOAT dstemp;
     statePenaltyMPC_FLOAT a_gamma;
-            
+
     *a = 1.0;
-    while( 1 ){                        
+    while( 1 ){
 
         /* check whether search criterion is fulfilled */
-        for( i=0; i<366; i++ ){
+        for( i=0; i<360; i++ ){
             dltemp = l[i] + (*a)*dl[i];
             dstemp = s[i] + (*a)*ds[i];
             if( dltemp < 0 || dstemp < 0 ){
@@ -1737,12 +1593,12 @@ int statePenaltyMPC_LINESEARCH_BACKTRACKING_COMBINED(statePenaltyMPC_FLOAT *z, s
                 break;
             }
         }
-        
-        /* 
+
+        /*
          * If no early termination of the for-loop above occurred, we
          * found the required value of a and we can quit the while loop.
          */
-        if( i == 366 ){
+        if( i == 360 ){
             break;
         } else {
             *a *= statePenaltyMPC_SET_LS_SCALE;
@@ -1751,30 +1607,30 @@ int statePenaltyMPC_LINESEARCH_BACKTRACKING_COMBINED(statePenaltyMPC_FLOAT *z, s
             }
         }
     }
-    
+
     /* update variables with safety margin */
     a_gamma = (*a)*statePenaltyMPC_SET_LS_MAXSTEP;
-    
+
     /* primal variables */
     for( i=0; i<180; i++ ){
         z[i] += a_gamma*dz[i];
     }
-    
+
     /* equality constraint multipliers */
     for( i=0; i<90; i++ ){
         v[i] += a_gamma*dv[i];
     }
-    
+
     /* inequality constraint multipliers & slacks, also update mu */
     *mu = 0;
-    for( i=0; i<366; i++ ){
+    for( i=0; i<360; i++ ){
         dltemp = l[i] + a_gamma*dl[i]; l[i] = dltemp;
         dstemp = s[i] + a_gamma*ds[i]; s[i] = dstemp;
         *mu += dltemp*dstemp;
     }
-    
+
     *a = a_gamma;
-    *mu /= (statePenaltyMPC_FLOAT)366;
+    *mu /= (statePenaltyMPC_FLOAT)360;
     return lsIt;
 }
 
@@ -1789,16 +1645,16 @@ statePenaltyMPC_FLOAT statePenaltyMPC_dv_aff[90];
 statePenaltyMPC_FLOAT statePenaltyMPC_grad_cost[180];
 statePenaltyMPC_FLOAT statePenaltyMPC_grad_eq[180];
 statePenaltyMPC_FLOAT statePenaltyMPC_rd[180];
-statePenaltyMPC_FLOAT statePenaltyMPC_l[366];
-statePenaltyMPC_FLOAT statePenaltyMPC_s[366];
-statePenaltyMPC_FLOAT statePenaltyMPC_lbys[366];
-statePenaltyMPC_FLOAT statePenaltyMPC_dl_aff[366];
-statePenaltyMPC_FLOAT statePenaltyMPC_ds_aff[366];
+statePenaltyMPC_FLOAT statePenaltyMPC_l[360];
+statePenaltyMPC_FLOAT statePenaltyMPC_s[360];
+statePenaltyMPC_FLOAT statePenaltyMPC_lbys[360];
+statePenaltyMPC_FLOAT statePenaltyMPC_dl_aff[360];
+statePenaltyMPC_FLOAT statePenaltyMPC_ds_aff[360];
 statePenaltyMPC_FLOAT statePenaltyMPC_dz_cc[180];
 statePenaltyMPC_FLOAT statePenaltyMPC_dv_cc[90];
-statePenaltyMPC_FLOAT statePenaltyMPC_dl_cc[366];
-statePenaltyMPC_FLOAT statePenaltyMPC_ds_cc[366];
-statePenaltyMPC_FLOAT statePenaltyMPC_ccrhs[366];
+statePenaltyMPC_FLOAT statePenaltyMPC_dl_cc[360];
+statePenaltyMPC_FLOAT statePenaltyMPC_ds_cc[360];
+statePenaltyMPC_FLOAT statePenaltyMPC_ccrhs[360];
 statePenaltyMPC_FLOAT statePenaltyMPC_grad_ineq[180];
 statePenaltyMPC_FLOAT* statePenaltyMPC_z00 = statePenaltyMPC_z + 0;
 statePenaltyMPC_FLOAT* statePenaltyMPC_dzaff00 = statePenaltyMPC_dz_aff + 0;
@@ -1809,17 +1665,17 @@ statePenaltyMPC_FLOAT* statePenaltyMPC_grad_cost00 = statePenaltyMPC_grad_cost +
 statePenaltyMPC_FLOAT* statePenaltyMPC_grad_eq00 = statePenaltyMPC_grad_eq + 0;
 statePenaltyMPC_FLOAT* statePenaltyMPC_grad_ineq00 = statePenaltyMPC_grad_ineq + 0;
 statePenaltyMPC_FLOAT statePenaltyMPC_ctv00[12];
-statePenaltyMPC_FLOAT statePenaltyMPC_C00[72] = {1.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 
-0.0000000000000000E+000, 1.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 
-0.0000000000000000E+000, 0.0000000000000000E+000, 1.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 
-0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 1.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 
-0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 1.0000000000000000E+000, 0.0000000000000000E+000, 
-0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 1.0000000000000000E+000, 
-1.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 
-0.0000000000000000E+000, 1.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 
-0.0000000000000000E+000, 0.0000000000000000E+000, 1.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 
-0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 1.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 
-0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 1.0000000000000000E+000, 0.0000000000000000E+000, 
+statePenaltyMPC_FLOAT statePenaltyMPC_C00[72] = {1.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000,
+0.0000000000000000E+000, 1.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000,
+0.0000000000000000E+000, 0.0000000000000000E+000, 1.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000,
+0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 1.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000,
+0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 1.0000000000000000E+000, 0.0000000000000000E+000,
+0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 1.0000000000000000E+000,
+1.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000,
+0.0000000000000000E+000, 1.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000,
+0.0000000000000000E+000, 0.0000000000000000E+000, 1.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000,
+0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 1.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000,
+0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 1.0000000000000000E+000, 0.0000000000000000E+000,
 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 1.0000000000000000E+000};
 statePenaltyMPC_FLOAT* statePenaltyMPC_v00 = statePenaltyMPC_v + 0;
 statePenaltyMPC_FLOAT statePenaltyMPC_re00[6];
@@ -1853,11 +1709,11 @@ statePenaltyMPC_FLOAT* statePenaltyMPC_dlubcc00 = statePenaltyMPC_dl_cc + 12;
 statePenaltyMPC_FLOAT* statePenaltyMPC_dsubcc00 = statePenaltyMPC_ds_cc + 12;
 statePenaltyMPC_FLOAT* statePenaltyMPC_ccrhsub00 = statePenaltyMPC_ccrhs + 12;
 statePenaltyMPC_FLOAT statePenaltyMPC_Phi00[78];
-statePenaltyMPC_FLOAT statePenaltyMPC_D00[12] = {1.0000000000000000E+000, 
-1.0000000000000000E+000, 
-1.0000000000000000E+000, 
-1.0000000000000000E+000, 
-1.0000000000000000E+000, 
+statePenaltyMPC_FLOAT statePenaltyMPC_D00[12] = {1.0000000000000000E+000,
+1.0000000000000000E+000,
+1.0000000000000000E+000,
+1.0000000000000000E+000,
+1.0000000000000000E+000,
 1.0000000000000000E+000};
 statePenaltyMPC_FLOAT statePenaltyMPC_W00[72];
 statePenaltyMPC_FLOAT* statePenaltyMPC_z01 = statePenaltyMPC_z + 12;
@@ -1902,11 +1758,11 @@ statePenaltyMPC_FLOAT* statePenaltyMPC_dlubcc01 = statePenaltyMPC_dl_cc + 36;
 statePenaltyMPC_FLOAT* statePenaltyMPC_dsubcc01 = statePenaltyMPC_ds_cc + 36;
 statePenaltyMPC_FLOAT* statePenaltyMPC_ccrhsub01 = statePenaltyMPC_ccrhs + 36;
 statePenaltyMPC_FLOAT statePenaltyMPC_Phi01[78];
-statePenaltyMPC_FLOAT statePenaltyMPC_D01[12] = {-1.0000000000000000E+000, 
--1.0000000000000000E+000, 
--1.0000000000000000E+000, 
--1.0000000000000000E+000, 
--1.0000000000000000E+000, 
+statePenaltyMPC_FLOAT statePenaltyMPC_D01[12] = {-1.0000000000000000E+000,
+-1.0000000000000000E+000,
+-1.0000000000000000E+000,
+-1.0000000000000000E+000,
+-1.0000000000000000E+000,
 -1.0000000000000000E+000};
 statePenaltyMPC_FLOAT statePenaltyMPC_W01[72];
 statePenaltyMPC_FLOAT statePenaltyMPC_Ysd01[36];
@@ -2500,7 +2356,7 @@ statePenaltyMPC_FLOAT* statePenaltyMPC_dsp_aff14 = statePenaltyMPC_ds_aff + 354;
 statePenaltyMPC_FLOAT* statePenaltyMPC_dlp_cc14 = statePenaltyMPC_dl_cc + 354;
 statePenaltyMPC_FLOAT* statePenaltyMPC_dsp_cc14 = statePenaltyMPC_ds_cc + 354;
 statePenaltyMPC_FLOAT* statePenaltyMPC_ccrhsp14 = statePenaltyMPC_ccrhs + 354;
-statePenaltyMPC_FLOAT statePenaltyMPC_rip14[12];
+statePenaltyMPC_FLOAT statePenaltyMPC_rip14[6];
 statePenaltyMPC_FLOAT statePenaltyMPC_Phi14[78];
 statePenaltyMPC_FLOAT statePenaltyMPC_W14[72];
 statePenaltyMPC_FLOAT statePenaltyMPC_Ysd14[36];
@@ -2513,7 +2369,7 @@ statePenaltyMPC_FLOAT sigma_3rdroot;
 
 /* SOLVER CODE --------------------------------------------------------- */
 int statePenaltyMPC_solve(statePenaltyMPC_params* params, statePenaltyMPC_output* output, statePenaltyMPC_info* info)
-{	
+{
 int exitcode;
 
 #if statePenaltyMPC_SET_TIMING == 1
@@ -2524,15 +2380,11 @@ int exitcode;
 info->it = 0;
 statePenaltyMPC_LA_INITIALIZEVECTOR_180(statePenaltyMPC_z, 0);
 statePenaltyMPC_LA_INITIALIZEVECTOR_90(statePenaltyMPC_v, 1);
-statePenaltyMPC_LA_INITIALIZEVECTOR_366(statePenaltyMPC_l, 1);
-statePenaltyMPC_LA_INITIALIZEVECTOR_366(statePenaltyMPC_s, 1);
+statePenaltyMPC_LA_INITIALIZEVECTOR_360(statePenaltyMPC_l, 1);
+statePenaltyMPC_LA_INITIALIZEVECTOR_360(statePenaltyMPC_s, 1);
 info->mu = 0;
-statePenaltyMPC_LA_DOTACC_366(statePenaltyMPC_l, statePenaltyMPC_s, &info->mu);
-info->mu /= 366;
-PRINTTEXT("This is statePenaltyMPC, a solver generated by FORCES (forces.ethz.ch).\n");
-PRINTTEXT("(c) Alexander Domahidi, Automatic Control Laboratory, ETH Zurich, 2011-2014.\n");
-PRINTTEXT("\n  #it  res_eq   res_ineq     pobj         dobj       dgap     rdgap     mu\n");
-PRINTTEXT("  ---------------------------------------------------------------------------\n");
+statePenaltyMPC_LA_DOTACC_360(statePenaltyMPC_l, statePenaltyMPC_s, &info->mu);
+info->mu /= 360;
 while( 1 ){
 info->pobj = 0;
 statePenaltyMPC_LA_DENSE_QUADFCN_12(params->Q1, params->f1, statePenaltyMPC_z00, statePenaltyMPC_grad_cost00, &info->pobj);
@@ -2613,7 +2465,7 @@ statePenaltyMPC_LA_VSUBADD3_12(params->lb14, statePenaltyMPC_z13, statePenaltyMP
 statePenaltyMPC_LA_VSUBADD2_12(statePenaltyMPC_z13, statePenaltyMPC_ubIdx13, params->ub14, statePenaltyMPC_lub13, statePenaltyMPC_sub13, statePenaltyMPC_riub13, &info->dgap, &info->res_ineq);
 statePenaltyMPC_LA_VSUBADD3_12(params->lb15, statePenaltyMPC_z14, statePenaltyMPC_lbIdx14, statePenaltyMPC_llb14, statePenaltyMPC_slb14, statePenaltyMPC_rilb14, &info->dgap, &info->res_ineq);
 statePenaltyMPC_LA_VSUBADD2_6(statePenaltyMPC_z14, statePenaltyMPC_ubIdx14, params->ub15, statePenaltyMPC_lub14, statePenaltyMPC_sub14, statePenaltyMPC_riub14, &info->dgap, &info->res_ineq);
-statePenaltyMPC_LA_MVSUBADD_12_12(params->A15, statePenaltyMPC_z14, params->b15, statePenaltyMPC_sp14, statePenaltyMPC_lp14, statePenaltyMPC_rip14, &info->dgap, &info->res_ineq);
+statePenaltyMPC_LA_MVSUBADD_6_12(params->A15, statePenaltyMPC_z14, params->b15, statePenaltyMPC_sp14, statePenaltyMPC_lp14, statePenaltyMPC_rip14, &info->dgap, &info->res_ineq);
 statePenaltyMPC_LA_INEQ_B_GRAD_12_12_12(statePenaltyMPC_lub00, statePenaltyMPC_sub00, statePenaltyMPC_riub00, statePenaltyMPC_llb00, statePenaltyMPC_slb00, statePenaltyMPC_rilb00, statePenaltyMPC_lbIdx00, statePenaltyMPC_ubIdx00, statePenaltyMPC_grad_ineq00, statePenaltyMPC_lubbysub00, statePenaltyMPC_llbbyslb00);
 statePenaltyMPC_LA_INEQ_B_GRAD_12_12_12(statePenaltyMPC_lub01, statePenaltyMPC_sub01, statePenaltyMPC_riub01, statePenaltyMPC_llb01, statePenaltyMPC_slb01, statePenaltyMPC_rilb01, statePenaltyMPC_lbIdx01, statePenaltyMPC_ubIdx01, statePenaltyMPC_grad_ineq01, statePenaltyMPC_lubbysub01, statePenaltyMPC_llbbyslb01);
 statePenaltyMPC_LA_INEQ_B_GRAD_12_12_12(statePenaltyMPC_lub02, statePenaltyMPC_sub02, statePenaltyMPC_riub02, statePenaltyMPC_llb02, statePenaltyMPC_slb02, statePenaltyMPC_rilb02, statePenaltyMPC_lbIdx02, statePenaltyMPC_ubIdx02, statePenaltyMPC_grad_ineq02, statePenaltyMPC_lubbysub02, statePenaltyMPC_llbbyslb02);
@@ -2629,19 +2481,16 @@ statePenaltyMPC_LA_INEQ_B_GRAD_12_12_12(statePenaltyMPC_lub11, statePenaltyMPC_s
 statePenaltyMPC_LA_INEQ_B_GRAD_12_12_12(statePenaltyMPC_lub12, statePenaltyMPC_sub12, statePenaltyMPC_riub12, statePenaltyMPC_llb12, statePenaltyMPC_slb12, statePenaltyMPC_rilb12, statePenaltyMPC_lbIdx12, statePenaltyMPC_ubIdx12, statePenaltyMPC_grad_ineq12, statePenaltyMPC_lubbysub12, statePenaltyMPC_llbbyslb12);
 statePenaltyMPC_LA_INEQ_B_GRAD_12_12_12(statePenaltyMPC_lub13, statePenaltyMPC_sub13, statePenaltyMPC_riub13, statePenaltyMPC_llb13, statePenaltyMPC_slb13, statePenaltyMPC_rilb13, statePenaltyMPC_lbIdx13, statePenaltyMPC_ubIdx13, statePenaltyMPC_grad_ineq13, statePenaltyMPC_lubbysub13, statePenaltyMPC_llbbyslb13);
 statePenaltyMPC_LA_INEQ_B_GRAD_12_12_6(statePenaltyMPC_lub14, statePenaltyMPC_sub14, statePenaltyMPC_riub14, statePenaltyMPC_llb14, statePenaltyMPC_slb14, statePenaltyMPC_rilb14, statePenaltyMPC_lbIdx14, statePenaltyMPC_ubIdx14, statePenaltyMPC_grad_ineq14, statePenaltyMPC_lubbysub14, statePenaltyMPC_llbbyslb14);
-statePenaltyMPC_LA_INEQ_P_12_12(params->A15, statePenaltyMPC_lp14, statePenaltyMPC_sp14, statePenaltyMPC_rip14, statePenaltyMPC_grad_ineq14, statePenaltyMPC_lpbysp14);
+statePenaltyMPC_LA_INEQ_P_6_12(params->A15, statePenaltyMPC_lp14, statePenaltyMPC_sp14, statePenaltyMPC_rip14, statePenaltyMPC_grad_ineq14, statePenaltyMPC_lpbysp14);
 info->dobj = info->pobj - info->dgap;
 info->rdgap = info->pobj ? info->dgap / info->pobj : 1e6;
 if( info->rdgap < 0 ) info->rdgap = -info->rdgap;
-PRINTTEXT("  %3d  %3.1e  %3.1e  %+6.4e  %+6.4e  %+3.1e  %3.1e  %3.1e\n",info->it, info->res_eq, info->res_ineq, info->pobj, info->dobj, info->dgap, info->rdgap, info->mu);
 if( info->mu < statePenaltyMPC_SET_ACC_KKTCOMPL
     && (info->rdgap < statePenaltyMPC_SET_ACC_RDGAP || info->dgap < statePenaltyMPC_SET_ACC_KKTCOMPL)
     && info->res_eq < statePenaltyMPC_SET_ACC_RESEQ
     && info->res_ineq < statePenaltyMPC_SET_ACC_RESINEQ ){
-PRINTTEXT("OPTIMAL (within RESEQ=%2.1e, RESINEQ=%2.1e, (R)DGAP=(%2.1e)%2.1e, MU=%2.1e).\n",statePenaltyMPC_SET_ACC_RESEQ, statePenaltyMPC_SET_ACC_RESINEQ,statePenaltyMPC_SET_ACC_KKTCOMPL,statePenaltyMPC_SET_ACC_RDGAP,statePenaltyMPC_SET_ACC_KKTCOMPL);
 exitcode = statePenaltyMPC_OPTIMAL; break; }
 if( info->it == statePenaltyMPC_SET_MAXIT ){
-PRINTTEXT("Maximum number of iterations reached, exiting.\n");
 exitcode = statePenaltyMPC_MAXITREACHED; break; }
 statePenaltyMPC_LA_VVADD3_180(statePenaltyMPC_grad_cost, statePenaltyMPC_grad_eq, statePenaltyMPC_grad_ineq, statePenaltyMPC_rd);
 statePenaltyMPC_LA_INEQ_DENSE_HESS_12_12_12(params->Q1, statePenaltyMPC_llbbyslb00, statePenaltyMPC_lbIdx00, statePenaltyMPC_lubbysub00, statePenaltyMPC_ubIdx00, statePenaltyMPC_Phi00);
@@ -2729,7 +2578,7 @@ statePenaltyMPC_LA_DENSE_DIAGZERO_MATRIXFORWARDSUB_6_12(statePenaltyMPC_Phi13, s
 statePenaltyMPC_LA_DENSE_MMTM_6_12_6(statePenaltyMPC_W13, statePenaltyMPC_V13, statePenaltyMPC_Ysd14);
 statePenaltyMPC_LA_DENSE_FORWARDSUB_12(statePenaltyMPC_Phi13, statePenaltyMPC_rd13, statePenaltyMPC_Lbyrd13);
 statePenaltyMPC_LA_INEQ_DENSE_HESS_12_12_6(params->Q15, statePenaltyMPC_llbbyslb14, statePenaltyMPC_lbIdx14, statePenaltyMPC_lubbysub14, statePenaltyMPC_ubIdx14, statePenaltyMPC_Phi14);
-statePenaltyMPC_LA_DENSE_ADDMTDM_12_12(params->A15, statePenaltyMPC_lpbysp14, statePenaltyMPC_Phi14);
+statePenaltyMPC_LA_DENSE_ADDMTDM_6_12(params->A15, statePenaltyMPC_lpbysp14, statePenaltyMPC_Phi14);
 statePenaltyMPC_LA_DENSE_CHOL2_12(statePenaltyMPC_Phi14);
 statePenaltyMPC_LA_DENSE_DIAGZERO_MATRIXFORWARDSUB_6_12(statePenaltyMPC_Phi14, statePenaltyMPC_D01, statePenaltyMPC_W14);
 statePenaltyMPC_LA_DENSE_FORWARDSUB_12(statePenaltyMPC_Phi14, statePenaltyMPC_rd14, statePenaltyMPC_Lbyrd14);
@@ -2955,17 +2804,16 @@ statePenaltyMPC_LA_VSUB_INDEXED_12(statePenaltyMPC_dzaff14, statePenaltyMPC_lbId
 statePenaltyMPC_LA_VSUB3_12(statePenaltyMPC_llbbyslb14, statePenaltyMPC_dslbaff14, statePenaltyMPC_llb14, statePenaltyMPC_dllbaff14);
 statePenaltyMPC_LA_VSUB2_INDEXED_6(statePenaltyMPC_riub14, statePenaltyMPC_dzaff14, statePenaltyMPC_ubIdx14, statePenaltyMPC_dsubaff14);
 statePenaltyMPC_LA_VSUB3_6(statePenaltyMPC_lubbysub14, statePenaltyMPC_dsubaff14, statePenaltyMPC_lub14, statePenaltyMPC_dlubaff14);
-statePenaltyMPC_LA_DENSE_MVMSUB4_12_12(params->A15, statePenaltyMPC_dzaff14, statePenaltyMPC_rip14, statePenaltyMPC_dsp_aff14);
-statePenaltyMPC_LA_VSUB3_12(statePenaltyMPC_lpbysp14, statePenaltyMPC_dsp_aff14, statePenaltyMPC_lp14, statePenaltyMPC_dlp_aff14);
+statePenaltyMPC_LA_DENSE_MVMSUB4_6_12(params->A15, statePenaltyMPC_dzaff14, statePenaltyMPC_rip14, statePenaltyMPC_dsp_aff14);
+statePenaltyMPC_LA_VSUB3_6(statePenaltyMPC_lpbysp14, statePenaltyMPC_dsp_aff14, statePenaltyMPC_lp14, statePenaltyMPC_dlp_aff14);
 info->lsit_aff = statePenaltyMPC_LINESEARCH_BACKTRACKING_AFFINE(statePenaltyMPC_l, statePenaltyMPC_s, statePenaltyMPC_dl_aff, statePenaltyMPC_ds_aff, &info->step_aff, &info->mu_aff);
 if( info->lsit_aff == statePenaltyMPC_NOPROGRESS ){
-PRINTTEXT("Affine line search could not proceed at iteration %d.\nThe problem might be infeasible -- exiting.\n",info->it+1);
 exitcode = statePenaltyMPC_NOPROGRESS; break;
 }
 sigma_3rdroot = info->mu_aff / info->mu;
 info->sigma = sigma_3rdroot*sigma_3rdroot*sigma_3rdroot;
 musigma = info->mu * info->sigma;
-statePenaltyMPC_LA_VSUB5_366(statePenaltyMPC_ds_aff, statePenaltyMPC_dl_aff, musigma, statePenaltyMPC_ccrhs);
+statePenaltyMPC_LA_VSUB5_360(statePenaltyMPC_ds_aff, statePenaltyMPC_dl_aff, musigma, statePenaltyMPC_ccrhs);
 statePenaltyMPC_LA_VSUB6_INDEXED_12_12_12(statePenaltyMPC_ccrhsub00, statePenaltyMPC_sub00, statePenaltyMPC_ubIdx00, statePenaltyMPC_ccrhsl00, statePenaltyMPC_slb00, statePenaltyMPC_lbIdx00, statePenaltyMPC_rd00);
 statePenaltyMPC_LA_VSUB6_INDEXED_12_12_12(statePenaltyMPC_ccrhsub01, statePenaltyMPC_sub01, statePenaltyMPC_ubIdx01, statePenaltyMPC_ccrhsl01, statePenaltyMPC_slb01, statePenaltyMPC_lbIdx01, statePenaltyMPC_rd01);
 statePenaltyMPC_LA_DENSE_FORWARDSUB_12(statePenaltyMPC_Phi00, statePenaltyMPC_rd00, statePenaltyMPC_Lbyrd00);
@@ -3036,7 +2884,7 @@ statePenaltyMPC_LA_DENSE_2MVMADD_6_12_12(statePenaltyMPC_V12, statePenaltyMPC_Lb
 statePenaltyMPC_LA_DENSE_MVMSUB1_6_6(statePenaltyMPC_Lsd13, statePenaltyMPC_yy12, statePenaltyMPC_beta13, statePenaltyMPC_bmy13);
 statePenaltyMPC_LA_DENSE_FORWARDSUB_6(statePenaltyMPC_Ld13, statePenaltyMPC_bmy13, statePenaltyMPC_yy13);
 statePenaltyMPC_LA_VSUB6_INDEXED_12_6_12(statePenaltyMPC_ccrhsub14, statePenaltyMPC_sub14, statePenaltyMPC_ubIdx14, statePenaltyMPC_ccrhsl14, statePenaltyMPC_slb14, statePenaltyMPC_lbIdx14, statePenaltyMPC_rd14);
-statePenaltyMPC_LA_DENSE_MTVMADD2_12_12(params->A15, statePenaltyMPC_ccrhsp14, statePenaltyMPC_sp14, statePenaltyMPC_rd14);
+statePenaltyMPC_LA_DENSE_MTVMADD2_6_12(params->A15, statePenaltyMPC_ccrhsp14, statePenaltyMPC_sp14, statePenaltyMPC_rd14);
 statePenaltyMPC_LA_DENSE_FORWARDSUB_12(statePenaltyMPC_Phi14, statePenaltyMPC_rd14, statePenaltyMPC_Lbyrd14);
 statePenaltyMPC_LA_DENSE_2MVMADD_6_12_12(statePenaltyMPC_V13, statePenaltyMPC_Lbyrd13, statePenaltyMPC_W14, statePenaltyMPC_Lbyrd14, statePenaltyMPC_beta14);
 statePenaltyMPC_LA_DENSE_MVMSUB1_6_6(statePenaltyMPC_Lsd14, statePenaltyMPC_yy13, statePenaltyMPC_beta14, statePenaltyMPC_bmy14);
@@ -3131,15 +2979,14 @@ statePenaltyMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_12(statePenaltyMPC_ccrhsl13, state
 statePenaltyMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_12(statePenaltyMPC_ccrhsub13, statePenaltyMPC_sub13, statePenaltyMPC_lubbysub13, statePenaltyMPC_dzcc13, statePenaltyMPC_ubIdx13, statePenaltyMPC_dlubcc13);
 statePenaltyMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_12(statePenaltyMPC_ccrhsl14, statePenaltyMPC_slb14, statePenaltyMPC_llbbyslb14, statePenaltyMPC_dzcc14, statePenaltyMPC_lbIdx14, statePenaltyMPC_dllbcc14);
 statePenaltyMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_6(statePenaltyMPC_ccrhsub14, statePenaltyMPC_sub14, statePenaltyMPC_lubbysub14, statePenaltyMPC_dzcc14, statePenaltyMPC_ubIdx14, statePenaltyMPC_dlubcc14);
-statePenaltyMPC_LA_DENSE_MVMSUB5_12_12(params->A15, statePenaltyMPC_dzcc14, statePenaltyMPC_ccrhsp14, statePenaltyMPC_sp14, statePenaltyMPC_lp14, statePenaltyMPC_dlp_cc14);
-statePenaltyMPC_LA_VSUB7_366(statePenaltyMPC_l, statePenaltyMPC_ccrhs, statePenaltyMPC_s, statePenaltyMPC_dl_cc, statePenaltyMPC_ds_cc);
+statePenaltyMPC_LA_DENSE_MVMSUB5_6_12(params->A15, statePenaltyMPC_dzcc14, statePenaltyMPC_ccrhsp14, statePenaltyMPC_sp14, statePenaltyMPC_lp14, statePenaltyMPC_dlp_cc14);
+statePenaltyMPC_LA_VSUB7_360(statePenaltyMPC_l, statePenaltyMPC_ccrhs, statePenaltyMPC_s, statePenaltyMPC_dl_cc, statePenaltyMPC_ds_cc);
 statePenaltyMPC_LA_VADD_180(statePenaltyMPC_dz_cc, statePenaltyMPC_dz_aff);
 statePenaltyMPC_LA_VADD_90(statePenaltyMPC_dv_cc, statePenaltyMPC_dv_aff);
-statePenaltyMPC_LA_VADD_366(statePenaltyMPC_dl_cc, statePenaltyMPC_dl_aff);
-statePenaltyMPC_LA_VADD_366(statePenaltyMPC_ds_cc, statePenaltyMPC_ds_aff);
+statePenaltyMPC_LA_VADD_360(statePenaltyMPC_dl_cc, statePenaltyMPC_dl_aff);
+statePenaltyMPC_LA_VADD_360(statePenaltyMPC_ds_cc, statePenaltyMPC_ds_aff);
 info->lsit_cc = statePenaltyMPC_LINESEARCH_BACKTRACKING_COMBINED(statePenaltyMPC_z, statePenaltyMPC_v, statePenaltyMPC_l, statePenaltyMPC_s, statePenaltyMPC_dz_cc, statePenaltyMPC_dv_cc, statePenaltyMPC_dl_cc, statePenaltyMPC_ds_cc, &info->step_cc, &info->mu);
 if( info->lsit_cc == statePenaltyMPC_NOPROGRESS ){
-PRINTTEXT("Line search could not proceed at iteration %d, exiting.\n",info->it+1);
 exitcode = statePenaltyMPC_NOPROGRESS; break;
 }
 info->it++;

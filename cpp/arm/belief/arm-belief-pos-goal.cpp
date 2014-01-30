@@ -1,9 +1,9 @@
 #include <vector>
 #include <iomanip>
 
-#include "../matrix.h"
-#include "../../util/Timer.h"
-#include "../../util/logging.h"
+#include "util/matrix.h"
+#include "util/Timer.h"
+#include "util/logging.h"
 
 extern "C" {
 #include "arm-belief-pos-goal-MPC.h"
@@ -17,7 +17,7 @@ beliefPenaltyMPC_FLOAT *A, *b;
 
 namespace cfg {
 const double improve_ratio_threshold = .1;
-const double min_approx_improve = 1e-4;
+const double min_approx_improve = 1e-3;
 const double min_trust_box_size = 1e-3;
 const double trust_shrink_ratio = .5;
 const double trust_expand_ratio = 1.5;
@@ -639,6 +639,13 @@ int main(int argc, char* argv[])
 	double cost = beliefPenaltyCollocation(B, U, problem, output, info);
 
 	double solvetime = util::Timer_toc(&solveTimer);
+
+	Matrix<B_DIM> bt;
+	vec(x0, SqrtSigma0, bt);
+	for (size_t t = 0; t < T-1; ++t) {
+		bt = beliefDynamics(bt, U[t]);
+		B[t+1] = bt;//std::cout << ~B[t] << std::endl;
+	}
 
 	LOG_INFO("Optimized cost: %4.10f", cost);
 	LOG_INFO("Actual cost: %4.10f", computeCost(B,U));

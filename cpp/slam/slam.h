@@ -21,8 +21,8 @@ namespace py = boost::python;
 
 #define TIMESTEPS 10
 #define DT 1.0
-#define NUM_LANDMARKS 4
-#define NUM_WAYPOINTS 5
+#define NUM_LANDMARKS 5
+#define NUM_WAYPOINTS 3
 
 #define C_DIM 3 // car dimension [x, y, theta]
 #define P_DIM 2 // Position dimension [x,y]
@@ -37,8 +37,6 @@ namespace py = boost::python;
 #define S_DIM (((X_DIM+1)*(X_DIM))/2)
 #define B_DIM (X_DIM+S_DIM)
 
-const double camera_range = 3;
-const double camera_view_angle = 3.1415926535/4;
 
 const double step = 0.0078125*0.0078125;
 
@@ -72,8 +70,8 @@ const double TURNING_NOISE = 3.0*M_PI/180.;
 const double MAX_RANGE = 10.0;
 const double DT_OBSERVE = 8*DT_CONTROLS;
 
-const double OBS_DIST_NOISE = 0.1;
-const double OBS_ANGLE_NOISE = 1.0*M_PI/180.;
+const double OBS_DIST_NOISE = 1 * 0.1;
+const double OBS_ANGLE_NOISE = 1 * 1.0*M_PI/180.;
 }
 
 
@@ -97,23 +95,22 @@ Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r)
 {
   //Matrix<L_DIM,1> landmarks = x.subMatrix<L_DIM,1>(P_DIM, 0);
 	double xPos = x[0], yPos = x[1], angle = x[2];
-	double l0, l1;
 	double dx, dy;
 
 	Matrix<Z_DIM> obs = zeros<Z_DIM,1>();
 
 	for(int i = 0; i < L_DIM; i += 2) {
-		dx = l0 - xPos;
-		dy = l1 - yPos;
+		dx = x[C_DIM+i] - xPos;
+		dy = x[C_DIM+i+1] - yPos;
 
-		if ((fabs(dx) < config::MAX_RANGE) &&
-			(fabs(dy) < config::MAX_RANGE) &&
-			(dx*cos(angle) + dy*sin(angle) > 0) &&
-			(dx*dx + dy*dy < config::MAX_RANGE*config::MAX_RANGE))
-		{
+		//if ((fabs(dx) < config::MAX_RANGE) &&
+		//	(fabs(dy) < config::MAX_RANGE) &&
+		//	(dx*cos(angle) + dy*sin(angle) > 0) &&
+		//	(dx*dx + dy*dy < config::MAX_RANGE*config::MAX_RANGE))
+		//{
 			obs[i] = sqrt(dx*dx + dy*dy) + r[i];
 			obs[i+1] = atan2(dy, dx) - angle + r[i+1];
-		}
+		//}
 	}
 
 	return obs;
@@ -130,8 +127,8 @@ Matrix<Z_DIM,Z_DIM> deltaMatrix(const Matrix<X_DIM>& x) {
 		dist = sqrt((x[0] - l0)*(x[0] - l0) + (x[1] - l1)*(x[1] - l1));
 
 		double signed_dist = 1/(1+exp(-alpha*(config::MAX_RANGE-dist)));
-		delta(i-P_DIM,i-P_DIM) = signed_dist;
-		delta(i-P_DIM+1,i-P_DIM+1) = signed_dist;
+		delta(i-C_DIM,i-C_DIM) = signed_dist;
+		delta(i-C_DIM+1,i-C_DIM+1) = signed_dist;
 	}
 
 	return delta;
@@ -159,27 +156,11 @@ void linearizeDynamics(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Mat
   A(2,2) = 1;
   A(0,2) = -vts;
   A(1,2) = vtc;
-  /*
-	A.reset();
-	Matrix<X_DIM> xr(x), xl(x);
-	for (size_t i = 0; i < X_DIM; ++i) {
-		xr[i] += step; xl[i] -= step;
-		A.insert(0,i, (dynfunc(xr, u, q) - dynfunc(xl, u, q)) / (xr[i] - xl[i]));
-		xr[i] = x[i]; xl[i] = x[i];
-	}
 
-	M.reset();
-	Matrix<Q_DIM> qr(q), ql(q);
-	for (size_t i = 0; i < Q_DIM; ++i) {
-		qr[i] += step; ql[i] -= step;
-		M.insert(0,i, (dynfunc(x, u, qr) - dynfunc(x, u, ql)) / (qr[i] - ql[i]));
-		qr[i] = q[i]; ql[i] = q[i];
-	}
-  */
 }
 
 // Jacobians: df(x,u,q)/dx, df(x,u,q)/du
-void linearizeDynamicsFunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, Matrix<X_DIM,X_DIM>& A, Matrix<X_DIM,Q_DIM>& M, const Matrix<X_DIM>& h)
+void linearizeDynamicsFiniteDiff(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<Q_DIM>& q, Matrix<X_DIM,X_DIM>& A, Matrix<X_DIM,Q_DIM>& M)
 {
 	A.reset();
 	Matrix<X_DIM> xr(x), xl(x);
@@ -190,14 +171,12 @@ void linearizeDynamicsFunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, Matri
 	}
 
 	M.reset();
-	Matrix<U_DIM> ur(u), ul(u);
-	for (size_t i = 0; i < U_DIM; ++i) {
-		ur[i] += step; ul[i] -= step;
-		M.insert(0,i, (dynfunc(x, ur,  zeros<Q_DIM,1>()) - dynfunc(x, ul,  zeros<Q_DIM,1>())) / (ur[i] - ul[i]));
-		ur[i] = u[i]; ul[i] = u[i];
+	Matrix<Q_DIM> qr(q), ql(q);
+	for (size_t i = 0; i < Q_DIM; ++i) {
+		qr[i] += step; ql[i] -= step;
+		M.insert(0,i, (dynfunc(x, u, qr) - dynfunc(x, u, ql)) / (qr[i] - ql[i]));
+		qr[i] = q[i]; ql[i] = q[i];
 	}
-
-	h = dynfunc(x, u,  zeros<Q_DIM,1>());
 }
 
 
@@ -207,11 +186,11 @@ void linearizeObservation(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r, Matrix
 
   //Approximate only setting H for 
   H.reset();
-  for (int i=0; i<NUM_LANDMARKS; ++i) {
-    double dx = x[3+2*i] - x[0];
-    double dy = x[4+2*i] - x[1];
-    double d2 = dx*dx + dy*dy;
-    double d = sqrt(d2);
+  for (int i=0; i < L_DIM; i+=2) {
+    double dx = x[C_DIM+i] - x[0];
+    double dy = x[C_DIM+i+1] - x[1];
+    double d2 = dx*dx + dy*dy + 1e-10;
+    double d = sqrt(d2 + 1e-10);
     double xd = dx/d;
     double yd = dy/d;
     double xd2 = dx/d2;
@@ -257,6 +236,30 @@ void linearizeObservation(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r, Matrix
 
 }
 
+// Jacobians: dh(x,r)/dx, dh(x,r)/dr
+void linearizeObservationFiniteDiff(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r, Matrix<Z_DIM,X_DIM>& H, Matrix<Z_DIM,R_DIM>& N)
+{
+
+	H.reset();
+	Matrix<X_DIM> xr(x), xl(x);
+	for (size_t i = 0; i < X_DIM; ++i) {
+	  xr[i] += step; xl[i] -= step;
+	  H.insert(0,i, (obsfunc(xr, r) - obsfunc(xl, r)) / (xr[i] - xl[i]));
+	  xr[i] = x[i]; xl[i] = x[i];
+	}
+
+
+	N.reset();
+	Matrix<R_DIM> rr(r), rl(r);
+	for (size_t i = 0; i < R_DIM; ++i) {
+		rr[i] += step; rl[i] -= step;
+		N.insert(0,i, (obsfunc(x, rr) - obsfunc(x, rl)) / (rr[i] - rl[i]));
+		rr[i] = r[i]; rl[i] = r[i];
+
+	}
+
+}
+
 // Switch between belief vector and matrices
 void unVec(const Matrix<B_DIM>& b, Matrix<X_DIM>& x, Matrix<X_DIM,X_DIM>& SqrtSigma) {
 	x = b.subMatrix<X_DIM,1>(0,0);
@@ -276,7 +279,8 @@ void vec(const Matrix<X_DIM>& x, const Matrix<X_DIM,X_DIM>& SqrtSigma, Matrix<B_
 	for (size_t j = 0; j < X_DIM; ++j) {
 		for (size_t i = j; i < X_DIM; ++i) {
 			b[idx] = 0.5 * (SqrtSigma(i,j) + SqrtSigma(j,i));
-			++idx;
+			//waypoints[4][0] = 0; waypoints[4][1] = 20;
+				++idx;
 		}
 	}
 }
@@ -296,31 +300,49 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	Matrix<C_DIM,Q_DIM> Mcar;
 	linearizeDynamics(x, u, zeros<Q_DIM,1>(), Acar, Mcar);
 
-	Matrix<X_DIM,X_DIM> A = zeros<X_DIM,X_DIM>();
+	Matrix<X_DIM,X_DIM> A = identity<X_DIM>();
 	A.insert<C_DIM,C_DIM>(0, 0, Acar);
 	Matrix<X_DIM,Q_DIM> M = zeros<X_DIM,Q_DIM>();
-	M.insert<C_DIM,U_DIM>(0, 0, Mcar);
+	M.insert<C_DIM, 2>(0, 0, Mcar);
 
-	//Sigma.insert<3,3>(0,0, A*Sigma.subMatrix<3,3>(0,0)*~A + M*Q*~M);
-	//Sigma.insert<3,X_DIM-3>(0,3, A*(Sigma.subMatrix<3,X_DIM-3>(0,3)));
+	//Matrix<X_DIM,X_DIM> A = zeros<X_DIM,X_DIM>();
+	//Matrix<X_DIM,Q_DIM> M = zeros<X_DIM,Q_DIM>();
+	//linearizeDynamicsFiniteDiff(x, u, zeros<Q_DIM,1>(), A, M);
+
 	Sigma = A*Sigma*~A + M*Q*~M;
+	//Sigma.insert(0,C_DIM, Acar*(Sigma.subMatrix<C_DIM,X_DIM-C_DIM>(0,3)));
 
 	x = dynfunc(x, u, zeros<Q_DIM,1>());
 
-	//Should include a Q here
-	//	Sigma = A*Sigma*~A + M*Q*~M;
 	Matrix<Z_DIM,X_DIM> H;
 	Matrix<Z_DIM,R_DIM> N;
 	linearizeObservation(x, zeros<R_DIM,1>(), H, N);
 	//Should include an R here
 
 	Matrix<Z_DIM,Z_DIM> delta = deltaMatrix(x);
-	Matrix<X_DIM,Z_DIM> K = ((Sigma*~H*delta)/(delta*H*Sigma*~H*delta + N*~N))*delta;//N*R*~N);
+
+	//std::cout << "A" << std::endl << A << std::endl;
+	//std::cout << "M" << std::endl << M << std::endl;
+	//std::cout << "Sigma" << std::endl << Sigma << std::endl;
+	//std::cout << "x" << std::endl << x << std::endl;
+	//std::cout << "H" << std::endl << H << std::endl;
+	//std::cout << "N" << std::endl << N << std::endl;
+	//std::cout << "deltaMatrix" << std::endl;
+	//for(int i=0; i < Z_DIM; ++i) {
+	//	std::cout << delta(i,i) << " ";
+	//}
+	//std::cout << std::endl;
+	//std::cout << "Sigma*~H*delta" << std::endl << Sigma*~H*delta << std::endl;
+
+	Matrix<X_DIM,Z_DIM> K = ((Sigma*~H*delta)/(delta*H*Sigma*~H*delta + R))*delta;//N*R*~N);
 
 	Sigma = (identity<X_DIM>() - K*H)*Sigma;
 
 	Matrix<B_DIM> g;
 	vec(x, sqrtm(Sigma), g);
+
+	//std::cout << "K" << std::endl << K << std::endl;
+	//std::cout << "Sigma" << std::endl << Sigma << std::endl;
 
 	return g;
 }
@@ -381,46 +403,5 @@ void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matri
 }
 
 
-
-void pythonDisplayTrajectory2(std::vector< Matrix<B_DIM> >& B)
-{
-	py::list Bvec;
-	for(int j=0; j < B_DIM; j++) {
-		for(int i=0; i < T; i++) {
-			Bvec.append(B[i][j]);
-		}
-	}
-
-	/*
-	py::list x0_list, xGoal_list;
-	for(int i=0; i < X_DIM; i++) {
-		x0_list.append(x0[i]);
-		xGoal_list.append(xGoal[i]);
-	}
-	*/
-
-	//std::string workingDir = boost::filesystem::current_path().normalize().string();
-	//std::string bspDir = workingDir.substr(0,workingDir.find("bsp"));
-
-	try
-	{
-		Py_Initialize();
-		py::object main_module = py::import("__main__");
-		py::object main_namespace = main_module.attr("__dict__");
-		//py::exec("import sys, os", main_namespace);
-		//py::exec(py::str("sys.path.append('"+bspDir+"bsp/python')"), main_namespace);
-		//py::exec("from bsp_light_dark import LightDarkModel", main_namespace);
-		//py::object model = py::eval("LightDarkModel()", main_namespace);
-		py::object plot_mod = py::import("plot_point_slam");
-		py::object plot_traj = plot_mod.attr("plot_belief_trajectory");
-
-		plot_traj(Bvec, B_DIM, X_DIM, T, camera_range, camera_view_angle);
-	}
-	catch(py::error_already_set const &)
-	{
-		PyErr_Print();
-	}
-
-}
 
 #endif

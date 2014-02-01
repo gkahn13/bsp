@@ -41,6 +41,9 @@ namespace py = boost::python;
 const double step = 0.0078125*0.0078125;
 
 
+std::vector< Matrix<P_DIM> > waypoints(NUM_WAYPOINTS);
+std::vector< Matrix<P_DIM> > landmarks(NUM_LANDMARKS);
+
 Matrix<X_DIM> x0;
 Matrix<X_DIM,X_DIM> SqrtSigma0;
 Matrix<X_DIM> xGoal;
@@ -75,8 +78,39 @@ const double OBS_ANGLE_NOISE = 1 * 1.0*M_PI/180.;
 }
 
 
-double *inputVars, *vars;
-std::vector<int> maskIndices;
+void initProblemParams()
+{
+	Q = zeros<Q_DIM,Q_DIM>();
+	Q(0,0) = 20*config::VELOCITY_NOISE*config::VELOCITY_NOISE;
+	Q(1,1) = 1e-2*config::TURNING_NOISE*config::TURNING_NOISE;
+
+	R = zeros<R_DIM, R_DIM>();
+	for(int i = 0; i < R_DIM-1; i+=2) {
+		R(i,i) = 1*config::OBS_DIST_NOISE*config::OBS_DIST_NOISE;
+		R(i+1,i+1) = 1e-5*config::OBS_ANGLE_NOISE*config::OBS_ANGLE_NOISE;
+	}
+
+	waypoints[0][0] = 60; waypoints[0][1] = 0;
+	waypoints[1][0] = 60; waypoints[1][1] = 20;
+	waypoints[2][0] = 0; waypoints[2][1] = 20;
+
+	landmarks[0][0] = 0; landmarks[0][1] = 0;
+	landmarks[1][0] = 30; landmarks[1][1] = 0;
+	landmarks[2][0] = 60; landmarks[2][1] = 0;
+	landmarks[3][0] = 60; landmarks[3][1] = 20;
+	landmarks[4][0] = 30; landmarks[4][1] = 5;
+
+	// start at (0, 0)
+	// landmarks will be the same for all waypoint-waypoint optimizations
+	x0.insert(0, 0, zeros<C_DIM,1>());
+	for(int i = 0; i < NUM_LANDMARKS; ++i) {
+		x0.insert(C_DIM+2*i, 0, landmarks[i]);
+	}
+
+	//This starts out at 0 for car, landmarks are set based on the car's sigma when first seen
+	SqrtSigma0 = zeros<X_DIM, X_DIM>();
+	for(int i = 0; i < L_DIM; ++i) { SqrtSigma0(C_DIM+i,C_DIM+i) = 1; }
+}
 
 Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<Q_DIM>& q)
 {
@@ -260,6 +294,7 @@ void linearizeObservationFiniteDiff(const Matrix<X_DIM>& x, const Matrix<R_DIM>&
 
 }
 
+
 // Switch between belief vector and matrices
 void unVec(const Matrix<B_DIM>& b, Matrix<X_DIM>& x, Matrix<X_DIM,X_DIM>& SqrtSigma) {
 	x = b.subMatrix<X_DIM,1>(0,0);
@@ -347,6 +382,28 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	return g;
 }
 
+// Jacobians: dg(b,u)/db, dg(b,u)/du
+void linearizeBeliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u, Matrix<B_DIM,B_DIM>& F, Matrix<B_DIM,U_DIM>& G, Matrix<B_DIM>& h)
+{
+	F.reset();
+	Matrix<B_DIM> br(b), bl(b);
+	for (size_t i = 0; i < B_DIM; ++i) {
+		br[i] += step; bl[i] -= step;
+		F.insert(0,i, (beliefDynamics(br, u) - beliefDynamics(bl, u)) / (br[i] - bl[i]));
+		br[i] = b[i]; bl[i] = b[i];
+	}
+
+	G.reset();
+	Matrix<U_DIM> ur(u), ul(u);
+	for (size_t i = 0; i < U_DIM; ++i) {
+		ur[i] += step; ul[i] -= step;
+		G.insert(0,i, (beliefDynamics(b, ur) - beliefDynamics(b, ul)) / (ur[i] - ul[i]));
+		ur[i] = u[i]; ul[i] = u[i];
+	}
+
+	h = beliefDynamics(b, u);
+}
+
 
 void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<P_DIM> >& waypoints, int time_steps)
 {
@@ -363,15 +420,15 @@ void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matri
 	Matrix<X_DIM,X_DIM> SqrtSigma;
 	for(int i=0; i < time_steps; i++) {
 		unVec(B[i], x, SqrtSigma);
-		B_vec.append(SqrtSigma[0,0]);
+		B_vec.append(SqrtSigma(0,0));
 	}
 	for(int i=0; i < time_steps; i++) {
 		unVec(B[i], x, SqrtSigma);
-		B_vec.append(SqrtSigma[1,1]);
+		B_vec.append(SqrtSigma(1,1));
 	}
 	for(int i=0; i < time_steps; i++) {
 		unVec(B[i], x, SqrtSigma);
-		B_vec.append(SqrtSigma[1,0]);
+		B_vec.append(SqrtSigma(1,0));
 	}
 
 	py::list waypoints_vec;

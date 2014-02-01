@@ -303,6 +303,9 @@ $(OBJ_DIR)/point-slam-test.o : $(PT_SLAM_TEST_DIR)/point-slam-test.cpp
 
 ###### SLAM ##########
 
+# setupFiles bash
+SLAM_SETUP_FILE = slam/setupFiles.sh
+
 # share point functions
 SLAM_HEADERS = slam/slam.h
 
@@ -320,6 +323,22 @@ test-slam: | touch-file-slam $(SLAM_TEST_OBJS)
 $(OBJ_DIR)/test-slam.o : $(SLAM_TEST_DIR)/test-slam.cpp
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) -c -o $@ $<
 
+# make slam-belief
+SLAM_BELIEF_DIR = slam/belief
+SLAM_BELIEF_FILES = slamBeliefPenaltyMPC slam-belief logging
+SLAM_BELIEF_OBJS = $(SLAM_BELIEF_FILES:%=$(OBJ_DIR)/%.o)
+
+slam-belief-setup:
+	bash $(SLAM_SETUP_FILE) belief $(T)
+
+slam-belief: | slam-belief-setup $(SLAM_BELIEF_OBJS)
+	$(CXX) $(BFLAGS) $(SLAM_BELIEF_OBJS) -o $(BIN_DIR)/slam-belief $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
+	
+$(OBJ_DIR)/slamBeliefPenaltyMPC.o : $(SLAM_BELIEF_DIR)/beliefPenaltyMPC.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+	
+$(OBJ_DIR)/slam-belief.o : $(SLAM_BELIEF_DIR)/slam-belief.cpp $(POINT_HEADERS)
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
 
 ###### CLEAN ########
 

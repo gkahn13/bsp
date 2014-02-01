@@ -137,12 +137,12 @@ void testRectangle()
 		R(i+1,i+1) = 1e-5*config::OBS_ANGLE_NOISE*config::OBS_ANGLE_NOISE;
 	}
 
-	std::vector< Matrix<P_DIM> > waypoints(NUM_WAYPOINTS);
+	//std::vector< Matrix<P_DIM> > waypoints(NUM_WAYPOINTS);
 	waypoints[0][0] = 60; waypoints[0][1] = 0;
 	waypoints[1][0] = 60; waypoints[1][1] = 20;
 	waypoints[2][0] = 0; waypoints[2][1] = 20;
 
-	std::vector< Matrix<P_DIM> > landmarks(NUM_LANDMARKS);
+	//std::vector< Matrix<P_DIM> > landmarks(NUM_LANDMARKS);
 	landmarks[0][0] = 0; landmarks[0][1] = 0;
 	landmarks[1][0] = 30; landmarks[1][1] = 0;
 	landmarks[2][0] = 60; landmarks[2][1] = 0;
@@ -193,6 +193,7 @@ void testRectangle()
 	Matrix<X_DIM> xtmp;
 	Matrix<X_DIM, X_DIM> stmp;
 	for(int t = 0; t <= num_controls-1; ++t) {
+		std::cout << "t: " << t << std::endl;
 		B[index+1] = beliefDynamics(B[index], U[index]);
 		unVec(B[index+1], xtmp, stmp);
 		//std::cout << "x: " << ~xtmp << std::endl;

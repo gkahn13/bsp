@@ -1,5 +1,6 @@
 #include <vector>
 #include <iomanip>
+#include <sys/resource.h>
 
 #include "util/matrix.h"
 #include "util/Timer.h"
@@ -481,15 +482,45 @@ double beliefPenaltyCollocation(std::vector< Matrix<B_DIM> >& B, std::vector< Ma
 
 int main(int argc, char* argv[])
 {
+	const rlim_t stackSize = 32 * 1024 * 1024;   // min stack size = 32 MB
+	struct rlimit rl;
+	int result;
+
+	result = getrlimit(RLIMIT_STACK, &rl);
+	if (result == 0)
+	{
+		if (rl.rlim_cur < stackSize)
+		{
+			rl.rlim_cur = stackSize;
+			result = setrlimit(RLIMIT_STACK, &rl);
+			if (result != 0)
+			{
+				LOG_ERROR("setrlimit returned result = %d\n", result);
+				exit(-1);
+			}
+		}
+	} else {
+		LOG_ERROR("Could not get stack limit");
+		exit(-1);
+	}
 
 	LOG_INFO("Initializing problem parameters");
 	initProblemParams();
 
 	LOG_INFO("Setting up belief variables");
-	beliefPenaltyMPC_params problem;
-	beliefPenaltyMPC_output output;
-	beliefPenaltyMPC_info info;
-	std::cout << "main calling setupBeliefVars" << std::endl;
+	std::cout << "size of params: " << sizeof(struct beliefPenaltyMPC_params)*9.53674e-7 << "mb" << std::endl;
+	std::cout << "size of output: " << sizeof(struct beliefPenaltyMPC_output)*9.53674e-7 << "mb" << std::endl;
+	std::cout << "size of info: " << sizeof(struct beliefPenaltyMPC_info)*9.53674e-7 << "mb" << std::endl;
+	exit(0);
+	beliefPenaltyMPC_params *problem_ptr = malloc(sizeof(struct beliefPenaltyMPC_params));
+	beliefPenaltyMPC_output *output_ptr = malloc(sizeof(struct beliefPenaltyMPC_output));
+	beliefPenaltyMPC_info *info_ptr = malloc(sizeof(struct beliefPenaltyMPC_info));
+	beliefPenaltyMPC_params problem = *problem_ptr;
+	beliefPenaltyMPC_output output = *output_ptr;
+	beliefPenaltyMPC_info info = *info_ptr;
+	//beliefPenaltyMPC_params problem;
+	//beliefPenaltyMPC_output output;
+	//beliefPenaltyMPC_info info;
 	setupBeliefVars(problem, output);
 	util::Timer solveTimer;
 
@@ -512,19 +543,19 @@ int main(int argc, char* argv[])
 
 		std::vector<Matrix<U_DIM> > U(T-1, uinit);
 
-		std::cout << "B" << std::endl;
+		//std::cout << "B" << std::endl;
 		vec(x0, SqrtSigma0, B[0]);
 		for(int t=0; t < T-1; ++t) {
-			std::cout << ~B[t].subMatrix<C_DIM,1>(0,0);
+			//std::cout << ~B[t].subMatrix<C_DIM,1>(0,0);
 			B[t+1] = beliefDynamics(B[t], U[t]);
 		}
-		std::cout << ~B[T-1].subMatrix<C_DIM,1>(0,0) << std::endl;
+		//std::cout << ~B[T-1].subMatrix<C_DIM,1>(0,0) << std::endl;
 
-		std::cout << "U" << std::endl;
+		//std::cout << "U" << std::endl;
 		for(int t=0; t < T-1; ++t) {
-			std::cout << ~U[t];
+			//std::cout << ~U[t];
 		}
-		std::cout << std::endl;
+		//std::cout << std::endl;
 
 		//pythonDisplayTrajectory(B, waypoints, T);
 

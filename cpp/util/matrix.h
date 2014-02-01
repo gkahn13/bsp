@@ -328,6 +328,7 @@ inline double norm(const Matrix<_numRows, _numColumns>& q) {
 	return norm1;
 }
 
+/*
 // Identity matrix
 template <size_t _size>
 inline Matrix<_size,_size> identity() {
@@ -339,11 +340,12 @@ inline Matrix<_size,_size> identity() {
 	}
 	return m;
 }
+*/
 
 
 // Identity matrix
 template <size_t _size>
-inline SymmetricMatrix<_size> symIdentity() {
+inline SymmetricMatrix<_size> identity() {
 	SymmetricMatrix<_size> m;
 	for (size_t j = 0; j < _size; ++j) {
 		for (size_t i = j; i < _size; ++i) {

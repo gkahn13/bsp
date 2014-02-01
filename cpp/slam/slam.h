@@ -19,7 +19,7 @@
 
 namespace py = boost::python;
 
-#define TIMESTEPS 10
+#define TIMESTEPS 15
 #define DT 1.0
 #define NUM_LANDMARKS 5
 #define NUM_WAYPOINTS 3

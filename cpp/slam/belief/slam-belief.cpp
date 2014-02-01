@@ -57,7 +57,6 @@ double computeCost(const std::vector< Matrix<B_DIM> >& B, const std::vector< Mat
 
 	for(int t = 0; t < T-1; ++t) {
 		unVec(B[t], x, SqrtSigma);
-		std::cout << "Sigma " << t << ":" << SqrtSigma*SqrtSigma << std::endl;
 		cost += alpha_belief*tr(SqrtSigma*SqrtSigma) + alpha_control*tr(~U[t]*U[t]);
 	}
 	unVec(B[T-1], x, SqrtSigma);
@@ -527,17 +526,16 @@ int main(int argc, char* argv[])
 		}
 		std::cout << std::endl;
 
-		pythonDisplayTrajectory(B, waypoints, T);
-		exit(0);
+		//pythonDisplayTrajectory(B, waypoints, T);
 
 		double initTrajCost = computeCost(B, U);
 		LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
 
-		exit(0);
-
 		Timer_tic(&solveTimer);
 
 		double cost = beliefPenaltyCollocation(B, U, problem, output, info);
+
+		exit(0);
 
 		double solvetime = util::Timer_toc(&solveTimer);
 
@@ -551,73 +549,13 @@ int main(int argc, char* argv[])
 		LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 
 	}
-	/*
-	//initProblemParams();
-
-	LOG_INFO("init problem params");
-
-	Matrix<U_DIM> uinit = (xGoal - x0) / (double)((T-1)*DT);
-	std::vector<Matrix<U_DIM> > U(T-1, uinit);
-
-	std::vector<Matrix<B_DIM> > B(T);
-
-	vec(x0, SqrtSigma0, B[0]);
-	for (size_t t = 0; t < T-1; ++t) {
-		B[t+1] = beliefDynamics(B[t], U[t]);
-		//std::cout << ~B[t] << std::endl;
-	}
-
-	double initTrajCost = computeCost(B, U);
-	LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
-
-	std::vector<Matrix<X_DIM> > X;
-	
-	for(int t = 0; t < T; ++t) {
-		X.push_back(B[t].subMatrix<X_DIM,1>(0,0));
-	}
-
-
-	beliefPenaltyMPC_params problem;
-	beliefPenaltyMPC_output output;
-	beliefPenaltyMPC_info info;
-
-	setupBeliefVars(problem, output);
-
-	util::Timer solveTimer;
-	Timer_tic(&solveTimer);
-
-	double cost = beliefPenaltyCollocation(B, U, problem, output, info);
-
-	double solvetime = util::Timer_toc(&solveTimer);
-
-	Matrix<B_DIM> bt;
-	vec(x0, SqrtSigma0, bt);
-	for (size_t t = 0; t < T-1; ++t) {
-		bt = beliefDynamics(bt, U[t]);
-		B[t+1] = bt;//std::cout << ~B[t] << std::endl;
-	}
-
-	LOG_INFO("Optimized cost: %4.10f", cost);
-	LOG_INFO("Actual cost: %4.10f", computeCost(B,U));
-	LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 	
 	cleanupBeliefMPCVars();
 	
-
 	//vec(x0, SqrtSigma0, B[0]);
 	//for (size_t t = 0; t < T-1; ++t) {
 	//	B[t+1] = beliefDynamics(B[t], U[t]);
 	//}
-
-
-	X.clear();
-	for(int t = 0; t < T; ++t) {
-		X.push_back(B[t].subMatrix<X_DIM,1>(0,0));
-	}
-
-	int k;
-	std::cin >> k;
-	*/
 
 	return 0;
 }

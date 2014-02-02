@@ -133,8 +133,9 @@ outputs(i) = newOutput(var,i,1:nb);
 % solver settings
 mpcname = 'beliefPenaltyMPC';
 codeoptions = getOptions(mpcname);
-codeoptions.printlevel = 1;
+codeoptions.printlevel = 2;
 codeoptions.timing=1;
+codeoptions.maxit = 50;
 
 % generate code
 generateCode(stages,params,codeoptions,outputs);

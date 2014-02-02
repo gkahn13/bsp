@@ -66,7 +66,7 @@ double computeCost(const std::vector< Matrix<B_DIM> >& B, const std::vector< Mat
 }
 
 
-void setupBeliefVars(beliefPenaltyMPC_params& problem, beliefPenaltyMPC_output& output)
+void setupBeliefVars(beliefPenaltyMPC_params &problem, beliefPenaltyMPC_output &output)
 {
 	// problem inputs
 	H = new beliefPenaltyMPC_FLOAT*[T];
@@ -126,6 +126,21 @@ void setupBeliefVars(beliefPenaltyMPC_params& problem, beliefPenaltyMPC_output& 
 
 
 	// set up D
+
+	Matrix<2*B_DIM, 3*B_DIM+U_DIM> D1mat = zeros<2*B_DIM, 3*B_DIM+U_DIM>();
+	D1mat.insert(B_DIM, 0, (Matrix<B_DIM,B_DIM>)identity<B_DIM>());
+	fillColMajor(D[1], D1mat);
+
+	Matrix<B_DIM, 3*B_DIM+U_DIM> Dmat = zeros<B_DIM, 3*B_DIM+U_DIM>();
+	Dmat.insert(0, 0, (Matrix<B_DIM,B_DIM>)identity<B_DIM>());
+	for(int t=2; t < T-1; ++t) {
+		fillColMajor(D[t], Dmat);
+	}
+
+	fillColMajor(D[T-1], (Matrix<B_DIM,B_DIM>)identity<B_DIM>());
+
+	/*
+	// set up D
 	for(int col=0; col < 3*B_DIM+U_DIM; ++col) {
 		for(int row=0; row < 2*B_DIM; ++row) {
 			D[1][col + row*(3*B_DIM+U_DIM)] = (row - B_DIM == col) ? 1 : 0;
@@ -145,7 +160,7 @@ void setupBeliefVars(beliefPenaltyMPC_params& problem, beliefPenaltyMPC_output& 
 			D[T-1][col + row*B_DIM] = (row == col) ? 1 : 0;
 		}
 	}
-
+	*/
 
 }
 
@@ -185,34 +200,81 @@ bool isValidInputs()
 {
 	for(int t = 0; t < T-1; ++t) {
 
-		// check if H, f, lb, ub, C, e, b are valid!
+		std::cout << "t: " << t << std::endl << std::endl;
 
-		//std::cout << std::endl << std::endl;
+		std::cout << "f: ";
+		for(int i = 0; i < (3*B_DIM+U_DIM); ++i) {
+			std::cout << f[t][i] << " ";
+		}
+		std::cout << std::endl;
+
+		std::cout << "lb b: ";
+		for(int i = 0; i < B_DIM; ++i) {
+			std::cout << lb[t][i] << " ";
+		}
+		std::cout << std::endl;
+
+		std::cout << "lb u: ";
+		for(int i = 0; i < U_DIM; ++i) {
+			std::cout << lb[t][B_DIM+i] << " ";
+		}
+		std::cout << std::endl;
+
+		std::cout << "lb s, t: ";
+		for(int i = 0; i < 2*B_DIM; ++i) {
+			std::cout << lb[t][B_DIM+U_DIM+i] << " ";
+		}
+		std::cout << std::endl;
+
+		std::cout << "ub b: ";
+		for(int i = 0; i < B_DIM; ++i) {
+			std::cout << ub[t][i] << " ";
+		}
+		std::cout << std::endl;
+
+		std::cout << "ub u: ";
+		for(int i = 0; i < U_DIM; ++i) {
+			std::cout << ub[t][B_DIM+i] << " ";
+		}
+		std::cout << std::endl;
+
+		//std::cout << "ub s, t: ";
+		//for(int i = 0; i < 2*B_DIM; ++i) {
+		//	std::cout << ub[t][B_DIM+U_DIM+i] << " ";
+		//}
+		//std::cout << std::endl;
+
+		std::cout << "C:" << std::endl;
+		if (t == 0) {
+			for(int i = 0; i < 2*B_DIM*(3*B_DIM+U_DIM); ++i) {
+				std::cout << C[t][i] << " ";
+			}
+		} else {
+			for(int i = 0; i < B_DIM*(3*B_DIM+U_DIM); ++i) {
+				std::cout << C[t][i] << " ";
+			}
+		}
+		std::cout << std::endl;
+
+		std::cout << "e:" << std::endl;
+		if (t == 0) {
+			for(int i = 0; i < 2*B_DIM; ++i) {
+				std::cout << e[t][i] << " ";
+			}
+		} else {
+			for(int i = 0; i < B_DIM; ++i) {
+				std::cout << e[t][i] << " ";
+			}
+		}
+
+
+		std::cout << std::endl << std::endl;
 	}
-
-	for(int i = 0; i < 33; ++i) {
-		std::cout << lb[T-1][i] << " ";
-	}
-	std::cout << "\n\n";
-
-	for(int i = 0; i < 27; ++i) {
-		std::cout << ub[T-1][i] << " ";
-	}
-
-	//for(int i = 0; i < 198; ++i) {
-	//	std::cout << A[i] << " ";
-	//}
-
-	//for(int i = 0; i < 6; ++i) {
-	//	std::cout << b[i] << "  ";
-	//}
-	std::cout << std::endl;
-
 	return true;
 }
 
 
-bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U, beliefPenaltyMPC_params& problem, beliefPenaltyMPC_output& output, beliefPenaltyMPC_info& info, double penalty_coeff, double trust_box_size)
+bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U, beliefPenaltyMPC_params &problem, beliefPenaltyMPC_output &output, beliefPenaltyMPC_info &info, double penalty_coeff, double trust_box_size)
 {
 	LOG_DEBUG("Solving sqp problem with penalty parameter: %2.4f", penalty_coeff);
 
@@ -260,12 +322,19 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 		// Problem linearization and definition
 		// fill in H, f, C, e
 		
+		util::Timer constructCETimer;
+		util::Timer_tic(&constructCETimer);
+
+		util::Timer linearizeTimer, fillCETimer;
+		double linearizeTime = 0, fillCETime = 0;
 		for (int t = 0; t < T-1; ++t) 
 		{
 			Matrix<B_DIM>& bt = B[t];
 			Matrix<U_DIM>& ut = U[t];
 
+			util::Timer_tic(&linearizeTimer);
 			linearizeBeliefDynamics(bt, ut, F[t], G[t], h[t]);
+			linearizeTime += util::Timer_toc(&linearizeTimer);
 
 			//constructHessian(bt, Hess);
 
@@ -275,6 +344,7 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			
 			//fillColMajor(H[t], HMat);
 
+			util::Timer_tic(&fillCETimer);
 			// initialize f in cost function to penalize
 			// belief dynamics slack variables
 			index = 0;
@@ -297,8 +367,15 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			} 
 			
 			eVec = -h[t] + F[t]*bt + G[t]*ut;
-			fillCol(e[t+1], eVec);
+			fillCol(e[t], eVec); // originally e[t+1]
+
+			fillCETime += util::Timer_toc(&fillCETimer);
 		}
+
+		double constructCETime = util::Timer_toc(&constructCETimer);
+		std::cout << "construct CE time = " << constructCETime*1000 << "ms" << std::endl;
+		std::cout << "linearize time = " << linearizeTime*1000 << "ms" << std::endl;
+		std::cout << "fill CE time = " << fillCETime*1000 << "ms" << std::endl;
 		
 		//std::cout << "PAUSED INSIDE MINIMIZEMERITFUNCTION" << std::endl;
 		//int k;
@@ -310,6 +387,8 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 		{
 			LOG_DEBUG("       trust region size: %2.6f %2.6f", Beps, Ueps);
 
+			util::Timer fillVarsTimer;
+			util::Timer_tic(&fillVarsTimer);
 			// solve the innermost QP here
 			for(int t = 0; t < T-1; ++t)
 			{
@@ -356,15 +435,19 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			for(int i = 0; i < S_DIM; ++i) { ub[T-1][index] = bT[index] + Beps; index++;}
 
 			// Verify problem inputs
-			//if (!isValidInputs()) {
-			//	std::cout << "Inputs are not valid!" << std::endl;
-			//	exit(-1);
-			//}
+			if (!isValidInputs()) {
+				std::cout << "Inputs are not valid!" << std::endl;
+				exit(-1);
+			}
 
 			//std::cerr << "PAUSING INSIDE MINIMIZE MERIT FUNCTION FOR INPUT VERIFICATION" << std::endl;
 			//int num;
 			//std::cin >> num;
 
+			double fillVarsTime = util::Timer_toc(&fillVarsTimer);
+			std::cout << "fill variables time = " << fillVarsTime*1000 << "ms" << std::endl;
+
+			LOG_DEBUG("Calling FORCES...");
 			int exitflag = beliefPenaltyMPC_solve(&problem, &output, &info);
 			if (exitflag == 1) {
 				for(int t = 0; t < T-1; ++t) {
@@ -443,7 +526,7 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 	return success;
 }
 
-double beliefPenaltyCollocation(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U, beliefPenaltyMPC_params& problem, beliefPenaltyMPC_output& output, beliefPenaltyMPC_info& info)
+double beliefPenaltyCollocation(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U, beliefPenaltyMPC_params &problem, beliefPenaltyMPC_output &output, beliefPenaltyMPC_info &info)
 {
 	double penalty_coeff = cfg::initial_penalty_coeff;
 	double trust_box_size = cfg::initial_trust_box_size;
@@ -511,16 +594,12 @@ int main(int argc, char* argv[])
 	std::cout << "size of params: " << sizeof(struct beliefPenaltyMPC_params)*9.53674e-7 << "mb" << std::endl;
 	std::cout << "size of output: " << sizeof(struct beliefPenaltyMPC_output)*9.53674e-7 << "mb" << std::endl;
 	std::cout << "size of info: " << sizeof(struct beliefPenaltyMPC_info)*9.53674e-7 << "mb" << std::endl;
-	exit(0);
-	beliefPenaltyMPC_params *problem_ptr = malloc(sizeof(struct beliefPenaltyMPC_params));
-	beliefPenaltyMPC_output *output_ptr = malloc(sizeof(struct beliefPenaltyMPC_output));
-	beliefPenaltyMPC_info *info_ptr = malloc(sizeof(struct beliefPenaltyMPC_info));
-	beliefPenaltyMPC_params problem = *problem_ptr;
-	beliefPenaltyMPC_output output = *output_ptr;
-	beliefPenaltyMPC_info info = *info_ptr;
-	//beliefPenaltyMPC_params problem;
-	//beliefPenaltyMPC_output output;
-	//beliefPenaltyMPC_info info;
+	//beliefPenaltyMPC_params &problem = malloc(sizeof(struct beliefPenaltyMPC_params));
+	//beliefPenaltyMPC_output *output = malloc(sizeof(struct beliefPenaltyMPC_output));
+	//beliefPenaltyMPC_info *info = malloc(sizeof(struct beliefPenaltyMPC_info));
+	beliefPenaltyMPC_params problem;
+	beliefPenaltyMPC_output output;
+	beliefPenaltyMPC_info info;
 	setupBeliefVars(problem, output);
 	util::Timer solveTimer;
 

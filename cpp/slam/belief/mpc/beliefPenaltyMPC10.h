@@ -28,7 +28,7 @@ typedef double beliefPenaltyMPC_FLOAT;
 /* SOLVER SETTINGS ------------------------------------------------------*/
 /* print level */
 #ifndef beliefPenaltyMPC_SET_PRINTLEVEL
-#define beliefPenaltyMPC_SET_PRINTLEVEL    (1)
+#define beliefPenaltyMPC_SET_PRINTLEVEL    (2)
 #endif
 
 /* timing */
@@ -40,7 +40,7 @@ typedef double beliefPenaltyMPC_FLOAT;
 /* #define PRINTNUMERICALWARNINGS */
 
 /* maximum number of iterations  */
-#define beliefPenaltyMPC_SET_MAXIT         (30)	
+#define beliefPenaltyMPC_SET_MAXIT         (50)	
 
 /* scaling factor of line search (affine direction) */
 #define beliefPenaltyMPC_SET_LS_SCALE_AFF  (0.9)      

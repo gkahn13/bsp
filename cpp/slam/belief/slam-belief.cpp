@@ -17,14 +17,14 @@ beliefPenaltyMPC_FLOAT **H, **f, **lb, **ub, **C, **D, **e, **z;
 
 namespace cfg {
 const double improve_ratio_threshold = .1;
-const double min_approx_improve = 1e-3;
+const double min_approx_improve = 1e-4;
 const double min_trust_box_size = 1e-3;
 const double trust_shrink_ratio = .5;
 const double trust_expand_ratio = 1.5;
 const double cnt_tolerance = 1e-4;
 const double penalty_coeff_increase_ratio = 5;
 const double initial_penalty_coeff = 5;
-const double initial_trust_box_size = 1;
+const double initial_trust_box_size = 10;
 const int max_penalty_coeff_increases = 3;
 const int max_sqp_iterations = 50;
 }
@@ -69,19 +69,19 @@ double computeCost(const std::vector< Matrix<B_DIM> >& B, const std::vector< Mat
 void setupBeliefVars(beliefPenaltyMPC_params &problem, beliefPenaltyMPC_output &output)
 {
 	// problem inputs
-	H = new beliefPenaltyMPC_FLOAT*[T];
+	//H = new beliefPenaltyMPC_FLOAT*[T];
 	f = new beliefPenaltyMPC_FLOAT*[T-1];
 	lb = new beliefPenaltyMPC_FLOAT*[T];
 	ub = new beliefPenaltyMPC_FLOAT*[T];
 	C = new beliefPenaltyMPC_FLOAT*[T-1];
-	D = new beliefPenaltyMPC_FLOAT*[T];
+	//D = new beliefPenaltyMPC_FLOAT*[T];
 	e = new beliefPenaltyMPC_FLOAT*[T];
 
 	// problem outputs
 	z = new beliefPenaltyMPC_FLOAT*[T];
 
+	// H[ BOOST_PP_SUB(n,1) ] = problem.H##n ;
 #define SET_VARS(n)    \
-		H[ BOOST_PP_SUB(n,1) ] = problem.H##n ;  \
 		f[ BOOST_PP_SUB(n,1) ] = problem.f##n ;  \
 		lb[ BOOST_PP_SUB(n,1) ] = problem.lb##n ;	\
 		ub[ BOOST_PP_SUB(n,1) ] = problem.ub##n ;	\
@@ -92,21 +92,24 @@ void setupBeliefVars(beliefPenaltyMPC_params &problem, beliefPenaltyMPC_output &
 #define BOOST_PP_LOCAL_LIMITS (1, TIMESTEPS-1)
 #include BOOST_PP_LOCAL_ITERATE()
 
+	// H[ BOOST_PP_SUB(n,1) ] = problem.H##n ;
 #define SET_LAST_VARS(n)    \
-		H[ BOOST_PP_SUB(n,1) ] = problem.H##n ;  \
 		lb[ BOOST_PP_SUB(n,1) ] = problem.lb##n ;	\
 		ub[ BOOST_PP_SUB(n,1) ] = problem.ub##n ;	\
+		e[ BOOST_PP_SUB(n,1) ] = problem.e##n ;  \
 		z[ BOOST_PP_SUB(n,1) ] = output.z##n ;
 #define BOOST_PP_LOCAL_MACRO(n) SET_LAST_VARS(n)
 #define BOOST_PP_LOCAL_LIMITS (TIMESTEPS, TIMESTEPS)
 #include BOOST_PP_LOCAL_ITERATE()
 
 
+	/*
 #define SET_D(n)    \
 		D[ BOOST_PP_SUB(n,1) ] = problem.D##n ;
 #define BOOST_PP_LOCAL_MACRO(n) SET_D(n)
 #define BOOST_PP_LOCAL_LIMITS (2, TIMESTEPS)
 #include BOOST_PP_LOCAL_ITERATE()
+
 
 	// initialize H in x'*H*x to penalize covariance and controls
 	// H is diagonal
@@ -138,40 +141,18 @@ void setupBeliefVars(beliefPenaltyMPC_params &problem, beliefPenaltyMPC_output &
 	}
 
 	fillColMajor(D[T-1], (Matrix<B_DIM,B_DIM>)identity<B_DIM>());
-
-	/*
-	// set up D
-	for(int col=0; col < 3*B_DIM+U_DIM; ++col) {
-		for(int row=0; row < 2*B_DIM; ++row) {
-			D[1][col + row*(3*B_DIM+U_DIM)] = (row - B_DIM == col) ? 1 : 0;
-		}
-	}
-
-	for(int t=2; t < T - 1; ++t) {
-		for(int col=0; col < 3*B_DIM+U_DIM; ++col) {
-			for(int row=0; row < B_DIM; ++row) {
-				D[t][col + row*(3*B_DIM+U_DIM)] = (row == col) ? 1 : 0;
-			}
-		}
-	}
-
-	for(int col=0; col < B_DIM; ++col) {
-		for(int row=0; row < B_DIM; ++row) {
-			D[T-1][col + row*B_DIM] = (row == col) ? 1 : 0;
-		}
-	}
 	*/
 
 }
 
 void cleanupBeliefMPCVars()
 {
-	delete[] H;
+	//delete[] H;
 	delete[] f;
 	delete[] lb;
 	delete[] ub;
 	delete[] C;
-	delete[] D;
+	//delete[] D;
 	delete[] e;
 	delete[] z;
 }
@@ -201,12 +182,13 @@ bool isValidInputs()
 	for(int t = 0; t < T-1; ++t) {
 
 		std::cout << "t: " << t << std::endl << std::endl;
-
+		/*
 		std::cout << "f: ";
 		for(int i = 0; i < (3*B_DIM+U_DIM); ++i) {
 			std::cout << f[t][i] << " ";
 		}
 		std::cout << std::endl;
+		*/
 
 		std::cout << "lb b: ";
 		for(int i = 0; i < B_DIM; ++i) {
@@ -238,6 +220,7 @@ bool isValidInputs()
 		}
 		std::cout << std::endl;
 
+		/*
 		//std::cout << "ub s, t: ";
 		//for(int i = 0; i < 2*B_DIM; ++i) {
 		//	std::cout << ub[t][B_DIM+U_DIM+i] << " ";
@@ -267,9 +250,32 @@ bool isValidInputs()
 			}
 		}
 
-
+		std::cout << "e:" << std::endl;
+		for(int i = 0; i < B_DIM; ++i) {
+			std::cout << e[t][i] << " ";
+		}
+		*/
 		std::cout << std::endl << std::endl;
 	}
+	/*
+	std::cout << "e:" << std::endl;
+	for(int i = 0; i < B_DIM; ++i) {
+		std::cout << e[T-1][i] << " ";
+	}
+	*/
+
+	std::cout << "lb b: ";
+	for(int i = 0; i < B_DIM; ++i) {
+		std::cout << lb[T-1][i] << " ";
+	}
+	std::cout << std::endl;
+
+	std::cout << "ub b: ";
+	for(int i = 0; i < B_DIM; ++i) {
+		std::cout << ub[T-1][i] << " ";
+	}
+	std::cout << std::endl;
+	std::cout << std::endl;
 	return true;
 }
 
@@ -339,6 +345,8 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			//std::cout << "F[" << t << "]" << std::endl << F[t] << std::endl;
 			//std::cout << "G[" << t << "]" << std::endl << G[t] << std::endl;
 			//std::cout << "h[" << t << "]" << std::endl << h[t] << std::endl;
+			//int k;
+			//std::cin >> k;
 
 			//constructHessian(bt, Hess);
 
@@ -371,15 +379,15 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			} 
 			
 			eVec = -h[t] + F[t]*bt + G[t]*ut;
-			fillCol(e[t], eVec); // originally e[t+1]
+			fillCol(e[t+1], eVec);
 
 			fillCETime += util::Timer_toc(&fillCETimer);
 		}
 
 		double constructCETime = util::Timer_toc(&constructCETimer);
-		std::cout << "construct CE time = " << constructCETime*1000 << "ms" << std::endl;
-		std::cout << "linearize time = " << linearizeTime*1000 << "ms" << std::endl;
-		std::cout << "fill CE time = " << fillCETime*1000 << "ms" << std::endl;
+		//std::cout << "construct CE time = " << constructCETime*1000 << "ms" << std::endl;
+		//std::cout << "linearize time = " << linearizeTime*1000 << "ms" << std::endl;
+		//std::cout << "fill CE time = " << fillCETime*1000 << "ms" << std::endl;
 		
 		//std::cout << "PAUSED INSIDE MINIMIZEMERITFUNCTION" << std::endl;
 		//int k;
@@ -427,14 +435,15 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 
 			// Fill in lb, ub, C, e
 			index = 0;
+			double delta = 0.01;
 			// xGoal lower bound
-			for(int i = 0; i < X_DIM; ++i) { lb[T-1][index++] = MAX(xGoal[i], bT[i] - Beps); }
+			for(int i = 0; i < X_DIM; ++i) { lb[T-1][index++] = MAX(xGoal[i] - delta, bT[i] - Beps); }
 			// sigma lower bound
 			for(int i = 0; i < S_DIM; ++i) { lb[T-1][index] = bT[index] - Beps; index++;}
 
 			index = 0;
 			// xGoal upper bound
-			for(int i = 0; i < X_DIM; ++i) { ub[T-1][index++] = MIN(xGoal[i], bT[i] + Beps); }
+			for(int i = 0; i < X_DIM; ++i) { ub[T-1][index++] = MIN(xGoal[i] + delta, bT[i] + Beps); }
 			// sigma lower bound
 			for(int i = 0; i < S_DIM; ++i) { ub[T-1][index] = bT[index] + Beps; index++;}
 
@@ -449,9 +458,8 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			//std::cin >> num;
 
 			double fillVarsTime = util::Timer_toc(&fillVarsTimer);
-			std::cout << "fill variables time = " << fillVarsTime*1000 << "ms" << std::endl;
+			//std::cout << "fill variables time = " << fillVarsTime*1000 << "ms" << std::endl;
 
-			LOG_DEBUG("Calling FORCES...");
 			int exitflag = beliefPenaltyMPC_solve(&problem, &output, &info);
 			if (exitflag == 1) {
 				for(int t = 0; t < T-1; ++t) {
@@ -640,7 +648,7 @@ int main(int argc, char* argv[])
 		}
 		//std::cout << std::endl;
 
-		//pythonDisplayTrajectory(B, waypoints, T);
+		pythonDisplayTrajectory(B, waypoints, T);
 
 		double initTrajCost = computeCost(B, U);
 		LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
@@ -649,8 +657,6 @@ int main(int argc, char* argv[])
 
 		double cost = beliefPenaltyCollocation(B, U, problem, output, info);
 
-		exit(0);
-
 		double solvetime = util::Timer_toc(&solveTimer);
 
 		vec(x0, SqrtSigma0, B[0]);
@@ -658,9 +664,12 @@ int main(int argc, char* argv[])
 			B[t+1] = beliefDynamics(B[t], U[t]);
 		}
 
+		LOG_INFO("Initial cost: %4.10f", initTrajCost);
 		LOG_INFO("Optimized cost: %4.10f", cost);
 		LOG_INFO("Actual cost: %4.10f", computeCost(B,U));
 		LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
+
+		pythonDisplayTrajectory(B, waypoints, T);
 
 	}
 	

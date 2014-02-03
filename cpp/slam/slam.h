@@ -21,7 +21,7 @@ namespace py = boost::python;
 
 #define TIMESTEPS 10
 #define DT 1.0
-#define NUM_LANDMARKS 5
+#define NUM_LANDMARKS 1 // 5
 #define NUM_WAYPOINTS 3
 
 #define C_DIM 3 // car dimension [x, y, theta]
@@ -94,11 +94,12 @@ void initProblemParams()
 	waypoints[1][0] = 60; waypoints[1][1] = 20;
 	waypoints[2][0] = 0; waypoints[2][1] = 20;
 
-	landmarks[0][0] = 0; landmarks[0][1] = 0;
-	landmarks[1][0] = 30; landmarks[1][1] = 0;
-	landmarks[2][0] = 60; landmarks[2][1] = 0;
-	landmarks[3][0] = 60; landmarks[3][1] = 20;
-	landmarks[4][0] = 30; landmarks[4][1] = 5;
+	landmarks[0][0] = 60; landmarks[0][1] = 0;
+	//landmarks[0][0] = 0; landmarks[0][1] = 0;
+	//landmarks[1][0] = 30; landmarks[1][1] = 0;
+	//landmarks[2][0] = 60; landmarks[2][1] = 0;
+	//landmarks[3][0] = 60; landmarks[3][1] = 20;
+	//landmarks[4][0] = 30; landmarks[4][1] = 5;
 
 	// start at (0, 0)
 	// landmarks will be the same for all waypoint-waypoint optimizations
@@ -109,7 +110,19 @@ void initProblemParams()
 
 	//This starts out at 0 for car, landmarks are set based on the car's sigma when first seen
 	SqrtSigma0 = zeros<X_DIM, X_DIM>();
-	for(int i = 0; i < L_DIM; ++i) { SqrtSigma0(C_DIM+i,C_DIM+i) = 1; }
+	for(int i = 0; i < C_DIM; ++i) { SqrtSigma0(i,i) = .1; }
+	for(int i = 0; i < L_DIM; ++i) { SqrtSigma0(C_DIM+i,C_DIM+i) = 10; }
+
+	// TODO: think of better values for these
+	uMin[0] = -10;
+	uMin[1] = -M_PI;
+	uMax[0] = 10;
+	uMax[1] = M_PI;
+
+	for(int i = 0; i < X_DIM; ++i) {
+		xMin[i] = -20;
+		xMax[i] = 80;
+	}
 }
 
 Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<Q_DIM>& q)

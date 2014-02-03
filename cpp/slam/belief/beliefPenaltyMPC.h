@@ -28,7 +28,7 @@ typedef double beliefPenaltyMPC_FLOAT;
 /* SOLVER SETTINGS ------------------------------------------------------*/
 /* print level */
 #ifndef beliefPenaltyMPC_SET_PRINTLEVEL
-#define beliefPenaltyMPC_SET_PRINTLEVEL    (0)
+#define beliefPenaltyMPC_SET_PRINTLEVEL    (2)
 #endif
 
 /* timing */
@@ -219,14 +219,89 @@ typedef struct beliefPenaltyMPC_params
     /* vector of size 20 */
     beliefPenaltyMPC_FLOAT e9[20];
 
-    /* vector of size 20 */
-    beliefPenaltyMPC_FLOAT lb10[20];
+    /* vector of size 62 */
+    beliefPenaltyMPC_FLOAT f10[62];
 
-    /* vector of size 20 */
-    beliefPenaltyMPC_FLOAT ub10[20];
+    /* vector of size 62 */
+    beliefPenaltyMPC_FLOAT lb10[62];
+
+    /* vector of size 22 */
+    beliefPenaltyMPC_FLOAT ub10[22];
+
+    /* matrix of size [20 x 62] (column major format) */
+    beliefPenaltyMPC_FLOAT C10[1240];
 
     /* vector of size 20 */
     beliefPenaltyMPC_FLOAT e10[20];
+
+    /* vector of size 62 */
+    beliefPenaltyMPC_FLOAT f11[62];
+
+    /* vector of size 62 */
+    beliefPenaltyMPC_FLOAT lb11[62];
+
+    /* vector of size 22 */
+    beliefPenaltyMPC_FLOAT ub11[22];
+
+    /* matrix of size [20 x 62] (column major format) */
+    beliefPenaltyMPC_FLOAT C11[1240];
+
+    /* vector of size 20 */
+    beliefPenaltyMPC_FLOAT e11[20];
+
+    /* vector of size 62 */
+    beliefPenaltyMPC_FLOAT f12[62];
+
+    /* vector of size 62 */
+    beliefPenaltyMPC_FLOAT lb12[62];
+
+    /* vector of size 22 */
+    beliefPenaltyMPC_FLOAT ub12[22];
+
+    /* matrix of size [20 x 62] (column major format) */
+    beliefPenaltyMPC_FLOAT C12[1240];
+
+    /* vector of size 20 */
+    beliefPenaltyMPC_FLOAT e12[20];
+
+    /* vector of size 62 */
+    beliefPenaltyMPC_FLOAT f13[62];
+
+    /* vector of size 62 */
+    beliefPenaltyMPC_FLOAT lb13[62];
+
+    /* vector of size 22 */
+    beliefPenaltyMPC_FLOAT ub13[22];
+
+    /* matrix of size [20 x 62] (column major format) */
+    beliefPenaltyMPC_FLOAT C13[1240];
+
+    /* vector of size 20 */
+    beliefPenaltyMPC_FLOAT e13[20];
+
+    /* vector of size 62 */
+    beliefPenaltyMPC_FLOAT f14[62];
+
+    /* vector of size 62 */
+    beliefPenaltyMPC_FLOAT lb14[62];
+
+    /* vector of size 22 */
+    beliefPenaltyMPC_FLOAT ub14[22];
+
+    /* matrix of size [20 x 62] (column major format) */
+    beliefPenaltyMPC_FLOAT C14[1240];
+
+    /* vector of size 20 */
+    beliefPenaltyMPC_FLOAT e14[20];
+
+    /* vector of size 20 */
+    beliefPenaltyMPC_FLOAT lb15[20];
+
+    /* vector of size 20 */
+    beliefPenaltyMPC_FLOAT ub15[20];
+
+    /* vector of size 20 */
+    beliefPenaltyMPC_FLOAT e15[20];
 
 } beliefPenaltyMPC_params;
 
@@ -262,8 +337,23 @@ typedef struct beliefPenaltyMPC_output
     /* vector of size 22 */
     beliefPenaltyMPC_FLOAT z9[22];
 
+    /* vector of size 22 */
+    beliefPenaltyMPC_FLOAT z10[22];
+
+    /* vector of size 22 */
+    beliefPenaltyMPC_FLOAT z11[22];
+
+    /* vector of size 22 */
+    beliefPenaltyMPC_FLOAT z12[22];
+
+    /* vector of size 22 */
+    beliefPenaltyMPC_FLOAT z13[22];
+
+    /* vector of size 22 */
+    beliefPenaltyMPC_FLOAT z14[22];
+
     /* vector of size 20 */
-    beliefPenaltyMPC_FLOAT z10[20];
+    beliefPenaltyMPC_FLOAT z15[20];
 
 } beliefPenaltyMPC_output;
 

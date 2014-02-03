@@ -128,13 +128,13 @@ void test1()
 void testRectangle()
 {
 	Q = zeros<Q_DIM,Q_DIM>();
-	Q(0,0) = 20*config::VELOCITY_NOISE*config::VELOCITY_NOISE;
-	Q(1,1) = 1e-2*config::TURNING_NOISE*config::TURNING_NOISE;
+	Q(0,0) = 1*config::VELOCITY_NOISE*config::VELOCITY_NOISE;
+	Q(1,1) = 1*config::TURNING_NOISE*config::TURNING_NOISE;
 
 	R = zeros<R_DIM, R_DIM>();
 	for(int i = 0; i < R_DIM-1; i+=2) {
 		R(i,i) = 1*config::OBS_DIST_NOISE*config::OBS_DIST_NOISE;
-		R(i+1,i+1) = 1e-5*config::OBS_ANGLE_NOISE*config::OBS_ANGLE_NOISE;
+		R(i+1,i+1) = 1*config::OBS_ANGLE_NOISE*config::OBS_ANGLE_NOISE;
 	}
 
 	//std::vector< Matrix<P_DIM> > waypoints(NUM_WAYPOINTS);
@@ -156,7 +156,8 @@ void testRectangle()
 
 	//This starts out at 0 for car, landmarks are set based on the car's sigma when first seen
 	Matrix<X_DIM,X_DIM> SqrtSigma0 = zeros<X_DIM, X_DIM>();//10*identity<X_DIM>();
-	for(int i = 0; i < L_DIM; ++i) { SqrtSigma0(C_DIM+i,C_DIM+i) = 1; }
+	for(int i = 0; i < C_DIM; ++i) { SqrtSigma0(i,i) = .1; }
+	for(int i = 0; i < L_DIM; ++i) { SqrtSigma0(C_DIM+i,C_DIM+i) = 10; }
 
 	int num_controls = 47;
 
@@ -199,10 +200,11 @@ void testRectangle()
 		B[index+1] = beliefDynamics(B[index], U[index]);
 		unVec(B[index+1], xtmp, stmp);
 		//std::cout << "x: " << ~xtmp << std::endl;
-		std::cout << "car" << std::endl << tr(stmp.subMatrix<C_DIM,C_DIM>(0,0)) << ": " << stmp(0,0) << " " << stmp(1,1) << " " << stmp(2,2) << std::endl;
-		std::cout << "landmarks" << std::endl;
-		for(int i=C_DIM; i < X_DIM; ++i) { std::cout << stmp(i,i) << " "; }
-		std::cout << std::endl << std::endl;
+		//std::cout << "car" << std::endl << tr(stmp.subMatrix<C_DIM,C_DIM>(0,0)) << ": " << stmp(0,0) << " " << stmp(1,1) << " " << stmp(2,2) << std::endl;
+		//std::cout << "landmarks" << std::endl;
+		//for(int i=C_DIM; i < X_DIM; ++i) { std::cout << stmp(i,i) << " "; }
+		//std::cout << std::endl << std::endl;
+		std::cout << stmp.subMatrix<P_DIM,P_DIM>(0,0);
 		index++;
 
 		//std::cout << "press enter" << std::endl;

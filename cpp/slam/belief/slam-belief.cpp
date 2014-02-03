@@ -437,21 +437,33 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			index = 0;
 			double delta = 0.01;
 			// xGoal lower bound
-			for(int i = 0; i < X_DIM; ++i) { lb[T-1][index++] = MAX(xGoal[i] - delta, bT[i] - Beps); }
+			for(int i = 0; i < X_DIM; ++i) { lb[T-1][index++] = MAX(xMin[i], bT[i] - Beps); }
+			//for(int i = 0; i < X_DIM-P_DIM; ++i) { lb[T-1][index++] = MAX(xMin[i+P_DIM], bT[i+P_DIM] - Beps); }
 			// sigma lower bound
 			for(int i = 0; i < S_DIM; ++i) { lb[T-1][index] = bT[index] - Beps; index++;}
 
 			index = 0;
 			// xGoal upper bound
-			for(int i = 0; i < X_DIM; ++i) { ub[T-1][index++] = MIN(xGoal[i] + delta, bT[i] + Beps); }
-			// sigma lower bound
+			for(int i = 0; i < X_DIM; ++i) { ub[T-1][index++] = MIN(xMax[i], bT[i] + Beps); }
+			//for(int i = 0; i < X_DIM-P_DIM; ++i) { ub[T-1][index++] = MIN(xMax[i+P_DIM], bT[i+P_DIM] + Beps); }
+			// sigma upper bound
 			for(int i = 0; i < S_DIM; ++i) { ub[T-1][index] = bT[index] + Beps; index++;}
 
+			lb[T-1][0] = 59.9;
+			ub[T-1][0] = 60.1;
+
+			lb[T-1][1] = -.1;
+			ub[T-1][1] = .1;
+
+			lb[T-1][2] = -M_PI;
+			ub[T-1][2] = M_PI;
+
+
 			// Verify problem inputs
-			//if (!isValidInputs()) {
-			//	std::cout << "Inputs are not valid!" << std::endl;
-			//	exit(-1);
-			//}
+			if (!isValidInputs()) {
+				std::cout << "Inputs are not valid!" << std::endl;
+				exit(-1);
+			}
 
 			//std::cerr << "PAUSING INSIDE MINIMIZE MERIT FUNCTION FOR INPUT VERIFICATION" << std::endl;
 			//int num;
@@ -624,7 +636,8 @@ int main(int argc, char* argv[])
 		LOG_INFO("Going to waypoint %d",i);
 		// goal is waypoint position + direct angle + landmarks
 		xGoal.insert(0, 0, waypoints[i]);
-		xGoal[2] = atan2(xGoal[1] - x0[1], xGoal[0] - x0[0]);
+		xGoal[2] = 0;
+		//xGoal[2] = atan2(xGoal[1] - x0[1], xGoal[0] - x0[0]);
 		xGoal.insert(C_DIM, 0, x0.subMatrix<L_DIM,1>(C_DIM,0));
 
 		// initialize velocity to dist / timesteps
@@ -649,6 +662,7 @@ int main(int argc, char* argv[])
 		//std::cout << std::endl;
 
 		pythonDisplayTrajectory(B, waypoints, T);
+		exit(0);
 
 		double initTrajCost = computeCost(B, U);
 		LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
@@ -662,6 +676,11 @@ int main(int argc, char* argv[])
 		vec(x0, SqrtSigma0, B[0]);
 		for (size_t t = 0; t < T-1; ++t) {
 			B[t+1] = beliefDynamics(B[t], U[t]);
+			Matrix<X_DIM,1> xtmp;
+			Matrix<X_DIM,X_DIM> stmp;
+			unVec(B[t+1], xtmp, stmp);
+
+			std::cout << stmp.subMatrix<P_DIM,P_DIM>(0,0) << std::endl;
 		}
 
 		LOG_INFO("Initial cost: %4.10f", initTrajCost);
@@ -670,6 +689,7 @@ int main(int argc, char* argv[])
 		LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 
 		pythonDisplayTrajectory(B, waypoints, T);
+		exit(0);
 
 	}
 	

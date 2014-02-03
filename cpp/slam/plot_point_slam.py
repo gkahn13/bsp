@@ -27,8 +27,11 @@ def plot_point_trajectory(B, waypoints, T):
     waypoints = np.matrix(waypoints)
     waypoints = waypoints.reshape(2, numWaypoints)
     
-    #plt.axis([-10,70,-10,50])
-    plt.axis('equal')
+    extents = [-10,70,-25,40]
+    plt.axis(extents)
+    #plt.axis('equal')
+    
+    plot_domain(extents)
     
     # plot mean of trajectory
     plot_mean(B[0:2,:])
@@ -55,6 +58,28 @@ def plot_point_trajectory(B, waypoints, T):
     
     raw_input()
     
+def plot_domain(extents):
+    # dist = sqrt((x[0] - l0)*(x[0] - l0) + (x[1] - l1)*(x[1] - l1));
+    # double signed_dist = 1/(1+exp(-alpha*(config::MAX_RANGE-dist)));
+    lx = 30
+    ly = 15
+    alpha = 10
+    max_range = 10
+    
+    xvec = np.linspace(extents[0],extents[1],8/.025)
+    yvec = np.linspace(extents[2],extents[3],6/.025)
+    imx, imy = np.meshgrid(xvec, yvec)
+
+    sx = np.size(imx,0)
+    sy = np.size(imy,1)
+    imz = np.ones([sx,sy])
+
+    for i in xrange(sx):
+        for j in xrange(sy):
+            dist = math.sqrt((lx-i)**2 + (ly-j)**2)
+            imz[i,j] = (1.0)/(1+math.exp(-alpha*(max_range-dist)))
+            
+    plt.imshow(imz,cmap=matplotlib.cm.Greys_r,extent=extents,aspect='equal')
 
 def compose_belief(x, SqrtSigma, bDim, xDim):
     b = ml.zeros([bDim,1])

@@ -26,7 +26,7 @@ nu = 2;
 stages = MultistageProblem(N+1);
 
 alpha_belief = 10;
-alpha_control = 1;
+alpha_control = .01;
 alpha_final_belief = 10;
 
 Q = alpha_belief*eye(ns);
@@ -127,6 +127,21 @@ params(end+1) = newParam(['e',istr], i, 'eq.c');
 stages(i).eq.D = -eye(nb);
 % params(end+1) = newParam(['D',istr], i, 'eq.D');
 
+% A = zeros(4, nb);
+% A(1,1) = 1;
+% A(2,2) = 1;
+% A(3,1) = -1;
+% A(4,2) = -1;
+% stages(i).ineq.p.A = A;
+% 
+% delta = .1;
+% b = zeros(4, 1);
+% b(1,1) = 60 + delta;
+% b(2,1) = 0 + delta;
+% b(3,1) = -60 + delta;
+% b(4,1) = -0 + delta;
+% stages(i).ineq.p.b = b;
+
 %--------------------------------------------------------------------------
 % define outputs of the solver
 for i=1:N
@@ -140,7 +155,7 @@ outputs(i) = newOutput(var,i,1:nb);
 % solver settings
 mpcname = 'beliefPenaltyMPC';
 codeoptions = getOptions(mpcname);
-codeoptions.printlevel = 0;
+codeoptions.printlevel = 2;
 codeoptions.timing=0;
 codeoptions.maxit = 50;
 

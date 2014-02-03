@@ -28,7 +28,7 @@ typedef double beliefPenaltyMPC_FLOAT;
 /* SOLVER SETTINGS ------------------------------------------------------*/
 /* print level */
 #ifndef beliefPenaltyMPC_SET_PRINTLEVEL
-#define beliefPenaltyMPC_SET_PRINTLEVEL    (0)
+#define beliefPenaltyMPC_SET_PRINTLEVEL    (2)
 #endif
 
 /* timing */

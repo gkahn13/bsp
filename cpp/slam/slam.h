@@ -19,9 +19,9 @@
 
 namespace py = boost::python;
 
-#define TIMESTEPS 10
+#define TIMESTEPS 15
 #define DT 1.0
-#define NUM_LANDMARKS 1 // 5
+#define NUM_LANDMARKS 1
 #define NUM_WAYPOINTS 3
 
 #define C_DIM 3 // car dimension [x, y, theta]
@@ -58,7 +58,7 @@ const double INFTY = 1e10;
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
-const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 1, alpha_goal_state = 1;
+const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = .01, alpha_goal_state = 1;
 
 namespace config {
 const double V = 3;
@@ -81,20 +81,20 @@ const double OBS_ANGLE_NOISE = 1 * 1.0*M_PI/180.;
 void initProblemParams()
 {
 	Q = zeros<Q_DIM,Q_DIM>();
-	Q(0,0) = 20*config::VELOCITY_NOISE*config::VELOCITY_NOISE;
-	Q(1,1) = 1e-2*config::TURNING_NOISE*config::TURNING_NOISE;
+	Q(0,0) = 1*config::VELOCITY_NOISE*config::VELOCITY_NOISE; // 20
+	Q(1,1) = 1*config::TURNING_NOISE*config::TURNING_NOISE; // 1e-2
 
 	R = zeros<R_DIM, R_DIM>();
 	for(int i = 0; i < R_DIM-1; i+=2) {
-		R(i,i) = 1*config::OBS_DIST_NOISE*config::OBS_DIST_NOISE;
-		R(i+1,i+1) = 1e-5*config::OBS_ANGLE_NOISE*config::OBS_ANGLE_NOISE;
+		R(i,i) = 1*config::OBS_DIST_NOISE*config::OBS_DIST_NOISE; // 1
+		R(i+1,i+1) = 1*config::OBS_ANGLE_NOISE*config::OBS_ANGLE_NOISE; // 1e-5
 	}
 
 	waypoints[0][0] = 60; waypoints[0][1] = 0;
 	waypoints[1][0] = 60; waypoints[1][1] = 20;
 	waypoints[2][0] = 0; waypoints[2][1] = 20;
 
-	landmarks[0][0] = 60; landmarks[0][1] = 0;
+	landmarks[0][0] = 30; landmarks[0][1] = 12.5;
 	//landmarks[0][0] = 0; landmarks[0][1] = 0;
 	//landmarks[1][0] = 30; landmarks[1][1] = 0;
 	//landmarks[2][0] = 60; landmarks[2][1] = 0;
@@ -111,7 +111,7 @@ void initProblemParams()
 	//This starts out at 0 for car, landmarks are set based on the car's sigma when first seen
 	SqrtSigma0 = zeros<X_DIM, X_DIM>();
 	for(int i = 0; i < C_DIM; ++i) { SqrtSigma0(i,i) = .1; }
-	for(int i = 0; i < L_DIM; ++i) { SqrtSigma0(C_DIM+i,C_DIM+i) = 10; }
+	for(int i = 0; i < L_DIM; ++i) { SqrtSigma0(C_DIM+i,C_DIM+i) = 1; }
 
 	// TODO: think of better values for these
 	uMin[0] = -10;
@@ -119,10 +119,18 @@ void initProblemParams()
 	uMax[0] = 10;
 	uMax[1] = M_PI;
 
-	for(int i = 0; i < X_DIM; ++i) {
-		xMin[i] = -20;
-		xMax[i] = 80;
-	}
+	xMin[0] = -20;
+	xMin[1] = -20;
+	xMin[2] = -M_PI;
+	xMin[3] = landmarks[0][0] - 5;
+	xMin[4] = landmarks[0][1] - 5;
+
+	xMax[0] = 80;
+	xMax[1] = 80;
+	xMax[2] = M_PI;
+	xMax[3] = landmarks[0][0] + 5;
+	xMax[4] = landmarks[0][1] + 5;
+
 }
 
 Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<Q_DIM>& q)
@@ -166,7 +174,7 @@ Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r)
 Matrix<Z_DIM,Z_DIM> deltaMatrix(const Matrix<X_DIM>& x) {
 	Matrix<Z_DIM,Z_DIM> delta = zeros<Z_DIM,Z_DIM>();
 	double l0, l1, dist;
-	double alpha = 100;
+	double alpha = 10;
 	for(int i=C_DIM; i < X_DIM; i += 2) {
 		l0 = x[i];
 		l1 = x[i+1];
@@ -437,11 +445,11 @@ void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matri
 	}
 	for(int i=0; i < time_steps; i++) {
 		unVec(B[i], x, SqrtSigma);
-		B_vec.append(SqrtSigma(1,1));
+		B_vec.append(SqrtSigma(1,0));
 	}
 	for(int i=0; i < time_steps; i++) {
 		unVec(B[i], x, SqrtSigma);
-		B_vec.append(SqrtSigma(1,0));
+		B_vec.append(SqrtSigma(1,1));
 	}
 
 	py::list waypoints_vec;
@@ -459,7 +467,7 @@ void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matri
 		py::object main_module = py::import("__main__");
 		py::object main_namespace = main_module.attr("__dict__");
 		py::exec("import sys, os", main_namespace);
-		py::exec(py::str("sys.path.append('"+workingDir+"/point-slam')"), main_namespace);
+		py::exec(py::str("sys.path.append('"+workingDir+"/slam')"), main_namespace);
 		py::object plot_mod = py::import("plot_point_slam");
 		py::object plot_traj = plot_mod.attr("plot_point_trajectory");
 

@@ -48,7 +48,7 @@ stages(i).ineq.b.lbidx = 1:stages(i).dims.n; % lower bound acts on these indices
 params(end+1) = newParam(['lb',istr], i, 'ineq.b.lb'); % lower bound for this stage variable
 
 % upper bounds
-stages(i).ineq.b.ubidx = 1:(nb+nu); % upper bound acts on these indices
+stages(i).ineq.b.ubidx = 1:stages(i).dims.u; % upper bound acts on these indices
 params(end+1) = newParam(['ub',istr], i, 'ineq.b.ub'); % upper bound for this stage variable
 
 params(end+1) = newParam(['C',istr], i, 'eq.C');
@@ -74,7 +74,7 @@ for i = 2:N
     params(end+1) = newParam(['lb',istr], i, 'ineq.b.lb'); % lower bound for this stage variable
     
     % upper bounds
-    stages(i).ineq.b.ubidx = 1:(nb+nu); % upper bound acts on these indices
+    stages(i).ineq.b.ubidx = 1:stages(i).dims.u; % upper bound acts on these indices
     params(end+1) = newParam(['ub',istr], i, 'ineq.b.ub'); % upper bound for this stage variable
         
     % equality constraints

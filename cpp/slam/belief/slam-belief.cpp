@@ -114,15 +114,15 @@ void setupBeliefVars(beliefPenaltyMPC_params &problem, beliefPenaltyMPC_output &
 	for(int t=0; t < T-1; ++t) {
 		index = 0;
 		for(int i=0; i < X_DIM; ++i) { H[t][index++] = 0; }
-		for(int i=0; i < S_DIM; ++i) { H[t][index++] = alpha_belief; }
-		for(int i=0; i < U_DIM; ++i) { H[t][index++] = alpha_control; }
+		for(int i=0; i < S_DIM; ++i) { H[t][index++] = 2*alpha_belief; }
+		for(int i=0; i < U_DIM; ++i) { H[t][index++] = 2*alpha_control; }
 		for(int i=0; i < B_DIM; ++i) { H[t][index++] = 0; }
 		for(int i=0; i < B_DIM; ++i) { H[t][index++] = 0; }
 	}
 
 	index = 0;
 	for(int i=0; i < X_DIM; ++i) { H[T-1][index++] = 0; }
-	for(int i=0; i < S_DIM; ++i) { H[T-1][index++] = alpha_final_belief; }
+	for(int i=0; i < S_DIM; ++i) { H[T-1][index++] = 2*alpha_final_belief; }
 
 
 	// set up D
@@ -336,6 +336,10 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			linearizeBeliefDynamics(bt, ut, F[t], G[t], h[t]);
 			linearizeTime += util::Timer_toc(&linearizeTimer);
 
+			//std::cout << "F[" << t << "]" << std::endl << F[t] << std::endl;
+			//std::cout << "G[" << t << "]" << std::endl << G[t] << std::endl;
+			//std::cout << "h[" << t << "]" << std::endl << h[t] << std::endl;
+
 			//constructHessian(bt, Hess);
 
 			//HMat.reset();
@@ -435,10 +439,10 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			for(int i = 0; i < S_DIM; ++i) { ub[T-1][index] = bT[index] + Beps; index++;}
 
 			// Verify problem inputs
-			if (!isValidInputs()) {
-				std::cout << "Inputs are not valid!" << std::endl;
-				exit(-1);
-			}
+			//if (!isValidInputs()) {
+			//	std::cout << "Inputs are not valid!" << std::endl;
+			//	exit(-1);
+			//}
 
 			//std::cerr << "PAUSING INSIDE MINIMIZE MERIT FUNCTION FOR INPUT VERIFICATION" << std::endl;
 			//int num;

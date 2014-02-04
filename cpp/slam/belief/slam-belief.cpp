@@ -460,10 +460,10 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 
 
 			// Verify problem inputs
-			if (!isValidInputs()) {
-				std::cout << "Inputs are not valid!" << std::endl;
-				exit(-1);
-			}
+			//if (!isValidInputs()) {
+			//	std::cout << "Inputs are not valid!" << std::endl;
+			//	exit(-1);
+			//}
 
 			//std::cerr << "PAUSING INSIDE MINIMIZE MERIT FUNCTION FOR INPUT VERIFICATION" << std::endl;
 			//int num;
@@ -632,6 +632,8 @@ int main(int argc, char* argv[])
 
 	Matrix<U_DIM> uinit;
 
+	Matrix<X_DIM,1> xtmp;
+	Matrix<X_DIM,X_DIM> stmp;
 	for(int i=0; i < NUM_WAYPOINTS; ++i) {
 		LOG_INFO("Going to waypoint %d",i);
 		// goal is waypoint position + direct angle + landmarks
@@ -654,6 +656,8 @@ int main(int argc, char* argv[])
 			B[t+1] = beliefDynamics(B[t], U[t]);
 		}
 		//std::cout << ~B[T-1].subMatrix<C_DIM,1>(0,0) << std::endl;
+		unVec(B[T-1], xtmp, stmp);
+		//std::cout << stmp.subMatrix<P_DIM,P_DIM>(0,0) << std::endl;
 
 		//std::cout << "U" << std::endl;
 		for(int t=0; t < T-1; ++t) {
@@ -661,8 +665,7 @@ int main(int argc, char* argv[])
 		}
 		//std::cout << std::endl;
 
-		pythonDisplayTrajectory(B, waypoints, T);
-		exit(0);
+		pythonDisplayTrajectory(B, U, waypoints, landmarks, T);
 
 		double initTrajCost = computeCost(B, U);
 		LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
@@ -676,19 +679,18 @@ int main(int argc, char* argv[])
 		vec(x0, SqrtSigma0, B[0]);
 		for (size_t t = 0; t < T-1; ++t) {
 			B[t+1] = beliefDynamics(B[t], U[t]);
-			Matrix<X_DIM,1> xtmp;
-			Matrix<X_DIM,X_DIM> stmp;
 			unVec(B[t+1], xtmp, stmp);
 
-			std::cout << stmp.subMatrix<P_DIM,P_DIM>(0,0) << std::endl;
+			//std::cout << stmp.subMatrix<P_DIM,P_DIM>(0,0) << std::endl;
 		}
+		std::cout << stmp.subMatrix<P_DIM,P_DIM>(0,0) << std::endl;
 
 		LOG_INFO("Initial cost: %4.10f", initTrajCost);
 		LOG_INFO("Optimized cost: %4.10f", cost);
 		LOG_INFO("Actual cost: %4.10f", computeCost(B,U));
 		LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 
-		pythonDisplayTrajectory(B, waypoints, T);
+		pythonDisplayTrajectory(B, U, waypoints, landmarks, T);
 		exit(0);
 
 	}

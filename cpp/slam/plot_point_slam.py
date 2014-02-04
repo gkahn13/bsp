@@ -3,6 +3,7 @@ from numpy import matlib as ml
 import math
 import time
 
+import matplotlib
 import matplotlib.pyplot as plt
 
 
@@ -12,43 +13,54 @@ import IPython
 
 # belief is just belief of point robot, not waypoints
 # T is time for total trajectory (i.e. to all the waypoints)
-def plot_point_trajectory(B, waypoints, T):
+def plot_point_trajectory(B, U, waypoints, landmarks, max_range, alpha_obs, T, DT):
     plt.clf()
     plt.cla()
 
-    xDim = 2
-    bDim = 5
+    xDim = 3 # x, y, theta
+    bDim = 6
     uDim = 2
     
     B = np.matrix(B)
     B = B.reshape(bDim, T)
     
+    Btmp = np.vstack((B[0:2,:],B[2:,:]))
+    for i in xrange(Btmp.shape[1]):
+        print Btmp[:,i].T
+        
+    
+    U = np.matrix(U)
+    U = U.reshape(uDim, T-1)
+    
     numWaypoints = len(waypoints)/2
     waypoints = np.matrix(waypoints)
     waypoints = waypoints.reshape(2, numWaypoints)
     
-    extents = [-10,70,-25,40]
-    plt.axis(extents)
+    numLandmarks = len(landmarks)/2
+    landmarks = np.array(landmarks)
+    landmarks = landmarks.reshape(2, numLandmarks)
+    
+    extent = [-10,70,-25,40]
+    plt.axis(extent)
     #plt.axis('equal')
     
-    plot_domain(extents)
+    plot_domain(landmarks, max_range, alpha_obs, extent)
     
     # plot mean of trajectory
-    plot_mean(B[0:2,:])
+    plot_mean(B[0:3,:], U, DT)
     
-    
-    for i in xrange(numWaypoints):
-        plt.plot(waypoints[0,i],waypoints[1,i],color='purple',marker='s',markersize=8.0)
+    plt.plot(landmarks[0,:], landmarks[1,:], color='red', marker='x', markersize = 5.0)
+    plt.plot(waypoints[0,:], waypoints[1,:], color='purple', marker='s', markersize=8.0)
 
-    Xt = ml.zeros([xDim,T])
+    Xt = ml.zeros([xDim-1,T])
 
     for t in xrange(0,T-1):
-        Xt[:,t], SqrtSigma_t = decompose_belief(B[:,t], bDim, xDim)
+        Xt[:,t], SqrtSigma_t = decompose_belief(np.vstack((B[0:2,t],B[2:,t])), bDim-1, xDim-1)
         Sigma_t = SqrtSigma_t*SqrtSigma_t
 
         plot_cov(Xt[0:2,t], Sigma_t[0:2,0:2])
 
-    Xt[:,T-1], SqrtSigma_T = decompose_belief(B[:,T-1], bDim, xDim)
+    Xt[:,T-1], SqrtSigma_T = decompose_belief(np.vstack((B[0:2,T-1],B[2:,T-1])), bDim-1, xDim-1)
     Sigma_T = SqrtSigma_T*SqrtSigma_T
 
     plot_cov(Xt[0:2,T-1], Sigma_T[0:2,0:2])
@@ -58,29 +70,45 @@ def plot_point_trajectory(B, waypoints, T):
     
     raw_input()
     
-def plot_domain(extents):
-    # dist = sqrt((x[0] - l0)*(x[0] - l0) + (x[1] - l1)*(x[1] - l1));
-    # double signed_dist = 1/(1+exp(-alpha*(config::MAX_RANGE-dist)));
-    lx = 30
-    ly = 15
-    alpha = 10
-    max_range = 10
+def plot_domain(landmarks, max_range, alpha_obs, extent):
+    # note x and y are flipped for plotting!
+    granularity = .25
     
-    xvec = np.linspace(extents[0],extents[1],8/.025)
-    yvec = np.linspace(extents[2],extents[3],6/.025)
+    numLandmarks = landmarks.shape[1]
+    
+    xvec = np.linspace(extent[0],extent[1],(extent[1]-extent[0])/granularity)
+    yvec = np.linspace(extent[2],extent[3],(extent[3]-extent[2])/granularity)
     imx, imy = np.meshgrid(xvec, yvec)
 
     sx = np.size(imx,0)
     sy = np.size(imy,1)
-    imz = np.ones([sx,sy])
+
+    imz = np.zeros([sx,sy])
 
     for i in xrange(sx):
         for j in xrange(sy):
-            dist = math.sqrt((lx-i)**2 + (ly-j)**2)
-            imz[i,j] = (1.0)/(1+math.exp(-alpha*(max_range-dist)))
-            
-    plt.imshow(imz,cmap=matplotlib.cm.Greys_r,extent=extents,aspect='equal')
-
+            for k in xrange(numLandmarks):
+                lx = landmarks[1,k]
+                ly = landmarks[0,k]
+                dist = math.sqrt((lx-imy[i,j])**2 + ((ly-imx[i,j])**2))
+                try:
+                    imz[i,j] += (1.0)/(1+math.exp(-alpha_obs*(max_range-dist)))
+                except:
+                    pass
+                    
+    imz = imz / imz.max()
+    plt.imshow(imz,cmap=matplotlib.cm.Greys_r,extent=extent,aspect='equal',origin='lower')
+ 
+def dynfunc(x, u, dt, wheelbase=4.):
+    xAdd = np.matrix(x)
+    
+    xAdd[0,0] = u[0,0] * dt * math.cos(x[2,0] + u[1,0])
+    xAdd[1,0] = u[0,0] * dt * math.sin(x[2,0] + u[1,0])
+    xAdd[2,0] = u[0,0] * dt * math.sin(u[1,0]) / wheelbase
+    
+    return x + xAdd 
+        
+    
 def compose_belief(x, SqrtSigma, bDim, xDim):
     b = ml.zeros([bDim,1])
     b[0:xDim] = x
@@ -107,12 +135,33 @@ def decompose_belief(b, bDim, xDim):
     return x, SqrtSigma
 
     
-def plot_mean(X):
+def plot_mean(X, U, DT):
+    
     X = np.asarray(X)
     plt.plot(X[0,:],X[1,:],color='red',marker='s',markerfacecolor='yellow')
+    plt.plot(X[0,0],X[1,0],ls='None',marker='s',markersize=10.0)
+    plt.plot(X[0,-1],X[1,-1],ls='None',marker='s',markersize=10.0)
     
-    plt.plot(X[0,0],X[1,0],'bs',markersize=10.0)
-    plt.plot(X[0,-1],X[1,-1],'bs',markersize=10.0)
+    """
+    X = np.asmatrix(X)
+    
+    T = X.shape[1]
+    sampling = 2
+    X_upsampled = ml.zeros([X.shape[0], T*sampling])
+    X_upsampled[:,0] = X[:,0]
+    index = 0
+    for i in xrange(0, T-1):
+        for j in xrange(0, sampling):
+            X_upsampled[:,index+1] = dynfunc(X_upsampled[:,index], U[:,i], DT/float(sampling))
+            index += 1
+    
+    X = np.asarray(X)
+    X_upsampled = np.asarray(X_upsampled)
+    plt.plot(X_upsampled[0,:],X_upsampled[1,:],color='red')
+    plt.plot(X[0,:],X[1,:],ls='None',color='red',marker='s',markerfacecolor='yellow')
+    plt.plot(X[0,0],X[1,0],ls='None',marker='s',markersize=10.0)
+    plt.plot(X[0,-1],X[1,-1],ls='None',marker='s',markersize=10.0)
+    """
     
 
 def plot_cov(mu, sigma):

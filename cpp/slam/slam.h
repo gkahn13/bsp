@@ -58,7 +58,7 @@ const double INFTY = 1e10;
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
-const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = .01, alpha_goal_state = 1;
+const double alpha_belief = 10, alpha_final_belief = 100, alpha_control = .01, alpha_goal_state = 1;
 
 namespace config {
 const double V = 3;
@@ -75,6 +75,8 @@ const double DT_OBSERVE = 8*DT_CONTROLS;
 
 const double OBS_DIST_NOISE = 1 * 0.1;
 const double OBS_ANGLE_NOISE = 1 * 1.0*M_PI/180.;
+
+const double ALPHA_OBS = .75;
 }
 
 
@@ -174,14 +176,13 @@ Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r)
 Matrix<Z_DIM,Z_DIM> deltaMatrix(const Matrix<X_DIM>& x) {
 	Matrix<Z_DIM,Z_DIM> delta = zeros<Z_DIM,Z_DIM>();
 	double l0, l1, dist;
-	double alpha = 10;
 	for(int i=C_DIM; i < X_DIM; i += 2) {
 		l0 = x[i];
 		l1 = x[i+1];
 
 		dist = sqrt((x[0] - l0)*(x[0] - l0) + (x[1] - l1)*(x[1] - l1));
 
-		double signed_dist = 1/(1+exp(-alpha*(config::MAX_RANGE-dist)));
+		double signed_dist = 1/(1+exp(-config::ALPHA_OBS*(config::MAX_RANGE-dist)));
 		delta(i-C_DIM,i-C_DIM) = signed_dist;
 		delta(i-C_DIM+1,i-C_DIM+1) = signed_dist;
 	}
@@ -426,14 +427,21 @@ void linearizeBeliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u, Mat
 }
 
 
-void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<P_DIM> >& waypoints, int time_steps)
+void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U, std::vector< Matrix<P_DIM> >& waypoints, std::vector< Matrix<P_DIM> >& landmarks, int time_steps)
 {
 
 	// B_vec is only for the robot, not the landmarks
 	py::list B_vec;
-	for(int j=0; j < P_DIM; j++) {
+	for(int j=0; j < C_DIM; j++) {
 		for(int i=0; i < time_steps; i++) {
 			B_vec.append(B[i][j]);
+		}
+	}
+
+	py::list U_vec;
+	for(int j=0; j < U_DIM; j++) {
+		for(int i=0; i < time_steps-1; i++) {
+			U_vec.append(U[i][j]);
 		}
 	}
 
@@ -459,6 +467,13 @@ void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matri
 		}
 	}
 
+	py::list landmarks_vec;
+	for(int j=0; j < 2; j++) {
+		for(int i=0; i < NUM_LANDMARKS; i++) {
+			landmarks_vec.append(landmarks[i][j]);
+		}
+	}
+
 	std::string workingDir = boost::filesystem::current_path().normalize().string();
 
 	try
@@ -471,7 +486,7 @@ void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matri
 		py::object plot_mod = py::import("plot_point_slam");
 		py::object plot_traj = plot_mod.attr("plot_point_trajectory");
 
-		plot_traj(B_vec, waypoints_vec, time_steps);
+		plot_traj(B_vec, U_vec, waypoints_vec, landmarks_vec, config::MAX_RANGE, config::ALPHA_OBS, time_steps, DT);
 	}
 	catch(py::error_already_set const &)
 	{

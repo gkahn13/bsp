@@ -27,7 +27,7 @@ stages = MultistageProblem(N+1);
 
 alpha_belief = 10;
 alpha_control = .01;
-alpha_final_belief = 10;
+alpha_final_belief = 100;
 
 Q = alpha_belief*eye(ns);
 Qfinal = alpha_final_belief*eye(ns);
@@ -155,7 +155,7 @@ outputs(i) = newOutput(var,i,1:nb);
 % solver settings
 mpcname = 'beliefPenaltyMPC';
 codeoptions = getOptions(mpcname);
-codeoptions.printlevel = 2;
+codeoptions.printlevel = 0;
 codeoptions.timing=0;
 codeoptions.maxit = 50;
 

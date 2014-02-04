@@ -432,7 +432,7 @@ void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matri
 
 	// B_vec is only for the robot, not the landmarks
 	py::list B_vec;
-	for(int j=0; j < C_DIM; j++) {
+	for(int j=0; j < P_DIM; j++) {
 		for(int i=0; i < time_steps; i++) {
 			B_vec.append(B[i][j]);
 		}

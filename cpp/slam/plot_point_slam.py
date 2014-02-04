@@ -17,17 +17,12 @@ def plot_point_trajectory(B, U, waypoints, landmarks, max_range, alpha_obs, T, D
     plt.clf()
     plt.cla()
 
-    xDim = 3 # x, y, theta
-    bDim = 6
+    xDim = 2 # x, y
+    bDim = 5
     uDim = 2
     
     B = np.matrix(B)
     B = B.reshape(bDim, T)
-    
-    Btmp = np.vstack((B[0:2,:],B[2:,:]))
-    for i in xrange(Btmp.shape[1]):
-        print Btmp[:,i].T
-        
     
     U = np.matrix(U)
     U = U.reshape(uDim, T-1)
@@ -52,15 +47,15 @@ def plot_point_trajectory(B, U, waypoints, landmarks, max_range, alpha_obs, T, D
     plt.plot(landmarks[0,:], landmarks[1,:], color='red', marker='x', markersize = 5.0)
     plt.plot(waypoints[0,:], waypoints[1,:], color='purple', marker='s', markersize=8.0)
 
-    Xt = ml.zeros([xDim-1,T])
+    Xt = ml.zeros([xDim,T])
 
     for t in xrange(0,T-1):
-        Xt[:,t], SqrtSigma_t = decompose_belief(np.vstack((B[0:2,t],B[2:,t])), bDim-1, xDim-1)
+        Xt[:,t], SqrtSigma_t = decompose_belief(B[:,t], bDim, xDim)
         Sigma_t = SqrtSigma_t*SqrtSigma_t
 
         plot_cov(Xt[0:2,t], Sigma_t[0:2,0:2])
 
-    Xt[:,T-1], SqrtSigma_T = decompose_belief(np.vstack((B[0:2,T-1],B[2:,T-1])), bDim-1, xDim-1)
+    Xt[:,T-1], SqrtSigma_T = decompose_belief(B[:,T-1], bDim, xDim)
     Sigma_T = SqrtSigma_T*SqrtSigma_T
 
     plot_cov(Xt[0:2,T-1], Sigma_T[0:2,0:2])

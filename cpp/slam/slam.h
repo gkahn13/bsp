@@ -98,7 +98,7 @@ void initProblemParams()
 
 	landmarks[0][0] = 30; landmarks[0][1] = 12.5;
 	//landmarks[0][0] = 0; landmarks[0][1] = 0;
-	//landmarks[1][0] = 30; landmarks[1][1] = 0;
+	//landmarks[1][0] = 60; landmarks[1][1] = 0;
 	//landmarks[2][0] = 60; landmarks[2][1] = 0;
 	//landmarks[3][0] = 60; landmarks[3][1] = 20;
 	//landmarks[4][0] = 30; landmarks[4][1] = 5;
@@ -430,13 +430,13 @@ void linearizeBeliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u, Mat
 void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U, std::vector< Matrix<P_DIM> >& waypoints, std::vector< Matrix<P_DIM> >& landmarks, int time_steps)
 {
 
-	// B_vec is only for the robot, not the landmarks
 	py::list B_vec;
-	for(int j=0; j < P_DIM; j++) {
+	for(int j=0; j < B_DIM; j++) {
 		for(int i=0; i < time_steps; i++) {
 			B_vec.append(B[i][j]);
 		}
 	}
+
 
 	py::list U_vec;
 	for(int j=0; j < U_DIM; j++) {
@@ -445,6 +445,7 @@ void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matri
 		}
 	}
 
+	/*
 	Matrix<X_DIM> x;
 	Matrix<X_DIM,X_DIM> SqrtSigma;
 	for(int i=0; i < time_steps; i++) {
@@ -459,6 +460,7 @@ void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matri
 		unVec(B[i], x, SqrtSigma);
 		B_vec.append(SqrtSigma(1,1));
 	}
+	*/
 
 	py::list waypoints_vec;
 	for(int j=0; j < 2; j++) {
@@ -486,7 +488,7 @@ void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matri
 		py::object plot_mod = py::import("plot_point_slam");
 		py::object plot_traj = plot_mod.attr("plot_point_trajectory");
 
-		plot_traj(B_vec, U_vec, waypoints_vec, landmarks_vec, config::MAX_RANGE, config::ALPHA_OBS, time_steps, DT);
+		plot_traj(B_vec, U_vec, waypoints_vec, landmarks_vec, config::MAX_RANGE, config::ALPHA_OBS, X_DIM, time_steps, DT);
 	}
 	catch(py::error_already_set const &)
 	{

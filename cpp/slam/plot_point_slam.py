@@ -13,12 +13,12 @@ import IPython
 
 # belief is just belief of point robot, not waypoints
 # T is time for total trajectory (i.e. to all the waypoints)
-def plot_point_trajectory(B, U, waypoints, landmarks, max_range, alpha_obs, T, DT):
+def plot_point_trajectory(B, U, waypoints, landmarks, max_range, alpha_obs, xDim, T, DT):
     plt.clf()
     plt.cla()
 
-    xDim = 2 # x, y
-    bDim = 5
+    sDim = (xDim*(xDim+1))/2.
+    bDim = xDim + sDim
     uDim = 2
     
     B = np.matrix(B)
@@ -44,8 +44,8 @@ def plot_point_trajectory(B, U, waypoints, landmarks, max_range, alpha_obs, T, D
     # plot mean of trajectory
     plot_mean(B[0:3,:], U, DT)
     
-    plt.plot(landmarks[0,:], landmarks[1,:], color='red', marker='x', markersize = 5.0)
-    plt.plot(waypoints[0,:], waypoints[1,:], color='purple', marker='s', markersize=8.0)
+    plt.plot(landmarks[0,:], landmarks[1,:], ls='None', color='red', marker='x', markersize = 5.0)
+    plt.plot(waypoints[0,:], waypoints[1,:], ls='None', color='purple', marker='s', markersize=8.0)
 
     Xt = ml.zeros([xDim,T])
 
@@ -133,7 +133,20 @@ def decompose_belief(b, bDim, xDim):
 def plot_mean(X, U, DT):
     
     X = np.asarray(X)
-    plt.plot(X[0,:],X[1,:],color='red',marker='s',markerfacecolor='yellow')
+    
+    from scipy.interpolate import spline
+    
+    xdata = X[0,:]
+    ydata = X[1,:]
+    
+    xnew = np.linspace(xdata.min(), xdata.max(), 300)
+    
+    ysmooth = spline(xdata, ydata, xnew)
+    
+    plt.plot(xnew, ysmooth, color='red')
+    plt.plot(X[0,:],X[1,:],ls='None',marker='s',markerfacecolor='yellow')
+    
+    
     plt.plot(X[0,0],X[1,0],ls='None',marker='s',markersize=10.0)
     plt.plot(X[0,-1],X[1,-1],ls='None',marker='s',markersize=10.0)
     

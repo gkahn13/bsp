@@ -5,6 +5,7 @@ import time
 
 import matplotlib
 import matplotlib.pyplot as plt
+from scipy.interpolate import spline
 
 
 import IPython
@@ -130,21 +131,22 @@ def decompose_belief(b, bDim, xDim):
     return x, SqrtSigma
 
     
-def plot_mean(X, U, DT):
+def plot_mean(X, U, DT, interp=False):
     
     X = np.asarray(X)
     
-    from scipy.interpolate import spline
-    
-    xdata = X[0,:]
-    ydata = X[1,:]
-    
-    xnew = np.linspace(xdata.min(), xdata.max(), 300)
-    
-    ysmooth = spline(xdata, ydata, xnew)
-    
-    plt.plot(xnew, ysmooth, color='red')
-    plt.plot(X[0,:],X[1,:],ls='None',marker='s',markerfacecolor='yellow')
+    if interp:
+        xdata = X[0,:]
+        ydata = X[1,:]
+        
+        xnew = np.linspace(xdata.min(), xdata.max(), 300)
+        
+        ysmooth = spline(xdata, ydata, xnew)
+        
+        plt.plot(xnew, ysmooth, color='red')
+        plt.plot(X[0,:],X[1,:],ls='None',marker='s',markerfacecolor='yellow')
+    else:
+        plt.plot(X[0,:],X[1,:],color='red',marker='s',markerfacecolor='yellow')
     
     
     plt.plot(X[0,0],X[1,0],ls='None',marker='s',markersize=10.0)

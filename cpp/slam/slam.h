@@ -96,7 +96,7 @@ void initProblemParams()
 	waypoints[1][0] = 60; waypoints[1][1] = 20;
 	waypoints[2][0] = 0; waypoints[2][1] = 20;
 
-	landmarks[0][0] = 30; landmarks[0][1] = 12.5;
+	landmarks[0][0] = 30; landmarks[0][1] = 15;
 	//landmarks[0][0] = 0; landmarks[0][1] = 0;
 	//landmarks[1][0] = 60; landmarks[1][1] = 0;
 	//landmarks[2][0] = 60; landmarks[2][1] = 0;
@@ -124,14 +124,18 @@ void initProblemParams()
 	xMin[0] = -20;
 	xMin[1] = -20;
 	xMin[2] = -M_PI;
-	xMin[3] = landmarks[0][0] - 5;
-	xMin[4] = landmarks[0][1] - 5;
+	for(int i=0; i < L_DIM; i+=2) {
+		xMin[i+C_DIM] = landmarks[i][0] - 5;
+		xMin[i+1+C_DIM] = landmarks[i][1] - 5;
+	}
 
 	xMax[0] = 80;
 	xMax[1] = 80;
 	xMax[2] = M_PI;
-	xMax[3] = landmarks[0][0] + 5;
-	xMax[4] = landmarks[0][1] + 5;
+	for(int i=0; i < L_DIM; i+=2) {
+		xMax[i+C_DIM] = landmarks[i][0] + 5;
+		xMax[i+1+C_DIM] = landmarks[i][1] + 5;
+	}
 
 }
 
@@ -139,7 +143,7 @@ Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matr
 {
 	Matrix<X_DIM> xAdd = zeros<X_DIM,1>();
   
-	xAdd[0] = (u[0]+q[0]) * DT * cos(x[2]+u[1]+q[0]);
+	xAdd[0] = (u[0]+q[0]) * DT * cos(x[2]+u[1]+q[1]);
 	xAdd[1] = (u[0]+q[0]) * DT * sin(x[2]+u[1]+q[1]);
 	xAdd[2] = (u[0]+q[0]) * DT * sin(u[1]+q[1])/config::WHEELBASE;
 

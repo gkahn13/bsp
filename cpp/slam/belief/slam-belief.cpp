@@ -435,29 +435,21 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 
 			// Fill in lb, ub, C, e
 			index = 0;
-			double delta = 0.01;
+			double delta = .1;
 			// xGoal lower bound
-			for(int i = 0; i < X_DIM; ++i) { lb[T-1][index++] = MAX(xMin[i], bT[i] - Beps); }
-			//for(int i = 0; i < X_DIM-P_DIM; ++i) { lb[T-1][index++] = MAX(xMin[i+P_DIM], bT[i+P_DIM] - Beps); }
+			for(int i = 0; i < P_DIM; ++i) { lb[T-1][index++] = xGoal[i] - delta; }
+			// loose on landmarks
+			for(int i = 0; i < X_DIM-P_DIM; ++i) { lb[T-1][index++] = MAX(xMin[i+P_DIM], bT[i+P_DIM] - Beps); }
 			// sigma lower bound
 			for(int i = 0; i < S_DIM; ++i) { lb[T-1][index] = bT[index] - Beps; index++;}
 
 			index = 0;
 			// xGoal upper bound
-			for(int i = 0; i < X_DIM; ++i) { ub[T-1][index++] = MIN(xMax[i], bT[i] + Beps); }
-			//for(int i = 0; i < X_DIM-P_DIM; ++i) { ub[T-1][index++] = MIN(xMax[i+P_DIM], bT[i+P_DIM] + Beps); }
+			for(int i = 0; i < P_DIM; ++i) { ub[T-1][index++] = xGoal[i] + delta; }
+			// loose on landmakrs
+			for(int i = 0; i < X_DIM-P_DIM; ++i) { ub[T-1][index++] = MIN(xMax[i+P_DIM], bT[i+P_DIM] + Beps); }
 			// sigma upper bound
 			for(int i = 0; i < S_DIM; ++i) { ub[T-1][index] = bT[index] + Beps; index++;}
-
-			lb[T-1][0] = 59.9;
-			ub[T-1][0] = 60.1;
-
-			lb[T-1][1] = -.1;
-			ub[T-1][1] = .1;
-
-			lb[T-1][2] = -M_PI;
-			ub[T-1][2] = M_PI;
-
 
 			// Verify problem inputs
 			//if (!isValidInputs()) {
@@ -585,6 +577,29 @@ double beliefPenaltyCollocation(std::vector< Matrix<B_DIM> >& B, std::vector< Ma
 	return computeCost(B, U);
 }
 
+// must set x0 and xGoal prior to calling this function
+// will only work if |angle(x0) - angle(xGoal)| < pi
+void initializeControls(std::vector<Matrix<U_DIM> >& U) {
+	double deltaAngle = atan2(xGoal[1] - x0[1], xGoal[0] - x0[0]) - x0[2];
+	double initVelInput = 10;
+
+	U[0][0] = initVelInput;
+	U[0][1] = asin((config::WHEELBASE/initVelInput)*deltaAngle);
+
+	Matrix<X_DIM> x1 = dynfunc(x0, U[0], zeros<Q_DIM,1>());
+
+	std::cout << "x0 theta: " << x0[2] << std::endl;
+	std::cout << "deltaAngle: " << deltaAngle << std::endl;
+	std::cout << "U[0]: " << ~U[0];
+	std::cout << "x1: " << ~x1.subMatrix<C_DIM,1>(0,0) << std::endl;
+
+	double vel = sqrt((x1[0] - xGoal[0])*(x1[0] - xGoal[0]) + (x1[1] - xGoal[1])*(x1[1] - xGoal[1])) / (double)((T-2)*DT);
+	for(int t=1; t < T-1; ++t) {
+		U[t][0] = vel;
+		U[t][1] = 0;
+	}
+}
+
 
 
 int main(int argc, char* argv[])
@@ -638,9 +653,14 @@ int main(int argc, char* argv[])
 		LOG_INFO("Going to waypoint %d",i);
 		// goal is waypoint position + direct angle + landmarks
 		xGoal.insert(0, 0, waypoints[i]);
-		xGoal[2] = 0;
-		//xGoal[2] = atan2(xGoal[1] - x0[1], xGoal[0] - x0[0]);
+
+		//xGoal[2] = x0[2];
+		x0[2] = atan2(xGoal[1] - x0[1], xGoal[0] - x0[0]);
+		xGoal[2] = atan2(xGoal[1] - x0[1], xGoal[0] - x0[0]);
+
+
 		xGoal.insert(C_DIM, 0, x0.subMatrix<L_DIM,1>(C_DIM,0));
+
 
 		// initialize velocity to dist / timesteps
 		uinit[0] = sqrt((x0[0] - xGoal[0])*(x0[0] - xGoal[0]) + (x0[1] - xGoal[1])*(x0[1] - xGoal[1])) / (double)((T-1)*DT);
@@ -648,6 +668,11 @@ int main(int argc, char* argv[])
 		uinit[1] = 0;
 
 		std::vector<Matrix<U_DIM> > U(T-1, uinit);
+
+
+		//std::vector<Matrix<U_DIM> > U(T-1);
+		//initializeControls(U);
+
 
 		//std::cout << "B" << std::endl;
 		vec(x0, SqrtSigma0, B[0]);
@@ -657,7 +682,7 @@ int main(int argc, char* argv[])
 		}
 		//std::cout << ~B[T-1].subMatrix<C_DIM,1>(0,0) << std::endl;
 		unVec(B[T-1], xtmp, stmp);
-		//std::cout << stmp.subMatrix<P_DIM,P_DIM>(0,0) << std::endl;
+		std::cout << stmp.subMatrix<P_DIM,P_DIM>(0,0) << std::endl;
 
 		//std::cout << "U" << std::endl;
 		for(int t=0; t < T-1; ++t) {
@@ -691,7 +716,8 @@ int main(int argc, char* argv[])
 		LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 
 		pythonDisplayTrajectory(B, U, waypoints, landmarks, T);
-		exit(0);
+
+		unVec(B[T-1], x0, SqrtSigma0);
 
 	}
 	

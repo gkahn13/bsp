@@ -32,7 +32,7 @@ if [ ! -f $MPC_C_FILE ] || [ ! -f $MPC_H_FILE ]; then
     echo "mpc files do not exist. generating with matlab..."
     cd $DIR
     if [ $SLAM_TYPE = "belief" ]; then MATLAB_FILE_NAME="${SLAM_TYPE}_penalty"
-    else MATLAB_FILE_NAME="{$SLAM_TYPE}"; fi
+    else MATLAB_FILE_NAME="${SLAM_TYPE}"; fi
     
     matlab -nodisplay -nosplash -nodesktop -r "slam_${MATLAB_FILE_NAME}_mpc_gen(${TIMESTEPS}); exit"
     cd $SLAM_DIR

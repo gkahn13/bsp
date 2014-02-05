@@ -339,6 +339,24 @@ $(OBJ_DIR)/slamBeliefPenaltyMPC.o : $(SLAM_BELIEF_DIR)/beliefPenaltyMPC.c
 	
 $(OBJ_DIR)/slam-belief.o : $(SLAM_BELIEF_DIR)/slam-belief.cpp $(POINT_HEADERS)
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
+	
+# make slam-traj
+SLAM_TRAJ_DIR = slam/traj
+SLAM_TRAJ_FILES = slamMPC slam-traj logging
+SLAM_TRAJ_OBJS = $(SLAM_TRAJ_FILES:%=$(OBJ_DIR)/%.o)
+
+slam-traj-setup:
+	bash $(SLAM_SETUP_FILE) traj $(T)
+
+slam-traj: | slam-traj-setup $(SLAM_TRAJ_OBJS)
+	$(CXX) $(BFLAGS) $(SLAM_TRAJ_OBJS) -o $(BIN_DIR)/slam-traj $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
+	
+$(OBJ_DIR)/slamMPC.o : $(SLAM_TRAJ_DIR)/trajMPC.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+	
+$(OBJ_DIR)/slam-traj.o : $(SLAM_TRAJ_DIR)/slam-traj.cpp $(POINT_HEADERS)
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
+
 
 ###### CLEAN ########
 

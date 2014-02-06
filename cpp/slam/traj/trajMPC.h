@@ -28,7 +28,7 @@ typedef double trajMPC_FLOAT;
 /* SOLVER SETTINGS ------------------------------------------------------*/
 /* print level */
 #ifndef trajMPC_SET_PRINTLEVEL
-#define trajMPC_SET_PRINTLEVEL    (2)
+#define trajMPC_SET_PRINTLEVEL    (0)
 #endif
 
 /* timing */
@@ -293,6 +293,9 @@ typedef struct trajMPC_params
 
     /* vector of size 3 */
     trajMPC_FLOAT e14[3];
+
+    /* vector of size 3 */
+    trajMPC_FLOAT f15[3];
 
     /* vector of size 3 */
     trajMPC_FLOAT lb15[3];

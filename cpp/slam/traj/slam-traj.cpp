@@ -18,17 +18,19 @@ trajMPC_FLOAT **f, **lb, **ub, **C, **e, **z;
 Matrix<C_DIM> c0;
 Matrix<C_DIM> cGoal;
 
+const double alpha_goal = 10;
+
 namespace cfg {
 const double improve_ratio_threshold = .1;
-const double min_approx_improve = 1e-4;
+const double min_approx_improve = 1e-3;
 const double min_trust_box_size = 1e-3;
-const double trust_shrink_ratio = .5;
+const double trust_shrink_ratio = .1;
 const double trust_expand_ratio = 1.5;
 const double cnt_tolerance = 1e-4;
-const double penalty_coeff_increase_ratio = 5;
-const double initial_penalty_coeff = 5;
-const double initial_trust_box_size = 10;
-const int max_penalty_coeff_increases = 3;
+const double penalty_coeff_increase_ratio = 10;
+const double initial_penalty_coeff = 25;
+const double initial_trust_box_size = 1;
+const int max_penalty_coeff_increases = 2;
 const int max_sqp_iterations = 50;
 }
 
@@ -93,6 +95,7 @@ double computeCost(const std::vector< Matrix<C_DIM> >& X, const std::vector< Mat
 	for(int t = 0; t < T-1; ++t) {
 		cost += alpha_control*tr(~U[t]*U[t]);
 	}
+	cost += alpha_goal*tr(~(X[T-1]-cGoal)*(X[T-1]-cGoal));
 	return cost;
 }
 
@@ -100,7 +103,7 @@ double computeCost(const std::vector< Matrix<C_DIM> >& X, const std::vector< Mat
 void setupTrajVars(trajMPC_params &problem, trajMPC_output &output)
 {
 	// problem inputs
-	f = new trajMPC_FLOAT*[T-1];
+	f = new trajMPC_FLOAT*[T];
 	lb = new trajMPC_FLOAT*[T];
 	ub = new trajMPC_FLOAT*[T];
 	C = new trajMPC_FLOAT*[T-1];
@@ -123,6 +126,7 @@ void setupTrajVars(trajMPC_params &problem, trajMPC_output &output)
 
 	// H[ BOOST_PP_SUB(n,1) ] = problem.H##n ;
 #define SET_LAST_VARS(n)    \
+		f[ BOOST_PP_SUB(n,1) ] = problem.f##n ;  \
 		lb[ BOOST_PP_SUB(n,1) ] = problem.lb##n ;	\
 		ub[ BOOST_PP_SUB(n,1) ] = problem.ub##n ;	\
 		e[ BOOST_PP_SUB(n,1) ] = problem.e##n ;  \
@@ -156,6 +160,7 @@ double computeMerit(const std::vector< Matrix<C_DIM> >& X, const std::vector< Ma
 			merit += penalty_coeff*fabs(dynviol[i]);
 		}
 	}
+	merit += alpha_goal*tr(~(X[T-1]-cGoal)*(X[T-1]-cGoal));
 	return merit;
 }
 
@@ -166,11 +171,13 @@ bool isValidInputs()
 
 		std::cout << "t: " << t << std::endl << std::endl;
 
+		/*
 		std::cout << "f: ";
 		for(int i = 0; i < (2*C_DIM+U_DIM); ++i) {
 			std::cout << f[t][i] << " ";
 		}
 		std::cout << std::endl;
+		*/
 
 		std::cout << "lb c: ";
 		for(int i = 0; i < C_DIM; ++i) {
@@ -178,21 +185,23 @@ bool isValidInputs()
 		}
 		std::cout << std::endl;
 
-		std::cout << "lb u: ";
-		for(int i = 0; i < U_DIM; ++i) {
-			std::cout << lb[t][C_DIM+i] << " ";
+		std::cout << "ub c: ";
+		for(int i = 0; i < C_DIM; ++i) {
+			std::cout << ub[t][i] << " ";
 		}
 		std::cout << std::endl;
 
+		/*
 		std::cout << "lb s, t: ";
 		for(int i = 0; i < 2*C_DIM; ++i) {
 			std::cout << lb[t][C_DIM+U_DIM+i] << " ";
 		}
 		std::cout << std::endl;
+		*/
 
-		std::cout << "ub c: ";
-		for(int i = 0; i < C_DIM; ++i) {
-			std::cout << ub[t][i] << " ";
+		std::cout << "lb u: ";
+		for(int i = 0; i < U_DIM; ++i) {
+			std::cout << lb[t][C_DIM+i] << " ";
 		}
 		std::cout << std::endl;
 
@@ -226,20 +235,24 @@ bool isValidInputs()
 				std::cout << e[t][i] << " ";
 			}
 		}
-		*/
+
 
 		std::cout << "e:" << std::endl;
 		for(int i = 0; i < C_DIM; ++i) {
 			std::cout << e[t][i] << " ";
 		}
+		*/
 		std::cout << std::endl << std::endl;
+
 	}
 
+	/*
 	std::cout << "e:" << std::endl;
 	for(int i = 0; i < C_DIM; ++i) {
 		std::cout << e[T-1][i] << " ";
 	}
 	std::cout << std::endl << std::endl;
+	*/
 
 	std::cout << "lb c: ";
 	for(int i = 0; i < C_DIM; ++i) {
@@ -340,6 +353,8 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 
 		}
 		
+		for(int i=0; i < C_DIM; ++i) { f[T-1][i] = -2*alpha_goal*cGoal[i]; }
+
 		//std::cout << "PAUSED INSIDE MINIMIZEMERITFUNCTION" << std::endl;
 		//int k;
 		//std::cin >> k;
@@ -382,21 +397,32 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 
 			// Fill in lb, ub, C, e
 			index = 0;
-			double delta = .1;
+			double delta = .5;
 			// cGoal lower bound
 			for(int i = 0; i < P_DIM; ++i) { lb[T-1][index++] = cGoal[i] - delta; }
-			lb[T-1][index++] = xMin[2]; // none on angles
+			lb[T-1][index++] = MIN(xMin[2], xT[2] - Xeps); // none on angles
 
 			index = 0;
 			// cGoal upper bound
 			for(int i = 0; i < P_DIM; ++i) { ub[T-1][index++] = cGoal[i] + delta; }
-			ub[T-1][index++] = xMax[2];
+			ub[T-1][index++] = MAX(xMax[2], xT[2] + Xeps);
+
+			double jac_constant = 0, hessian_constant = 0, constant_cost = 0;
+			//for(int i = 0; i < C_DIM; ++i) { jac_constant += 0.5*(f[T-1][i]*cGoal[i]); }
+			//jac_constant = alpha_goal*tr(~cGoal*cGoal);
+			//hessian_constant = alpha_goal*tr(~xT*xT);
+
+			constant_cost = alpha_goal*tr(~cGoal*cGoal);
+
+			//LOG_DEBUG("Hessian constant: %10.4f", hessian_constant);
+			//LOG_DEBUG("Jacobian constant: %10.4f", jac_constant);
+			LOG_DEBUG("Constant cost: %10.4f", constant_cost);
 
 			// Verify problem inputs
-			if (!isValidInputs()) {
-				std::cout << "Inputs are not valid!" << std::endl;
-				exit(-1);
-			}
+			//if (!isValidInputs()) {
+			//	std::cout << "Inputs are not valid!" << std::endl;
+			//	exit(-1);
+			//}
 
 			//std::cerr << "PAUSING INSIDE MINIMIZE MERIT FUNCTION FOR INPUT VERIFICATION" << std::endl;
 			//int num;
@@ -430,8 +456,16 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 
 			LOG_DEBUG("Optimized cost: %4.10f", optcost);
 
-			model_merit = optcost;
+			model_merit = optcost + constant_cost;
 			new_merit = computeMerit(Xopt, Uopt, penalty_coeff);
+
+			//std::cout << "Xopt" << std::endl;
+			//for(int t=0; t < T; ++t) { std::cout << ~Xopt[t]; }
+			//std::cout << std::endl << std::endl;
+
+			//std::cout << "Uopt" << std::endl;
+			//for(int t=0; t < T-1; ++t) { std::cout << ~Uopt[t]; }
+			//std::cout << std::endl << std::endl;
 
 			LOG_DEBUG("merit: %4.10f", merit);
 			LOG_DEBUG("model_merit: %4.10f", model_merit);
@@ -445,11 +479,13 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			LOG_DEBUG("exact_merit_improve: %1.6f", exact_merit_improve);
 			LOG_DEBUG("merit_improve_ratio: %1.6f", merit_improve_ratio);
 			
+
 			//std::cout << "PAUSED INSIDE minimizeMeritFunction" << std::endl;
 			//int num;
 			//std::cin >> num;
+			//std::cin.ignore();
 
-			if (approx_merit_improve < -1e-5) {
+			if (approx_merit_improve < -1e-3) {
 				LOG_ERROR("Approximate merit function got worse: %1.6f", approx_merit_improve);
 				LOG_ERROR("Either convexification is wrong to zeroth order, or you are in numerical trouble");
 				LOG_ERROR("Failure!");
@@ -533,8 +569,14 @@ void initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 	uinit[0] = sqrt((c0[0] - cGoal[0])*(c0[0] - cGoal[0]) + (c0[1] - cGoal[1])*(c0[1] - cGoal[1])) / (double)((T-1)*DT);
 	uinit[1] = 0;
 
+	// TEMP
+	uinit[0] *= .1;
+
+	std::cout << "uinit: " << ~uinit << std::endl;
+
 	for(int i=0; i < T-1; ++i) { U[i] = uinit; }
 
+	std::cout << "X initial" << std::endl;
 	X[0].insert(0,0,c0);
 	for(int t=0; t < T-1; ++t) {
 		std::cout << ~X[t];
@@ -552,6 +594,13 @@ void initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 
 	double solvetime = util::Timer_toc(&solveTimer);
 
+	std::cout << "Final input" << std::endl;
+	for(int t = 0; t < T-1; ++t) {
+		std::cout << ~U[t];
+	}
+	std::cout << std::endl;
+
+	std::cout << "Final trajectory" << std::endl;
 	for (size_t t = 0; t < T-1; ++t) {
 		std::cout << ~X[t];
 		X[t+1] = dynfunccar(X[t], U[t]);
@@ -580,6 +629,7 @@ int main(int argc, char* argv[])
 	cEnd[1] = 0;
 
 	cStart[2] = atan2(cEnd[1] - cStart[1], cEnd[0] - cStart[0]);
+	//cStart[2] = M_PI;
 	cEnd[2] = atan2(cEnd[1] - cStart[1], cEnd[0] - cStart[0]);
 
 	initTraj(cStart, cEnd, X, U);

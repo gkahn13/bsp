@@ -20,6 +20,7 @@ nx = 3;
 nu = 2;
 stages = MultistageProblem(N+1);
 
+alpha_goal = 10;
 alpha_control = .01;
 
 R = alpha_control*eye(nu);
@@ -98,9 +99,9 @@ stages(i).dims.p = 0;     % number of polytopic constraints
 stages(i).dims.q = 0;     % number of quadratic constraints
 
 % cost
-stages(i).cost.H = 2*blkdiag(zeros(nx,nx));
-% params(end+1) = newParam(['H',istr], i, 'cost.H', 'diag');
-stages(i).cost.f = zeros(stages(i).dims.n,1);
+stages(i).cost.H = 2*blkdiag(alpha_goal*eye(nx,nx));
+params(end+1) = newParam(['f',istr], i, 'cost.f');
+%stages(i).cost.f = zeros(stages(i).dims.n,1);
 
 % lower bounds
 stages(i).ineq.b.lbidx = 1:stages(i).dims.l; % lower bound acts on these indices
@@ -129,7 +130,7 @@ outputs(i) = newOutput(var,i,1:nx);
 % solver settings
 mpcname = 'trajMPC';
 codeoptions = getOptions(mpcname);
-codeoptions.printlevel = 2;
+codeoptions.printlevel = 0;
 codeoptions.timing=0;
 codeoptions.maxit = 50;
 

@@ -99,7 +99,7 @@ stages(i).dims.p = 0;     % number of polytopic constraints
 stages(i).dims.q = 0;     % number of quadratic constraints
 
 % cost
-stages(i).cost.H = 2*blkdiag(alpha_goal*eye(nx,nx));
+stages(i).cost.H = 2*blkdiag(alpha_goal*eye(nx-1,nx-1),zeros(1,1));
 params(end+1) = newParam(['f',istr], i, 'cost.f');
 %stages(i).cost.f = zeros(stages(i).dims.n,1);
 

@@ -95,7 +95,9 @@ double computeCost(const std::vector< Matrix<C_DIM> >& X, const std::vector< Mat
 	for(int t = 0; t < T-1; ++t) {
 		cost += alpha_control*tr(~U[t]*U[t]);
 	}
-	cost += alpha_goal*tr(~(X[T-1]-cGoal)*(X[T-1]-cGoal));
+	Matrix<P_DIM> pT = X[T-1].subMatrix<P_DIM,1>(0, 0);
+	Matrix<P_DIM> pGoal = cGoal.subMatrix<P_DIM,1>(0, 0);
+	cost += alpha_goal*tr(~(pT-pGoal)*(pT-pGoal));
 	return cost;
 }
 
@@ -160,7 +162,9 @@ double computeMerit(const std::vector< Matrix<C_DIM> >& X, const std::vector< Ma
 			merit += penalty_coeff*fabs(dynviol[i]);
 		}
 	}
-	merit += alpha_goal*tr(~(X[T-1]-cGoal)*(X[T-1]-cGoal));
+	Matrix<P_DIM> pT = X[T-1].subMatrix<P_DIM,1>(0, 0);
+	Matrix<P_DIM> pGoal = cGoal.subMatrix<P_DIM,1>(0, 0);
+	merit += alpha_goal*tr(~(pT-pGoal)*(pT-pGoal));
 	return merit;
 }
 
@@ -353,7 +357,8 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 
 		}
 		
-		for(int i=0; i < C_DIM; ++i) { f[T-1][i] = -2*alpha_goal*cGoal[i]; }
+		for(int i=0; i < P_DIM; ++i) { f[T-1][i] = -2*alpha_goal*cGoal[i]; }
+		f[T-1][2] = 0;
 
 		//std::cout << "PAUSED INSIDE MINIMIZEMERITFUNCTION" << std::endl;
 		//int k;
@@ -412,7 +417,8 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			//jac_constant = alpha_goal*tr(~cGoal*cGoal);
 			//hessian_constant = alpha_goal*tr(~xT*xT);
 
-			constant_cost = alpha_goal*tr(~cGoal*cGoal);
+			Matrix<P_DIM> pGoal = cGoal.subMatrix<P_DIM,1>(0, 0);
+			constant_cost = alpha_goal*tr(~pGoal*pGoal);
 
 			//LOG_DEBUG("Hessian constant: %10.4f", hessian_constant);
 			//LOG_DEBUG("Jacobian constant: %10.4f", jac_constant);
@@ -628,8 +634,8 @@ int main(int argc, char* argv[])
 	cEnd[0] = 60;
 	cEnd[1] = 0;
 
-	cStart[2] = atan2(cEnd[1] - cStart[1], cEnd[0] - cStart[0]);
-	//cStart[2] = M_PI;
+	//cStart[2] = atan2(cEnd[1] - cStart[1], cEnd[0] - cStart[0]);
+	cStart[2] = .5*M_PI;
 	cEnd[2] = atan2(cEnd[1] - cStart[1], cEnd[0] - cStart[0]);
 
 	initTraj(cStart, cEnd, X, U);

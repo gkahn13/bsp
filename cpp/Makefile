@@ -308,6 +308,13 @@ SLAM_SETUP_FILE = slam/setupFiles.sh
 
 # share point functions
 SLAM_HEADERS = slam/slam.h
+SLAM_SRC = slam/slam.cpp
+
+#slam: $(OBJ_DIR)/slam.o
+	 
+
+$(OBJ_DIR)/slam.o : $(SLAM_SRC)
+	 $(CXX) $(CPP_FLAGS) $(BFLAGS)  $(PYTHON_FLAGS) $(BOOST_FLAGS) -c -o $@ $<
 
 # make slam-test
 SLAM_TEST_DIR = slam/test
@@ -325,7 +332,7 @@ $(OBJ_DIR)/test-slam.o : $(SLAM_TEST_DIR)/test-slam.cpp
 	
 # make slam-traj
 SLAM_TRAJ_DIR = slam/traj
-SLAM_TRAJ_FILES = trajMPC slam-traj logging
+SLAM_TRAJ_FILES = trajMPC slam-traj logging slam
 SLAM_TRAJ_OBJS = $(SLAM_TRAJ_FILES:%=$(OBJ_DIR)/%.o)
 
 slam-traj-setup:
@@ -342,7 +349,7 @@ $(OBJ_DIR)/slam-traj.o : $(SLAM_TRAJ_DIR)/slam-traj.cpp $(SLAM_HEADERS)
 
 # make slam-belief
 SLAM_BELIEF_DIR = slam/belief
-SLAM_BELIEF_FILES = slamBeliefPenaltyMPC slam-belief logging
+SLAM_BELIEF_FILES = slamBeliefPenaltyMPC slam-belief logging slam slam-traj trajMPC
 SLAM_BELIEF_OBJS = $(SLAM_BELIEF_FILES:%=$(OBJ_DIR)/%.o)
 
 slam-belief-setup:

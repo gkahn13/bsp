@@ -656,27 +656,30 @@ int main(int argc, char* argv[])
 		xGoal.insert(0, 0, waypoints[i]);
 
 		//xGoal[2] = x0[2];
-		x0[2] = atan2(xGoal[1] - x0[1], xGoal[0] - x0[0]);
+		//x0[2] = atan2(xGoal[1] - x0[1], xGoal[0] - x0[0]);
 		xGoal[2] = atan2(xGoal[1] - x0[1], xGoal[0] - x0[0]);
 
 
 		xGoal.insert(C_DIM, 0, x0.subMatrix<L_DIM,1>(C_DIM,0));
 
 
+		/*
 		// initialize velocity to dist / timesteps
 		uinit[0] = sqrt((x0[0] - xGoal[0])*(x0[0] - xGoal[0]) + (x0[1] - xGoal[1])*(x0[1] - xGoal[1])) / (double)((T-1)*DT);
 		// angle already pointed at goal, so is 0
 		uinit[1] = 0;
 
 		std::vector<Matrix<U_DIM> > U(T-1, uinit);
+		 */
 
+		std::vector<Matrix<U_DIM> > U(T-1);
+		bool initTrajSuccess = initTraj(x0.subMatrix<C_DIM,1>(0,0), xGoal.subMatrix<C_DIM,1>(0,0), U);
+		if (!initTrajSuccess) {
+			LOG_ERROR("Failed to initialize trajectory, exiting slam-belief");
+			exit(-1);
+		}
 
-		//std::vector<Matrix<U_DIM> > U(T-1);
-		//initializeControls(U);
-		//Matrix<C_DIM> cStart, cGoal;
-		//initTraj(cStart, cGoal, U);
-
-		//std::cout << "B" << std::endl;
+		//std::cout << "X car initial" << std::endl;
 		vec(x0, SqrtSigma0, B[0]);
 		for(int t=0; t < T-1; ++t) {
 			//std::cout << ~B[t].subMatrix<C_DIM,1>(0,0);
@@ -686,11 +689,13 @@ int main(int argc, char* argv[])
 		unVec(B[T-1], xtmp, stmp);
 		std::cout << stmp.subMatrix<P_DIM,P_DIM>(0,0) << std::endl;
 
-		//std::cout << "U" << std::endl;
+		/*
+		std::cout << "U" << std::endl;
 		for(int t=0; t < T-1; ++t) {
-			//std::cout << ~U[t];
+			std::cout << ~U[t];
 		}
-		//std::cout << std::endl;
+		std::cout << std::endl;
+		*/
 
 		pythonDisplayTrajectory(B, U, waypoints, landmarks, T);
 

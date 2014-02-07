@@ -10,9 +10,8 @@
 
 extern "C" {
 #include "trajMPC.h"
-trajMPC_FLOAT **f, **lb, **ub, **C, **e, **z;
+trajMPC_FLOAT **f_traj, **lb_traj, **ub_traj, **C_traj, **e_traj, **z_traj;
 }
-
 
 #include "boost/preprocessor.hpp"
 
@@ -111,34 +110,32 @@ double computeCost(const std::vector< Matrix<C_DIM> >& X, const std::vector< Mat
 void setupTrajVars(trajMPC_params &problem, trajMPC_output &output)
 {
 	// problem inputs
-	f = new trajMPC_FLOAT*[T];
-	lb = new trajMPC_FLOAT*[T];
-	ub = new trajMPC_FLOAT*[T];
-	C = new trajMPC_FLOAT*[T-1];
-	e = new trajMPC_FLOAT*[T];
+	f_traj = new trajMPC_FLOAT*[T];
+	lb_traj = new trajMPC_FLOAT*[T];
+	ub_traj = new trajMPC_FLOAT*[T];
+	C_traj = new trajMPC_FLOAT*[T-1];
+	e_traj = new trajMPC_FLOAT*[T];
 
 	// problem outputs
-	z = new trajMPC_FLOAT*[T];
+	z_traj = new trajMPC_FLOAT*[T];
 
-	// H[ BOOST_PP_SUB(n,1) ] = problem.H##n ;
 #define SET_VARS(n)    \
-		f[ BOOST_PP_SUB(n,1) ] = problem.f##n ;  \
-		lb[ BOOST_PP_SUB(n,1) ] = problem.lb##n ;	\
-		ub[ BOOST_PP_SUB(n,1) ] = problem.ub##n ;	\
-		C[ BOOST_PP_SUB(n,1) ] = problem.C##n ;  \
-		e[ BOOST_PP_SUB(n,1) ] = problem.e##n ;  \
-		z[ BOOST_PP_SUB(n,1) ] = output.z##n ;
+		f_traj[ BOOST_PP_SUB(n,1) ] = problem.f##n ;  \
+		lb_traj[ BOOST_PP_SUB(n,1) ] = problem.lb##n ;	\
+		ub_traj[ BOOST_PP_SUB(n,1) ] = problem.ub##n ;	\
+		C_traj[ BOOST_PP_SUB(n,1) ] = problem.C##n ;  \
+		e_traj[ BOOST_PP_SUB(n,1) ] = problem.e##n ;  \
+		z_traj[ BOOST_PP_SUB(n,1) ] = output.z##n ;
 #define BOOST_PP_LOCAL_MACRO(n) SET_VARS(n)
 #define BOOST_PP_LOCAL_LIMITS (1, TIMESTEPS-1)
 #include BOOST_PP_LOCAL_ITERATE()
 
-	// H[ BOOST_PP_SUB(n,1) ] = problem.H##n ;
 #define SET_LAST_VARS(n)    \
-		f[ BOOST_PP_SUB(n,1) ] = problem.f##n ;  \
-		lb[ BOOST_PP_SUB(n,1) ] = problem.lb##n ;	\
-		ub[ BOOST_PP_SUB(n,1) ] = problem.ub##n ;	\
-		e[ BOOST_PP_SUB(n,1) ] = problem.e##n ;  \
-		z[ BOOST_PP_SUB(n,1) ] = output.z##n ;
+		f_traj[ BOOST_PP_SUB(n,1) ] = problem.f##n ;  \
+		lb_traj[ BOOST_PP_SUB(n,1) ] = problem.lb##n ;	\
+		ub_traj[ BOOST_PP_SUB(n,1) ] = problem.ub##n ;	\
+		e_traj[ BOOST_PP_SUB(n,1) ] = problem.e##n ;  \
+		z_traj[ BOOST_PP_SUB(n,1) ] = output.z##n ;
 #define BOOST_PP_LOCAL_MACRO(n) SET_LAST_VARS(n)
 #define BOOST_PP_LOCAL_LIMITS (TIMESTEPS, TIMESTEPS)
 #include BOOST_PP_LOCAL_ITERATE()
@@ -149,12 +146,12 @@ void setupTrajVars(trajMPC_params &problem, trajMPC_output &output)
 
 void cleanupTrajMPCVars()
 {
-	delete[] f;
-	delete[] lb;
-	delete[] ub;
-	delete[] C;
-	delete[] e;
-	delete[] z;
+	delete[] f_traj;
+	delete[] lb_traj;
+	delete[] ub_traj;
+	delete[] C_traj;
+	delete[] e_traj;
+	delete[] z_traj;
 }
 
 double computeMerit(const std::vector< Matrix<C_DIM> >& X, const std::vector< Matrix<U_DIM> >& U, double penalty_coeff)
@@ -174,110 +171,111 @@ double computeMerit(const std::vector< Matrix<C_DIM> >& X, const std::vector< Ma
 	return merit;
 }
 
-// TODO: Check if all inputs are valid, H, f, lb, ub, C, e, D at last time step
+/*
 bool isValidInputs()
 {
 	for(int t = 0; t < T-1; ++t) {
 
 		std::cout << "t: " << t << std::endl << std::endl;
 
-		/*
-		std::cout << "f: ";
+
+		std::cout << "f_traj: ";
 		for(int i = 0; i < (2*C_DIM+U_DIM); ++i) {
-			std::cout << f[t][i] << " ";
+			std::cout << f_traj[t][i] << " ";
 		}
 		std::cout << std::endl;
-		*/
 
-		std::cout << "lb c: ";
+
+		std::cout << "lb_traj c: ";
 		for(int i = 0; i < C_DIM; ++i) {
-			std::cout << lb[t][i] << " ";
+			std::cout << lb_traj[t][i] << " ";
 		}
 		std::cout << std::endl;
 
-		std::cout << "ub c: ";
+		std::cout << "ub_traj c: ";
 		for(int i = 0; i < C_DIM; ++i) {
-			std::cout << ub[t][i] << " ";
+			std::cout << ub_traj[t][i] << " ";
 		}
 		std::cout << std::endl;
 
-		/*
-		std::cout << "lb s, t: ";
+
+		std::cout << "lb_traj s, t: ";
 		for(int i = 0; i < 2*C_DIM; ++i) {
-			std::cout << lb[t][C_DIM+U_DIM+i] << " ";
+			std::cout << lb_traj[t][C_DIM+U_DIM+i] << " ";
 		}
 		std::cout << std::endl;
-		*/
 
-		std::cout << "lb u: ";
+
+		std::cout << "lb_traj u: ";
 		for(int i = 0; i < U_DIM; ++i) {
-			std::cout << lb[t][C_DIM+i] << " ";
+			std::cout << lb_traj[t][C_DIM+i] << " ";
 		}
 		std::cout << std::endl;
 
-		std::cout << "ub u: ";
+		std::cout << "ub_traj u: ";
 		for(int i = 0; i < U_DIM; ++i) {
-			std::cout << ub[t][C_DIM+i] << " ";
+			std::cout << ub_traj[t][C_DIM+i] << " ";
 		}
 		std::cout << std::endl;
 
-		/*
 
-		std::cout << "C:" << std::endl;
+
+		std::cout << "C_traj:" << std::endl;
 		if (t == 0) {
 			for(int i = 0; i < 2*B_DIM*(3*B_DIM+U_DIM); ++i) {
-				std::cout << C[t][i] << " ";
+				std::cout << C_traj[t][i] << " ";
 			}
 		} else {
 			for(int i = 0; i < B_DIM*(3*B_DIM+U_DIM); ++i) {
-				std::cout << C[t][i] << " ";
+				std::cout << C_traj[t][i] << " ";
 			}
 		}
 		std::cout << std::endl;
 
-		std::cout << "e:" << std::endl;
+		std::cout << "e_traj:" << std::endl;
 		if (t == 0) {
 			for(int i = 0; i < 2*B_DIM; ++i) {
-				std::cout << e[t][i] << " ";
+				std::cout << e_traj[t][i] << " ";
 			}
 		} else {
 			for(int i = 0; i < B_DIM; ++i) {
-				std::cout << e[t][i] << " ";
+				std::cout << e_traj[t][i] << " ";
 			}
 		}
 
 
-		std::cout << "e:" << std::endl;
+		std::cout << "e_traj:" << std::endl;
 		for(int i = 0; i < C_DIM; ++i) {
-			std::cout << e[t][i] << " ";
+			std::cout << e_traj[t][i] << " ";
 		}
-		*/
+
 		std::cout << std::endl << std::endl;
 
 	}
 
-	/*
-	std::cout << "e:" << std::endl;
+
+	std::cout << "e_traj:" << std::endl;
 	for(int i = 0; i < C_DIM; ++i) {
-		std::cout << e[T-1][i] << " ";
+		std::cout << e_traj[T-1][i] << " ";
 	}
 	std::cout << std::endl << std::endl;
-	*/
 
-	std::cout << "lb c: ";
+
+	std::cout << "lb_traj c: ";
 	for(int i = 0; i < C_DIM; ++i) {
-		std::cout << lb[T-1][i] << " ";
+		std::cout << lb_traj[T-1][i] << " ";
 	}
 	std::cout << std::endl;
 
-	std::cout << "ub c: ";
+	std::cout << "ub_traj c: ";
 	for(int i = 0; i < C_DIM; ++i) {
-		std::cout << ub[T-1][i] << " ";
+		std::cout << ub_traj[T-1][i] << " ";
 	}
 	std::cout << std::endl;
 	std::cout << std::endl;
 	return true;
 }
+*/
 
 
 bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<U_DIM> >& U, trajMPC_params &problem, trajMPC_output &output, trajMPC_info &info, double penalty_coeff, double trust_box_size)
@@ -321,7 +319,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 		LOG_DEBUG("  merit: %4.10f", merit);
 
 		// Problem linearization and definition
-		// fill in f, C, e
+		// fill in f_traj, C_traj, e_traj
 		
 		for (int t = 0; t < T-1; ++t) 
 		{
@@ -336,11 +334,11 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			//std::cout << "G[" << t << "]" << std::endl << G[t] << std::endl;
 			//std::cout << "ut[" << t << "]" << ~ut;
 
-			// initialize f in cost function to penalize
+			// initialize f_traj in cost function to penalize
 			// belief dynamics slack variables
 			index = 0;
-			for(int i = 0; i < (C_DIM+U_DIM); ++i) { f[t][index++] = 0; }
-			for(int i = 0; i < 2*C_DIM; ++i) { f[t][index++] = penalty_coeff; }
+			for(int i = 0; i < (C_DIM+U_DIM); ++i) { f_traj[t][index++] = 0; }
+			for(int i = 0; i < 2*C_DIM; ++i) { f_traj[t][index++] = penalty_coeff; }
 
 			CMat.reset();
 			eVec.reset();
@@ -350,21 +348,21 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			CMat.insert<C_DIM,C_DIM>(0,C_DIM+U_DIM,IB);
 			CMat.insert<C_DIM,C_DIM>(0,2*C_DIM+U_DIM,minusIB);
 
-			fillColMajor(C[t], CMat);
+			fillColMajor(C_traj[t], CMat);
 
 			if (t == 0) {
 				eVec.insert<C_DIM,1>(0,0,X[0]);
-				fillCol(e[0], eVec);
+				fillCol(e_traj[0], eVec);
 			} 
 			
 			eVec = -h[t] + F[t]*xt + G[t]*ut;
 			//std::cout << "eVec " << ~eVec << std::endl;
-			fillCol(e[t+1], eVec);
+			fillCol(e_traj[t+1], eVec);
 
 		}
 		
-		for(int i=0; i < P_DIM; ++i) { f[T-1][i] = -2*alpha_goal*cGoal[i]; }
-		f[T-1][2] = 0;
+		for(int i=0; i < P_DIM; ++i) { f_traj[T-1][i] = -2*alpha_goal*cGoal[i]; }
+		f_traj[T-1][2] = 0;
 
 		//std::cout << "PAUSED INSIDE MINIMIZEMERITFUNCTION" << std::endl;
 		//int k;
@@ -384,39 +382,39 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 				Matrix<C_DIM>& xt = X[t];
 				Matrix<U_DIM>& ut = U[t];
 
-				// Fill in lb, ub
+				// Fill in lb_traj, ub_traj
 
 				index = 0;
 				// x lower bound
-				for(int i = 0; i < C_DIM; ++i) { lb[t][index++] = MAX(xMin[i], xt[i] - Xeps); }
+				for(int i = 0; i < C_DIM; ++i) { lb_traj[t][index++] = MAX(xMin[i], xt[i] - Xeps); }
 				// u lower bound
-				for(int i = 0; i < U_DIM; ++i) { lb[t][index++] = MAX(uMin[i], ut[i] - Ueps); }
+				for(int i = 0; i < U_DIM; ++i) { lb_traj[t][index++] = MAX(uMin[i], ut[i] - Ueps); }
 
 				// for lower bound on L1 slacks
-				for(int i = 0; i < 2*C_DIM; ++i) { lb[t][index++] = 0; }
+				for(int i = 0; i < 2*C_DIM; ++i) { lb_traj[t][index++] = 0; }
 
 				index = 0;
 				// x upper bound
-				for(int i = 0; i < C_DIM; ++i) { ub[t][index++] = MIN(xMax[i], xt[i] + Xeps); }
+				for(int i = 0; i < C_DIM; ++i) { ub_traj[t][index++] = MIN(xMax[i], xt[i] + Xeps); }
 				// u upper bound
-				for(int i = 0; i < U_DIM; ++i) { ub[t][index++] = MIN(uMax[i], ut[i] + Ueps); }
+				for(int i = 0; i < U_DIM; ++i) { ub_traj[t][index++] = MIN(uMax[i], ut[i] + Ueps); }
 
-				//for(int i = 0; i < 2*B_DIM; ++i) { ub[t][index++] = INFTY; }
+				//for(int i = 0; i < 2*B_DIM; ++i) { ub_traj[t][index++] = INFTY; }
 			}
 
 			Matrix<C_DIM>& xT = X[T-1];
 
-			// Fill in lb, ub, C, e
+			// Fill in lb_traj, ub_traj, C_traj, e_traj
 			index = 0;
 			double delta = .5;
 			// cGoal lower bound
-			for(int i = 0; i < P_DIM; ++i) { lb[T-1][index++] = cGoal[i] - delta; }
-			lb[T-1][index++] = MIN(xMin[2], xT[2] - Xeps); // none on angles
+			for(int i = 0; i < P_DIM; ++i) { lb_traj[T-1][index++] = cGoal[i] - delta; }
+			lb_traj[T-1][index++] = MIN(xMin[2], xT[2] - Xeps); // none on angles
 
 			index = 0;
 			// cGoal upper bound
-			for(int i = 0; i < P_DIM; ++i) { ub[T-1][index++] = cGoal[i] + delta; }
-			ub[T-1][index++] = MAX(xMax[2], xT[2] + Xeps);
+			for(int i = 0; i < P_DIM; ++i) { ub_traj[T-1][index++] = cGoal[i] + delta; }
+			ub_traj[T-1][index++] = MAX(xMax[2], xT[2] + Xeps);
 
 			double constant_cost = 0;
 
@@ -443,15 +441,15 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 					Matrix<U_DIM>& ut = Uopt[t];
 
 					for(int i = 0; i < C_DIM; ++i) {
-						xt[i] = z[t][i];
+						xt[i] = z_traj[t][i];
 					}
 					for(int i = 0; i < U_DIM; ++i) {
-						ut[i] = z[t][C_DIM+i];
+						ut[i] = z_traj[t][C_DIM+i];
 					}
 					optcost = info.pobj;
 				}
 				for(int i = 0; i < C_DIM; ++i) {
-					Xopt[T-1][i] = z[T-1][i];
+					Xopt[T-1][i] = z_traj[T-1][i];
 				}
 			}
 			else {
@@ -653,5 +651,4 @@ int main(int argc, char* argv[])
 	cleanupTrajMPCVars();
 	
 }
-
 */

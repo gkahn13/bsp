@@ -2,24 +2,6 @@
 
 namespace py = boost::python;
 
-#define TIMESTEPS 15
-#define DT 1.0
-#define NUM_LANDMARKS 1
-#define NUM_WAYPOINTS 3
-
-#define C_DIM 3 // car dimension [x, y, theta]
-#define P_DIM 2 // Position dimension [x,y]
-#define L_DIM 2*NUM_LANDMARKS
-
-#define X_DIM C_DIM+L_DIM
-#define U_DIM 2
-#define Z_DIM L_DIM
-#define Q_DIM 2
-#define R_DIM L_DIM
-
-#define S_DIM (((X_DIM+1)*(X_DIM))/2)
-#define B_DIM (X_DIM+S_DIM)
-
 
 const double step = 0.0078125*0.0078125;
 
@@ -37,9 +19,6 @@ Matrix<R_DIM, R_DIM> R;
 
 const int T = TIMESTEPS;
 const double INFTY = 1e10;
-
-#define MIN(a,b) (((a)<(b))?(a):(b))
-#define MAX(a,b) (((a)>(b))?(a):(b))
 
 const double alpha_belief = 10, alpha_final_belief = 100, alpha_control = .01, alpha_goal_state = 1;
 
@@ -62,7 +41,7 @@ void initProblemParams()
 	waypoints[1][0] = 60; waypoints[1][1] = 20;
 	waypoints[2][0] = 0; waypoints[2][1] = 20;
 
-	landmarks[0][0] = 30; landmarks[0][1] = 15;
+	landmarks[0][0] = 30; landmarks[0][1] = 10;
 	//landmarks[0][0] = 0; landmarks[0][1] = 0;
 	//landmarks[1][0] = 60; landmarks[1][1] = 0;
 	//landmarks[2][0] = 60; landmarks[2][1] = 0;

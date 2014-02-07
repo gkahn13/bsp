@@ -355,7 +355,7 @@ SLAM_BELIEF_OBJS = $(SLAM_BELIEF_FILES:%=$(OBJ_DIR)/%.o)
 slam-belief-setup:
 	bash $(SLAM_SETUP_FILE) belief $(T)
 
-slam-belief: | slam-belief-setup $(SLAM_BELIEF_OBJS)
+slam-belief: | slam-belief-setup slam-traj-setup $(SLAM_BELIEF_OBJS)
 	$(CXX) $(BFLAGS) $(SLAM_BELIEF_OBJS) -o $(BIN_DIR)/slam-belief $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
 	
 $(OBJ_DIR)/slamBeliefPenaltyMPC.o : $(SLAM_BELIEF_DIR)/beliefPenaltyMPC.c

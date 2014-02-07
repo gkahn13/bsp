@@ -132,7 +132,7 @@ mpcname = 'trajMPC';
 codeoptions = getOptions(mpcname);
 codeoptions.printlevel = 0;
 codeoptions.timing=0;
-codeoptions.maxit = 50;
+codeoptions.maxit = 100;
 
 % generate code
 generateCode(stages,params,codeoptions,outputs);

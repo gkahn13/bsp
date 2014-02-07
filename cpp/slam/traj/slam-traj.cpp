@@ -573,36 +573,54 @@ bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 	uinit[1] = 0;
 
 	// TODO: if problems, change this
-	uinit[0] *= .25;
+	//uinit[0] *= .01;
 
-	//std::cout << "uinit: " << ~uinit << std::endl;
-
-	for(int i=0; i < T-1; ++i) { U[i] = uinit; }
-
-	std::vector<Matrix<C_DIM> > X(T);
-	//std::cout << "X initial" << std::endl;
-	X[0].insert(0,0,c0);
-	for(int t=0; t < T-1; ++t) {
-		//std::cout << ~X[t];
-		X[t+1] = dynfunccar(X[t],U[t]);
-	}
-	//std::cout << ~X[T-1];
-
-	double initTrajCost = computeCost(X, U);
-	LOG_DEBUG("Initial trajectory cost: %4.10f", initTrajCost);
+	double scaling[4] = {.01, .05, .25, .5};
+	bool success = false;
+	double initTrajCost = 0, cost = 0;
 
 	util::Timer solveTimer;
 	Timer_tic(&solveTimer);
 
-	double cost = 0;
-	try {
-		cost = trajCollocation(X, U, problem, output, info);
-	} catch(exit_exception& e) {
-		LOG_ERROR("initTraj failed!");
-		return false;
+	for(int scalingIndex=0; scalingIndex < 4; scalingIndex++) {
+
+		for(int i=0; i < T-1; ++i) { U[i] = uinit*scaling[scalingIndex]; }
+
+		std::vector<Matrix<C_DIM> > X(T);
+		//std::cout << "X initial" << std::endl;
+		X[0].insert(0,0,c0);
+		for(int t=0; t < T-1; ++t) {
+			//std::cout << ~X[t];
+			X[t+1] = dynfunccar(X[t],U[t]);
+		}
+		//std::cout << ~X[T-1];
+
+		initTrajCost = computeCost(X, U);
+		LOG_DEBUG("Initial trajectory cost: %4.10f", initTrajCost);
+
+
+		double cost = 0;
+		try {
+			cost = trajCollocation(X, U, problem, output, info);
+			success = true;
+		} catch(exit_exception& e) {
+			success = false;
+		}
+
+		if (success) {
+			break;
+		}
+
 	}
 
 	double solvetime = util::Timer_toc(&solveTimer);
+
+	if (!success) {
+		LOG_ERROR("initTraj failed!");
+		std::cout << "c0: " << ~c0;
+		std::cout << "cGoal: " << ~cGoal;
+		return false;
+	}
 
 	/*
 	std::cout << "Final input" << std::endl;

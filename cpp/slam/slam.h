@@ -66,7 +66,7 @@ const double DT_CONTROLS = 0.025;
 const double VELOCITY_NOISE = 0.3;
 const double TURNING_NOISE = 3.0*M_PI/180.;
 
-const double MAX_RANGE = 10.0;
+const double MAX_RANGE = 5.0;
 const double DT_OBSERVE = 8*DT_CONTROLS;
 
 const double OBS_DIST_NOISE = 1 * 0.1;

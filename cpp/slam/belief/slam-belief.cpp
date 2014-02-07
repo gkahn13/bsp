@@ -25,7 +25,7 @@ const double trust_expand_ratio = 1.5;
 const double cnt_tolerance = 1e-4;
 const double penalty_coeff_increase_ratio = 5;
 const double initial_penalty_coeff = 5;
-const double initial_trust_box_size = 10;
+const double initial_trust_box_size = 1;
 const int max_penalty_coeff_increases = 3;
 const int max_sqp_iterations = 50;
 }
@@ -70,7 +70,7 @@ double computeCost(const std::vector< Matrix<B_DIM> >& B, const std::vector< Mat
 void setupBeliefVars(beliefPenaltyMPC_params &problem, beliefPenaltyMPC_output &output)
 {
 	// problem inputs
-	//H = new beliefPenaltyMPC_FLOAT*[T];
+	H = new beliefPenaltyMPC_FLOAT*[T];
 	f = new beliefPenaltyMPC_FLOAT*[T-1];
 	lb = new beliefPenaltyMPC_FLOAT*[T];
 	ub = new beliefPenaltyMPC_FLOAT*[T];
@@ -81,8 +81,8 @@ void setupBeliefVars(beliefPenaltyMPC_params &problem, beliefPenaltyMPC_output &
 	// problem outputs
 	z = new beliefPenaltyMPC_FLOAT*[T];
 
-	// H[ BOOST_PP_SUB(n,1) ] = problem.H##n ;
 #define SET_VARS(n)    \
+		H[ BOOST_PP_SUB(n,1) ] = problem.H##n ; \
 		f[ BOOST_PP_SUB(n,1) ] = problem.f##n ;  \
 		lb[ BOOST_PP_SUB(n,1) ] = problem.lb##n ;	\
 		ub[ BOOST_PP_SUB(n,1) ] = problem.ub##n ;	\
@@ -93,8 +93,9 @@ void setupBeliefVars(beliefPenaltyMPC_params &problem, beliefPenaltyMPC_output &
 #define BOOST_PP_LOCAL_LIMITS (1, TIMESTEPS-1)
 #include BOOST_PP_LOCAL_ITERATE()
 
-	// H[ BOOST_PP_SUB(n,1) ] = problem.H##n ;
+
 #define SET_LAST_VARS(n)    \
+		H[ BOOST_PP_SUB(n,1) ] = problem.H##n ; \
 		lb[ BOOST_PP_SUB(n,1) ] = problem.lb##n ;	\
 		ub[ BOOST_PP_SUB(n,1) ] = problem.ub##n ;	\
 		e[ BOOST_PP_SUB(n,1) ] = problem.e##n ;  \
@@ -104,16 +105,18 @@ void setupBeliefVars(beliefPenaltyMPC_params &problem, beliefPenaltyMPC_output &
 #include BOOST_PP_LOCAL_ITERATE()
 
 
-	/*
+/*
 #define SET_D(n)    \
 		D[ BOOST_PP_SUB(n,1) ] = problem.D##n ;
 #define BOOST_PP_LOCAL_MACRO(n) SET_D(n)
 #define BOOST_PP_LOCAL_LIMITS (2, TIMESTEPS)
 #include BOOST_PP_LOCAL_ITERATE()
+*/
 
 
 	// initialize H in x'*H*x to penalize covariance and controls
 	// H is diagonal
+
 	int index;
 	for(int t=0; t < T-1; ++t) {
 		index = 0;
@@ -129,6 +132,7 @@ void setupBeliefVars(beliefPenaltyMPC_params &problem, beliefPenaltyMPC_output &
 	for(int i=0; i < S_DIM; ++i) { H[T-1][index++] = 2*alpha_final_belief; }
 
 
+	/*
 	// set up D
 
 	Matrix<2*B_DIM, 3*B_DIM+U_DIM> D1mat = zeros<2*B_DIM, 3*B_DIM+U_DIM>();
@@ -447,7 +451,7 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			index = 0;
 			// xGoal upper bound
 			for(int i = 0; i < P_DIM; ++i) { ub[T-1][index++] = xGoal[i] + delta; }
-			// loose on landmakrs
+			// loose on landmarks
 			for(int i = 0; i < X_DIM-P_DIM; ++i) { ub[T-1][index++] = MIN(xMax[i+P_DIM], bT[i+P_DIM] + Beps); }
 			// sigma upper bound
 			for(int i = 0; i < S_DIM; ++i) { ub[T-1][index] = bT[index] + Beps; index++;}

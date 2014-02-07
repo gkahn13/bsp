@@ -1,3 +1,5 @@
+#include "slam-traj.h"
+
 #include <vector>
 #include <iomanip>
 #include <sys/resource.h>
@@ -11,9 +13,8 @@ extern "C" {
 trajMPC_FLOAT **f, **lb, **ub, **C, **e, **z;
 }
 
-#include "boost/preprocessor.hpp"
 
-#include "../slam.h"
+#include "boost/preprocessor.hpp"
 
 Matrix<C_DIM> c0;
 Matrix<C_DIM> cGoal;
@@ -28,11 +29,16 @@ const double trust_shrink_ratio = .1;
 const double trust_expand_ratio = 1.5;
 const double cnt_tolerance = 1e-4;
 const double penalty_coeff_increase_ratio = 10;
-const double initial_penalty_coeff = 25;
+const double initial_penalty_coeff = 50;
 const double initial_trust_box_size = 1;
 const int max_penalty_coeff_increases = 2;
 const int max_sqp_iterations = 50;
 }
+
+struct exit_exception {
+	int c;
+	exit_exception(int c):c(c) { }
+};
 
 Matrix<C_DIM> dynfunccar(const Matrix<C_DIM>& x, const Matrix<U_DIM>& u)
 {
@@ -412,16 +418,11 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			for(int i = 0; i < P_DIM; ++i) { ub[T-1][index++] = cGoal[i] + delta; }
 			ub[T-1][index++] = MAX(xMax[2], xT[2] + Xeps);
 
-			double jac_constant = 0, hessian_constant = 0, constant_cost = 0;
-			//for(int i = 0; i < C_DIM; ++i) { jac_constant += 0.5*(f[T-1][i]*cGoal[i]); }
-			//jac_constant = alpha_goal*tr(~cGoal*cGoal);
-			//hessian_constant = alpha_goal*tr(~xT*xT);
+			double constant_cost = 0;
 
 			Matrix<P_DIM> pGoal = cGoal.subMatrix<P_DIM,1>(0, 0);
 			constant_cost = alpha_goal*tr(~pGoal*pGoal);
 
-			//LOG_DEBUG("Hessian constant: %10.4f", hessian_constant);
-			//LOG_DEBUG("Jacobian constant: %10.4f", jac_constant);
 			LOG_DEBUG("Constant cost: %10.4f", constant_cost);
 
 			// Verify problem inputs
@@ -434,8 +435,6 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			//int num;
 			//std::cin >> num;
 
-			double fillVarsTime = util::Timer_toc(&fillVarsTimer);
-			//std::cout << "fill variables time = " << fillVarsTime*1000 << "ms" << std::endl;
 
 			int exitflag = trajMPC_solve(&problem, &output, &info);
 			if (exitflag == 1) {
@@ -457,7 +456,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			}
 			else {
 				LOG_ERROR("Some problem in solver");
-				exit(-1);
+				throw exit_exception(-1);
 			}
 
 			LOG_DEBUG("Optimized cost: %4.10f", optcost);
@@ -561,7 +560,7 @@ double trajCollocation(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<U_DI
 }
 
 
-void initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vector<Matrix<C_DIM> >& X, std::vector<Matrix<U_DIM> >& U) {
+bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vector<Matrix<U_DIM> >& U) {
 	trajMPC_params problem;
 	trajMPC_output output;
 	trajMPC_info info;
@@ -575,31 +574,39 @@ void initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 	uinit[0] = sqrt((c0[0] - cGoal[0])*(c0[0] - cGoal[0]) + (c0[1] - cGoal[1])*(c0[1] - cGoal[1])) / (double)((T-1)*DT);
 	uinit[1] = 0;
 
-	// TEMP
-	uinit[0] *= .1;
+	// TODO: if problems, change this
+	uinit[0] *= .25;
 
-	std::cout << "uinit: " << ~uinit << std::endl;
+	//std::cout << "uinit: " << ~uinit << std::endl;
 
 	for(int i=0; i < T-1; ++i) { U[i] = uinit; }
 
-	std::cout << "X initial" << std::endl;
+	std::vector<Matrix<C_DIM> > X(T);
+	//std::cout << "X initial" << std::endl;
 	X[0].insert(0,0,c0);
 	for(int t=0; t < T-1; ++t) {
-		std::cout << ~X[t];
+		//std::cout << ~X[t];
 		X[t+1] = dynfunccar(X[t],U[t]);
 	}
-	std::cout << ~X[T-1];
+	//std::cout << ~X[T-1];
 
 	double initTrajCost = computeCost(X, U);
-	LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
+	LOG_DEBUG("Initial trajectory cost: %4.10f", initTrajCost);
 
 	util::Timer solveTimer;
 	Timer_tic(&solveTimer);
 
-	double cost = trajCollocation(X, U, problem, output, info);
+	double cost = 0;
+	try {
+		cost = trajCollocation(X, U, problem, output, info);
+	} catch(exit_exception& e) {
+		LOG_ERROR("initTraj failed!");
+		return false;
+	}
 
 	double solvetime = util::Timer_toc(&solveTimer);
 
+	/*
 	std::cout << "Final input" << std::endl;
 	for(int t = 0; t < T-1; ++t) {
 		std::cout << ~U[t];
@@ -612,20 +619,23 @@ void initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 		X[t+1] = dynfunccar(X[t], U[t]);
 	}
 	std::cout << ~X[T-1];
+	*/
 
-	LOG_INFO("Initial cost: %4.10f", initTrajCost);
-	LOG_INFO("Optimized cost: %4.10f", cost);
-	LOG_INFO("Actual cost: %4.10f", computeCost(X,U));
-	LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
+	LOG_DEBUG("Initial cost: %4.10f", initTrajCost);
+	LOG_DEBUG("Optimized cost: %4.10f", cost);
+	//LOG_DEBUG("Actual cost: %4.10f", computeCost(X,U));
+	LOG_DEBUG("Solve time: %5.3f ms", solvetime*1000);
+
+	return true;
 }
 
 
+/*
 int main(int argc, char* argv[])
 {
 	initProblemParams();
 
 	Matrix<C_DIM> cStart, cEnd;
-	std::vector<Matrix<C_DIM> > X(T, zeros<C_DIM,1>());
 	std::vector<Matrix<U_DIM> > U(T-1, zeros<U_DIM,1>());
 
 	cStart[0] = 0;
@@ -635,11 +645,13 @@ int main(int argc, char* argv[])
 	cEnd[1] = 0;
 
 	//cStart[2] = atan2(cEnd[1] - cStart[1], cEnd[0] - cStart[0]);
-	cStart[2] = .5*M_PI;
+	cStart[2] = 0;
 	cEnd[2] = atan2(cEnd[1] - cStart[1], cEnd[0] - cStart[0]);
 
-	initTraj(cStart, cEnd, X, U);
+	initTraj(cStart, cEnd, U);
 
 	cleanupTrajMPCVars();
 	
 }
+
+*/

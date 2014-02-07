@@ -14,6 +14,7 @@ beliefPenaltyMPC_FLOAT **H, **f, **lb, **ub, **C, **D, **e, **z;
 #include "boost/preprocessor.hpp"
 
 #include "../slam.h"
+#include "../traj/slam-traj.h"
 
 namespace cfg {
 const double improve_ratio_threshold = .1;
@@ -672,7 +673,8 @@ int main(int argc, char* argv[])
 
 		//std::vector<Matrix<U_DIM> > U(T-1);
 		//initializeControls(U);
-
+		//Matrix<C_DIM> cStart, cGoal;
+		//initTraj(cStart, cGoal, U);
 
 		//std::cout << "B" << std::endl;
 		vec(x0, SqrtSigma0, B[0]);

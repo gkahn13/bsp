@@ -1,4 +1,6 @@
-#pragma once
+#ifndef _LOGGING_H__
+#define _LOGGING_H__
+
 #include <cstdio>
 
 namespace util {
@@ -32,3 +34,5 @@ inline LogLevel GetLogLevel() {return gLogLevel;}
 #define LOG_TRACE(msg, ...) if (util::GetLogLevel() >= util::LevelTrace) {printf(TRACE_PREFIX); printf(msg, ##__VA_ARGS__); printf(LOG_SUFFIX);}
 
 }
+
+#endif

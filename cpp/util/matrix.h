@@ -498,14 +498,14 @@ inline Matrix<_size, _numColumns> operator%(const Matrix<_size, _size>& p, const
 	}
 
 	// Backward substitution
-	for (size_t k = _size - 1; k != -1; --k) {
+	for (int k = _size - 1; k != -1; --k) {
 		double quotient = m(row_p[k], col_p[k]);
 
 		for (size_t j = 0; j < _numColumns; ++j) {
 			inv(row_p[k], j) /= quotient;
 		}
 
-		for (size_t i = 0; i < k; ++i) {
+		for (int i = 0; i < k; ++i) {
 			double factor = m(row_p[i], col_p[k]);
 			for (size_t j = 0; j < _numColumns; ++j) {
 				inv(row_p[i], j) -= factor * inv(row_p[k], j);
@@ -976,7 +976,7 @@ inline void jacobi(const Matrix<_size, _size>& q, Matrix<_size, _size>& V, Matri
 		D(max_col, max_row) = 0;
 		D(max_row, max_row) = temp1;
 		D(max_col, max_col) = temp2;
-		for (int j = 0; j < _size; ++j) {
+		for (size_t j = 0; j < _size; ++j) {
 			if ((j != max_row) && (j != max_col)) {
 				temp1 = c * D(j, max_row) - s * D(j, max_col);
 				temp2 = c * D(j, max_col) + s * D(j, max_row);

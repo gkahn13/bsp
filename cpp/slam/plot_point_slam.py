@@ -64,7 +64,7 @@ def plot_point_trajectory(B, U, waypoints, landmarks, max_range, alpha_obs, xDim
     plt.show(block=False)
     plt.pause(.05)
     
-    raw_input()
+    #raw_input()
     
 def plot_domain(landmarks, max_range, alpha_obs, extent):
     # note x and y are flipped for plotting!

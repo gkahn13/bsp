@@ -20,7 +20,7 @@ Matrix<R_DIM, R_DIM> R;
 const int T = TIMESTEPS;
 const double INFTY = 1e10;
 
-const double alpha_belief = 10, alpha_final_belief = 100, alpha_control = .01, alpha_goal_state = 1;
+const double alpha_belief = 10, alpha_final_belief = 50, alpha_control = .01, alpha_goal_state = 1;
 
 
 
@@ -42,8 +42,7 @@ void initProblemParams()
 	waypoints[2][0] = 0; waypoints[2][1] = 20;
 
 	landmarks[0][0] = 30; landmarks[0][1] = 10;
-	//landmarks[0][0] = 0; landmarks[0][1] = 0;
-	//landmarks[1][0] = 60; landmarks[1][1] = 0;
+	landmarks[1][0] = 40; landmarks[1][1] = -10;
 	//landmarks[2][0] = 60; landmarks[2][1] = 0;
 	//landmarks[3][0] = 60; landmarks[3][1] = 20;
 	//landmarks[4][0] = 30; landmarks[4][1] = 5;
@@ -69,17 +68,17 @@ void initProblemParams()
 	xMin[0] = -20;
 	xMin[1] = -20;
 	xMin[2] = -M_PI;
-	for(int i=0; i < L_DIM; i+=2) {
-		xMin[i+C_DIM] = landmarks[i][0] - 5;
-		xMin[i+1+C_DIM] = landmarks[i][1] - 5;
+	for(int i=0; i < NUM_LANDMARKS; i++) {
+		xMin[2*i+C_DIM] = landmarks[i][0] - 5;
+		xMin[2*i+1+C_DIM] = landmarks[i][1] - 5;
 	}
 
 	xMax[0] = 80;
 	xMax[1] = 80;
 	xMax[2] = M_PI;
-	for(int i=0; i < L_DIM; i+=2) {
-		xMax[i+C_DIM] = landmarks[i][0] + 5;
-		xMax[i+1+C_DIM] = landmarks[i][1] + 5;
+	for(int i=0; i < NUM_LANDMARKS; i++) {
+		xMax[2*i+C_DIM] = landmarks[i][0] + 5;
+		xMax[2*i+1+C_DIM] = landmarks[i][1] + 5;
 	}
 
 }
@@ -141,26 +140,26 @@ Matrix<Z_DIM,Z_DIM> deltaMatrix(const Matrix<X_DIM>& x) {
 
 
 // Jacobians: df(x,u,q)/dx, df(x,u,q)/dq
-void linearizeDynamics(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<Q_DIM>& q, Matrix<3,3>& A, Matrix<3,2>& M)
+void linearizeDynamics(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<Q_DIM>& q, Matrix<C_DIM,C_DIM>& A, Matrix<C_DIM,Q_DIM>& M)
 {
-  //g is control input steer angle
-  double s= sin(u[1]+x[2]); double c= cos(u[1]+x[2]);
-  double vts= u[0]*DT*s; double vtc= u[0]*DT*c;
+	//g is control input steer angle
+	double s= sin(u[1]+x[2]); double c= cos(u[1]+x[2]);
+	double vts= u[0]*DT*s; double vtc= u[0]*DT*c;
 
-  M.reset();
-  M(0, 0) = DT*c;
-  M(0, 1) = -vts;
-  M(1, 0) = DT*s;
-  M(1, 1) = vtc;
-  M(2, 0) = DT*sin(u[1])/config::WHEELBASE;
-  M(2, 1) = u[0]*DT*cos(u[1])/config::WHEELBASE;
+	M.reset();
+	M(0, 0) = DT*c;
+	M(0, 1) = -vts;
+	M(1, 0) = DT*s;
+	M(1, 1) = vtc;
+	M(2, 0) = DT*sin(u[1])/config::WHEELBASE;
+	M(2, 1) = u[0]*DT*cos(u[1])/config::WHEELBASE;
 
-  A.reset();
-  A(0,0) = 1;
-  A(1,1) = 1;
-  A(2,2) = 1;
-  A(0,2) = -vts;
-  A(1,2) = vtc;
+	A.reset();
+	A(0,0) = 1;
+	A(1,1) = 1;
+	A(2,2) = 1;
+	A(0,2) = -vts;
+	A(1,2) = vtc;
 
 }
 
@@ -189,55 +188,31 @@ void linearizeDynamicsFiniteDiff(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u,
 void linearizeObservation(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r, Matrix<Z_DIM,X_DIM>& H, Matrix<Z_DIM,R_DIM>& N)
 {
 
-  //Approximate only setting H for
-  H.reset();
-  for (int i=0; i < L_DIM; i+=2) {
-    double dx = x[C_DIM+i] - x[0];
-    double dy = x[C_DIM+i+1] - x[1];
-    double d2 = dx*dx + dy*dy + 1e-10;
-    double d = sqrt(d2 + 1e-10);
-    double xd = dx/d;
-    double yd = dy/d;
-    double xd2 = dx/d2;
-    double yd2 = dy/d2;
-
-    // Approximate H being 0 for observations out of range
-    // Currently full circle, should only be half circle
-    // double range_scale = (1+exp(10*(d-config::MAX_RANGE)));
-    // GREG: trying delta matrix for now
-    double range_scale = 1;
-
-    H(i, 0) = -xd / range_scale;
-    H(i, 1) = -yd / range_scale;
-    H(i, 2) = 0;
-    H(i+1, 0) = yd2 / range_scale;
-    H(i+1, 1) = -xd2 / range_scale;
-    H(i+1, 2) = -1 / range_scale;
-    H(i, 3+i) = xd / range_scale;
-    H(i, 3+i+1) = yd / range_scale;
-    H(i+1, 3+i) = -yd2 / range_scale;
-    H(i+1, 3+i+1) = xd2 / range_scale;
-  }
-
-
-  	 /*
 	H.reset();
-	Matrix<X_DIM> xr(x), xl(x);
-	for (size_t i = 0; i < X_DIM; ++i) {
-	  xr[i] += step; xl[i] -= step;
-	  H.insert(0,i, (obsfunc(xr, r) - obsfunc(xl, r)) / (xr[i] - xl[i]));
-	  xr[i] = x[i]; xl[i] = x[i];
-	}
-	*/
+	for (int i=0; i < L_DIM; i+=2) {
+		double dx = x[C_DIM+i] - x[0];
+		double dy = x[C_DIM+i+1] - x[1];
+		double d2 = dx*dx + dy*dy + 1e-10;
+		double d = sqrt(d2 + 1e-10);
+		double xd = dx/d;
+		double yd = dy/d;
+		double xd2 = dx/d2;
+		double yd2 = dy/d2;
 
-	N.reset();
-	Matrix<R_DIM> rr(r), rl(r);
-	for (size_t i = 0; i < R_DIM; ++i) {
-		rr[i] += step; rl[i] -= step;
-		N.insert(0,i, (obsfunc(x, rr) - obsfunc(x, rl)) / (rr[i] - rl[i]));
-		rr[i] = r[i]; rl[i] = r[i];
 
+		H(i, 0) = -xd;
+		H(i, 1) = -yd;
+		H(i, 2) = 0;
+		H(i+1, 0) = yd2;
+		H(i+1, 1) = -xd2;
+		H(i+1, 2) = -1;
+		H(i, 3+i) = xd;
+		H(i, 3+i+1) = yd;
+		H(i+1, 3+i) = -yd2;
+		H(i+1, 3+i+1) = xd2;
 	}
+
+	N = identity<Z_DIM>();
 
 }
 

@@ -453,7 +453,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 				}
 			}
 			else {
-				LOG_ERROR("Some problem in solver");
+				LOG_ERROR("Some problem in traj solver, retrying");
 				throw exit_exception(-1);
 			}
 
@@ -575,7 +575,8 @@ bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 	// TODO: if problems, change this
 	//uinit[0] *= .01;
 
-	double scaling[4] = {.01, .05, .25, .5};
+	//double scaling[4] = {.01, .05, .25, .5};
+	double scaling[4] = {.5, .25, .05, .01};
 	bool success = false;
 	double initTrajCost = 0, cost = 0;
 

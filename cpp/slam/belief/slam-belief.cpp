@@ -25,7 +25,7 @@ const double trust_expand_ratio = 1.5;
 const double cnt_tolerance = 1e-4;
 const double penalty_coeff_increase_ratio = 5;
 const double initial_penalty_coeff = 5;
-const double initial_trust_box_size = 1;
+const double initial_trust_box_size = 10;
 const int max_penalty_coeff_increases = 3;
 const int max_sqp_iterations = 50;
 }
@@ -195,27 +195,34 @@ bool isValidInputs()
 		std::cout << std::endl;
 		*/
 
-		std::cout << "lb b: ";
-		for(int i = 0; i < B_DIM; ++i) {
+		std::cout << "lb c: ";
+		for(int i = 0; i < C_DIM; ++i) {
 			std::cout << lb[t][i] << " ";
 		}
 		std::cout << std::endl;
 
+		std::cout << "ub c: ";
+		for(int i = 0; i < C_DIM; ++i) {
+			std::cout << ub[t][i] << " ";
+		}
+		std::cout << std::endl;
+
+		std::cout << "lb l: ";
+		for(int i = 0; i < L_DIM; ++i) {
+			std::cout << lb[t][C_DIM+i] << " ";
+		}
+		std::cout << std::endl;
+
+		std::cout << "ub l: ";
+		for(int i = 0; i < L_DIM; ++i) {
+			std::cout << ub[t][C_DIM+i] << " ";
+		}
+		std::cout << std::endl;
+
+
 		std::cout << "lb u: ";
 		for(int i = 0; i < U_DIM; ++i) {
 			std::cout << lb[t][B_DIM+i] << " ";
-		}
-		std::cout << std::endl;
-
-		std::cout << "lb s, t: ";
-		for(int i = 0; i < 2*B_DIM; ++i) {
-			std::cout << lb[t][B_DIM+U_DIM+i] << " ";
-		}
-		std::cout << std::endl;
-
-		std::cout << "ub b: ";
-		for(int i = 0; i < B_DIM; ++i) {
-			std::cout << ub[t][i] << " ";
 		}
 		std::cout << std::endl;
 
@@ -353,14 +360,7 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			//int k;
 			//std::cin >> k;
 
-			//constructHessian(bt, Hess);
-
-			//HMat.reset();
-			//HMat.insert<S_DIM,S_DIM>(X_DIM,X_DIM,2*alpha_belief*Hess);
-			//HMat.insert<U_DIM,U_DIM>(B_DIM,B_DIM,2*alpha_control*identity<U_DIM>());
 			
-			//fillColMajor(H[t], HMat);
-
 			util::Timer_tic(&fillCETimer);
 			// initialize f in cost function to penalize
 			// belief dynamics slack variables
@@ -394,14 +394,14 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 		//std::cout << "linearize time = " << linearizeTime*1000 << "ms" << std::endl;
 		//std::cout << "fill CE time = " << fillCETime*1000 << "ms" << std::endl;
 		
-		//std::cout << "PAUSED INSIDE MINIMIZEMERITFUNCTION" << std::endl;
-		//int k;
-		//std::cin >> k;
-
 
 		// trust region size adjustment
 		while(true)
 		{
+			//std::cout << "PAUSED INSIDE MINIMIZEMERITFUNCTION" << std::endl;
+			//std::cin.ignore();
+
+
 			LOG_DEBUG("       trust region size: %2.6f %2.6f", Beps, Ueps);
 
 			util::Timer fillVarsTimer;
@@ -689,9 +689,10 @@ int main(int argc, char* argv[])
 			//std::cout << ~B[t].subMatrix<C_DIM,1>(0,0);
 			B[t+1] = beliefDynamics(B[t], U[t]);
 		}
-		//std::cout << ~B[T-1].subMatrix<C_DIM,1>(0,0) << std::endl;
+		//std::cout << ~B[T-1].subMatrix<C_DIM,1>(0,0) << std::endl << std::endl;
 		unVec(B[T-1], xtmp, stmp);
 		std::cout << stmp.subMatrix<P_DIM,P_DIM>(0,0) << std::endl;
+
 
 		/*
 		std::cout << "U" << std::endl;
@@ -701,7 +702,9 @@ int main(int argc, char* argv[])
 		std::cout << std::endl;
 		*/
 
+
 		pythonDisplayTrajectory(B, U, waypoints, landmarks, T);
+
 
 		double initTrajCost = computeCost(B, U);
 		LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);

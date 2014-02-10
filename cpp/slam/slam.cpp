@@ -20,7 +20,7 @@ Matrix<R_DIM, R_DIM> R;
 const int T = TIMESTEPS;
 const double INFTY = 1e10;
 
-const double alpha_belief = 10, alpha_final_belief = 50, alpha_control = .01, alpha_goal_state = 1;
+//const double alpha_belief = 10, alpha_final_belief = 50, alpha_control = .01, alpha_goal_state = 1;
 
 
 

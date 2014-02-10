@@ -16,6 +16,8 @@ beliefPenaltyMPC_FLOAT **H, **f, **lb, **ub, **C, **D, **e, **z;
 #include "../slam.h"
 #include "../traj/slam-traj.h"
 
+const double alpha_belief = 10, alpha_final_belief = 50, alpha_control = .01;
+
 namespace cfg {
 const double improve_ratio_threshold = .1;
 const double min_approx_improve = 1e-4;

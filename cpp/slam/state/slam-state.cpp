@@ -16,19 +16,37 @@ stateMPC_FLOAT **H, **f, **lb, **ub, **C, **e, **z;
 
 #include "boost/preprocessor.hpp"
 
+const double alpha_belief = 10, alpha_final_belief = 50, alpha_control = .01;
+
 namespace cfg {
 const double improve_ratio_threshold = .1;
 const double min_approx_improve = 1e-4;
 const double min_trust_box_size = 1e-3;
-const double trust_shrink_ratio = .5;
+const double trust_shrink_ratio = .1;
 const double trust_expand_ratio = 1.5;
 const double cnt_tolerance = 1e-4;
-const double penalty_coeff_increase_ratio = 5;
+const double penalty_coeff_increase_ratio = 5; // 5
 const double initial_penalty_coeff = 5;
-const double initial_trust_box_size = 10;
-const int max_penalty_coeff_increases = 3;
+const double initial_trust_box_size = 5;
+const int max_penalty_coeff_increases = 3; // 3
 const int max_sqp_iterations = 50;
 }
+
+/*
+namespace cfg {
+const double improve_ratio_threshold = .1;
+const double min_approx_improve = 1e-3;
+const double min_trust_box_size = 1e-3;
+const double trust_shrink_ratio = .1;
+const double trust_expand_ratio = 1.5;
+const double cnt_tolerance = 1e-4;
+const double penalty_coeff_increase_ratio = 10;
+const double initial_penalty_coeff = 50;
+const double initial_trust_box_size = 1;
+const int max_penalty_coeff_increases = 2;
+const int max_sqp_iterations = 50;
+}
+*/
 
 // utility to fill Matrix in column major format in FORCES array
 template <size_t _numRows>
@@ -796,7 +814,7 @@ int main(int argc, char* argv[])
 		unVec(B[T-1], x0, SqrtSigma0);
 
 		pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
-		exit(0);
+
 	}
 
 	cleanupStateMPCVars();

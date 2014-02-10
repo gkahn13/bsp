@@ -57,7 +57,7 @@ extern const double INFTY;
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
-extern const double alpha_belief, alpha_final_belief, alpha_control, alpha_goal_state;
+//extern const double alpha_belief, alpha_final_belief, alpha_control, alpha_goal_state;
 
 namespace config {
 const double V = 3;

@@ -18,6 +18,9 @@ trajMPC_FLOAT **f_traj, **lb_traj, **ub_traj, **C_traj, **e_traj, **z_traj;
 Matrix<C_DIM> c0;
 Matrix<C_DIM> cGoal;
 
+Matrix<U_DIM> uMinTraj, uMaxTraj;
+
+const double alpha_control = .01;
 const double alpha_goal = 10;
 
 namespace cfg {
@@ -388,7 +391,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 				// x lower bound
 				for(int i = 0; i < C_DIM; ++i) { lb_traj[t][index++] = MAX(xMin[i], xt[i] - Xeps); }
 				// u lower bound
-				for(int i = 0; i < U_DIM; ++i) { lb_traj[t][index++] = MAX(uMin[i], ut[i] - Ueps); }
+				for(int i = 0; i < U_DIM; ++i) { lb_traj[t][index++] = MAX(uMinTraj[i], ut[i] - Ueps); }
 
 				// for lower bound on L1 slacks
 				for(int i = 0; i < 2*C_DIM; ++i) { lb_traj[t][index++] = 0; }
@@ -397,7 +400,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 				// x upper bound
 				for(int i = 0; i < C_DIM; ++i) { ub_traj[t][index++] = MIN(xMax[i], xt[i] + Xeps); }
 				// u upper bound
-				for(int i = 0; i < U_DIM; ++i) { ub_traj[t][index++] = MIN(uMax[i], ut[i] + Ueps); }
+				for(int i = 0; i < U_DIM; ++i) { ub_traj[t][index++] = MIN(uMaxTraj[i], ut[i] + Ueps); }
 
 				//for(int i = 0; i < 2*B_DIM; ++i) { ub_traj[t][index++] = INFTY; }
 			}
@@ -567,15 +570,16 @@ bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 	c0 = cStart;
 	cGoal = cEnd;
 
+	uMinTraj[0] = -10;
+	uMinTraj[1] = -M_PI;
+	uMaxTraj[0] = 10;
+	uMaxTraj[1] = M_PI;
 
 	Matrix<U_DIM> uinit;
 	uinit[0] = sqrt((c0[0] - cGoal[0])*(c0[0] - cGoal[0]) + (c0[1] - cGoal[1])*(c0[1] - cGoal[1])) / (double)((T-1)*DT);
 	uinit[1] = 0;
 
-	// TODO: if problems, change this
-	//uinit[0] *= .01;
 
-	//double scaling[4] = {.01, .05, .25, .5};
 	double scaling[4] = {.5, .25, .05, .01};
 	bool success = false;
 	double initTrajCost = 0, cost = 0;
@@ -583,11 +587,11 @@ bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 	util::Timer solveTimer;
 	Timer_tic(&solveTimer);
 
+	std::vector<Matrix<C_DIM> > X(T);
 	for(int scalingIndex=0; scalingIndex < 4; scalingIndex++) {
 
 		for(int i=0; i < T-1; ++i) { U[i] = uinit*scaling[scalingIndex]; }
 
-		std::vector<Matrix<C_DIM> > X(T);
 		//std::cout << "X initial" << std::endl;
 		X[0].insert(0,0,c0);
 		for(int t=0; t < T-1; ++t) {
@@ -612,6 +616,21 @@ bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 		}
 
 	}
+
+	/*
+	X[0].insert(0,0,c0);
+	for(int t=0; t < T-1; ++t) {
+		X[t+1] = dynfunccar(X[t],U[t]);
+	}
+	try {
+		std::cout << "second trajcollocation" << std::endl;
+		std::cin.ignore();
+		trajCollocation(X, U, problem, output, info);
+		success = true;
+	} catch(exit_exception& e) {
+		success = false;
+	}
+	*/
 
 	double solvetime = util::Timer_toc(&solveTimer);
 

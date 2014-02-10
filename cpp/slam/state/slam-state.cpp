@@ -713,18 +713,28 @@ int main(int argc, char* argv[])
 		}
 		*/
 
-		std::cout << "X car initial" << std::endl;
+		/*
+		vec(x0, SqrtSigma0, B[0]);
+		unVec(B[0], x, s);
+		std::cout << s*s << std::endl;
+
+		B[1] = beliefDynamics(B[0], U[0]);
+		unVec(B[1], x, s);
+		std::cout << s*s << std::endl;
+		exit(0);
+		 */
+
+		//std::cout << "X car initial" << std::endl;
 		vec(x0, SqrtSigma0, B[0]);
 		for(int t=0; t < T-1; ++t) {
 			X[t] = B[t].subMatrix<X_DIM,1>(0,0);
-			std::cout << ~X[t];
+			//std::cout << ~X[t];
 			B[t+1] = beliefDynamics(B[t], U[t]);
 		}
 		X[T-1] = B[T-1].subMatrix<X_DIM,1>(0,0);
-		std::cout << ~X[T-1] << std::endl << std::endl;
+		//std::cout << ~X[T-1] << std::endl << std::endl;
 		//unVec(B[T-1], x, s);
 		//std::cout << s.subMatrix<P_DIM,P_DIM>(0,0) << std::endl;
-
 
 
 		std::cout << "U" << std::endl;

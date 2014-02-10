@@ -45,21 +45,11 @@ const double ALPHA_OBS = .75;
 using namespace CasADi;
 using namespace std;
 
-SXMatrix zeros(int m, int n) {
-	SXMatrix Z(m,n);
-
-	for(int i=0; i < m; ++i) {
-		for(int j=0; j < n; ++j) {
-			Z(i,j) = 0.0;
-		}
-	}
-	return Z;
-}
 
 // dynfunc and obsfunc moved to arm-dynobsjac for analytical Jacobians
 SXMatrix dynfunc(const SXMatrix& x_t, const SXMatrix& u_t)
 {
-  	SXMatrix x_tp1 = x_t;
+	SXMatrix x_tp1 = x_t;
 
   	x_tp1(0) += u_t(0) * DT * cos(x_t(2) + u_t(1));
   	x_tp1(1) += u_t(0) * DT * sin(x_t(2) + u_t(1));
@@ -84,6 +74,10 @@ void linearizeDynamics(const SXMatrix& x, const SXMatrix& u, SXMatrix& A, SXMatr
 	M(1, 1) = vtc;
 	M(2, 0) = DT*sin(u(1))/config::WHEELBASE;
 	M(2, 1) = u(0)*DT*cos(u(1))/config::WHEELBASE;
+
+	for(int i=0; i < X_DIM; ++i) {
+		A(i,i) = 1;
+	}
 
 	A(0,0) = 1;
 	A(1,1) = 1;
@@ -146,12 +140,19 @@ void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMa
 
 	linearizeDynamics(x_t, u_t, A, M);
 
+	//cout << "A" << endl << A << endl;
+	//cout << "M" << endl << M << endl;
+
 	QC(0,0) = config::VELOCITY_NOISE*config::VELOCITY_NOISE;
 	QC(1,1) = config::TURNING_NOISE*config::TURNING_NOISE;
 
 	Sigma_tp1 = mul(mul(A,Sigma_t),trans(A)) + mul(mul(M,QC),trans(M));
 
+	//cout << "Sigma_tp1 first" << endl << Sigma_tp1 << endl;
+
 	x_tp1 = dynfunc(x_t, u_t);
+
+	//cout << "x_tp1" << endl << x_tp1 << endl;
 
 
 	SXMatrix H(Z_DIM,X_DIM), N(Z_DIM,R_DIM), RC(Z_DIM,Z_DIM);
@@ -166,7 +167,7 @@ void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMa
 	}
 
 	//K = ((Sigma_tp1*~H*delta)/(delta*H*Sigma_tp1*~H*delta + RC))*delta;
-	SXMatrix K = mul(mul(mul(Sigma_tp1, mul(trans(H), delta)), solve(mul(delta, mul(H, mul(Sigma_tp1, mul(trans(H), delta)))) + RC, SXMatrix::eye(Z_DIM))), delta);
+	SXMatrix K = mul(mul(mul(Sigma_tp1, mul(trans(H), delta)), solve(mul(delta, mul(H, mul(Sigma_tp1, mul(trans(H), delta)))) + RC, SXMatrix(DMatrix::eye(Z_DIM)))), delta);
 
 	Sigma_tp1 = Sigma_tp1 - mul(K,mul(H,Sigma_tp1));
 }
@@ -210,8 +211,29 @@ void generateCode(FX fcn, const std::string& name){
 	fcn.generateCode(name + ".c");
 }
 
+void test() {
+	SXMatrix x_t(X_DIM,1), u_t(U_DIM,1), Sigma_t(X_DIM,X_DIM), x_tp1(X_DIM,1), Sigma_tp1(X_DIM,X_DIM);
+
+	for(int i=0; i < X_DIM; ++i) { x_t(i) = 0; }
+	x_t(3) = 30; x_t(4) = 10;
+	x_t(5) = 40; x_t(6) = -10;
+
+	u_t(0) = 4.28571;
+	u_t(1) = 0;
+
+	for(int i = 0; i < C_DIM; ++i) { Sigma_t(i,i) = .1*.1; }
+	for(int i = 0; i < L_DIM; ++i) { Sigma_t(C_DIM+i,C_DIM+i) = 1*1; }
+
+	EKF(x_t, u_t, Sigma_t, x_tp1, Sigma_tp1);
+
+	cout << "Sigma_t" << endl << Sigma_t << endl;
+	cout << "x_tp1" << endl << x_tp1 << endl;
+	cout << "Sigma_tp1" << endl << Sigma_tp1 << endl;
+}
+
 int main()
 {
+
 	vector<SXMatrix> X, U;
 	int nXU = T*X_DIM+(T-1)*U_DIM;
 	SXMatrix XU = ssym("XU",nXU,1);

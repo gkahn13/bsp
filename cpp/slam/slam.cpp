@@ -302,10 +302,10 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 
 	Matrix<Z_DIM,Z_DIM> delta = deltaMatrix(x);
 
-	//std::cout << "A" << std::endl << A << std::endl;
-	//std::cout << "M" << std::endl << M << std::endl;
-	//std::cout << "Sigma" << std::endl << Sigma << std::endl;
-	//std::cout << "x" << std::endl << x << std::endl;
+	std::cout << "A" << std::endl << A << std::endl;
+	std::cout << "M" << std::endl << M << std::endl;
+	std::cout << "Sigma" << std::endl << Sigma << std::endl;
+	std::cout << "x" << std::endl << x << std::endl;
 	//std::cout << "H" << std::endl << H << std::endl;
 	//std::cout << "N" << std::endl << N << std::endl;
 	//std::cout << "deltaMatrix" << std::endl;

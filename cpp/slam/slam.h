@@ -1,6 +1,8 @@
 #ifndef __SLAM_H__
 #define __SLAM_H__
 
+#include <Python.h>
+
 #include <fstream>
 #include <math.h>
 
@@ -9,7 +11,6 @@
 #include "../util/matrix.h"
 #include "../util/logging.h"
 
-#include <Python.h>
 //#include <pythonrun.h>
 #include <boost/python.hpp>
 #include <boost/filesystem.hpp>
@@ -24,7 +25,7 @@
 #define P_DIM 2 // Position dimension [x,y]
 #define L_DIM 2*NUM_LANDMARKS
 
-#define X_DIM C_DIM+L_DIM
+#define X_DIM (C_DIM+L_DIM)
 #define U_DIM 2
 #define Z_DIM L_DIM
 #define Q_DIM 2
@@ -32,6 +33,8 @@
 
 #define S_DIM (((X_DIM+1)*(X_DIM))/2)
 #define B_DIM (X_DIM+S_DIM)
+
+#define XU_DIM (TIMESTEPS*X_DIM + (TIMESTEPS-1)*U_DIM)
 
 
 extern const double step;

@@ -582,29 +582,6 @@ double beliefPenaltyCollocation(std::vector< Matrix<B_DIM> >& B, std::vector< Ma
 	return computeCost(B, U);
 }
 
-// must set x0 and xGoal prior to calling this function
-// will only work if |angle(x0) - angle(xGoal)| < pi
-void initializeControls(std::vector<Matrix<U_DIM> >& U) {
-	double deltaAngle = atan2(xGoal[1] - x0[1], xGoal[0] - x0[0]) - x0[2];
-	double initVelInput = 10;
-
-	U[0][0] = initVelInput;
-	U[0][1] = asin((config::WHEELBASE/initVelInput)*deltaAngle);
-
-	Matrix<X_DIM> x1 = dynfunc(x0, U[0], zeros<Q_DIM,1>());
-
-	std::cout << "x0 theta: " << x0[2] << std::endl;
-	std::cout << "deltaAngle: " << deltaAngle << std::endl;
-	std::cout << "U[0]: " << ~U[0];
-	std::cout << "x1: " << ~x1.subMatrix<C_DIM,1>(0,0) << std::endl;
-
-	double vel = sqrt((x1[0] - xGoal[0])*(x1[0] - xGoal[0]) + (x1[1] - xGoal[1])*(x1[1] - xGoal[1])) / (double)((T-2)*DT);
-	for(int t=1; t < T-1; ++t) {
-		U[t][0] = vel;
-		U[t][1] = 0;
-	}
-}
-
 
 
 int main(int argc, char* argv[])

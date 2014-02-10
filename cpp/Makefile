@@ -364,6 +364,29 @@ $(OBJ_DIR)/slamBeliefPenaltyMPC.o : $(SLAM_BELIEF_DIR)/beliefPenaltyMPC.c
 $(OBJ_DIR)/slam-belief.o : $(SLAM_BELIEF_DIR)/slam-belief.cpp $(SLAM_HEADERS)
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
 	
+# make slam-state
+SLAM_STATE_DIR = slam/state
+SLAM_STATE_FILES = slam-state-cost slam-state-grad slamStateMPC slam-state logging slam slam-traj trajMPC
+SLAM_STATE_OBJS = $(SLAM_STATE_FILES:%=$(OBJ_DIR)/%.o)
+
+slam-state-setup:
+	bash $(SLAM_SETUP_FILE) state $(T)
+
+slam-state: | slam-state-setup slam-traj-setup $(SLAM_STATE_OBJS)
+	$(CXX) $(BFLAGS) $(SLAM_STATE_OBJS) -o $(BIN_DIR)/slam-state $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
+	
+$(OBJ_DIR)/slam-state-cost.o : $(SLAM_STATE_DIR)/slam-state-cost.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+
+$(OBJ_DIR)/slam-state-grad.o : $(SLAM_STATE_DIR)/slam-state-grad.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+	
+$(OBJ_DIR)/slamStateMPC.o : $(SLAM_STATE_DIR)/stateMPC.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+	
+$(OBJ_DIR)/slam-state.o : $(SLAM_STATE_DIR)/slam-state.cpp $(SLAM_HEADERS)
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
+	
 
 
 

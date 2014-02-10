@@ -14,7 +14,7 @@
 #define P_DIM 2 // Position dimension [x,y]
 #define L_DIM 2*NUM_LANDMARKS
 
-#define X_DIM C_DIM+L_DIM
+#define X_DIM (C_DIM+L_DIM)
 #define U_DIM 2
 #define Z_DIM L_DIM
 #define Q_DIM 2
@@ -44,6 +44,17 @@ const double ALPHA_OBS = .75;
 
 using namespace CasADi;
 using namespace std;
+
+SXMatrix zeros(int m, int n) {
+	SXMatrix Z(m,n);
+
+	for(int i=0; i < m; ++i) {
+		for(int j=0; j < n; ++j) {
+			Z(i,j) = 0.0;
+		}
+	}
+	return Z;
+}
 
 // dynfunc and obsfunc moved to arm-dynobsjac for analytical Jacobians
 SXMatrix dynfunc(const SXMatrix& x_t, const SXMatrix& u_t)
@@ -181,6 +192,7 @@ SXMatrix costfunc(const SXMatrix& XU, const SXMatrix& Sigma_0, const SXMatrix& p
 		offset += U_DIM;
 
 		cost += params[0]*trace(Sigma_t);
+		cout << x_t << endl;
 		cost += params[1]*inner_prod(u_t, u_t);
 
 		EKF(x_t, u_t, Sigma_t, x_tp1, Sigma_tp1);
@@ -201,7 +213,7 @@ void generateCode(FX fcn, const std::string& name){
 int main()
 {
 	vector<SXMatrix> X, U;
-	int nXU = T*((int)X_DIM)+(T-1)*((int)U_DIM);
+	int nXU = T*X_DIM+(T-1)*U_DIM;
 	SXMatrix XU = ssym("XU",nXU,1);
 	SXMatrix Sigma_0 = ssym("S0",X_DIM,X_DIM);
 	SXMatrix params = ssym("params",3);
@@ -237,9 +249,120 @@ int main()
 	//hess_f_fcn.init();
 
 	// Generate code
-	generateCode(f_fcn,"f");
-	generateCode(grad_f_fcn,"grad_f");
+	generateCode(f_fcn,"slam-state-cost");
+	generateCode(grad_f_fcn,"slam-state-grad");
 	//generateCode(hess_f_fcn,"hess_f");
+
+#define TEST
+#ifdef TEST
+	// test evaluate function
+	double x0[X_DIM], xGoal[X_DIM];
+	double Sigma0[X_DIM][X_DIM];
+
+	x0[0] = 0; x0[1] = 0; x0[2] = 0;
+	x0[3] = 30; x0[4] = 10;
+	x0[5] = 40; x0[6] = -10;
+
+	xGoal[0] = 60; xGoal[1] = 0; xGoal[2] = 0;
+	xGoal[3] = 30; xGoal[4] = 10;
+	xGoal[5] = 40; xGoal[6] = -10;
+
+
+	for(int i = 0; i < X_DIM; ++i) {
+		for(int j = 0; j < X_DIM; ++j) {
+			Sigma0[i][j] = 0;
+		}
+	}
+	for(int i = 0; i < C_DIM; ++i) { Sigma0[i][i] = .1*.1; }
+	for(int i = 0; i < L_DIM; ++i) { Sigma0[C_DIM+i][C_DIM+i] = 1*1; }
+
+
+	double t_x0[nXU];
+	double t_x1[X_DIM*X_DIM];
+	double t_x2[3];
+
+	//double t_r0[1];
+
+	double u[X_DIM];
+	for(int i = 0; i < X_DIM; ++i) {
+		t_x0[i] = x0[i];
+		if (i < U_DIM) {
+			u[i] = (xGoal[i] - x0[i])/(double)(T-1);
+		}
+		//cout << u[i] << endl;
+	}
+	//cout << endl;
+
+	int offset = X_DIM;
+	for(int t = 0; t < (T-1); ++t) {
+		for(int i = 0; i < U_DIM; ++i) {
+			t_x0[offset++] = u[i];
+		}
+		offset += X_DIM;
+	}
+
+	offset = X_DIM+U_DIM;
+	for(int i = 0; i < (T-1); ++i) {
+		for(int i = 0; i < X_DIM; ++i) {
+			// going in straight line horizontally
+			if (i == 0) {
+				t_x0[offset] = t_x0[offset-(X_DIM+U_DIM)] + u[i]*DT;
+			}
+			else {
+				t_x0[offset] = t_x0[offset-(X_DIM+U_DIM)];
+			}
+			offset++;
+		}
+		offset += U_DIM;
+	}
+
+	for(int i = 0; i < X_DIM; ++i) {
+		for(int j = 0; j < X_DIM; ++j) {
+			t_x1[X_DIM*i+j] = Sigma0[i][j];
+		}
+	}
+
+	t_x2[0] = 10; t_x2[1] = 0.01; t_x2[2] = 50;
+
+
+	int index = 0;
+	for(int t=0; t < T-1; ++t) {
+		cout << "x[" << t << "]: ";
+		for(int i=0; i < X_DIM; ++i) {
+			cout << t_x0[index++] << " ";
+		}
+		cout << endl;
+
+		cout << "u[" << t << "]: ";
+		for(int i=0; i < U_DIM; ++i) {
+			cout << t_x0[index++] << " ";
+		}
+		cout << endl;
+	}
+	cout << "x[" << T-1 << "]: ";
+	for(int i=0; i < X_DIM; ++i) {
+		cout << t_x0[index++] << " ";
+	}
+	cout << endl;
+	/*
+		for(int i = 0; i < 174; ++i) {
+			cout << t_x0[i] << " ";
+			if ((i+1)%12 == 0) {
+				cout << endl;
+			}
+		}
+		cout << endl;
+	 */
+
+	f_fcn.setInput(t_x0,0);
+	f_fcn.setInput(t_x1,1);
+	f_fcn.setInput(t_x2,2);
+	f_fcn.evaluate();
+
+	double cost;
+	f_fcn.getOutput(&cost,0);
+	cout << "cost: " << setprecision(12) << cost << endl;
+#endif
 
 
 	return 0;

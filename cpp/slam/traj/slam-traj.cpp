@@ -600,9 +600,8 @@ bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 		LOG_DEBUG("Initial trajectory cost: %4.10f", initTrajCost);
 
 
-		double cost = 0;
 		try {
-			cost = trajCollocation(X, U, problem, output, info);
+			trajCollocation(X, U, problem, output, info);
 			success = true;
 		} catch(exit_exception& e) {
 			success = false;

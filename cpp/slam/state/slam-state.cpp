@@ -18,14 +18,14 @@ stateMPC_FLOAT **H, **f, **lb, **ub, **C, **e, **z;
 
 namespace cfg {
 const double improve_ratio_threshold = .1;
-const double min_approx_improve = 1e-3;
-const double min_trust_box_size = 1e-2;
-const double trust_shrink_ratio = .1;
-const double trust_expand_ratio = 2;
+const double min_approx_improve = 1e-4;
+const double min_trust_box_size = 1e-3;
+const double trust_shrink_ratio = .5;
+const double trust_expand_ratio = 1.5;
 const double cnt_tolerance = 1e-4;
 const double penalty_coeff_increase_ratio = 5;
 const double initial_penalty_coeff = 5;
-const double initial_trust_box_size = 1;
+const double initial_trust_box_size = 10;
 const int max_penalty_coeff_increases = 3;
 const int max_sqp_iterations = 50;
 }
@@ -100,6 +100,29 @@ double casadiComputeCost(const std::vector< Matrix<X_DIM> >& X, const std::vecto
 	evaluateCostWrap(casadi_input, cost_arr);
 
 	return cost;
+}
+
+double casadiComputeMerit(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matrix<U_DIM> >& U, double penalty_coeff)
+{
+	double merit = 0;
+
+	merit = casadiComputeCost(X, U);
+
+	Matrix<X_DIM> x, dynviol;
+	Matrix<X_DIM, X_DIM> SqrtSigma;
+	Matrix<B_DIM> b, b_tp1;
+	vec(x0, SqrtSigma0, b);
+
+	for(int t = 0; t < T-1; ++t) {
+		unVec(b, x, SqrtSigma);
+		b_tp1 = beliefDynamics(b, U[t]);
+		dynviol = (X[t+1] - b_tp1.subMatrix<X_DIM,1>(0,0) );
+		for(int i = 0; i < X_DIM; ++i) {
+			merit += penalty_coeff*fabs(dynviol[i]);
+		}
+		b = b_tp1;
+	}
+	return merit;
 }
 
 void casadiComputeCostGrad(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matrix<U_DIM> >& U, double& cost, Matrix<XU_DIM>& Grad)
@@ -336,7 +359,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 		// In this loop, we repeatedly construct a linear approximation to the nonlinear belief dynamics constraint
 		LOG_DEBUG("  sqp iter: %d", sqp_iter);
 
-		merit = computeMerit(X, U, penalty_coeff);
+		merit = casadiComputeMerit(X, U, penalty_coeff);
 
 		LOG_DEBUG("  merit: %4.10f", merit);
 
@@ -366,7 +389,8 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 				HMat(i,i) = (val < 0) ? 0 : val;
 			}
 
-			fillColMajor(H[t], HMat);
+			// since diagonal, fill directly
+			for(int i = 0; i < (X_DIM+U_DIM); ++i) { H[t][i] = HMat(i,i); }
 
 			zbar.insert(0,0,xt);
 			zbar.insert(X_DIM,0,ut);
@@ -415,7 +439,8 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			HfMat(i,i) = (val < 0) ? 0 : val;
 		}
 
-		fillColMajor(H[T-1], HfMat);
+		// since diagonal, fill directly
+		for(int i = 0; i < X_DIM; ++i) { H[T-1][i] = HMat(i,i); }
 
 		for(int i = 0; i < X_DIM; ++i) {
 			hessian_constant += HfMat(i,i)*xT[i]*xT[i];
@@ -510,6 +535,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			}
 			else {
 				LOG_ERROR("Some problem in solver");
+				pythonDisplayTrajectory(U, T, true);
 				exit(-1);
 			}
 
@@ -517,7 +543,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 
 			model_merit = optcost + constant_cost;
 
-			new_merit = computeMerit(Xopt, Uopt, penalty_coeff);
+			new_merit = casadiComputeMerit(Xopt, Uopt, penalty_coeff);
 
 			LOG_DEBUG("       merit: %4.10f", merit);
 			LOG_DEBUG("       model_merit: %4.10f", model_merit);
@@ -696,33 +722,24 @@ int main(int argc, char* argv[])
 		xGoal.insert(C_DIM, 0, x0.subMatrix<L_DIM,1>(C_DIM,0));
 
 
-
+		/*
 		// initialize velocity to dist / timesteps
 		uinit[0] = sqrt((x0[0] - xGoal[0])*(x0[0] - xGoal[0]) + (x0[1] - xGoal[1])*(x0[1] - xGoal[1])) / (double)((T-1)*DT);
 		// angle already pointed at goal, so is 0
 		uinit[1] = 0;
 
 		std::vector<Matrix<U_DIM> > U(T-1, uinit);
+		*/
 
-		/*
+
 		std::vector<Matrix<U_DIM> > U(T-1);
 		bool initTrajSuccess = initTraj(x0.subMatrix<C_DIM,1>(0,0), xGoal.subMatrix<C_DIM,1>(0,0), U);
 		if (!initTrajSuccess) {
 			LOG_ERROR("Failed to initialize trajectory, exiting slam-belief");
 			exit(-1);
 		}
-		*/
 
-		/*
-		vec(x0, SqrtSigma0, B[0]);
-		unVec(B[0], x, s);
-		std::cout << s*s << std::endl;
 
-		B[1] = beliefDynamics(B[0], U[0]);
-		unVec(B[1], x, s);
-		std::cout << s*s << std::endl;
-		exit(0);
-		 */
 
 		//std::cout << "X car initial" << std::endl;
 		vec(x0, SqrtSigma0, B[0]);
@@ -745,14 +762,13 @@ int main(int argc, char* argv[])
 
 
 
-		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T);
+		pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 
 		double initTrajCost = computeCost(X, U);
 		LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
 
 		double initCasadiTrajCost = casadiComputeCost(X, U);
 		LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
-		exit(0);
 
 		Timer_tic(&solveTimer);
 
@@ -775,10 +791,12 @@ int main(int argc, char* argv[])
 		LOG_INFO("Actual cost: %4.10f", computeCost(X,U));
 		LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 
-		pythonDisplayTrajectory(B, U, waypoints, landmarks, T);
+		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T);
 
 		unVec(B[T-1], x0, SqrtSigma0);
 
+		pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
+		exit(0);
 	}
 
 	cleanupStateMPCVars();

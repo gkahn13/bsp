@@ -199,7 +199,6 @@ void linearizeObservation(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r, Matrix
 		double xd2 = dx/d2;
 		double yd2 = dy/d2;
 
-
 		H(i, 0) = -xd;
 		H(i, 1) = -yd;
 		H(i, 2) = 0;
@@ -302,10 +301,10 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 
 	Matrix<Z_DIM,Z_DIM> delta = deltaMatrix(x);
 
-	std::cout << "A" << std::endl << A << std::endl;
-	std::cout << "M" << std::endl << M << std::endl;
-	std::cout << "Sigma" << std::endl << Sigma << std::endl;
-	std::cout << "x" << std::endl << x << std::endl;
+	//std::cout << "A" << std::endl << A << std::endl;
+	//std::cout << "M" << std::endl << M << std::endl;
+	//std::cout << "Sigma" << std::endl << Sigma << std::endl;
+	//std::cout << "x" << std::endl << x << std::endl;
 	//std::cout << "H" << std::endl << H << std::endl;
 	//std::cout << "N" << std::endl << N << std::endl;
 	//std::cout << "deltaMatrix" << std::endl;
@@ -350,8 +349,18 @@ void linearizeBeliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u, Mat
 	h = beliefDynamics(b, u);
 }
 
+void pythonDisplayTrajectory(std::vector< Matrix<U_DIM> >& U, int time_steps, bool pause=false) {
+	std::vector<Matrix<B_DIM> > B(time_steps);
 
-void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U, std::vector< Matrix<P_DIM> >& waypoints, std::vector< Matrix<P_DIM> >& landmarks, int time_steps)
+	vec(x0, SqrtSigma0, B[0]);
+	for (int t = 0; t < T-1; ++t) {
+		B[t+1] = beliefDynamics(B[t], U[t]);
+	}
+
+	pythonDisplayTrajectory(B, U, waypoints, landmarks, time_steps, pause);
+}
+
+void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U, std::vector< Matrix<P_DIM> >& waypoints, std::vector< Matrix<P_DIM> >& landmarks, int time_steps, bool pause=false)
 {
 
 	py::list B_vec;
@@ -368,23 +377,6 @@ void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matri
 			U_vec.append(U[i][j]);
 		}
 	}
-
-	/*
-	Matrix<X_DIM> x;
-	Matrix<X_DIM,X_DIM> SqrtSigma;
-	for(int i=0; i < time_steps; i++) {
-		unVec(B[i], x, SqrtSigma);
-		B_vec.append(SqrtSigma(0,0));
-	}
-	for(int i=0; i < time_steps; i++) {
-		unVec(B[i], x, SqrtSigma);
-		B_vec.append(SqrtSigma(1,0));
-	}
-	for(int i=0; i < time_steps; i++) {
-		unVec(B[i], x, SqrtSigma);
-		B_vec.append(SqrtSigma(1,1));
-	}
-	*/
 
 	py::list waypoints_vec;
 	for(int j=0; j < 2; j++) {
@@ -417,6 +409,11 @@ void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matri
 	catch(py::error_already_set const &)
 	{
 		PyErr_Print();
+	}
+
+	if (pause) {
+		LOG_INFO("Press enter to continue");
+		std::cin.ignore();
 	}
 
 }

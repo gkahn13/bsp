@@ -28,7 +28,7 @@ typedef double stateMPC_FLOAT;
 /* SOLVER SETTINGS ------------------------------------------------------*/
 /* print level */
 #ifndef stateMPC_SET_PRINTLEVEL
-#define stateMPC_SET_PRINTLEVEL    (0)
+#define stateMPC_SET_PRINTLEVEL    (2)
 #endif
 
 /* timing */
@@ -40,7 +40,7 @@ typedef double stateMPC_FLOAT;
 /* #define PRINTNUMERICALWARNINGS */
 
 /* maximum number of iterations  */
-#define stateMPC_SET_MAXIT         (30)	
+#define stateMPC_SET_MAXIT         (50)	
 
 /* scaling factor of line search (affine direction) */
 #define stateMPC_SET_LS_SCALE_AFF  (0.9)      

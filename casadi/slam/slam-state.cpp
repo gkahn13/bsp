@@ -99,6 +99,17 @@ void linearizeObservation(const SXMatrix& x, SXMatrix& H, SXMatrix& N)
 		SXMatrix xd2 = dx/d2;
 		SXMatrix yd2 = dy/d2;
 
+		/*
+		cout << "dx[" << i << "]: " << dx << endl;
+		cout << "dy[" << i << "]: " << dy << endl;
+		cout << "d2[" << i << "]: " << d2 << endl;
+		cout << "d[" << i << "]: " << d << endl;
+		cout << "xd[" << i << "]: " << xd << endl;
+		cout << "yd[" << i << "]: " << yd << endl;
+		cout << "xd2[" << i << "]: " << xd2 << endl;
+		cout << "yd2[" << i << "]: " << yd2 << endl;
+		*/
+
 		H(i, 0) = -xd;
 		H(i, 1) = -yd;
 		H(i, 2) = 0;
@@ -157,7 +168,10 @@ void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMa
 
 	SXMatrix H(Z_DIM,X_DIM), N(Z_DIM,R_DIM), RC(Z_DIM,Z_DIM);
 
-	linearizeObservation(x_t, H, N);
+	linearizeObservation(x_tp1, H, N);
+
+	//cout << "H" << endl << H << endl;
+	//cout << "N" << endl << N << endl;
 
 	SXMatrix delta = deltaMatrix(x_t);
 
@@ -193,7 +207,6 @@ SXMatrix costfunc(const SXMatrix& XU, const SXMatrix& Sigma_0, const SXMatrix& p
 		offset += U_DIM;
 
 		cost += params[0]*trace(Sigma_t);
-		cout << x_t << endl;
 		cost += params[1]*inner_prod(u_t, u_t);
 
 		EKF(x_t, u_t, Sigma_t, x_tp1, Sigma_tp1);
@@ -218,7 +231,7 @@ void test() {
 	x_t(3) = 30; x_t(4) = 10;
 	x_t(5) = 40; x_t(6) = -10;
 
-	u_t(0) = 4.28571;
+	u_t(0) = (60.0 - 0.0)/((double)(T-1));
 	u_t(1) = 0;
 
 	for(int i = 0; i < C_DIM; ++i) { Sigma_t(i,i) = .1*.1; }
@@ -233,6 +246,7 @@ void test() {
 
 int main()
 {
+
 
 	vector<SXMatrix> X, U;
 	int nXU = T*X_DIM+(T-1)*U_DIM;
@@ -275,7 +289,7 @@ int main()
 	generateCode(grad_f_fcn,"slam-state-grad");
 	//generateCode(hess_f_fcn,"hess_f");
 
-#define TEST
+//#define TEST
 #ifdef TEST
 	// test evaluate function
 	double x0[X_DIM], xGoal[X_DIM];

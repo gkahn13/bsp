@@ -24,12 +24,20 @@ namespace cfg {
 const double improve_ratio_threshold = .1; // .1
 const double min_approx_improve = 1e-3; // 1e-4
 const double min_trust_box_size = 1e-2; // 1e-3
-const double trust_shrink_ratio = .5; // .1
+
+const double trust_shrink_ratio = .5; // .5
 const double trust_expand_ratio = 1.5; // 1.5
+
 const double cnt_tolerance = 1e-4;
 const double penalty_coeff_increase_ratio = 5; // 5
 const double initial_penalty_coeff = 5; // 5
+
 const double initial_trust_box_size = 1; // 5 // split up trust box size for X and U
+const double initial_Xpos_trust_box_size = 1; //1;
+const double initial_Xangle_trust_box_size = M_PI/6; //M_PI/6;
+const double initial_Uvel_trust_box_size = 1; //1;
+const double initial_Uangle_trust_box_size = M_PI/8; //M_PI/8;
+
 const int max_penalty_coeff_increases = 3; // 3
 const int max_sqp_iterations = 50;
 }
@@ -273,57 +281,121 @@ void cleanupStateMPCVars()
 	delete[] z;
 }
 
-// TODO: Check if all inputs are valid, Q, f, lb, ub, A, b at last time step
 bool isValidInputs()
 {
-	// check if Q, f, lb, ub, e are valid!
-	for(int t = 0; t < T-1; ++t)
-	{
-		//for(int i = 0; i < 144; ++i) {
-		//	std::cout << Q[t][i] << " ";
-		//}
-		for(int i = 0; i < 12; ++i) {
+	for(int t = 0; t < T; ++t) {
+
+		std::cout << "t: " << t << std::endl << std::endl;
+		/*
+			std::cout << "f: ";
+			for(int i = 0; i < (3*B_DIM+U_DIM); ++i) {
+				std::cout << f[t][i] << " ";
+			}
+			std::cout << std::endl;
+		 */
+
+		std::cout << "lb c: ";
+		for(int i = 0; i < C_DIM; ++i) {
 			std::cout << lb[t][i] << " ";
 		}
 		std::cout << std::endl;
-		for(int i = 0; i < 12; ++i) {
+
+		std::cout << "ub c: ";
+		for(int i = 0; i < C_DIM; ++i) {
 			std::cout << ub[t][i] << " ";
 		}
-		std::cout << "\n\n";
+		std::cout << std::endl;
+
+		std::cout << "lb l: ";
+		for(int i = 0; i < L_DIM; ++i) {
+			std::cout << lb[t][C_DIM+i] << " ";
+		}
+		std::cout << std::endl;
+
+		std::cout << "ub l: ";
+		for(int i = 0; i < L_DIM; ++i) {
+			std::cout << ub[t][C_DIM+i] << " ";
+		}
+		std::cout << std::endl;
+
+		if (t < T-1) {
+			std::cout << "lb u: ";
+			for(int i = 0; i < U_DIM; ++i) {
+				std::cout << lb[t][X_DIM+i] << " ";
+			}
+			std::cout << std::endl;
+
+			std::cout << "ub u: ";
+			for(int i = 0; i < U_DIM; ++i) {
+				std::cout << ub[t][X_DIM+i] << " ";
+			}
+			std::cout << std::endl;
+		}
+		/*
+			//std::cout << "ub s, t: ";
+			//for(int i = 0; i < 2*B_DIM; ++i) {
+			//	std::cout << ub[t][B_DIM+U_DIM+i] << " ";
+			//}
+			//std::cout << std::endl;
+
+			std::cout << "C:" << std::endl;
+			if (t == 0) {
+				for(int i = 0; i < 2*B_DIM*(3*B_DIM+U_DIM); ++i) {
+					std::cout << C[t][i] << " ";
+				}
+			} else {
+				for(int i = 0; i < B_DIM*(3*B_DIM+U_DIM); ++i) {
+					std::cout << C[t][i] << " ";
+				}
+			}
+			std::cout << std::endl;
+
+			std::cout << "e:" << std::endl;
+			if (t == 0) {
+				for(int i = 0; i < 2*B_DIM; ++i) {
+					std::cout << e[t][i] << " ";
+				}
+			} else {
+				for(int i = 0; i < B_DIM; ++i) {
+					std::cout << e[t][i] << " ";
+				}
+			}
+
+			std::cout << "e:" << std::endl;
+			for(int i = 0; i < B_DIM; ++i) {
+				std::cout << e[t][i] << " ";
+			}
+		 */
+		std::cout << std::endl << std::endl;
 	}
-	for(int i = 0; i < 12; ++i) {
-		std::cout << lb[T-1][i] << " ";
-	}
+	/*
+		std::cout << "e:" << std::endl;
+		for(int i = 0; i < B_DIM; ++i) {
+			std::cout << e[T-1][i] << " ";
+		}
+	 */
+
+
 	std::cout << std::endl;
-	for(int i = 0; i < 6; ++i) {
-		std::cout << ub[T-1][i] << " ";
-	}
-	std::cout << "\n\n";
-
-
-	int magic;
-	std::cin >> magic;
-
+	std::cout << std::endl;
 	return true;
 }
 
-bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >& U, stateMPC_params& problem, stateMPC_output& output, stateMPC_info& info, double penalty_coeff, double trust_box_size)
+bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >& U, stateMPC_params& problem, stateMPC_output& output, stateMPC_info& info, double penalty_coeff)
 {
 	LOG_DEBUG("Solving sqp problem with penalty parameter: %2.4f", penalty_coeff);
-
-	//Matrix<X_DIM,1> x0 = X[0];
-
-	// constrain initial state
-	//for(int i = 0; i < X_DIM; ++i) {
-	//	e[i] = x0[i];
-	//}
 
 	std::vector< Matrix<X_DIM,X_DIM> > F(T-1);
 	std::vector< Matrix<X_DIM,U_DIM> > G(T-1);
 	std::vector< Matrix<X_DIM> > h(T-1);
 
-	double Xeps = trust_box_size;
-	double Ueps = trust_box_size;
+	double Xeps = cfg::initial_trust_box_size;
+	double Ueps = cfg::initial_trust_box_size;
+
+	double Xpos_eps = cfg::initial_Xpos_trust_box_size;
+	double Xangle_eps = cfg::initial_Xangle_trust_box_size;
+	double Uvel_eps = cfg::initial_Uvel_trust_box_size;
+	double Uangle_eps = cfg::initial_Uangle_trust_box_size;
 
 	double optcost;
 
@@ -468,7 +540,6 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 		while(true)
 		{
 			LOG_DEBUG("       trust region size: %2.6f %2.6f", Xeps, Ueps);
-			//std::cout << "       trust region size: " << Xeps << ", " << Ueps << std::endl;
 
 			// solve the innermost QP here
 			for(int t = 0; t < T-1; ++t)
@@ -480,18 +551,45 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 
 				index = 0;
 				// x lower bound
-				for(int i = 0; i < X_DIM; ++i) { lb[t][index++] = MAX(xMin[i], xt[i] - Xeps); }
+				//for(int i = 0; i < X_DIM; ++i) { lb[t][index++] = MAX(xMin[i], xt[i] - Xeps); }
+
+				// car pos lower bound
+				for(int i = 0; i < P_DIM; ++i) { lb[t][index++] = MAX(xMin[i], xt[i] - Xpos_eps); }
+				// car angle lower bound
+				lb[t][index++] = MAX(xMin[P_DIM], xt[P_DIM] - Xangle_eps);
+				// landmark pos lower bound
+				for(int i = C_DIM; i < X_DIM; ++i) { lb[t][index++] = MAX(xMin[i], xt[i] - Xpos_eps); }
+
 				// u lower bound
-				for(int i = 0; i < U_DIM; ++i) { lb[t][index++] = MAX(uMin[i], ut[i] - Ueps); }
+				//for(int i = 0; i < U_DIM; ++i) { lb[t][index++] = MAX(uMin[i], ut[i] - Ueps); }
+
+				// u velocity lower bound
+				lb[t][index++] = MAX(uMin[0], ut[0] - Uvel_eps);
+				// u angle lower bound
+				lb[t][index++] = MAX(uMin[1], ut[1] - Uangle_eps);
 
 				// for lower bound on L1 slacks
 				for(int i = 0; i < 2*X_DIM; ++i) { lb[t][index++] = 0; }
 
 				index = 0;
 				// x upper bound
-				for(int i = 0; i < X_DIM; ++i) { ub[t][index++] = MIN(xMax[i], xt[i] + Xeps); }
+				//for(int i = 0; i < X_DIM; ++i) { ub[t][index++] = MIN(xMax[i], xt[i] + Xeps); }
+
+				// car pos upper bound
+				for(int i = 0; i < P_DIM; ++i) { ub[t][index++] = MIN(xMax[i], xt[i] + Xpos_eps); }
+				// car angle upper bound
+				ub[t][index++] = MIN(xMax[P_DIM], xt[P_DIM] + Xangle_eps);
+				// landmark pos upper bound
+				for(int i = C_DIM; i < X_DIM; ++i) { ub[t][index++] = MIN(xMax[i], xt[i] + Xpos_eps); }
+
+
 				// u upper bound
-				for(int i = 0; i < U_DIM; ++i) { ub[t][index++] = MIN(uMax[i], ut[i] + Ueps); }
+				//for(int i = 0; i < U_DIM; ++i) { ub[t][index++] = MIN(uMax[i], ut[i] + Ueps); }
+
+				// u velocity upper bound
+				ub[t][index++] = MIN(uMax[0], ut[0] + Uvel_eps);
+				// u angle upper bound
+				ub[t][index++] = MIN(uMax[1], ut[1] + Uangle_eps);
 			}
 
 			Matrix<X_DIM>& xT = X[T-1];
@@ -501,14 +599,16 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			double delta = .1;
 			// xGoal lower bound
 			for(int i = 0; i < P_DIM; ++i) { lb[T-1][index++] = xGoal[i] - delta; }
-			// loose on landmarks
-			for(int i = 0; i < X_DIM-P_DIM; ++i) { lb[T-1][index++] = MAX(xMin[i+P_DIM], xT[i+P_DIM] - Xeps); }
+			// loose on car angle and landmarks
+			lb[T-1][index++] = MAX(xMin[P_DIM], xT[P_DIM] - Xangle_eps);
+			for(int i = C_DIM; i < X_DIM; ++i) { lb[T-1][index++] = MAX(xMin[i], xT[i] - Xpos_eps); }
 
 			index = 0;
 			// xGoal upper bound
 			for(int i = 0; i < P_DIM; ++i) { ub[T-1][index++] = xGoal[i] + delta; }
-			// loose on landmarks
-			for(int i = 0; i < X_DIM-P_DIM; ++i) { ub[T-1][index++] = MIN(xMax[i+P_DIM], xT[i+P_DIM] + Xeps); }
+			// loose on car angle and landmarks
+			ub[T-1][index++] = MIN(xMax[P_DIM], xT[P_DIM] + Xangle_eps);
+			for(int i = C_DIM; i < X_DIM; ++i) { ub[T-1][index++] = MIN(xMax[i], xT[i] + Xpos_eps); }
 
 			// Verify problem inputs
 			//if (!isValidInputs()) {
@@ -577,12 +677,21 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 				X = Xopt; U = Uopt;
 				return true;
 			} else if ((exact_merit_improve < 0) || (merit_improve_ratio < cfg::improve_ratio_threshold)) {
-				Xeps *= cfg::trust_shrink_ratio;
-				Ueps *= cfg::trust_shrink_ratio;
-				LOG_DEBUG("Shrinking trust region size to: %2.6f %2.6f", Xeps, Ueps);
+				//Xeps *= cfg::trust_shrink_ratio;
+				//Ueps *= cfg::trust_shrink_ratio;
+				Xpos_eps *= cfg::trust_shrink_ratio;
+				Xangle_eps *= cfg::trust_shrink_ratio;
+				Uvel_eps *= cfg::trust_shrink_ratio;
+				Uangle_eps *= cfg::trust_shrink_ratio;
+				LOG_DEBUG("Shrinking trust region size to: %2.6f %2.6f %2.6f %2.6f", Xpos_eps, Xangle_eps, Uvel_eps, Uangle_eps);
 			} else {
-				Xeps *= cfg::trust_expand_ratio;
-				Ueps *= cfg::trust_expand_ratio;
+				//Xeps *= cfg::trust_expand_ratio;
+				//Ueps *= cfg::trust_expand_ratio;
+				Xpos_eps *= cfg::trust_expand_ratio;
+				Xangle_eps *= cfg::trust_expand_ratio;
+				Uvel_eps *= cfg::trust_expand_ratio;
+				Uangle_eps *= cfg::trust_expand_ratio;
+
 
 				casadiComputeCostGrad(Xopt, Uopt, cost, Gradopt);
 
@@ -633,11 +742,13 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 
 				X = Xopt; U = Uopt;
 
-				LOG_DEBUG("Accepted, Increasing trust region size to:  %2.6f %2.6f", Xeps, Ueps);
+				LOG_DEBUG("Accepted, Increasing trust region size to:  %2.6f %2.6f %2.6f %2.6f", Xpos_eps, Xangle_eps, Uvel_eps, Uangle_eps);
 				break;
 			}
 
-			if (Xeps < cfg::min_trust_box_size && Ueps < cfg::min_trust_box_size) {
+			//if (Xeps < cfg::min_trust_box_size && Ueps < cfg::min_trust_box_size) {
+			if (Xpos_eps < cfg::min_trust_box_size && Xangle_eps < cfg::min_trust_box_size &&
+					Uvel_eps < cfg::min_trust_box_size && Uangle_eps < cfg::min_trust_box_size) {
 			    LOG_DEBUG("Converged: x tolerance");
 			    return true;
 			}
@@ -661,7 +772,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 double statePenaltyCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >& U, stateMPC_params& problem, stateMPC_output& output, stateMPC_info& info)
 {
 	double penalty_coeff = cfg::initial_penalty_coeff;
-	double trust_box_size = cfg::initial_trust_box_size;
+	//double trust_box_size = cfg::initial_trust_box_size;
 
 	int penalty_increases = 0;
 
@@ -670,7 +781,7 @@ double statePenaltyCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Mat
 	// penalty loop
 	while(penalty_increases < cfg::max_penalty_coeff_increases)
 	{
-		bool success = minimizeMeritFunction(X, U, problem, output, info, penalty_coeff, trust_box_size);
+		bool success = minimizeMeritFunction(X, U, problem, output, info, penalty_coeff);
 
 		double cntviol = 0;
 		for(int t = 0; t < T-1; ++t) {
@@ -683,12 +794,11 @@ double statePenaltyCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Mat
 	    success = success && (cntviol < cfg::cnt_tolerance);
 
 		LOG_DEBUG("Constraint violations: %2.10f",cntviol);
-		//std::cout << "Constraint violations: " << cntviol << std::endl;
 
 	    if (!success) {
 	        penalty_increases++;
 	        penalty_coeff = penalty_coeff*cfg::penalty_coeff_increase_ratio;
-	        trust_box_size = cfg::initial_trust_box_size;
+	        //trust_box_size = cfg::initial_trust_box_size;
 	    }
 	    else {
 	    	//return computeCost(X, U);
@@ -795,7 +905,8 @@ int main(int argc, char* argv[])
 			X[t+1] = x;
 			//std::cout << s.subMatrix<P_DIM,P_DIM>(0,0) << std::endl;
 		}
-		std::cout << s.subMatrix<P_DIM,P_DIM>(0,0) << std::endl;
+		std::cout << ~x << std::endl;
+		std::cout << s << std::endl;
 
 		LOG_INFO("Initial cost: %4.10f", initTrajCost);
 		LOG_INFO("Optimized cost: %4.10f", cost);

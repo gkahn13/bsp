@@ -570,15 +570,15 @@ bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 	c0 = cStart;
 	cGoal = cEnd;
 
-	uMinTraj[0] = 0;
+	uMinTraj[0] = .5;
 	uMinTraj[1] = -M_PI;
 	uMaxTraj[0] = 10;
 	uMaxTraj[1] = M_PI;
 
 	Matrix<U_DIM> uinit;
 	uinit[0] = sqrt((c0[0] - cGoal[0])*(c0[0] - cGoal[0]) + (c0[1] - cGoal[1])*(c0[1] - cGoal[1])) / (double)((T-1)*DT);
-	//uinit[1] = 0;
-	uinit[1] = atan2(cGoal[1] - c0[1], cGoal[0] - c0[0]) / (double)((T-1)*DT);
+	uinit[1] = 0;
+	//uinit[1] = atan2(cGoal[1] - c0[1], cGoal[0] - c0[0]) / (double)((T-1)*DT);
 
 
 	double scaling[4] = {.5, .25, .05, .01};

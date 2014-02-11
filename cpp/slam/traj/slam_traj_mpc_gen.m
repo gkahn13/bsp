@@ -21,7 +21,7 @@ nu = 2;
 stages = MultistageProblem(N+1);
 
 alpha_goal = 10;
-alpha_control = .01;
+alpha_control = 1;
 
 R = alpha_control*eye(nu);
 

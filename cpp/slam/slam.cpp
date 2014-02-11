@@ -60,7 +60,7 @@ void initProblemParams()
 	for(int i = 0; i < L_DIM; ++i) { SqrtSigma0(C_DIM+i,C_DIM+i) = 1; }
 
 	// TODO: think of better values for these
-	uMin[0] = -10;
+	uMin[0] = 0; //-10;
 	uMin[1] = -M_PI;
 	uMax[0] = 10;
 	uMax[1] = M_PI;
@@ -348,6 +348,18 @@ void linearizeBeliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u, Mat
 
 	h = beliefDynamics(b, u);
 }
+
+void pythonDisplayTrajectory(std::vector< Matrix<X_DIM> >& X, int time_steps, bool pause=false) {
+	std::vector<Matrix<B_DIM> > B(time_steps);
+	std::vector<Matrix<U_DIM> > U(time_steps-1,zeros<U_DIM,1>());
+
+	for (int t = 0; t < T; ++t) {
+		vec(X[t], zeros<X_DIM,X_DIM>(), B[t]);
+	}
+
+	pythonDisplayTrajectory(B, U, waypoints, landmarks, time_steps, pause);
+}
+
 
 void pythonDisplayTrajectory(std::vector< Matrix<U_DIM> >& U, int time_steps, bool pause=false) {
 	std::vector<Matrix<B_DIM> > B(time_steps);

@@ -16,37 +16,23 @@ stateMPC_FLOAT **H, **f, **lb, **ub, **C, **e, **z;
 
 #include "boost/preprocessor.hpp"
 
-const double alpha_belief = 10, alpha_final_belief = 50, alpha_control = .01;
+const double alpha_belief = 10;//10;
+const double alpha_final_belief = 50;//50;
+const double alpha_control = .01;//.01
 
 namespace cfg {
-const double improve_ratio_threshold = .1;
-const double min_approx_improve = 1e-4;
-const double min_trust_box_size = 1e-3;
-const double trust_shrink_ratio = .1;
-const double trust_expand_ratio = 1.5;
+const double improve_ratio_threshold = .1; // .1
+const double min_approx_improve = 1e-3; // 1e-4
+const double min_trust_box_size = 1e-2; // 1e-3
+const double trust_shrink_ratio = .5; // .1
+const double trust_expand_ratio = 1.5; // 1.5
 const double cnt_tolerance = 1e-4;
 const double penalty_coeff_increase_ratio = 5; // 5
-const double initial_penalty_coeff = 5;
-const double initial_trust_box_size = 5;
+const double initial_penalty_coeff = 5; // 5
+const double initial_trust_box_size = 1; // 5 // split up trust box size for X and U
 const int max_penalty_coeff_increases = 3; // 3
 const int max_sqp_iterations = 50;
 }
-
-/*
-namespace cfg {
-const double improve_ratio_threshold = .1;
-const double min_approx_improve = 1e-3;
-const double min_trust_box_size = 1e-3;
-const double trust_shrink_ratio = .1;
-const double trust_expand_ratio = 1.5;
-const double cnt_tolerance = 1e-4;
-const double penalty_coeff_increase_ratio = 10;
-const double initial_penalty_coeff = 50;
-const double initial_trust_box_size = 1;
-const int max_penalty_coeff_increases = 2;
-const int max_sqp_iterations = 50;
-}
-*/
 
 // utility to fill Matrix in column major format in FORCES array
 template <size_t _numRows>
@@ -409,6 +395,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 
 			// since diagonal, fill directly
 			for(int i = 0; i < (X_DIM+U_DIM); ++i) { H[t][i] = HMat(i,i); }
+			for(int i = 0; i < (2*X_DIM); ++i) { H[t][i + (X_DIM+U_DIM)] = 0; }
 
 			zbar.insert(0,0,xt);
 			zbar.insert(X_DIM,0,ut);
@@ -419,12 +406,12 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 				f[t][i] = Grad[idx+i] - HMat(i,i)*zbar[i];
 			}
 
-			// fill in linearizations
-
-			linearizeCarDynamics(xt, ut, F[t], G[t], h[t]);
-
 			// penalize dynamics slack variables
 			for(int i = X_DIM+U_DIM; i < 3*X_DIM+U_DIM; ++i) { f[t][i] = penalty_coeff; }
+
+			// fill in linearizations
+			linearizeCarDynamics(xt, ut, F[t], G[t], h[t]);
+
 
 			CMat.reset();
 			eVec.reset();
@@ -655,6 +642,13 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			    return true;
 			}
 
+			std::cout << "U" << std::endl;
+			for(int t=0; t < T-1; ++t) {
+				std::cout << ~U[t];
+			}
+			std::cout << std::endl << std::endl;
+			//pythonDisplayTrajectory(U, T, false);
+			//pythonDisplayTrajectory(X, T, true);
 
 		} // trust region loop
 		sqp_iter++;
@@ -779,14 +773,13 @@ int main(int argc, char* argv[])
 		std::cout << std::endl;
 
 
-
-		pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
-
 		double initTrajCost = computeCost(X, U);
 		LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
 
 		double initCasadiTrajCost = casadiComputeCost(X, U);
 		LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
+
+		pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 
 		Timer_tic(&solveTimer);
 

@@ -259,12 +259,14 @@ int main()
 
 	SXMatrix grad_f = gradient(f,XU);
 
-	//SXMatrix hess_f = hessian(f,XU);
+	/*
+	SXMatrix hess_f = hessian(f,XU);
 
-	//SXMatrix diag_hess_f(nXU,1);
-	//for(int i = 0; i < nXU; ++i) {
-	//	diag_hess_f(i) = hess_f(i,i);
-	//}
+	SXMatrix diag_hess_f(nXU,1);
+	for(int i = 0; i < nXU; ++i) {
+		diag_hess_f(i) = hess_f(i,i);
+	}
+	*/
 
 	// Create functions
 	vector<SXMatrix> inp;
@@ -287,7 +289,7 @@ int main()
 	// Generate code
 	generateCode(f_fcn,"slam-state-cost");
 	generateCode(grad_f_fcn,"slam-state-grad");
-	//generateCode(hess_f_fcn,"hess_f");
+	//generateCode(hess_f_fcn,"slam-state-diag-hess");
 
 //#define TEST
 #ifdef TEST

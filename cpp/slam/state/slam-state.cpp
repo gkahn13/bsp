@@ -467,7 +467,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 
 			// since diagonal, fill directly
 			for(int i = 0; i < (X_DIM+U_DIM); ++i) { H[t][i] = HMat(i,i); }
-			for(int i = 0; i < (2*X_DIM); ++i) { H[t][i + (X_DIM+U_DIM)] = 0; }
+			for(int i = 0; i < (2*X_DIM); ++i) { H[t][i + (X_DIM+U_DIM)] = 1e4; }
 
 			zbar.insert(0,0,xt);
 			zbar.insert(X_DIM,0,ut);
@@ -596,18 +596,20 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 
 			// Fill in lb, ub, C, e
 			index = 0;
-			double delta = .1;
+			double posDelta = .1;
+			double angleDelta = M_PI/4;
+
 			// xGoal lower bound
-			for(int i = 0; i < P_DIM; ++i) { lb[T-1][index++] = xGoal[i] - delta; }
+			for(int i = 0; i < P_DIM; ++i) { lb[T-1][index++] = xGoal[i] - posDelta; }
 			// loose on car angle and landmarks
-			lb[T-1][index++] = MAX(xMin[P_DIM], xT[P_DIM] - Xangle_eps);
+			lb[T-1][index++] = xGoal[2] - angleDelta;//MAX(xMin[P_DIM], xT[P_DIM] - Xangle_eps);
 			for(int i = C_DIM; i < X_DIM; ++i) { lb[T-1][index++] = MAX(xMin[i], xT[i] - Xpos_eps); }
 
 			index = 0;
 			// xGoal upper bound
-			for(int i = 0; i < P_DIM; ++i) { ub[T-1][index++] = xGoal[i] + delta; }
+			for(int i = 0; i < P_DIM; ++i) { ub[T-1][index++] = xGoal[i] + posDelta; }
 			// loose on car angle and landmarks
-			ub[T-1][index++] = MIN(xMax[P_DIM], xT[P_DIM] + Xangle_eps);
+			ub[T-1][index++] = xGoal[2] + angleDelta; //MIN(xMax[P_DIM], xT[P_DIM] + Xangle_eps);
 			for(int i = C_DIM; i < X_DIM; ++i) { ub[T-1][index++] = MIN(xMax[i], xT[i] + Xpos_eps); }
 
 			// Verify problem inputs
@@ -838,7 +840,13 @@ int main(int argc, char* argv[])
 
 		//xGoal[2] = x0[2];
 		//x0[2] = atan2(xGoal[1] - x0[1], xGoal[0] - x0[0]);
-		xGoal[2] = atan2(xGoal[1] - x0[1], xGoal[0] - x0[0]);
+
+		// want to be facing the next waypoint
+		if (i < NUM_WAYPOINTS - 1) {
+			xGoal[2] = atan2(waypoints[i+1][1] - waypoints[i][1], waypoints[i+1][0] - waypoints[i][0]);
+		} else {
+			xGoal[2] = atan2(xGoal[1] - x0[1], xGoal[0] - x0[0]);
+		}
 
 
 		xGoal.insert(C_DIM, 0, x0.subMatrix<L_DIM,1>(C_DIM,0));
@@ -903,10 +911,20 @@ int main(int argc, char* argv[])
 			B[t+1] = beliefDynamics(B[t], U[t]);
 			unVec(B[t+1], x, s);
 			X[t+1] = x;
-			//std::cout << s.subMatrix<P_DIM,P_DIM>(0,0) << std::endl;
 		}
-		std::cout << ~x << std::endl;
-		std::cout << s << std::endl;
+
+		std::cout << "X car" << std::endl;
+		for(int t=0; t < T; ++t) {
+			std::cout << ~X[t].subMatrix<C_DIM,1>(0,0);
+		}
+		std::cout << std::endl << std::endl;
+
+		std::cout << "U" << std::endl;
+		for(int t=0; t < T-1; ++t) {
+			std::cout << ~U[t];
+		}
+		std::cout << std::endl;
+
 
 		LOG_INFO("Initial cost: %4.10f", initTrajCost);
 		LOG_INFO("Optimized cost: %4.10f", cost);
@@ -923,10 +941,6 @@ int main(int argc, char* argv[])
 
 	cleanupStateMPCVars();
 
-	//vec(x0, SqrtSigma0, B[0]);
-	//for (size_t t = 0; t < T-1; ++t) {
-	//	B[t+1] = beliefDynamics(B[t], U[t]);
-	//}
 
 	return 0;
 }

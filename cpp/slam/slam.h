@@ -19,7 +19,7 @@
 #define TIMESTEPS 15
 #define DT 1.0
 #define NUM_LANDMARKS 2
-#define NUM_WAYPOINTS 1
+#define NUM_WAYPOINTS 3
 
 #define C_DIM 3 // car dimension [x, y, theta]
 #define P_DIM 2 // Position dimension [x,y]

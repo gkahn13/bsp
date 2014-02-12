@@ -571,9 +571,9 @@ bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 	cGoal = cEnd;
 
 	uMinTraj[0] = .5;
-	uMinTraj[1] = -M_PI;
+	uMinTraj[1] = -M_PI/4;
 	uMaxTraj[0] = 10;
-	uMaxTraj[1] = M_PI;
+	uMaxTraj[1] = M_PI/4;
 
 	Matrix<U_DIM> uinit;
 	uinit[0] = sqrt((c0[0] - cGoal[0])*(c0[0] - cGoal[0]) + (c0[1] - cGoal[1])*(c0[1] - cGoal[1])) / (double)((T-1)*DT);

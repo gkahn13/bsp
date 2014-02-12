@@ -37,28 +37,34 @@ void initProblemParams()
 		R(i+1,i+1) = 1*config::OBS_ANGLE_NOISE*config::OBS_ANGLE_NOISE; // 1e-5
 	}
 
-	waypoints[0][0] = 60; waypoints[0][1] = 20;
+	waypoints[0][0] = 60; waypoints[0][1] = 0;
+	waypoints[1][0] = 60; waypoints[1][1] = 20;
+	waypoints[2][0] = 0; waypoints[2][1] = 20;
 
 	landmarks[0][0] = 30; landmarks[0][1] = 10;
 	landmarks[1][0] = 40; landmarks[1][1] = -10;
 
+	//landmarks[0][0] = 0; landmarks[0][1] = 10;
+	//landmarks[1][0] = 0; landmarks[1][1] = 10;
+
 
 	// start at (0, 0)
 	// landmarks will be the same for all waypoint-waypoint optimizations
-	//x0.insert(0, 0, zeros<C_DIM,1>());
+	x0.insert(0, 0, zeros<C_DIM,1>());
 
-	x0[0] = 60;
-	x0[1] = 0;
-	x0[2] = -.65;
+	//x0[0] = 60;
+	//x0[1] = 0;
+	//x0[2] = -.65;
 	for(int i = 0; i < NUM_LANDMARKS; ++i) {
 		x0.insert(C_DIM+2*i, 0, landmarks[i]);
 	}
 
 	//This starts out at 0 for car, landmarks are set based on the car's sigma when first seen
 	SqrtSigma0 = zeros<X_DIM, X_DIM>();
-	//for(int i = 0; i < C_DIM; ++i) { SqrtSigma0(i,i) = .1; }
-	//for(int i = 0; i < L_DIM; ++i) { SqrtSigma0(C_DIM+i,C_DIM+i) = 1; }
+	for(int i = 0; i < C_DIM; ++i) { SqrtSigma0(i,i) = .1; }
+	for(int i = 0; i < L_DIM; ++i) { SqrtSigma0(C_DIM+i,C_DIM+i) = 1; }
 
+	/*
 	double SqrtSigma0arr[X_DIM*X_DIM] = {0.86099, -0.13141, -0.0174449,  0.142165, 0.0154876,   0.209152, 0.03075,
 		-0.13141,    2.36482,    0.128894,   -0.144078,  0.0425713,  0.353772,   0.304487,
 		-0.0174449, 0.128894,   0.108498,   0.00684147, -0.0122736, 0.0030617,  -0.0221395,
@@ -73,9 +79,10 @@ void initProblemParams()
 			SqrtSigma0(i,j) = SqrtSigma0arr[index++];
 		}
 	}
+	*/
 
 	// TODO: think of better values for these
-	uMin[0] = 0; //-10;
+	uMin[0] = 1;
 	uMin[1] = -M_PI;
 	uMax[0] = 10;
 	uMax[1] = M_PI;

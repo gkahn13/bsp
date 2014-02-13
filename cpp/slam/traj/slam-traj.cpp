@@ -24,17 +24,20 @@ const double alpha_control = 1;//.01;
 const double alpha_goal = 10;
 
 namespace cfg {
-const double improve_ratio_threshold = .1;
-const double min_approx_improve = 1e-3;
-const double min_trust_box_size = 1e-3;
-const double trust_shrink_ratio = .1;
-const double trust_expand_ratio = 1.5;
+const double improve_ratio_threshold = .1; // .1
+const double min_approx_improve = 1e-3; // 1e-3
+const double min_trust_box_size = 1e-3; // 1e-3
+
+const double trust_shrink_ratio = .1; // .1
+const double trust_expand_ratio = 1.5; // 1.5
+
 const double cnt_tolerance = 1e-4;
-const double penalty_coeff_increase_ratio = 10;
-const double initial_penalty_coeff = 50;
-const double initial_trust_box_size = 1;
-const int max_penalty_coeff_increases = 2;
-const int max_sqp_iterations = 50;
+const double penalty_coeff_increase_ratio = 10; // 10
+const double initial_penalty_coeff = 10; // 50
+const double initial_trust_box_size = 1; // 1
+
+const int max_penalty_coeff_increases = 2; // 2
+const int max_sqp_iterations = 50; // 50
 }
 
 struct exit_exception {
@@ -609,6 +612,7 @@ bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 			trajCollocation(X, U, problem, output, info);
 			success = true;
 		} catch(exit_exception& e) {
+			pythonDisplayTrajectory(U, T, true);
 			success = false;
 		}
 

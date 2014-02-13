@@ -40,6 +40,7 @@ void initProblemParams()
 	waypoints[0][0] = 60; waypoints[0][1] = 0;
 	waypoints[1][0] = 60; waypoints[1][1] = 20;
 	waypoints[2][0] = 0; waypoints[2][1] = 20;
+	waypoints[3][0] = 0; waypoints[3][1] = 5;
 
 	landmarks[0][0] = 30; landmarks[0][1] = -10;
 	landmarks[1][0] = 40; landmarks[1][1] = 15;
@@ -90,7 +91,7 @@ void initProblemParams()
 
 	xMin[0] = -20;
 	xMin[1] = -20;
-	xMin[2] = -M_PI;
+	xMin[2] = -2*M_PI;
 	for(int i=0; i < NUM_LANDMARKS; i++) {
 		xMin[2*i+C_DIM] = landmarks[i][0] - 5;
 		xMin[2*i+1+C_DIM] = landmarks[i][1] - 5;
@@ -98,7 +99,7 @@ void initProblemParams()
 
 	xMax[0] = 80;
 	xMax[1] = 80;
-	xMax[2] = M_PI;
+	xMax[2] = 2*M_PI;
 	for(int i=0; i < NUM_LANDMARKS; i++) {
 		xMax[2*i+C_DIM] = landmarks[i][0] + 5;
 		xMax[2*i+1+C_DIM] = landmarks[i][1] + 5;

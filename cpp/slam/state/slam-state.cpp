@@ -20,6 +20,7 @@ const double alpha_belief = 10; // 10;
 const double alpha_final_belief = 50; // 50;
 const double alpha_control = .01; // .01
 
+
 namespace cfg {
 const double improve_ratio_threshold = .1; // .1
 const double min_approx_improve = 1e-3; // 1e-4
@@ -41,6 +42,7 @@ const double initial_Uangle_trust_box_size = M_PI/8; // M_PI/8;
 const int max_penalty_coeff_increases = 8; // 8
 const int max_sqp_iterations = 50; // 50
 }
+
 
 // utility to fill Matrix in column major format in FORCES array
 template <size_t _numRows>
@@ -597,20 +599,20 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 
 			// Fill in lb, ub
 			index = 0;
-			double posDelta = .1;
-			double angleDelta = M_PI/4;
+			double finalPosDelta = .1;
+			double finalAngleDelta = M_PI/4;
 
 			// xGoal lower bound
-			for(int i = 0; i < P_DIM; ++i) { lb[T-1][index++] = xGoal[i] - posDelta; }
+			for(int i = 0; i < P_DIM; ++i) { lb[T-1][index++] = xGoal[i] - finalPosDelta; }
 			// loose on car angle and landmarks
-			lb[T-1][index++] = xGoal[2] - angleDelta;//MAX(xMin[P_DIM], xT[P_DIM] - Xangle_eps);
+			lb[T-1][index++] = xGoal[2] - finalAngleDelta;//MAX(xMin[P_DIM], xT[P_DIM] - Xangle_eps);
 			for(int i = C_DIM; i < X_DIM; ++i) { lb[T-1][index++] = MAX(xMin[i], xT[i] - Xpos_eps); }
 
 			index = 0;
 			// xGoal upper bound
-			for(int i = 0; i < P_DIM; ++i) { ub[T-1][index++] = xGoal[i] + posDelta; }
+			for(int i = 0; i < P_DIM; ++i) { ub[T-1][index++] = xGoal[i] + finalPosDelta; }
 			// loose on car angle and landmarks
-			ub[T-1][index++] = xGoal[2] + angleDelta; //MIN(xMax[P_DIM], xT[P_DIM] + Xangle_eps);
+			ub[T-1][index++] = xGoal[2] + finalAngleDelta; //MIN(xMax[P_DIM], xT[P_DIM] + Xangle_eps);
 			for(int i = C_DIM; i < X_DIM; ++i) { ub[T-1][index++] = MIN(xMax[i], xT[i] + Xpos_eps); }
 
 			// Verify problem inputs

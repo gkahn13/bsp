@@ -33,7 +33,7 @@ const double trust_expand_ratio = 1.5; // 1.5
 
 const double cnt_tolerance = 1e-4;
 const double penalty_coeff_increase_ratio = 10; // 10
-const double initial_penalty_coeff = 10; // 50
+const double initial_penalty_coeff = 10; // 10
 const double initial_trust_box_size = 1; // 1
 
 const int max_penalty_coeff_increases = 2; // 2
@@ -580,8 +580,8 @@ bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 
 	Matrix<U_DIM> uinit;
 	uinit[0] = sqrt((c0[0] - cGoal[0])*(c0[0] - cGoal[0]) + (c0[1] - cGoal[1])*(c0[1] - cGoal[1])) / (double)((T-1)*DT);
-	uinit[1] = 0;
-	//uinit[1] = atan2(cGoal[1] - c0[1], cGoal[0] - c0[0]) / (double)((T-1)*DT);
+	//uinit[1] = 0;
+	uinit[1] = atan2(cGoal[1] - c0[1], cGoal[0] - c0[0]) / (double)((T-1)*DT);
 
 
 	double scaling[4] = {.5, .25, .05, .01};
@@ -622,20 +622,6 @@ bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 
 	}
 
-	/*
-	X[0].insert(0,0,c0);
-	for(int t=0; t < T-1; ++t) {
-		X[t+1] = dynfunccar(X[t],U[t]);
-	}
-	try {
-		std::cout << "second trajcollocation" << std::endl;
-		std::cin.ignore();
-		trajCollocation(X, U, problem, output, info);
-		success = true;
-	} catch(exit_exception& e) {
-		success = false;
-	}
-	*/
 
 	double solvetime = util::Timer_toc(&solveTimer);
 

@@ -16,8 +16,7 @@ disp(strcat(rootDir,'bsp/forces'));
 % problem setup
 N = timesteps - 1;
 
-landmarks = 2;
-waypoints = 3;
+landmarks = 3;
 
 nx = 3 + 2*landmarks;
 % ns = ((nx+1)*nx)/2;
@@ -131,7 +130,7 @@ outputs(i) = newOutput(var,i,1:nx);
 % solver settings
 mpcname = 'stateMPC';
 codeoptions = getOptions(mpcname);
-codeoptions.printlevel = 1;
+codeoptions.printlevel = 2;
 codeoptions.timing=0;
 codeoptions.maxit=50;
 

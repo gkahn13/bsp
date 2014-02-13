@@ -41,8 +41,9 @@ void initProblemParams()
 	waypoints[1][0] = 60; waypoints[1][1] = 20;
 	waypoints[2][0] = 0; waypoints[2][1] = 20;
 
-	landmarks[0][0] = 30; landmarks[0][1] = 10;
-	landmarks[1][0] = 40; landmarks[1][1] = -10;
+	landmarks[0][0] = 30; landmarks[0][1] = -10;
+	landmarks[1][0] = 40; landmarks[1][1] = 15;
+	landmarks[2][0] = 20; landmarks[2][1] = 10;
 
 	//landmarks[0][0] = 0; landmarks[0][1] = 10;
 	//landmarks[1][0] = 0; landmarks[1][1] = 10;
@@ -83,9 +84,9 @@ void initProblemParams()
 
 	// TODO: think of better values for these
 	uMin[0] = 1;
-	uMin[1] = -M_PI;
+	uMin[1] = -M_PI/3;
 	uMax[0] = 10;
-	uMax[1] = M_PI;
+	uMax[1] = M_PI/3;
 
 	xMin[0] = -20;
 	xMin[1] = -20;

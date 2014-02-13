@@ -7,7 +7,7 @@
 
 
 #define TIMESTEPS 15
-#define NUM_LANDMARKS 2
+#define NUM_LANDMARKS 3
 #define NUM_WAYPOINTS 3
 
 #define C_DIM 3 // car dimension [x, y, theta]

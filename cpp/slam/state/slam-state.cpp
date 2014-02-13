@@ -16,9 +16,9 @@ stateMPC_FLOAT **H, **f, **lb, **ub, **C, **e, **z;
 
 #include "boost/preprocessor.hpp"
 
-const double alpha_belief = 10;//10;
-const double alpha_final_belief = 50;//50;
-const double alpha_control = .01;//.01
+const double alpha_belief = 10; // 10;
+const double alpha_final_belief = 50; // 50;
+const double alpha_control = .01; // .01
 
 namespace cfg {
 const double improve_ratio_threshold = .1; // .1
@@ -26,20 +26,20 @@ const double min_approx_improve = 1e-3; // 1e-4
 const double min_trust_box_size = 1e-2; // 1e-3
 
 const double trust_shrink_ratio = .5; // .5
-const double trust_expand_ratio = 1.5; // 1.5
+const double trust_expand_ratio = 1.2; // 1.5
 
 const double cnt_tolerance = 1e-4;
 const double penalty_coeff_increase_ratio = 5; // 5
 const double initial_penalty_coeff = 5; // 5
 
 const double initial_trust_box_size = 1; // 5 // split up trust box size for X and U
-const double initial_Xpos_trust_box_size = 1; //1;
-const double initial_Xangle_trust_box_size = M_PI/6; //M_PI/6;
-const double initial_Uvel_trust_box_size = 1; //1;
-const double initial_Uangle_trust_box_size = M_PI/8; //M_PI/8;
+const double initial_Xpos_trust_box_size = 1; // 1;
+const double initial_Xangle_trust_box_size = M_PI/6; // M_PI/6;
+const double initial_Uvel_trust_box_size = 1; // 1;
+const double initial_Uangle_trust_box_size = M_PI/8; // M_PI/8;
 
-const int max_penalty_coeff_increases = 3; // 3
-const int max_sqp_iterations = 50;
+const int max_penalty_coeff_increases = 8; // 8
+const int max_sqp_iterations = 50; // 50
 }
 
 // utility to fill Matrix in column major format in FORCES array
@@ -467,7 +467,8 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 
 			// since diagonal, fill directly
 			for(int i = 0; i < (X_DIM+U_DIM); ++i) { H[t][i] = HMat(i,i); }
-			for(int i = 0; i < (2*X_DIM); ++i) { H[t][i + (X_DIM+U_DIM)] = 1e4; }
+			// TODO: why does this work???
+			for(int i = 0; i < (2*X_DIM); ++i) { H[t][i + (X_DIM+U_DIM)] = 1e4; } //1e4
 
 			zbar.insert(0,0,xt);
 			zbar.insert(X_DIM,0,ut);
@@ -594,7 +595,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 
 			Matrix<X_DIM>& xT = X[T-1];
 
-			// Fill in lb, ub, C, e
+			// Fill in lb, ub
 			index = 0;
 			double posDelta = .1;
 			double angleDelta = M_PI/4;
@@ -618,9 +619,6 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			//	exit(-1);
 			//}
 
-			//std::cerr << "PAUSING INSIDE MINIMIZE MERIT FUNCTION FOR INPUT VERIFICATION" << std::endl;
-			//int num;
-			//std::cin >> num;
 
 			int exitflag = stateMPC_solve(&problem, &output, &info);
 			if (exitflag == 1) {

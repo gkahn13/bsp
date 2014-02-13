@@ -28,7 +28,7 @@ typedef double stateMPC_FLOAT;
 /* SOLVER SETTINGS ------------------------------------------------------*/
 /* print level */
 #ifndef stateMPC_SET_PRINTLEVEL
-#define stateMPC_SET_PRINTLEVEL    (1)
+#define stateMPC_SET_PRINTLEVEL    (2)
 #endif
 
 /* timing */
@@ -84,272 +84,272 @@ typedef double stateMPC_FLOAT;
 /* fill this with data before calling the solver! */
 typedef struct stateMPC_params
 {
-    /* diagonal matrix of size [23 x 23] (only the diagonal is stored) */
-    stateMPC_FLOAT H1[23];
+    /* diagonal matrix of size [29 x 29] (only the diagonal is stored) */
+    stateMPC_FLOAT H1[29];
 
-    /* vector of size 23 */
-    stateMPC_FLOAT f1[23];
+    /* vector of size 29 */
+    stateMPC_FLOAT f1[29];
 
-    /* vector of size 23 */
-    stateMPC_FLOAT lb1[23];
+    /* vector of size 29 */
+    stateMPC_FLOAT lb1[29];
 
-    /* vector of size 9 */
-    stateMPC_FLOAT ub1[9];
+    /* vector of size 11 */
+    stateMPC_FLOAT ub1[11];
 
-    /* matrix of size [7 x 23] (column major format) */
-    stateMPC_FLOAT C1[161];
-
-    /* vector of size 7 */
-    stateMPC_FLOAT e1[7];
-
-    /* diagonal matrix of size [23 x 23] (only the diagonal is stored) */
-    stateMPC_FLOAT H2[23];
-
-    /* vector of size 23 */
-    stateMPC_FLOAT f2[23];
-
-    /* vector of size 23 */
-    stateMPC_FLOAT lb2[23];
+    /* matrix of size [9 x 29] (column major format) */
+    stateMPC_FLOAT C1[261];
 
     /* vector of size 9 */
-    stateMPC_FLOAT ub2[9];
+    stateMPC_FLOAT e1[9];
 
-    /* matrix of size [7 x 23] (column major format) */
-    stateMPC_FLOAT C2[161];
+    /* diagonal matrix of size [29 x 29] (only the diagonal is stored) */
+    stateMPC_FLOAT H2[29];
 
-    /* vector of size 7 */
-    stateMPC_FLOAT e2[7];
+    /* vector of size 29 */
+    stateMPC_FLOAT f2[29];
 
-    /* diagonal matrix of size [23 x 23] (only the diagonal is stored) */
-    stateMPC_FLOAT H3[23];
+    /* vector of size 29 */
+    stateMPC_FLOAT lb2[29];
 
-    /* vector of size 23 */
-    stateMPC_FLOAT f3[23];
+    /* vector of size 11 */
+    stateMPC_FLOAT ub2[11];
 
-    /* vector of size 23 */
-    stateMPC_FLOAT lb3[23];
-
-    /* vector of size 9 */
-    stateMPC_FLOAT ub3[9];
-
-    /* matrix of size [7 x 23] (column major format) */
-    stateMPC_FLOAT C3[161];
-
-    /* vector of size 7 */
-    stateMPC_FLOAT e3[7];
-
-    /* diagonal matrix of size [23 x 23] (only the diagonal is stored) */
-    stateMPC_FLOAT H4[23];
-
-    /* vector of size 23 */
-    stateMPC_FLOAT f4[23];
-
-    /* vector of size 23 */
-    stateMPC_FLOAT lb4[23];
+    /* matrix of size [9 x 29] (column major format) */
+    stateMPC_FLOAT C2[261];
 
     /* vector of size 9 */
-    stateMPC_FLOAT ub4[9];
+    stateMPC_FLOAT e2[9];
 
-    /* matrix of size [7 x 23] (column major format) */
-    stateMPC_FLOAT C4[161];
+    /* diagonal matrix of size [29 x 29] (only the diagonal is stored) */
+    stateMPC_FLOAT H3[29];
 
-    /* vector of size 7 */
-    stateMPC_FLOAT e4[7];
+    /* vector of size 29 */
+    stateMPC_FLOAT f3[29];
 
-    /* diagonal matrix of size [23 x 23] (only the diagonal is stored) */
-    stateMPC_FLOAT H5[23];
+    /* vector of size 29 */
+    stateMPC_FLOAT lb3[29];
 
-    /* vector of size 23 */
-    stateMPC_FLOAT f5[23];
+    /* vector of size 11 */
+    stateMPC_FLOAT ub3[11];
 
-    /* vector of size 23 */
-    stateMPC_FLOAT lb5[23];
-
-    /* vector of size 9 */
-    stateMPC_FLOAT ub5[9];
-
-    /* matrix of size [7 x 23] (column major format) */
-    stateMPC_FLOAT C5[161];
-
-    /* vector of size 7 */
-    stateMPC_FLOAT e5[7];
-
-    /* diagonal matrix of size [23 x 23] (only the diagonal is stored) */
-    stateMPC_FLOAT H6[23];
-
-    /* vector of size 23 */
-    stateMPC_FLOAT f6[23];
-
-    /* vector of size 23 */
-    stateMPC_FLOAT lb6[23];
+    /* matrix of size [9 x 29] (column major format) */
+    stateMPC_FLOAT C3[261];
 
     /* vector of size 9 */
-    stateMPC_FLOAT ub6[9];
+    stateMPC_FLOAT e3[9];
 
-    /* matrix of size [7 x 23] (column major format) */
-    stateMPC_FLOAT C6[161];
+    /* diagonal matrix of size [29 x 29] (only the diagonal is stored) */
+    stateMPC_FLOAT H4[29];
 
-    /* vector of size 7 */
-    stateMPC_FLOAT e6[7];
+    /* vector of size 29 */
+    stateMPC_FLOAT f4[29];
 
-    /* diagonal matrix of size [23 x 23] (only the diagonal is stored) */
-    stateMPC_FLOAT H7[23];
+    /* vector of size 29 */
+    stateMPC_FLOAT lb4[29];
 
-    /* vector of size 23 */
-    stateMPC_FLOAT f7[23];
+    /* vector of size 11 */
+    stateMPC_FLOAT ub4[11];
 
-    /* vector of size 23 */
-    stateMPC_FLOAT lb7[23];
-
-    /* vector of size 9 */
-    stateMPC_FLOAT ub7[9];
-
-    /* matrix of size [7 x 23] (column major format) */
-    stateMPC_FLOAT C7[161];
-
-    /* vector of size 7 */
-    stateMPC_FLOAT e7[7];
-
-    /* diagonal matrix of size [23 x 23] (only the diagonal is stored) */
-    stateMPC_FLOAT H8[23];
-
-    /* vector of size 23 */
-    stateMPC_FLOAT f8[23];
-
-    /* vector of size 23 */
-    stateMPC_FLOAT lb8[23];
+    /* matrix of size [9 x 29] (column major format) */
+    stateMPC_FLOAT C4[261];
 
     /* vector of size 9 */
-    stateMPC_FLOAT ub8[9];
+    stateMPC_FLOAT e4[9];
 
-    /* matrix of size [7 x 23] (column major format) */
-    stateMPC_FLOAT C8[161];
+    /* diagonal matrix of size [29 x 29] (only the diagonal is stored) */
+    stateMPC_FLOAT H5[29];
 
-    /* vector of size 7 */
-    stateMPC_FLOAT e8[7];
+    /* vector of size 29 */
+    stateMPC_FLOAT f5[29];
 
-    /* diagonal matrix of size [23 x 23] (only the diagonal is stored) */
-    stateMPC_FLOAT H9[23];
+    /* vector of size 29 */
+    stateMPC_FLOAT lb5[29];
 
-    /* vector of size 23 */
-    stateMPC_FLOAT f9[23];
+    /* vector of size 11 */
+    stateMPC_FLOAT ub5[11];
 
-    /* vector of size 23 */
-    stateMPC_FLOAT lb9[23];
-
-    /* vector of size 9 */
-    stateMPC_FLOAT ub9[9];
-
-    /* matrix of size [7 x 23] (column major format) */
-    stateMPC_FLOAT C9[161];
-
-    /* vector of size 7 */
-    stateMPC_FLOAT e9[7];
-
-    /* diagonal matrix of size [23 x 23] (only the diagonal is stored) */
-    stateMPC_FLOAT H10[23];
-
-    /* vector of size 23 */
-    stateMPC_FLOAT f10[23];
-
-    /* vector of size 23 */
-    stateMPC_FLOAT lb10[23];
+    /* matrix of size [9 x 29] (column major format) */
+    stateMPC_FLOAT C5[261];
 
     /* vector of size 9 */
-    stateMPC_FLOAT ub10[9];
+    stateMPC_FLOAT e5[9];
 
-    /* matrix of size [7 x 23] (column major format) */
-    stateMPC_FLOAT C10[161];
+    /* diagonal matrix of size [29 x 29] (only the diagonal is stored) */
+    stateMPC_FLOAT H6[29];
 
-    /* vector of size 7 */
-    stateMPC_FLOAT e10[7];
+    /* vector of size 29 */
+    stateMPC_FLOAT f6[29];
 
-    /* diagonal matrix of size [23 x 23] (only the diagonal is stored) */
-    stateMPC_FLOAT H11[23];
+    /* vector of size 29 */
+    stateMPC_FLOAT lb6[29];
 
-    /* vector of size 23 */
-    stateMPC_FLOAT f11[23];
+    /* vector of size 11 */
+    stateMPC_FLOAT ub6[11];
 
-    /* vector of size 23 */
-    stateMPC_FLOAT lb11[23];
-
-    /* vector of size 9 */
-    stateMPC_FLOAT ub11[9];
-
-    /* matrix of size [7 x 23] (column major format) */
-    stateMPC_FLOAT C11[161];
-
-    /* vector of size 7 */
-    stateMPC_FLOAT e11[7];
-
-    /* diagonal matrix of size [23 x 23] (only the diagonal is stored) */
-    stateMPC_FLOAT H12[23];
-
-    /* vector of size 23 */
-    stateMPC_FLOAT f12[23];
-
-    /* vector of size 23 */
-    stateMPC_FLOAT lb12[23];
+    /* matrix of size [9 x 29] (column major format) */
+    stateMPC_FLOAT C6[261];
 
     /* vector of size 9 */
-    stateMPC_FLOAT ub12[9];
+    stateMPC_FLOAT e6[9];
 
-    /* matrix of size [7 x 23] (column major format) */
-    stateMPC_FLOAT C12[161];
+    /* diagonal matrix of size [29 x 29] (only the diagonal is stored) */
+    stateMPC_FLOAT H7[29];
 
-    /* vector of size 7 */
-    stateMPC_FLOAT e12[7];
+    /* vector of size 29 */
+    stateMPC_FLOAT f7[29];
 
-    /* diagonal matrix of size [23 x 23] (only the diagonal is stored) */
-    stateMPC_FLOAT H13[23];
+    /* vector of size 29 */
+    stateMPC_FLOAT lb7[29];
 
-    /* vector of size 23 */
-    stateMPC_FLOAT f13[23];
+    /* vector of size 11 */
+    stateMPC_FLOAT ub7[11];
 
-    /* vector of size 23 */
-    stateMPC_FLOAT lb13[23];
-
-    /* vector of size 9 */
-    stateMPC_FLOAT ub13[9];
-
-    /* matrix of size [7 x 23] (column major format) */
-    stateMPC_FLOAT C13[161];
-
-    /* vector of size 7 */
-    stateMPC_FLOAT e13[7];
-
-    /* diagonal matrix of size [23 x 23] (only the diagonal is stored) */
-    stateMPC_FLOAT H14[23];
-
-    /* vector of size 23 */
-    stateMPC_FLOAT f14[23];
-
-    /* vector of size 23 */
-    stateMPC_FLOAT lb14[23];
+    /* matrix of size [9 x 29] (column major format) */
+    stateMPC_FLOAT C7[261];
 
     /* vector of size 9 */
-    stateMPC_FLOAT ub14[9];
+    stateMPC_FLOAT e7[9];
 
-    /* matrix of size [7 x 23] (column major format) */
-    stateMPC_FLOAT C14[161];
+    /* diagonal matrix of size [29 x 29] (only the diagonal is stored) */
+    stateMPC_FLOAT H8[29];
 
-    /* vector of size 7 */
-    stateMPC_FLOAT e14[7];
+    /* vector of size 29 */
+    stateMPC_FLOAT f8[29];
 
-    /* diagonal matrix of size [7 x 7] (only the diagonal is stored) */
-    stateMPC_FLOAT H15[7];
+    /* vector of size 29 */
+    stateMPC_FLOAT lb8[29];
 
-    /* vector of size 7 */
-    stateMPC_FLOAT f15[7];
+    /* vector of size 11 */
+    stateMPC_FLOAT ub8[11];
 
-    /* vector of size 7 */
-    stateMPC_FLOAT lb15[7];
+    /* matrix of size [9 x 29] (column major format) */
+    stateMPC_FLOAT C8[261];
 
-    /* vector of size 7 */
-    stateMPC_FLOAT ub15[7];
+    /* vector of size 9 */
+    stateMPC_FLOAT e8[9];
 
-    /* vector of size 7 */
-    stateMPC_FLOAT e15[7];
+    /* diagonal matrix of size [29 x 29] (only the diagonal is stored) */
+    stateMPC_FLOAT H9[29];
+
+    /* vector of size 29 */
+    stateMPC_FLOAT f9[29];
+
+    /* vector of size 29 */
+    stateMPC_FLOAT lb9[29];
+
+    /* vector of size 11 */
+    stateMPC_FLOAT ub9[11];
+
+    /* matrix of size [9 x 29] (column major format) */
+    stateMPC_FLOAT C9[261];
+
+    /* vector of size 9 */
+    stateMPC_FLOAT e9[9];
+
+    /* diagonal matrix of size [29 x 29] (only the diagonal is stored) */
+    stateMPC_FLOAT H10[29];
+
+    /* vector of size 29 */
+    stateMPC_FLOAT f10[29];
+
+    /* vector of size 29 */
+    stateMPC_FLOAT lb10[29];
+
+    /* vector of size 11 */
+    stateMPC_FLOAT ub10[11];
+
+    /* matrix of size [9 x 29] (column major format) */
+    stateMPC_FLOAT C10[261];
+
+    /* vector of size 9 */
+    stateMPC_FLOAT e10[9];
+
+    /* diagonal matrix of size [29 x 29] (only the diagonal is stored) */
+    stateMPC_FLOAT H11[29];
+
+    /* vector of size 29 */
+    stateMPC_FLOAT f11[29];
+
+    /* vector of size 29 */
+    stateMPC_FLOAT lb11[29];
+
+    /* vector of size 11 */
+    stateMPC_FLOAT ub11[11];
+
+    /* matrix of size [9 x 29] (column major format) */
+    stateMPC_FLOAT C11[261];
+
+    /* vector of size 9 */
+    stateMPC_FLOAT e11[9];
+
+    /* diagonal matrix of size [29 x 29] (only the diagonal is stored) */
+    stateMPC_FLOAT H12[29];
+
+    /* vector of size 29 */
+    stateMPC_FLOAT f12[29];
+
+    /* vector of size 29 */
+    stateMPC_FLOAT lb12[29];
+
+    /* vector of size 11 */
+    stateMPC_FLOAT ub12[11];
+
+    /* matrix of size [9 x 29] (column major format) */
+    stateMPC_FLOAT C12[261];
+
+    /* vector of size 9 */
+    stateMPC_FLOAT e12[9];
+
+    /* diagonal matrix of size [29 x 29] (only the diagonal is stored) */
+    stateMPC_FLOAT H13[29];
+
+    /* vector of size 29 */
+    stateMPC_FLOAT f13[29];
+
+    /* vector of size 29 */
+    stateMPC_FLOAT lb13[29];
+
+    /* vector of size 11 */
+    stateMPC_FLOAT ub13[11];
+
+    /* matrix of size [9 x 29] (column major format) */
+    stateMPC_FLOAT C13[261];
+
+    /* vector of size 9 */
+    stateMPC_FLOAT e13[9];
+
+    /* diagonal matrix of size [29 x 29] (only the diagonal is stored) */
+    stateMPC_FLOAT H14[29];
+
+    /* vector of size 29 */
+    stateMPC_FLOAT f14[29];
+
+    /* vector of size 29 */
+    stateMPC_FLOAT lb14[29];
+
+    /* vector of size 11 */
+    stateMPC_FLOAT ub14[11];
+
+    /* matrix of size [9 x 29] (column major format) */
+    stateMPC_FLOAT C14[261];
+
+    /* vector of size 9 */
+    stateMPC_FLOAT e14[9];
+
+    /* diagonal matrix of size [9 x 9] (only the diagonal is stored) */
+    stateMPC_FLOAT H15[9];
+
+    /* vector of size 9 */
+    stateMPC_FLOAT f15[9];
+
+    /* vector of size 9 */
+    stateMPC_FLOAT lb15[9];
+
+    /* vector of size 9 */
+    stateMPC_FLOAT ub15[9];
+
+    /* vector of size 9 */
+    stateMPC_FLOAT e15[9];
 
 } stateMPC_params;
 
@@ -358,50 +358,50 @@ typedef struct stateMPC_params
 /* the desired variables are put here by the solver */
 typedef struct stateMPC_output
 {
-    /* vector of size 9 */
-    stateMPC_FLOAT z1[9];
+    /* vector of size 11 */
+    stateMPC_FLOAT z1[11];
+
+    /* vector of size 11 */
+    stateMPC_FLOAT z2[11];
+
+    /* vector of size 11 */
+    stateMPC_FLOAT z3[11];
+
+    /* vector of size 11 */
+    stateMPC_FLOAT z4[11];
+
+    /* vector of size 11 */
+    stateMPC_FLOAT z5[11];
+
+    /* vector of size 11 */
+    stateMPC_FLOAT z6[11];
+
+    /* vector of size 11 */
+    stateMPC_FLOAT z7[11];
+
+    /* vector of size 11 */
+    stateMPC_FLOAT z8[11];
+
+    /* vector of size 11 */
+    stateMPC_FLOAT z9[11];
+
+    /* vector of size 11 */
+    stateMPC_FLOAT z10[11];
+
+    /* vector of size 11 */
+    stateMPC_FLOAT z11[11];
+
+    /* vector of size 11 */
+    stateMPC_FLOAT z12[11];
+
+    /* vector of size 11 */
+    stateMPC_FLOAT z13[11];
+
+    /* vector of size 11 */
+    stateMPC_FLOAT z14[11];
 
     /* vector of size 9 */
-    stateMPC_FLOAT z2[9];
-
-    /* vector of size 9 */
-    stateMPC_FLOAT z3[9];
-
-    /* vector of size 9 */
-    stateMPC_FLOAT z4[9];
-
-    /* vector of size 9 */
-    stateMPC_FLOAT z5[9];
-
-    /* vector of size 9 */
-    stateMPC_FLOAT z6[9];
-
-    /* vector of size 9 */
-    stateMPC_FLOAT z7[9];
-
-    /* vector of size 9 */
-    stateMPC_FLOAT z8[9];
-
-    /* vector of size 9 */
-    stateMPC_FLOAT z9[9];
-
-    /* vector of size 9 */
-    stateMPC_FLOAT z10[9];
-
-    /* vector of size 9 */
-    stateMPC_FLOAT z11[9];
-
-    /* vector of size 9 */
-    stateMPC_FLOAT z12[9];
-
-    /* vector of size 9 */
-    stateMPC_FLOAT z13[9];
-
-    /* vector of size 9 */
-    stateMPC_FLOAT z14[9];
-
-    /* vector of size 7 */
-    stateMPC_FLOAT z15[7];
+    stateMPC_FLOAT z15[9];
 
 } stateMPC_output;
 

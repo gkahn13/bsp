@@ -16,7 +16,7 @@ disp(strcat(rootDir,'bsp/forces'));
 % problem setup
 N = timesteps - 1;
 
-landmarks = 2;
+landmarks = 1;
 waypoints = 3;
 
 nx = 3 + 2*landmarks;

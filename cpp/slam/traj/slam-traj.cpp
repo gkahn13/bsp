@@ -612,7 +612,7 @@ bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 			trajCollocation(X, U, problem, output, info);
 			success = true;
 		} catch(exit_exception& e) {
-			pythonDisplayTrajectory(U, T, true);
+			//pythonDisplayTrajectory(U, T, true);
 			success = false;
 		}
 

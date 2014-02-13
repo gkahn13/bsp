@@ -43,7 +43,7 @@ void initProblemParams()
 	waypoints[3][0] = 0; waypoints[3][1] = 5;
 
 	landmarks[0][0] = 30; landmarks[0][1] = -10;
-	landmarks[1][0] = 40; landmarks[1][1] = 15;
+	landmarks[1][0] = 70; landmarks[1][1] = 12.5;
 	landmarks[2][0] = 20; landmarks[2][1] = 10;
 
 	//landmarks[0][0] = 0; landmarks[0][1] = 10;

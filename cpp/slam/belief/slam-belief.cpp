@@ -43,16 +43,16 @@ const double trust_shrink_ratio = .5; // .5
 const double trust_expand_ratio = 1.2; // 1.5
 
 const double cnt_tolerance = 1e-4;
-const double penalty_coeff_increase_ratio = 5; // 5
-const double initial_penalty_coeff = 5; // 5
+const double penalty_coeff_increase_ratio = 2; // 2
+const double initial_penalty_coeff = 15; // 10
 
 const double initial_trust_box_size = 10; // 5 // split up trust box size for X and U
-const double initial_Xpos_trust_box_size = 1; // 1;
-const double initial_Xangle_trust_box_size = M_PI/6; // M_PI/6;
-const double initial_Uvel_trust_box_size = 1; // 1;
-const double initial_Uangle_trust_box_size = M_PI/8; // M_PI/8;
+const double initial_Xpos_trust_box_size = 10; // 1;
+const double initial_Xangle_trust_box_size = 10*M_PI/6; // M_PI/6;
+const double initial_Uvel_trust_box_size = 10; // 1;
+const double initial_Uangle_trust_box_size = 10*M_PI/8; // M_PI/8;
 
-const int max_penalty_coeff_increases = 3; // 8
+const int max_penalty_coeff_increases = 4; // 8
 const int max_sqp_iterations = 50; // 50
 }
 
@@ -73,6 +73,24 @@ inline void fillColMajor(double *X, const Matrix<_numRows, _numColumns>& XMat) {
 			X[idx++] = XMat[c + r*_numColumns];
 		}
 	}
+}
+
+inline double wrapAngle(double angle) {
+	return angle - 2*M_PI * floor(angle/(2*M_PI));
+}
+
+double nearestAngleFromTo(double from, double to) {
+	double fromMod = wrapAngle(from);
+	double toMod = wrapAngle(to);
+
+	std::cout << "fromMod: " << fromMod << std::endl;
+	std::cout << "toMod: " << toMod << std::endl;
+	std::cout << "toMod - fromMod: " << toMod - fromMod << std::endl;
+
+	//if (fromMod > M_PI) { fromMod -= M_PI; }
+	//if (toMod > M_PI) { toMod -= M_PI; }
+
+	return from + (toMod - fromMod);
 }
 
 
@@ -149,8 +167,7 @@ void setupBeliefVars(beliefPenaltyMPC_params &problem, beliefPenaltyMPC_output &
 		for(int i=0; i < X_DIM; ++i) { H[t][index++] = 0; }
 		for(int i=0; i < S_DIM; ++i) { H[t][index++] = 2*alpha_belief; }
 		for(int i=0; i < U_DIM; ++i) { H[t][index++] = 2*alpha_control; }
-		for(int i=0; i < B_DIM; ++i) { H[t][index++] = 0; } // TODO: maybe penalize like in slam-state
-		for(int i=0; i < B_DIM; ++i) { H[t][index++] = 0; }
+		for(int i=0; i < 2*B_DIM; ++i) { H[t][index++] = 0; } // TODO: maybe penalize like in slam-state
 	}
 
 	index = 0;
@@ -178,7 +195,7 @@ void setupBeliefVars(beliefPenaltyMPC_params &problem, beliefPenaltyMPC_output &
 
 void cleanupBeliefMPCVars()
 {
-	//delete[] H;
+	delete[] H;
 	delete[] f;
 	delete[] lb;
 	delete[] ub;
@@ -503,7 +520,7 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			// xGoal lower bound
 			for(int i = 0; i < P_DIM; ++i) { lb[T-1][index++] = xGoal[i] - finalPosDelta; }
 			// loose on car angles and landmarks
-			lb[T-1][index++] = xGoal[2] - finalAngleDelta;
+			lb[T-1][index++] = nearestAngleFromTo(bT[2], xGoal[2] - finalAngleDelta);
 			for(int i = C_DIM; i < X_DIM; ++i) { lb[T-1][index++] = MAX(xMin[i], bT[i] - Xpos_eps); }
 			// sigma lower bound
 			for(int i = 0; i < S_DIM; ++i) { lb[T-1][index] = bT[index] - Beps; index++;}
@@ -512,10 +529,18 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			// xGoal upper bound
 			for(int i = 0; i < P_DIM; ++i) { ub[T-1][index++] = xGoal[i] + finalPosDelta; }
 			// loose on car angles and landmarks
-			ub[T-1][index++] = xGoal[2] + finalAngleDelta;
+			ub[T-1][index++] = nearestAngleFromTo(bT[2], xGoal[2] + finalAngleDelta);
 			for(int i = C_DIM; i < X_DIM; ++i) { ub[T-1][index++] = MIN(xMax[i], bT[i] + Xpos_eps); }
 			// sigma upper bound
 			for(int i = 0; i < S_DIM; ++i) { ub[T-1][index] = bT[index] + Beps; index++;}
+
+			std::cout << "b[T-1][2]: " << bT[2] << std::endl;
+
+			std::cout << "lb[T-1][2] orig: " << xGoal[2] - finalAngleDelta << std::endl;
+			std::cout << "ub[T-1][2] orig: " << xGoal[2] + finalAngleDelta << std::endl;
+
+			std::cout << "lb[T-1][2]: " << lb[T-1][2] << std::endl;
+			std::cout << "ub[T-1][2]: " << ub[T-1][2] << std::endl;
 
 			// Verify problem inputs
 			//if (!isValidInputs()) {
@@ -657,6 +682,18 @@ double beliefPenaltyCollocation(std::vector< Matrix<B_DIM> >& B, std::vector< Ma
 
 int main(int argc, char* argv[])
 {
+	/*
+	double currAngle = M_PI;
+	double angleGoal = -0.5*M_PI;
+	double angleDelta = M_PI/4;
+
+	double modifiedBound = nearestAngleFromTo(currAngle, angleGoal - angleDelta);
+	std::cout << modifiedBound/M_PI << " pi" <<  std::endl;
+	exit(0);
+	*/
+
+
+
 	const rlim_t stackSize = 32 * 1024 * 1024;   // min stack size = 32 MB
 	struct rlimit rl;
 	int result;
@@ -737,15 +774,15 @@ int main(int argc, char* argv[])
 			exit(-1);
 		}
 
-		//std::cout << "X car initial" << std::endl;
+		std::cout << "X car initial" << std::endl;
 		vec(x0, SqrtSigma0, B[0]);
 		for(int t=0; t < T-1; ++t) {
-			//std::cout << ~B[t].subMatrix<C_DIM,1>(0,0);
+			std::cout << ~B[t].subMatrix<C_DIM,1>(0,0);
 			B[t+1] = beliefDynamics(B[t], U[t]);
 		}
-		//std::cout << ~B[T-1].subMatrix<C_DIM,1>(0,0) << std::endl << std::endl;
-		unVec(B[T-1], xtmp, stmp);
-		std::cout << stmp.subMatrix<P_DIM,P_DIM>(0,0) << std::endl;
+		std::cout << ~B[T-1].subMatrix<C_DIM,1>(0,0) << std::endl << std::endl;
+		//unVec(B[T-1], xtmp, stmp);
+		//std::cout << stmp.subMatrix<P_DIM,P_DIM>(0,0) << std::endl;
 
 
 		/*
@@ -769,14 +806,30 @@ int main(int argc, char* argv[])
 
 		double solvetime = util::Timer_toc(&solveTimer);
 
+		//std::cout << "Unintegrated trajectory" << std::endl;
+		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
+
 		vec(x0, SqrtSigma0, B[0]);
 		for (size_t t = 0; t < T-1; ++t) {
 			B[t+1] = beliefDynamics(B[t], U[t]);
 			unVec(B[t+1], xtmp, stmp);
-
-			//std::cout << stmp.subMatrix<P_DIM,P_DIM>(0,0) << std::endl;
 		}
-		std::cout << stmp.subMatrix<P_DIM,P_DIM>(0,0) << std::endl;
+		//std::cout << stmp.subMatrix<P_DIM,P_DIM>(0,0) << std::endl;
+
+		std::cout << "X car goal" << std::endl;
+		std::cout << xGoal.subMatrix<C_DIM,1>(0,0) << std::endl;
+
+		std::cout << "X car" << std::endl;
+		for(int t=0; t < T; ++t) {
+			std::cout << ~B[t].subMatrix<C_DIM,1>(0,0);
+		}
+		std::cout << std::endl << std::endl;
+
+		std::cout << "U" << std::endl;
+		for(int t=0; t < T-1; ++t) {
+			std::cout << ~U[t];
+		}
+		std::cout << std::endl;
 
 		LOG_INFO("Initial cost: %4.10f", initTrajCost);
 		LOG_INFO("Optimized cost: %4.10f", cost);
@@ -790,11 +843,6 @@ int main(int argc, char* argv[])
 	}
 	
 	cleanupBeliefMPCVars();
-	
-	//vec(x0, SqrtSigma0, B[0]);
-	//for (size_t t = 0; t < T-1; ++t) {
-	//	B[t+1] = beliefDynamics(B[t], U[t]);
-	//}
 
 	return 0;
 }

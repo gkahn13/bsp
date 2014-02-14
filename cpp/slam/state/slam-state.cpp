@@ -931,7 +931,6 @@ int main(int argc, char* argv[])
 		LOG_INFO("Actual cost: %4.10f", computeCost(X,U));
 		LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 
-		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T);
 
 		unVec(B[T-1], x0, SqrtSigma0);
 

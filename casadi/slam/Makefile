@@ -16,7 +16,7 @@ T = 15
 
 all: slam-state.cpp | clean
 	$(CXX) $(BFLAGS) $(CPP_FLAGS) $(CASADI_FLAGS) slam-state.cpp -o slam-state $(CASADI_LIBS)
-	./slam-state
+	./slam-state $(T)
 	bash modifyCasadi.sh slam-state-cost.c Cost slam
 	bash modifyCasadi.sh slam-state-grad.c CostGrad slam
 	

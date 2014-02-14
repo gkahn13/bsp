@@ -310,10 +310,8 @@ SLAM_SETUP_FILE = slam/setupFiles.sh
 SLAM_HEADERS = slam/slam.h
 SLAM_SRC = slam/slam.cpp
 
-#slam: $(OBJ_DIR)/slam.o
-	 
 
-$(OBJ_DIR)/slam.o : $(SLAM_SRC)
+$(OBJ_DIR)/slam.o : $(SLAM_SRC) $(SLAM_HEADERS)
 	 $(CXX) $(CPP_FLAGS) $(BFLAGS)  $(PYTHON_FLAGS) $(BOOST_FLAGS) -c -o $@ $<
 
 # make slam-test
@@ -344,7 +342,7 @@ slam-traj: | slam-traj-setup $(SLAM_TRAJ_OBJS)
 $(OBJ_DIR)/trajMPC.o : $(SLAM_TRAJ_DIR)/trajMPC.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
 	
-$(OBJ_DIR)/slam-traj.o : $(SLAM_TRAJ_DIR)/slam-traj.cpp $(SLAM_HEADERS)
+$(OBJ_DIR)/slam-traj.o : $(SLAM_TRAJ_DIR)/slam-traj.cpp $(SLAM_TRAJ_DIR)/trajMPC.c
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
 
 # make slam-belief
@@ -366,7 +364,7 @@ $(OBJ_DIR)/slam-belief.o : $(SLAM_BELIEF_DIR)/slam-belief.cpp $(SLAM_HEADERS)
 	
 # make slam-state
 SLAM_STATE_DIR = slam/state
-SLAM_STATE_FILES = slam-state-cost slam-state-grad slamStateMPC slam-state logging slam slam-traj trajMPC
+SLAM_STATE_FILES = slam-state-cost slam-state-grad slamStateMPC slam-state logging slam trajMPC slam-traj
 SLAM_STATE_OBJS = $(SLAM_STATE_FILES:%=$(OBJ_DIR)/%.o)
 
 slam-state-setup:

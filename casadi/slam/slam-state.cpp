@@ -4,9 +4,9 @@
 #include <ctime>
 #include <symbolic/casadi.hpp>
 #include <symbolic/stl_vector_tools.hpp>
+#include <cstdlib>
 
-
-#define TIMESTEPS 15
+//#define TIMESTEPS 15
 #define NUM_LANDMARKS 3
 #define NUM_WAYPOINTS 3
 
@@ -20,7 +20,7 @@
 #define Q_DIM 2
 #define R_DIM L_DIM
 
-const int T = TIMESTEPS;
+int T;
 const double DT = 1;
 
 namespace config {
@@ -244,9 +244,15 @@ void test() {
 	cout << "Sigma_tp1" << endl << Sigma_tp1 << endl;
 }
 
-int main()
+int main(int argc, char* argv[])
 {
+	if (argc > 1) {
+		T = atoi(argv[1]);
+	} else {
+		T = 15;
+	}
 
+	cout << "Creating casadi file for T = " << T << endl;
 
 	vector<SXMatrix> X, U;
 	int nXU = T*X_DIM+(T-1)*U_DIM;

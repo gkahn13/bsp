@@ -137,7 +137,7 @@ void setupTrajVars(trajMPC_params &problem, trajMPC_output &output)
 #include BOOST_PP_LOCAL_ITERATE()
 
 #define SET_LAST_VARS(n)    \
-		f_traj[ BOOST_PP_SUB(n,1) ] = problem.f##n ;  \
+		f_traj[ BOOST_PP_SUB(n,1) ] = problem.f##n ; \
 		lb_traj[ BOOST_PP_SUB(n,1) ] = problem.lb##n ;	\
 		ub_traj[ BOOST_PP_SUB(n,1) ] = problem.ub##n ;	\
 		e_traj[ BOOST_PP_SUB(n,1) ] = problem.e##n ;  \

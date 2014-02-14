@@ -40,7 +40,7 @@ typedef double trajMPC_FLOAT;
 /* #define PRINTNUMERICALWARNINGS */
 
 /* maximum number of iterations  */
-#define trajMPC_SET_MAXIT         (50)	
+#define trajMPC_SET_MAXIT         (100)	
 
 /* scaling factor of line search (affine direction) */
 #define trajMPC_SET_LS_SCALE_AFF  (0.9)      
@@ -84,140 +84,143 @@ typedef double trajMPC_FLOAT;
 /* fill this with data before calling the solver! */
 typedef struct trajMPC_params
 {
-    /* vector of size 8 */
-    trajMPC_FLOAT f1[8];
+    /* vector of size 11 */
+    trajMPC_FLOAT f1[11];
 
-    /* vector of size 8 */
-    trajMPC_FLOAT lb1[8];
+    /* vector of size 11 */
+    trajMPC_FLOAT lb1[11];
 
     /* vector of size 5 */
     trajMPC_FLOAT ub1[5];
 
-    /* matrix of size [3 x 8] (column major format) */
-    trajMPC_FLOAT C1[24];
+    /* matrix of size [3 x 11] (column major format) */
+    trajMPC_FLOAT C1[33];
 
     /* vector of size 3 */
     trajMPC_FLOAT e1[3];
 
-    /* vector of size 8 */
-    trajMPC_FLOAT f2[8];
+    /* vector of size 11 */
+    trajMPC_FLOAT f2[11];
 
-    /* vector of size 8 */
-    trajMPC_FLOAT lb2[8];
+    /* vector of size 11 */
+    trajMPC_FLOAT lb2[11];
 
     /* vector of size 5 */
     trajMPC_FLOAT ub2[5];
 
-    /* matrix of size [3 x 8] (column major format) */
-    trajMPC_FLOAT C2[24];
+    /* matrix of size [3 x 11] (column major format) */
+    trajMPC_FLOAT C2[33];
 
     /* vector of size 3 */
     trajMPC_FLOAT e2[3];
 
-    /* vector of size 8 */
-    trajMPC_FLOAT f3[8];
+    /* vector of size 11 */
+    trajMPC_FLOAT f3[11];
 
-    /* vector of size 8 */
-    trajMPC_FLOAT lb3[8];
+    /* vector of size 11 */
+    trajMPC_FLOAT lb3[11];
 
     /* vector of size 5 */
     trajMPC_FLOAT ub3[5];
 
-    /* matrix of size [3 x 8] (column major format) */
-    trajMPC_FLOAT C3[24];
+    /* matrix of size [3 x 11] (column major format) */
+    trajMPC_FLOAT C3[33];
 
     /* vector of size 3 */
     trajMPC_FLOAT e3[3];
 
-    /* vector of size 8 */
-    trajMPC_FLOAT f4[8];
+    /* vector of size 11 */
+    trajMPC_FLOAT f4[11];
 
-    /* vector of size 8 */
-    trajMPC_FLOAT lb4[8];
+    /* vector of size 11 */
+    trajMPC_FLOAT lb4[11];
 
     /* vector of size 5 */
     trajMPC_FLOAT ub4[5];
 
-    /* matrix of size [3 x 8] (column major format) */
-    trajMPC_FLOAT C4[24];
+    /* matrix of size [3 x 11] (column major format) */
+    trajMPC_FLOAT C4[33];
 
     /* vector of size 3 */
     trajMPC_FLOAT e4[3];
 
-    /* vector of size 8 */
-    trajMPC_FLOAT f5[8];
+    /* vector of size 11 */
+    trajMPC_FLOAT f5[11];
 
-    /* vector of size 8 */
-    trajMPC_FLOAT lb5[8];
+    /* vector of size 11 */
+    trajMPC_FLOAT lb5[11];
 
     /* vector of size 5 */
     trajMPC_FLOAT ub5[5];
 
-    /* matrix of size [3 x 8] (column major format) */
-    trajMPC_FLOAT C5[24];
+    /* matrix of size [3 x 11] (column major format) */
+    trajMPC_FLOAT C5[33];
 
     /* vector of size 3 */
     trajMPC_FLOAT e5[3];
 
-    /* vector of size 8 */
-    trajMPC_FLOAT f6[8];
+    /* vector of size 11 */
+    trajMPC_FLOAT f6[11];
 
-    /* vector of size 8 */
-    trajMPC_FLOAT lb6[8];
+    /* vector of size 11 */
+    trajMPC_FLOAT lb6[11];
 
     /* vector of size 5 */
     trajMPC_FLOAT ub6[5];
 
-    /* matrix of size [3 x 8] (column major format) */
-    trajMPC_FLOAT C6[24];
+    /* matrix of size [3 x 11] (column major format) */
+    trajMPC_FLOAT C6[33];
 
     /* vector of size 3 */
     trajMPC_FLOAT e6[3];
 
-    /* vector of size 8 */
-    trajMPC_FLOAT f7[8];
+    /* vector of size 11 */
+    trajMPC_FLOAT f7[11];
 
-    /* vector of size 8 */
-    trajMPC_FLOAT lb7[8];
+    /* vector of size 11 */
+    trajMPC_FLOAT lb7[11];
 
     /* vector of size 5 */
     trajMPC_FLOAT ub7[5];
 
-    /* matrix of size [3 x 8] (column major format) */
-    trajMPC_FLOAT C7[24];
+    /* matrix of size [3 x 11] (column major format) */
+    trajMPC_FLOAT C7[33];
 
     /* vector of size 3 */
     trajMPC_FLOAT e7[3];
 
-    /* vector of size 8 */
-    trajMPC_FLOAT f8[8];
+    /* vector of size 11 */
+    trajMPC_FLOAT f8[11];
 
-    /* vector of size 8 */
-    trajMPC_FLOAT lb8[8];
+    /* vector of size 11 */
+    trajMPC_FLOAT lb8[11];
 
     /* vector of size 5 */
     trajMPC_FLOAT ub8[5];
 
-    /* matrix of size [3 x 8] (column major format) */
-    trajMPC_FLOAT C8[24];
+    /* matrix of size [3 x 11] (column major format) */
+    trajMPC_FLOAT C8[33];
 
     /* vector of size 3 */
     trajMPC_FLOAT e8[3];
 
-    /* vector of size 8 */
-    trajMPC_FLOAT f9[8];
+    /* vector of size 11 */
+    trajMPC_FLOAT f9[11];
 
-    /* vector of size 8 */
-    trajMPC_FLOAT lb9[8];
+    /* vector of size 11 */
+    trajMPC_FLOAT lb9[11];
 
     /* vector of size 5 */
     trajMPC_FLOAT ub9[5];
 
-    /* matrix of size [3 x 8] (column major format) */
-    trajMPC_FLOAT C9[24];
+    /* matrix of size [3 x 11] (column major format) */
+    trajMPC_FLOAT C9[33];
 
     /* vector of size 3 */
     trajMPC_FLOAT e9[3];
+
+    /* vector of size 3 */
+    trajMPC_FLOAT f10[3];
 
     /* vector of size 3 */
     trajMPC_FLOAT lb10[3];

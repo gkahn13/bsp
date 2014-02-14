@@ -80,17 +80,47 @@ inline double wrapAngle(double angle) {
 }
 
 double nearestAngleFromTo(double from, double to) {
+
+	while (to > from) {
+		if (to - 2*M_PI < from) {
+			if (fabs(to - from) < (fabs(to - 2*M_PI - from))) {
+				return to;
+			} else {
+				return to - 2*M_PI;
+			}
+		}
+		to -= 2*M_PI;
+	}
+
+	while (to < from) {
+		if (to + 2*M_PI > from) {
+			if (fabs(to - from) < (fabs(to + 2*M_PI - from))) {
+				return to;
+			} else {
+				return to + 2*M_PI;
+			}
+		}
+		to += 2*M_PI;
+	}
+
+	std::cout << "should never reach here" << std::endl;
+	return to;
+
+	/*
 	double fromMod = wrapAngle(from);
 	double toMod = wrapAngle(to);
 
-	std::cout << "fromMod: " << fromMod << std::endl;
-	std::cout << "toMod: " << toMod << std::endl;
-	std::cout << "toMod - fromMod: " << toMod - fromMod << std::endl;
+	std::cout << "from: " << from << std::endl;
+	std::cout << "to: " << to << std::endl;
+	//std::cout << "fromMod: " << fromMod << std::endl;
+	//std::cout << "toMod: " << toMod << std::endl;
+	//std::cout << "toMod - fromMod: " << toMod - fromMod << std::endl;
 
 	//if (fromMod > M_PI) { fromMod -= M_PI; }
 	//if (toMod > M_PI) { toMod -= M_PI; }
 
-	return from + (toMod - fromMod);
+	return from + wrapAngle(to - from);
+	*/
 }
 
 
@@ -521,6 +551,7 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			for(int i = 0; i < P_DIM; ++i) { lb[T-1][index++] = xGoal[i] - finalPosDelta; }
 			// loose on car angles and landmarks
 			lb[T-1][index++] = nearestAngleFromTo(bT[2], xGoal[2] - finalAngleDelta);
+			//lb[T-1][index++] = xGoal[2] - finalAngleDelta;
 			for(int i = C_DIM; i < X_DIM; ++i) { lb[T-1][index++] = MAX(xMin[i], bT[i] - Xpos_eps); }
 			// sigma lower bound
 			for(int i = 0; i < S_DIM; ++i) { lb[T-1][index] = bT[index] - Beps; index++;}
@@ -530,6 +561,7 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			for(int i = 0; i < P_DIM; ++i) { ub[T-1][index++] = xGoal[i] + finalPosDelta; }
 			// loose on car angles and landmarks
 			ub[T-1][index++] = nearestAngleFromTo(bT[2], xGoal[2] + finalAngleDelta);
+			//ub[T-1][index++] = xGoal[2] + finalAngleDelta;
 			for(int i = C_DIM; i < X_DIM; ++i) { ub[T-1][index++] = MIN(xMax[i], bT[i] + Xpos_eps); }
 			// sigma upper bound
 			for(int i = 0; i < S_DIM; ++i) { ub[T-1][index] = bT[index] + Beps; index++;}
@@ -540,7 +572,7 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			std::cout << "ub[T-1][2] orig: " << xGoal[2] + finalAngleDelta << std::endl;
 
 			std::cout << "lb[T-1][2]: " << lb[T-1][2] << std::endl;
-			std::cout << "ub[T-1][2]: " << ub[T-1][2] << std::endl;
+			std::cout << "ub[T-1][2]: " << ub[T-1][2] << std::endl << std::endl;
 
 			// Verify problem inputs
 			//if (!isValidInputs()) {
@@ -682,18 +714,6 @@ double beliefPenaltyCollocation(std::vector< Matrix<B_DIM> >& B, std::vector< Ma
 
 int main(int argc, char* argv[])
 {
-	/*
-	double currAngle = M_PI;
-	double angleGoal = -0.5*M_PI;
-	double angleDelta = M_PI/4;
-
-	double modifiedBound = nearestAngleFromTo(currAngle, angleGoal - angleDelta);
-	std::cout << modifiedBound/M_PI << " pi" <<  std::endl;
-	exit(0);
-	*/
-
-
-
 	const rlim_t stackSize = 32 * 1024 * 1024;   // min stack size = 32 MB
 	struct rlimit rl;
 	int result;

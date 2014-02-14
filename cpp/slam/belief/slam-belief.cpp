@@ -75,10 +75,6 @@ inline void fillColMajor(double *X, const Matrix<_numRows, _numColumns>& XMat) {
 	}
 }
 
-inline double wrapAngle(double angle) {
-	return angle - 2*M_PI * floor(angle/(2*M_PI));
-}
-
 double nearestAngleFromTo(double from, double to) {
 
 	while (to > from) {
@@ -103,24 +99,8 @@ double nearestAngleFromTo(double from, double to) {
 		to += 2*M_PI;
 	}
 
-	std::cout << "should never reach here" << std::endl;
+	// should never reach this point
 	return to;
-
-	/*
-	double fromMod = wrapAngle(from);
-	double toMod = wrapAngle(to);
-
-	std::cout << "from: " << from << std::endl;
-	std::cout << "to: " << to << std::endl;
-	//std::cout << "fromMod: " << fromMod << std::endl;
-	//std::cout << "toMod: " << toMod << std::endl;
-	//std::cout << "toMod - fromMod: " << toMod - fromMod << std::endl;
-
-	//if (fromMod > M_PI) { fromMod -= M_PI; }
-	//if (toMod > M_PI) { toMod -= M_PI; }
-
-	return from + wrapAngle(to - from);
-	*/
 }
 
 
@@ -566,23 +546,19 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			// sigma upper bound
 			for(int i = 0; i < S_DIM; ++i) { ub[T-1][index] = bT[index] + Beps; index++;}
 
-			std::cout << "b[T-1][2]: " << bT[2] << std::endl;
+			//std::cout << "b[T-1][2]: " << bT[2] << std::endl;
 
-			std::cout << "lb[T-1][2] orig: " << xGoal[2] - finalAngleDelta << std::endl;
-			std::cout << "ub[T-1][2] orig: " << xGoal[2] + finalAngleDelta << std::endl;
+			//std::cout << "lb[T-1][2] orig: " << xGoal[2] - finalAngleDelta << std::endl;
+			//std::cout << "ub[T-1][2] orig: " << xGoal[2] + finalAngleDelta << std::endl;
 
-			std::cout << "lb[T-1][2]: " << lb[T-1][2] << std::endl;
-			std::cout << "ub[T-1][2]: " << ub[T-1][2] << std::endl << std::endl;
+			//std::cout << "lb[T-1][2]: " << lb[T-1][2] << std::endl;
+			//std::cout << "ub[T-1][2]: " << ub[T-1][2] << std::endl << std::endl;
 
 			// Verify problem inputs
 			//if (!isValidInputs()) {
 			//	std::cout << "Inputs are not valid!" << std::endl;
 			//	exit(-1);
 			//}
-
-			//std::cerr << "PAUSING INSIDE MINIMIZE MERIT FUNCTION FOR INPUT VERIFICATION" << std::endl;
-			//int num;
-			//std::cin >> num;
 
 			double fillVarsTime = util::Timer_toc(&fillVarsTimer);
 			//std::cout << "fill variables time = " << fillVarsTime*1000 << "ms" << std::endl;
@@ -750,7 +726,9 @@ int main(int argc, char* argv[])
 	beliefPenaltyMPC_output output;
 	beliefPenaltyMPC_info info;
 	setupBeliefVars(problem, output);
+
 	util::Timer solveTimer;
+	double totalSolveTime = 0;
 
 	std::vector<Matrix<B_DIM> > B_total(T*NUM_WAYPOINTS);
 	std::vector<Matrix<B_DIM> > B(T);
@@ -825,6 +803,7 @@ int main(int argc, char* argv[])
 		double cost = beliefPenaltyCollocation(B, U, problem, output, info);
 
 		double solvetime = util::Timer_toc(&solveTimer);
+		totalSolveTime += solvetime;
 
 		//std::cout << "Unintegrated trajectory" << std::endl;
 		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
@@ -862,6 +841,8 @@ int main(int argc, char* argv[])
 
 	}
 	
+	LOG_INFO("Total solve time: %5.3f ms", totalSolveTime*1000);
+
 	cleanupBeliefMPCVars();
 
 	return 0;

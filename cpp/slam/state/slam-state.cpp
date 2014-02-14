@@ -27,9 +27,9 @@ const double min_approx_improve = 1e-3; // 1e-4
 const double min_trust_box_size = 1e-2; // 1e-3
 
 const double trust_shrink_ratio = .5; // .5
-const double trust_expand_ratio = 1.2; // 1.5
+const double trust_expand_ratio = 1.2; // 1.2
 
-const double cnt_tolerance = 1e-4;
+const double cnt_tolerance = 1e-2; // 1e-2
 const double penalty_coeff_increase_ratio = 5; // 5
 const double initial_penalty_coeff = 5; // 5
 
@@ -61,6 +61,34 @@ inline void fillColMajor(double *X, const Matrix<_numRows, _numColumns>& XMat) {
 			X[idx++] = XMat[c + r*_numColumns];
 		}
 	}
+}
+
+double nearestAngleFromTo(double from, double to) {
+
+	while (to > from) {
+		if (to - 2*M_PI < from) {
+			if (fabs(to - from) < (fabs(to - 2*M_PI - from))) {
+				return to;
+			} else {
+				return to - 2*M_PI;
+			}
+		}
+		to -= 2*M_PI;
+	}
+
+	while (to < from) {
+		if (to + 2*M_PI > from) {
+			if (fabs(to - from) < (fabs(to + 2*M_PI - from))) {
+				return to;
+			} else {
+				return to + 2*M_PI;
+			}
+		}
+		to += 2*M_PI;
+	}
+
+	// should never reach this point
+	return to;
 }
 
 
@@ -158,13 +186,6 @@ void casadiComputeCostGrad(const std::vector< Matrix<X_DIM> >& X, const std::vec
 
 	evaluateCostGradWrap(casadi_input, costgrad_arr);
 
-	/*
-	double jac_cost = 0;
-	for(int i = 0; i < XU_DIM; ++i) {
-		jac_cost += Grad[i]*XU_arr[i];
-	}
-	LOG_DEBUG("jac cost: %4.10f",jac_cost);
-	*/
 }
 
 double computeCost(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matrix<U_DIM> >& U)
@@ -605,14 +626,16 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			// xGoal lower bound
 			for(int i = 0; i < P_DIM; ++i) { lb[T-1][index++] = xGoal[i] - finalPosDelta; }
 			// loose on car angle and landmarks
-			lb[T-1][index++] = xGoal[2] - finalAngleDelta;//MAX(xMin[P_DIM], xT[P_DIM] - Xangle_eps);
+			//lb[T-1][index++] = xGoal[2] - finalAngleDelta;
+			lb[T-1][index++] = nearestAngleFromTo(xT[2], xGoal[2] - finalAngleDelta);
 			for(int i = C_DIM; i < X_DIM; ++i) { lb[T-1][index++] = MAX(xMin[i], xT[i] - Xpos_eps); }
 
 			index = 0;
 			// xGoal upper bound
 			for(int i = 0; i < P_DIM; ++i) { ub[T-1][index++] = xGoal[i] + finalPosDelta; }
 			// loose on car angle and landmarks
-			ub[T-1][index++] = xGoal[2] + finalAngleDelta; //MIN(xMax[P_DIM], xT[P_DIM] + Xangle_eps);
+			//ub[T-1][index++] = xGoal[2] + finalAngleDelta;
+			ub[T-1][index++] = nearestAngleFromTo(xT[2], xGoal[2] + finalAngleDelta);
 			for(int i = C_DIM; i < X_DIM; ++i) { ub[T-1][index++] = MIN(xMax[i], xT[i] + Xpos_eps); }
 
 			// Verify problem inputs
@@ -755,11 +778,11 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			    return true;
 			}
 
-			std::cout << "U" << std::endl;
-			for(int t=0; t < T-1; ++t) {
-				std::cout << ~U[t];
-			}
-			std::cout << std::endl << std::endl;
+			//std::cout << "U" << std::endl;
+			//for(int t=0; t < T-1; ++t) {
+			//	std::cout << ~U[t];
+			//}
+			//std::cout << std::endl << std::endl;
 			//pythonDisplayTrajectory(U, T, false);
 			//pythonDisplayTrajectory(X, T, true);
 

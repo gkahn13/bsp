@@ -14,8 +14,10 @@ BFLAGS := $(BFLAGS.$(BUILD))
 # default to 15 T
 T = 15
 
-all: slam-state.cpp | clean
+slam-state: slam-state.cpp
 	$(CXX) $(BFLAGS) $(CPP_FLAGS) $(CASADI_FLAGS) slam-state.cpp -o slam-state $(CASADI_LIBS)
+
+all: .FORCE
 	./slam-state $(T)
 	bash modifyCasadi.sh slam-state-cost.c Cost slam
 	bash modifyCasadi.sh slam-state-grad.c CostGrad slam
@@ -23,3 +25,7 @@ all: slam-state.cpp | clean
 clean:
 	rm -f *.c
 	rm -f slam-state
+	
+.FORCE:
+	
+.PHONY: .FORCE

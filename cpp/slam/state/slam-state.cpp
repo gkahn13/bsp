@@ -489,6 +489,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			}
 
 			// since diagonal, fill directly
+			// TODO: check if H is 0 for the landmarks. if so, pull out of the state
 			for(int i = 0; i < (X_DIM+U_DIM); ++i) { H[t][i] = HMat(i,i); }
 			// TODO: why does this work???
 			for(int i = 0; i < (2*X_DIM); ++i) { H[t][i + (X_DIM+U_DIM)] = 1e4; } //1e4
@@ -846,9 +847,15 @@ int main(int argc, char* argv[])
 	stateMPC_output output;
 	stateMPC_info info;
 	setupStateVars(problem, output);
+
 	util::Timer solveTimer;
+	double totalSolveTime = 0;
+
+	double totalTrajCost = 0;
 
 	std::vector<Matrix<B_DIM> > B_total(T*NUM_WAYPOINTS);
+	std::vector<Matrix<U_DIM> > U_total((T-1)*NUM_WAYPOINTS);
+
 	std::vector<Matrix<B_DIM> > B(T);
 	std::vector<Matrix<X_DIM> > X(T);
 
@@ -894,25 +901,12 @@ int main(int argc, char* argv[])
 
 
 
-		//std::cout << "X car initial" << std::endl;
 		vec(x0, SqrtSigma0, B[0]);
 		for(int t=0; t < T-1; ++t) {
 			X[t] = B[t].subMatrix<X_DIM,1>(0,0);
-			//std::cout << ~X[t];
 			B[t+1] = beliefDynamics(B[t], U[t]);
 		}
 		X[T-1] = B[T-1].subMatrix<X_DIM,1>(0,0);
-		//std::cout << ~X[T-1] << std::endl << std::endl;
-		//unVec(B[T-1], x, s);
-		//std::cout << s.subMatrix<P_DIM,P_DIM>(0,0) << std::endl;
-
-
-		std::cout << "U" << std::endl;
-		for(int t=0; t < T-1; ++t) {
-			std::cout << ~U[t];
-		}
-		std::cout << std::endl;
-
 
 		double initTrajCost = computeCost(X, U);
 		LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
@@ -920,13 +914,14 @@ int main(int argc, char* argv[])
 		double initCasadiTrajCost = casadiComputeCost(X, U);
 		LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
 
-		pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
+		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, false);
 
 		Timer_tic(&solveTimer);
 
 		double cost = statePenaltyCollocation(X, U, problem, output, info);
 
 		double solvetime = util::Timer_toc(&solveTimer);
+		totalSolveTime += solvetime;
 
 		vec(x0, SqrtSigma0, B[0]);
 		X[0] = x0;
@@ -936,6 +931,15 @@ int main(int argc, char* argv[])
 			X[t+1] = x;
 		}
 
+		for (int t = 0; t < T-1; ++t) {
+			B_total[t+T*i] = B[t];
+			U_total[t+(T-1)*i] = U[t];
+		}
+		B_total[T-1+T*i] = B[T-1];
+
+		totalTrajCost += computeCost(X,U);
+
+		/*
 		std::cout << "X car" << std::endl;
 		for(int t=0; t < T; ++t) {
 			std::cout << ~X[t].subMatrix<C_DIM,1>(0,0);
@@ -947,7 +951,7 @@ int main(int argc, char* argv[])
 			std::cout << ~U[t];
 		}
 		std::cout << std::endl;
-
+		 */
 
 		LOG_INFO("Initial cost: %4.10f", initTrajCost);
 		LOG_INFO("Optimized cost: %4.10f", cost);
@@ -957,9 +961,17 @@ int main(int argc, char* argv[])
 
 		unVec(B[T-1], x0, SqrtSigma0);
 
-		pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
+		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, false);
 
 	}
+
+
+
+	LOG_INFO("Total trajectory cost: %4.10f", totalTrajCost);
+	LOG_INFO("Total solve time: %5.3f ms", totalSolveTime*1000);
+
+
+	pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, true);
 
 	cleanupStateMPCVars();
 

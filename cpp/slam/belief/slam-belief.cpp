@@ -716,12 +716,10 @@ int main(int argc, char* argv[])
 	initProblemParams();
 
 	LOG_INFO("Setting up belief variables");
-	std::cout << "size of params: " << sizeof(struct beliefPenaltyMPC_params)*9.53674e-7 << "mb" << std::endl;
-	std::cout << "size of output: " << sizeof(struct beliefPenaltyMPC_output)*9.53674e-7 << "mb" << std::endl;
-	std::cout << "size of info: " << sizeof(struct beliefPenaltyMPC_info)*9.53674e-7 << "mb" << std::endl;
-	//beliefPenaltyMPC_params &problem = malloc(sizeof(struct beliefPenaltyMPC_params));
-	//beliefPenaltyMPC_output *output = malloc(sizeof(struct beliefPenaltyMPC_output));
-	//beliefPenaltyMPC_info *info = malloc(sizeof(struct beliefPenaltyMPC_info));
+	//std::cout << "size of params: " << sizeof(struct beliefPenaltyMPC_params)*9.53674e-7 << "mb" << std::endl;
+	//std::cout << "size of output: " << sizeof(struct beliefPenaltyMPC_output)*9.53674e-7 << "mb" << std::endl;
+	//std::cout << "size of info: " << sizeof(struct beliefPenaltyMPC_info)*9.53674e-7 << "mb" << std::endl;
+
 	beliefPenaltyMPC_params problem;
 	beliefPenaltyMPC_output output;
 	beliefPenaltyMPC_info info;
@@ -730,7 +728,11 @@ int main(int argc, char* argv[])
 	util::Timer solveTimer;
 	double totalSolveTime = 0;
 
+	double totalTrajCost = 0;
+
 	std::vector<Matrix<B_DIM> > B_total(T*NUM_WAYPOINTS);
+	std::vector<Matrix<U_DIM> > U_total((T-1)*NUM_WAYPOINTS);
+
 	std::vector<Matrix<B_DIM> > B(T);
 
 	Matrix<U_DIM> uinit;
@@ -772,13 +774,13 @@ int main(int argc, char* argv[])
 			exit(-1);
 		}
 
-		std::cout << "X car initial" << std::endl;
+		//std::cout << "X car initial" << std::endl;
 		vec(x0, SqrtSigma0, B[0]);
 		for(int t=0; t < T-1; ++t) {
-			std::cout << ~B[t].subMatrix<C_DIM,1>(0,0);
+			//std::cout << ~B[t].subMatrix<C_DIM,1>(0,0);
 			B[t+1] = beliefDynamics(B[t], U[t]);
 		}
-		std::cout << ~B[T-1].subMatrix<C_DIM,1>(0,0) << std::endl << std::endl;
+		//std::cout << ~B[T-1].subMatrix<C_DIM,1>(0,0) << std::endl << std::endl;
 		//unVec(B[T-1], xtmp, stmp);
 		//std::cout << stmp.subMatrix<P_DIM,P_DIM>(0,0) << std::endl;
 
@@ -792,7 +794,7 @@ int main(int argc, char* argv[])
 		*/
 
 
-		pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
+		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, false);
 
 
 		double initTrajCost = computeCost(B, U);
@@ -809,12 +811,21 @@ int main(int argc, char* argv[])
 		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 
 		vec(x0, SqrtSigma0, B[0]);
-		for (size_t t = 0; t < T-1; ++t) {
+		for (int t = 0; t < T-1; ++t) {
 			B[t+1] = beliefDynamics(B[t], U[t]);
 			unVec(B[t+1], xtmp, stmp);
 		}
 		//std::cout << stmp.subMatrix<P_DIM,P_DIM>(0,0) << std::endl;
 
+		for (int t = 0; t < T-1; ++t) {
+			B_total[t+T*i] = B[t];
+			U_total[t+(T-1)*i] = U[t];
+		}
+		B_total[T-1+T*i] = B[T-1];
+
+		totalTrajCost += computeCost(B,U);
+
+		/*
 		std::cout << "X car goal" << std::endl;
 		std::cout << xGoal.subMatrix<C_DIM,1>(0,0) << std::endl;
 
@@ -829,19 +840,23 @@ int main(int argc, char* argv[])
 			std::cout << ~U[t];
 		}
 		std::cout << std::endl;
+		*/
 
 		LOG_INFO("Initial cost: %4.10f", initTrajCost);
 		LOG_INFO("Optimized cost: %4.10f", cost);
 		LOG_INFO("Actual cost: %4.10f", computeCost(B,U));
 		LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 
-		pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
+		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, false);
 
 		unVec(B[T-1], x0, SqrtSigma0);
 
 	}
 	
+	LOG_INFO("Total trajectory cost: %4.10f", totalTrajCost);
 	LOG_INFO("Total solve time: %5.3f ms", totalSolveTime*1000);
+
+	pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, true);
 
 	cleanupBeliefMPCVars();
 

@@ -219,17 +219,92 @@ typedef struct trajMPC_params
     /* vector of size 3 */
     trajMPC_FLOAT e9[3];
 
-    /* vector of size 3 */
-    trajMPC_FLOAT f10[3];
+    /* vector of size 11 */
+    trajMPC_FLOAT f10[11];
 
-    /* vector of size 3 */
-    trajMPC_FLOAT lb10[3];
+    /* vector of size 11 */
+    trajMPC_FLOAT lb10[11];
 
-    /* vector of size 3 */
-    trajMPC_FLOAT ub10[3];
+    /* vector of size 5 */
+    trajMPC_FLOAT ub10[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    trajMPC_FLOAT C10[33];
 
     /* vector of size 3 */
     trajMPC_FLOAT e10[3];
+
+    /* vector of size 11 */
+    trajMPC_FLOAT f11[11];
+
+    /* vector of size 11 */
+    trajMPC_FLOAT lb11[11];
+
+    /* vector of size 5 */
+    trajMPC_FLOAT ub11[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    trajMPC_FLOAT C11[33];
+
+    /* vector of size 3 */
+    trajMPC_FLOAT e11[3];
+
+    /* vector of size 11 */
+    trajMPC_FLOAT f12[11];
+
+    /* vector of size 11 */
+    trajMPC_FLOAT lb12[11];
+
+    /* vector of size 5 */
+    trajMPC_FLOAT ub12[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    trajMPC_FLOAT C12[33];
+
+    /* vector of size 3 */
+    trajMPC_FLOAT e12[3];
+
+    /* vector of size 11 */
+    trajMPC_FLOAT f13[11];
+
+    /* vector of size 11 */
+    trajMPC_FLOAT lb13[11];
+
+    /* vector of size 5 */
+    trajMPC_FLOAT ub13[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    trajMPC_FLOAT C13[33];
+
+    /* vector of size 3 */
+    trajMPC_FLOAT e13[3];
+
+    /* vector of size 11 */
+    trajMPC_FLOAT f14[11];
+
+    /* vector of size 11 */
+    trajMPC_FLOAT lb14[11];
+
+    /* vector of size 5 */
+    trajMPC_FLOAT ub14[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    trajMPC_FLOAT C14[33];
+
+    /* vector of size 3 */
+    trajMPC_FLOAT e14[3];
+
+    /* vector of size 3 */
+    trajMPC_FLOAT f15[3];
+
+    /* vector of size 3 */
+    trajMPC_FLOAT lb15[3];
+
+    /* vector of size 3 */
+    trajMPC_FLOAT ub15[3];
+
+    /* vector of size 3 */
+    trajMPC_FLOAT e15[3];
 
 } trajMPC_params;
 
@@ -265,8 +340,23 @@ typedef struct trajMPC_output
     /* vector of size 5 */
     trajMPC_FLOAT z9[5];
 
+    /* vector of size 5 */
+    trajMPC_FLOAT z10[5];
+
+    /* vector of size 5 */
+    trajMPC_FLOAT z11[5];
+
+    /* vector of size 5 */
+    trajMPC_FLOAT z12[5];
+
+    /* vector of size 5 */
+    trajMPC_FLOAT z13[5];
+
+    /* vector of size 5 */
+    trajMPC_FLOAT z14[5];
+
     /* vector of size 3 */
-    trajMPC_FLOAT z10[3];
+    trajMPC_FLOAT z15[3];
 
 } trajMPC_output;
 

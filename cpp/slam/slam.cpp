@@ -438,15 +438,16 @@ void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matri
 		py::object plot_traj = plot_mod.attr("plot_point_trajectory");
 
 		plot_traj(B_vec, U_vec, waypoints_vec, landmarks_vec, config::MAX_RANGE, config::ALPHA_OBS, X_DIM, time_steps, DT);
+
+		if (pause) {
+			LOG_INFO("Press enter to continue");
+			py::exec("raw_input()",main_namespace);
+			//std::cin.ignore();
+		}
 	}
 	catch(py::error_already_set const &)
 	{
 		PyErr_Print();
-	}
-
-	if (pause) {
-		LOG_INFO("Press enter to continue");
-		std::cin.ignore();
 	}
 
 }

@@ -19,7 +19,7 @@ namespace py = boost::python;
 // horizon is total lifetime of planning
 // timesteps is how far into future accounting for during MPC
 #define HORIZON 100
-#define TIMESTEPS 25
+#define TIMESTEPS 15
 #define DT 1.0/5.0
 
 

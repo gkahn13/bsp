@@ -910,7 +910,7 @@ int main(int argc, char* argv[])
 		}
 		X[T-1] = B[T-1].subMatrix<X_DIM,1>(0,0);
 
-		std::cout << ~X[0].subMatrix<C_DIM,1>(0,0);
+		//std::cout << ~X[0].subMatrix<C_DIM,1>(0,0);
 
 		double initTrajCost = computeCost(X, U);
 		LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
@@ -918,7 +918,7 @@ int main(int argc, char* argv[])
 		double initCasadiTrajCost = casadiComputeCost(X, U);
 		LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
 
-		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, false);
+		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 
 		util::Timer_tic(&solveTimer);
 
@@ -973,7 +973,7 @@ int main(int argc, char* argv[])
 
 
 	LOG_INFO("Total trajectory cost: %4.10f", totalTrajCost);
-	LOG_INFO("Total trajectory solve time: %5.3f", trajTime*1000);
+	LOG_INFO("Total trajectory solve time: %5.3f ms", trajTime*1000);
 	LOG_INFO("Total solve time: %5.3f ms", totalSolveTime*1000);
 
 

@@ -337,10 +337,10 @@ slam-traj-setup:
 	bash $(SLAM_SETUP_FILE) traj $(T)
 
 slam-traj: | slam-traj-setup $(SLAM_TRAJ_OBJS)
-	$(CXX) $(BFLAGS) $(SLAM_TRAJ_OBJS) -o $(BIN_DIR)/slam-traj $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
+	$(CXX) $(SLAM_TRAJ_OBJS) $(BFLAGS) -o $(BIN_DIR)/slam-traj $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
 	
 $(OBJ_DIR)/trajMPC.o : $(SLAM_TRAJ_DIR)/trajMPC.c
-	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+	$(CC) $(C_FLAGS) -c -o $@ $^
 	
 $(OBJ_DIR)/slam-traj.o : $(SLAM_TRAJ_DIR)/slam-traj.cpp $(SLAM_TRAJ_DIR)/trajMPC.c
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
@@ -374,10 +374,10 @@ slam-state: | slam-state-setup slam-traj-setup $(SLAM_STATE_OBJS)
 	$(CXX) $(BFLAGS) $(SLAM_STATE_OBJS) -o $(BIN_DIR)/slam-state $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
 	
 $(OBJ_DIR)/slam-state-cost.o : $(SLAM_STATE_DIR)/slam-state-cost.c
-	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+	$(CC) $(C_FLAGS) -c -o $@ $^
 
 $(OBJ_DIR)/slam-state-grad.o : $(SLAM_STATE_DIR)/slam-state-grad.c
-	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+	$(CC) $(C_FLAGS) -c -o $@ $^
 	
 $(OBJ_DIR)/slamStateMPC.o : $(SLAM_STATE_DIR)/stateMPC.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^

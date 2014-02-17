@@ -510,6 +510,8 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 				LOG_ERROR("Either convexification is wrong to zeroth order, or you are in numerical trouble");
 				LOG_ERROR("Failure!");
 
+				throw exit_exception(-1); // TODO: keep?
+
 				success = false;
 			} else if (approx_merit_improve < cfg::min_approx_improve) {
 				LOG_DEBUG("Converged: improvement small enough");
@@ -672,10 +674,10 @@ bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 	std::cout << ~X[T-1];
 	*/
 
-	LOG_DEBUG("Initial cost: %4.10f", initTrajCost);
-	LOG_DEBUG("Optimized cost: %4.10f", cost);
+	LOG_INFO("Initial cost: %4.10f", initTrajCost);
+	LOG_INFO("Optimized cost: %4.10f", cost);
 	//LOG_DEBUG("Actual cost: %4.10f", computeCost(X,U));
-	LOG_DEBUG("Solve time: %5.3f ms", solvetime*1000);
+	LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 
 	//pythonDisplayTrajectory(U, T, true);
 
@@ -711,6 +713,6 @@ int main(int argc, char* argv[])
 	cleanupTrajMPCVars();
 	
 }
-*/
 
+*/
 

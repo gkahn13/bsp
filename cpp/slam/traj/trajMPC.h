@@ -40,7 +40,7 @@ typedef double trajMPC_FLOAT;
 /* #define PRINTNUMERICALWARNINGS */
 
 /* maximum number of iterations  */
-#define trajMPC_SET_MAXIT         (100)	
+#define trajMPC_SET_MAXIT         (50)	
 
 /* scaling factor of line search (affine direction) */
 #define trajMPC_SET_LS_SCALE_AFF  (0.9)      

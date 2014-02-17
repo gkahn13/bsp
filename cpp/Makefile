@@ -1,5 +1,6 @@
 CXX = g++
 CC = gcc
+INTELCC = icc
 
 C_FLAGS = -std=gnu99
 CPP_FLAGS = -std=c++0x -fpermissive -I.

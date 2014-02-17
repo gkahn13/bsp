@@ -20,7 +20,7 @@ Matrix<C_DIM> cGoal;
 
 Matrix<U_DIM> uMinTraj, uMaxTraj;
 
-const double alpha_control = 1;//.01;
+const double alpha_control = 1;
 const double alpha_goal = 10;
 
 namespace cfg {
@@ -424,6 +424,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 				//for(int i = 0; i < U_DIM; ++i) { ub_traj[t][index++] = MIN(uMaxTraj[i], ut[i] + Ueps); }
 
 				//for(int i = 0; i < 2*B_DIM; ++i) { ub_traj[t][index++] = INFTY; }
+
 			}
 
 			Matrix<C_DIM>& xT = X[T-1];
@@ -476,6 +477,10 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 				LOG_ERROR("Some problem in traj solver, retrying");
 				throw exit_exception(-1);
 			}
+
+			//for(int t=0; t < T-1; ++t) {
+			//	std::cout << ~Uopt[t];
+			//}
 
 
 			LOG_DEBUG("Optimized cost: %4.10f", optcost);
@@ -541,7 +546,6 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			    LOG_DEBUG("Converged: x tolerance");
 			    return true;
 			}
-
 
 		} // trust region loop
 		sqp_iter++;
@@ -645,6 +649,9 @@ bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 			break;
 		}
 
+		//success = true;
+		//break;
+
 
 	}
 
@@ -674,10 +681,10 @@ bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 	std::cout << ~X[T-1];
 	*/
 
-	LOG_INFO("Initial cost: %4.10f", initTrajCost);
-	LOG_INFO("Optimized cost: %4.10f", cost);
+	LOG_DEBUG("Initial cost: %4.10f", initTrajCost);
+	LOG_DEBUG("Optimized cost: %4.10f", cost);
 	//LOG_DEBUG("Actual cost: %4.10f", computeCost(X,U));
-	LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
+	LOG_DEBUG("Solve time: %5.3f ms", solvetime*1000);
 
 	//pythonDisplayTrajectory(U, T, true);
 
@@ -713,6 +720,6 @@ int main(int argc, char* argv[])
 	cleanupTrajMPCVars();
 	
 }
-
 */
+
 

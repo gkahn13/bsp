@@ -25,11 +25,11 @@ const double alpha_goal = 10;
 
 namespace cfg {
 const double improve_ratio_threshold = .1; // .1
-const double min_approx_improve = 1e-2; // 1e-3
-const double min_trust_box_size = 1e-2; // 1e-3
+const double min_approx_improve = 1e-2; // 1e-2
+const double min_trust_box_size = 1e-2; // 1e-2
 
-const double trust_shrink_ratio = .5; // .1
-const double trust_expand_ratio = 2; // 1.5
+const double trust_shrink_ratio = .5; // .5
+const double trust_expand_ratio = 2; // 2
 
 const double cnt_tolerance = 1e-2;
 const double penalty_coeff_increase_ratio = 10; // 10
@@ -103,12 +103,17 @@ inline void fillColMajor(double *X, const Matrix<_numRows, _numColumns>& XMat) {
 	}
 }
 
+inline double wrapAngle(double angle) {
+	return angle - 2*M_PI * floor(angle/(2*M_PI));
+}
+
 
 
 double computeCost(const std::vector< Matrix<C_DIM> >& X, const std::vector< Matrix<U_DIM> >& U)
 {
 	double cost = 0;
 	for(int t = 0; t < T-1; ++t) {
+		// assuming controls don't wrap around
 		cost += alpha_control*tr(~U[t]*U[t]);
 	}
 	Matrix<P_DIM> pT = X[T-1].subMatrix<P_DIM,1>(0, 0);
@@ -170,11 +175,15 @@ double computeMerit(const std::vector< Matrix<C_DIM> >& X, const std::vector< Ma
 	double merit = 0;
 	Matrix<C_DIM> dynviol;
 	for(int t = 0; t < T-1; ++t) {
+		// assuming controls don't wrap around
 		merit += alpha_control*tr(~U[t]*U[t]);
 		dynviol = (X[t+1] - dynfunccar(X[t], U[t]) );
-		for(int i = 0; i < C_DIM; ++i) {
-			merit += penalty_coeff*fabs(dynviol[i]);
-		}
+		//for(int i = 0; i < C_DIM; ++i) {
+		//	merit += penalty_coeff*fabs(dynviol[i]);
+		//}
+		merit += penalty_coeff*fabs(dynviol[0]);
+		merit += penalty_coeff*fabs(dynviol[1]);
+		merit += penalty_coeff*wrapAngle(fabs(dynviol[2])); // since angles wrap
 	}
 	Matrix<P_DIM> pT = X[T-1].subMatrix<P_DIM,1>(0, 0);
 	Matrix<P_DIM> pGoal = cGoal.subMatrix<P_DIM,1>(0, 0);
@@ -517,7 +526,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 
 				throw exit_exception(-1); // TODO: keep?
 
-				success = false;
+				//return false;
 			} else if (approx_merit_improve < cfg::min_approx_improve) {
 				LOG_DEBUG("Converged: improvement small enough");
 				X = Xopt; U = Uopt;

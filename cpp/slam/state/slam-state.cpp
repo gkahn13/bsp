@@ -63,6 +63,10 @@ inline void fillColMajor(double *X, const Matrix<_numRows, _numColumns>& XMat) {
 	}
 }
 
+inline double wrapAngle(double angle) {
+	return angle - 2*M_PI * floor(angle/(2*M_PI));
+}
+
 double nearestAngleFromTo(double from, double to) {
 
 	while (to > from) {
@@ -160,7 +164,11 @@ double casadiComputeMerit(const std::vector< Matrix<X_DIM> >& X, const std::vect
 		b_tp1 = beliefDynamics(b, U[t]);
 		dynviol = (X[t+1] - b_tp1.subMatrix<X_DIM,1>(0,0) );
 		for(int i = 0; i < X_DIM; ++i) {
-			merit += penalty_coeff*fabs(dynviol[i]);
+			if (i != P_DIM) {
+				merit += penalty_coeff*fabs(dynviol[i]);
+			} else {
+				merit += penalty_coeff*wrapAngle(fabs(dynviol[i])); // since angles wrap
+			}
 		}
 		b = b_tp1;
 	}
@@ -221,7 +229,11 @@ double computeMerit(const std::vector< Matrix<X_DIM> >& X, const std::vector< Ma
 		b_tp1 = beliefDynamics(b, U[t]);
 		dynviol = (X[t+1] - b_tp1.subMatrix<X_DIM,1>(0,0) );
 		for(int i = 0; i < X_DIM; ++i) {
-			merit += penalty_coeff*fabs(dynviol[i]);
+			if (i != P_DIM) {
+				merit += penalty_coeff*fabs(dynviol[i]);
+			} else {
+				merit += penalty_coeff*wrapAngle(fabs(dynviol[i]));
+			}
 		}
 		b = b_tp1;
 	}
@@ -896,7 +908,7 @@ int main(int argc, char* argv[])
 		std::vector<Matrix<U_DIM> > U(T-1);
 		bool initTrajSuccess = initTraj(x0.subMatrix<C_DIM,1>(0,0), xGoal.subMatrix<C_DIM,1>(0,0), U);
 		if (!initTrajSuccess) {
-			LOG_ERROR("Failed to initialize trajectory, exiting slam-belief");
+			LOG_ERROR("Failed to initialize trajectory, exiting slam-state");
 			exit(-1);
 		}
 
@@ -977,7 +989,7 @@ int main(int argc, char* argv[])
 	LOG_INFO("Total solve time: %5.3f ms", totalSolveTime*1000);
 
 
-	pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, true);
+	//pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, true);
 
 	cleanupStateMPCVars();
 

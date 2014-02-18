@@ -386,7 +386,7 @@ void pythonDisplayTrajectory(std::vector< Matrix<U_DIM> >& U, int time_steps, bo
 	std::vector<Matrix<B_DIM> > B(time_steps);
 
 	vec(x0, SqrtSigma0, B[0]);
-	for (int t = 0; t < T-1; ++t) {
+	for (int t = 0; t < time_steps-1; ++t) {
 		B[t+1] = beliefDynamics(B[t], U[t]);
 	}
 

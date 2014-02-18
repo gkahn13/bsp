@@ -20,6 +20,8 @@ Matrix<C_DIM> cGoal;
 
 Matrix<U_DIM> uMinTraj, uMaxTraj;
 
+int T_TRAJ_MPC = T;
+
 const double alpha_control = 1;
 const double alpha_goal = 10;
 
@@ -112,11 +114,11 @@ inline double wrapAngle(double angle) {
 double computeCost(const std::vector< Matrix<C_DIM> >& X, const std::vector< Matrix<U_DIM> >& U)
 {
 	double cost = 0;
-	for(int t = 0; t < T-1; ++t) {
+	for(int t = 0; t < T_TRAJ_MPC-1; ++t) {
 		// assuming controls don't wrap around
 		cost += alpha_control*tr(~U[t]*U[t]);
 	}
-	Matrix<P_DIM> pT = X[T-1].subMatrix<P_DIM,1>(0, 0);
+	Matrix<P_DIM> pT = X[T_TRAJ_MPC-1].subMatrix<P_DIM,1>(0, 0);
 	Matrix<P_DIM> pGoal = cGoal.subMatrix<P_DIM,1>(0, 0);
 	cost += alpha_goal*tr(~(pT-pGoal)*(pT-pGoal));
 	return cost;
@@ -157,6 +159,38 @@ void setupTrajVars(trajMPC_params &problem, trajMPC_output &output)
 #include BOOST_PP_LOCAL_ITERATE()
 
 
+	Matrix<C_DIM,3*C_DIM+U_DIM> CMat;
+	Matrix<C_DIM> eVec;
+
+	CMat.reset();
+	eVec.reset();
+
+	CMat.insert<C_DIM,C_DIM>(0,0,identity<C_DIM>());
+
+	for(int t = 0; t < T-1; ++t) {
+			for(int i = 0; i < (3*C_DIM + U_DIM); ++i) { f_traj[t][i] = 0; }
+
+			fillColMajor(C_traj[t], CMat);
+			fillCol(e_traj[t+1], eVec);
+	}
+	for(int i = 0; i < C_DIM; ++i) { f_traj[T-1][i] = 0; }
+
+	int index = 0;
+	for(int t = 0; t < T-1; ++t) {
+		index = 0;
+		for(int i = 0; i < C_DIM; ++i) { lb_traj[t][index++] = -INFTY; }
+		for(int i = 0; i < U_DIM; ++i) { lb_traj[t][index++] = -INFTY; }
+		for(int i = 0; i < 2*(C_DIM); ++i) { lb_traj[t][index++] = 0; }
+
+
+		index = 0;
+		for(int i = 0; i < C_DIM; ++i) { ub_traj[t][index++] = INFTY; }
+		for(int i = 0; i < U_DIM; ++i) { ub_traj[t][index++] = INFTY; }
+	}
+
+	for(int i = 0; i < C_DIM; ++i) { lb_traj[T-1][i] = -INFTY; }
+	for(int i = 0; i < C_DIM; ++i) { ub_traj[T-1][i] = INFTY; }
+
 
 }
 
@@ -174,7 +208,7 @@ double computeMerit(const std::vector< Matrix<C_DIM> >& X, const std::vector< Ma
 {
 	double merit = 0;
 	Matrix<C_DIM> dynviol;
-	for(int t = 0; t < T-1; ++t) {
+	for(int t = 0; t < T_TRAJ_MPC-1; ++t) {
 		// assuming controls don't wrap around
 		merit += alpha_control*tr(~U[t]*U[t]);
 		dynviol = (X[t+1] - dynfunccar(X[t], U[t]) );
@@ -185,7 +219,7 @@ double computeMerit(const std::vector< Matrix<C_DIM> >& X, const std::vector< Ma
 		merit += penalty_coeff*fabs(dynviol[1]);
 		merit += penalty_coeff*wrapAngle(fabs(dynviol[2])); // since angles wrap
 	}
-	Matrix<P_DIM> pT = X[T-1].subMatrix<P_DIM,1>(0, 0);
+	Matrix<P_DIM> pT = X[T_TRAJ_MPC-1].subMatrix<P_DIM,1>(0, 0);
 	Matrix<P_DIM> pGoal = cGoal.subMatrix<P_DIM,1>(0, 0);
 	merit += alpha_goal*tr(~(pT-pGoal)*(pT-pGoal));
 	return merit;
@@ -281,6 +315,8 @@ bool isValidTrajInputs()
 	std::cout << std::endl << std::endl;
 	*/
 
+	std::cout << "t: " << T-1 << std::endl << std::endl;
+
 	std::cout << "lb_traj c: ";
 	for(int i = 0; i < C_DIM; ++i) {
 		std::cout << lb_traj[T-1][i] << " ";
@@ -302,7 +338,6 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 {
 	LOG_DEBUG("Solving sqp problem with penalty parameter: %2.4f", penalty_coeff);
 
-	//Matrix<B_DIM,1> b0 = B[0];
 
 	std::vector< Matrix<C_DIM,C_DIM> > F(T-1);
 	std::vector< Matrix<C_DIM,U_DIM> > G(T-1);
@@ -346,18 +381,12 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 		// Problem linearization and definition
 		// fill in f_traj, C_traj, e_traj
 		
-		for (int t = 0; t < T-1; ++t) 
+		for (int t = 0; t < T_TRAJ_MPC-1; ++t)
 		{
 			Matrix<C_DIM>& xt = X[t];
 			Matrix<U_DIM>& ut = U[t];
 
 			linearizeCarDynamics(xt, ut, F[t], G[t], h[t]);
-
-			//std::cout << "h[" << t << "]" << std::endl << h[t] << std::endl;
-			//std::cout << "F[" << t << "]" << std::endl << F[t] << std::endl;
-			//std::cout << "xt[" << t << "]" << ~xt;
-			//std::cout << "G[" << t << "]" << std::endl << G[t] << std::endl;
-			//std::cout << "ut[" << t << "]" << ~ut;
 
 			// initialize f_traj in cost function to penalize
 			// belief dynamics slack variables
@@ -381,13 +410,12 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			} 
 			
 			eVec = -h[t] + F[t]*xt + G[t]*ut;
-			//std::cout << "eVec " << ~eVec << std::endl;
 			fillCol(e_traj[t+1], eVec);
 
 		}
 		
-		for(int i=0; i < P_DIM; ++i) { f_traj[T-1][i] = -2*alpha_goal*cGoal[i]; }
-		f_traj[T-1][2] = 0;
+		for(int i=0; i < P_DIM; ++i) { f_traj[T_TRAJ_MPC-1][i] = -2*alpha_goal*cGoal[i]; }
+		f_traj[T_TRAJ_MPC-1][2] = 0;
 
 		//std::cout << "PAUSED INSIDE MINIMIZEMERITFUNCTION" << std::endl;
 		//int k;
@@ -402,7 +430,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			util::Timer fillVarsTimer;
 			util::Timer_tic(&fillVarsTimer);
 			// solve the innermost QP here
-			for(int t = 0; t < T-1; ++t)
+			for(int t = 0; t < T_TRAJ_MPC-1; ++t)
 			{
 				Matrix<C_DIM>& xt = X[t];
 				Matrix<U_DIM>& ut = U[t];
@@ -436,19 +464,42 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 
 			}
 
-			Matrix<C_DIM>& xT = X[T-1];
+			Matrix<C_DIM>& xT = X[T_TRAJ_MPC-1];
 
 			// Fill in lb_traj, ub_traj, C_traj, e_traj
 			index = 0;
 			double delta = .5;
 			// cGoal lower bound
-			for(int i = 0; i < P_DIM; ++i) { lb_traj[T-1][index++] = cGoal[i] - delta; }
-			lb_traj[T-1][index++] = MIN(xMin[2], xT[2] - Xeps); // none on angles
+			for(int i = 0; i < P_DIM; ++i) { lb_traj[T_TRAJ_MPC-1][index++] = cGoal[i] - delta; }
+			lb_traj[T_TRAJ_MPC-1][index++] = MIN(xMin[2], xT[2] - Xeps); // none on angles
 
 			index = 0;
 			// cGoal upper bound
-			for(int i = 0; i < P_DIM; ++i) { ub_traj[T-1][index++] = cGoal[i] + delta; }
-			ub_traj[T-1][index++] = MAX(xMax[2], xT[2] + Xeps);
+			for(int i = 0; i < P_DIM; ++i) { ub_traj[T_TRAJ_MPC-1][index++] = cGoal[i] + delta; }
+			ub_traj[T_TRAJ_MPC-1][index++] = MAX(xMax[2], xT[2] + Xeps);
+
+
+			// set timesteps after T_TRAJ_MPC to stay in goal region
+			if (T_TRAJ_MPC < T) {
+				for(int i = 0; i < U_DIM; ++i) { lb_traj[T_TRAJ_MPC-1][i+C_DIM] = uMinTraj[i]; }
+				for(int i = 0; i < U_DIM; ++i) { ub_traj[T_TRAJ_MPC-1][i+C_DIM] = uMaxTraj[i]; }
+			}
+			for(int t = T_TRAJ_MPC; t < T; ++t) {
+				index = 0;
+				for(int i = 0; i < C_DIM; ++i) { lb_traj[t][index] = lb_traj[T_TRAJ_MPC-1][index]; index++; }
+				if (t < T-1) {
+					for(int i = 0; i < U_DIM; ++i) { lb_traj[t][index] = lb_traj[T_TRAJ_MPC-1][index]; index++; }
+					for(int i = 0; i < 2*(C_DIM); ++i) { lb_traj[t][index++] = 0; }
+				}
+
+				index = 0;
+				for(int i = 0; i < C_DIM; ++i) { ub_traj[t][index] = ub_traj[T_TRAJ_MPC-1][index]; index++; }
+				if (t < T-1) {
+					for(int i = 0; i < U_DIM; ++i) { ub_traj[t][index] = ub_traj[T_TRAJ_MPC-1][index]; index++; }
+				}
+
+			}
+
 
 			double constant_cost = 0;
 
@@ -466,6 +517,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 
 			int exitflag = trajMPC_solve(&problem, &output, &info);
 			if (exitflag == 1) {
+				optcost = info.pobj;
 				for(int t = 0; t < T-1; ++t) {
 					Matrix<C_DIM>& xt = Xopt[t];
 					Matrix<U_DIM>& ut = Uopt[t];
@@ -476,7 +528,6 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 					for(int i = 0; i < U_DIM; ++i) {
 						ut[i] = z_traj[t][C_DIM+i];
 					}
-					optcost = info.pobj;
 				}
 				for(int i = 0; i < C_DIM; ++i) {
 					Xopt[T-1][i] = z_traj[T-1][i];
@@ -490,6 +541,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			//for(int t=0; t < T-1; ++t) {
 			//	std::cout << ~Uopt[t];
 			//}
+			//pythonDisplayTrajectory(U, T_TRAJ_MPC, true);
 
 
 			LOG_DEBUG("Optimized cost: %4.10f", optcost);
@@ -518,8 +570,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			LOG_DEBUG("merit_improve_ratio: %1.6f", merit_improve_ratio);
 			
 
-
-			if (approx_merit_improve < -1e-3) {
+			if (approx_merit_improve < -1) { // -1e-3
 				LOG_ERROR("Approximate merit function got worse: %1.6f", approx_merit_improve);
 				LOG_ERROR("Either convexification is wrong to zeroth order, or you are in numerical trouble");
 				LOG_ERROR("Failure!");
@@ -578,7 +629,7 @@ double trajCollocation(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<U_DI
 		bool success = minimizeMeritFunction(X, U, problem, output, info, penalty_coeff);
 
 		double cntviol = 0;
-		for(int t = 0; t < T-1; ++t) {
+		for(int t = 0; t < T_TRAJ_MPC-1; ++t) {
 			dynviol = (X[t+1] - dynfunccar(X[t], U[t]) );
 			for(int i = 0; i < C_DIM; ++i) {
 				cntviol += fabs(dynviol[i]);
@@ -599,7 +650,9 @@ double trajCollocation(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<U_DI
 }
 
 
-bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vector<Matrix<U_DIM> >& U) {
+bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vector<Matrix<U_DIM> >& U, int timesteps) {
+	T_TRAJ_MPC = timesteps;
+
 	trajMPC_params problem;
 	trajMPC_output output;
 	trajMPC_info info;
@@ -614,7 +667,7 @@ bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 	uMaxTraj[1] = M_PI/4;
 
 	Matrix<U_DIM> uinit;
-	uinit[0] = sqrt((c0[0] - cGoal[0])*(c0[0] - cGoal[0]) + (c0[1] - cGoal[1])*(c0[1] - cGoal[1])) / (double)((T-1)*DT);
+	uinit[0] = sqrt((c0[0] - cGoal[0])*(c0[0] - cGoal[0]) + (c0[1] - cGoal[1])*(c0[1] - cGoal[1])) / (double)((T_TRAJ_MPC-1)*DT);
 	uinit[1] = 0;
 	//uinit[1] = atan2(cGoal[1] - c0[1], cGoal[0] - c0[0]) / (double)((T-1)*DT);
 
@@ -626,18 +679,18 @@ bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 	util::Timer solveTimer;
 	util::Timer_tic(&solveTimer);
 
-	std::vector<Matrix<C_DIM> > X(T);
+	std::vector<Matrix<C_DIM> > X(T_TRAJ_MPC);
 	for(int scalingIndex=0; scalingIndex < 4; scalingIndex++) {
 
 		//std::cout << "scaling factor: " << scaling[scalingIndex] << std::endl;
 
-		for(int i=0; i < T-1; ++i) { U[i] = uinit*scaling[scalingIndex]; }
+		for(int i=0; i < T_TRAJ_MPC-1; ++i) { U[i] = uinit*scaling[scalingIndex]; }
 
 		//pythonDisplayTrajectory(U, T, true);
 
 		//std::cout << "X initial" << std::endl;
 		X[0].insert(0,0,c0);
-		for(int t=0; t < T-1; ++t) {
+		for(int t=0; t < timesteps-1; ++t) {
 			//std::cout << ~X[t];
 			X[t+1] = dynfunccar(X[t],U[t]);
 		}
@@ -650,17 +703,12 @@ bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 			trajCollocation(X, U, problem, output, info);
 			success = true;
 		} catch(exit_exception& e) {
-			//pythonDisplayTrajectory(U, T, true);
 			success = false;
 		}
 
 		if (success) {
 			break;
 		}
-
-		//success = true;
-		//break;
-
 
 	}
 
@@ -690,12 +738,14 @@ bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 	std::cout << ~X[T-1];
 	*/
 
+	cost = computeCost(X, U);
+
 	LOG_DEBUG("Initial cost: %4.10f", initTrajCost);
 	LOG_DEBUG("Optimized cost: %4.10f", cost);
 	//LOG_DEBUG("Actual cost: %4.10f", computeCost(X,U));
 	LOG_DEBUG("Solve time: %5.3f ms", solvetime*1000);
 
-	//pythonDisplayTrajectory(U, T, true);
+	//pythonDisplayTrajectory(U, T_TRAJ_MPC, true);
 
 	return true;
 }
@@ -709,12 +759,12 @@ int main(int argc, char* argv[])
 	Matrix<C_DIM> cStart, cEnd;
 	std::vector<Matrix<U_DIM> > U(T-1, zeros<U_DIM,1>());
 
-	cStart[0] = 60; // 60
-	cStart[1] = 20; // 20
-	cStart[2] = 2.47; // 2.47
+	cStart[0] = 0; // 60
+	cStart[1] = 0; // 20
+	cStart[2] = 0; // 2.47
 
-	cEnd[0] = 0; // 0
-	cEnd[1] = 20; // 20
+	cEnd[0] = 60; // 0
+	cEnd[1] = 0; // 20
 
 	for(int i=0; i < C_DIM; ++i) { x0[i] = cStart[i]; }
 	for(int i=0; i < C_DIM; ++i) { xGoal[i] = cEnd[i]; }
@@ -724,7 +774,7 @@ int main(int argc, char* argv[])
 	//cStart[2] = 0;
 	//cEnd[2] = atan2(cEnd[1] - cStart[1], cEnd[0] - cStart[0]);
 
-	initTraj(cStart, cEnd, U);
+	initTraj(cStart, cEnd, U, T-4);
 
 	cleanupTrajMPCVars();
 	

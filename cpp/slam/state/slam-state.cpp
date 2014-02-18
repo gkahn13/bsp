@@ -20,6 +20,7 @@ const double alpha_belief = 10; // 10;
 const double alpha_final_belief = 50; // 50;
 const double alpha_control = .01; // .01
 
+int T_MPC = T;
 
 namespace cfg {
 const double improve_ratio_threshold = .1; // .1
@@ -471,14 +472,16 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 		LOG_DEBUG("  sqp iter: %d", sqp_iter);
 
 		merit = casadiComputeMerit(X, U, penalty_coeff);
+		//merit = computeMerit(X, U, penalty_coeff);
 
 		LOG_DEBUG("  merit: %4.10f", merit);
 
 		// Compute gradients
 		casadiComputeCostGrad(X, U, cost, Grad);
+		//cost = computeCost(X, U);
 
 		// Problem linearization and definition
-		// fill in Q, f
+		// fill in H, f
 
 		hessian_constant = 0;
 		jac_constant = 0;
@@ -501,7 +504,6 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			}
 
 			// since diagonal, fill directly
-			// TODO: check if H is 0 for the landmarks. if so, pull out of the state
 			for(int i = 0; i < (X_DIM+U_DIM); ++i) { H[t][i] = HMat(i,i); }
 			// TODO: why does this work???
 			for(int i = 0; i < (2*X_DIM); ++i) { H[t][i + (X_DIM+U_DIM)] = 1e4; } //1e4
@@ -510,8 +512,10 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			zbar.insert(X_DIM,0,ut);
 
 			for(int i = 0; i < (X_DIM+U_DIM); ++i) {
-				hessian_constant += HMat(i,i)*zbar[i]*zbar[i];
-				jac_constant -= Grad[idx+i]*zbar[i];
+				if (t < T_MPC-1) {
+					hessian_constant += HMat(i,i)*zbar[i]*zbar[i];
+					jac_constant -= Grad[idx+i]*zbar[i];
+				}
 				f[t][i] = Grad[idx+i] - HMat(i,i)*zbar[i];
 			}
 
@@ -541,7 +545,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			fillCol(e[t+1], eVec);
 		}
 
-		// For last stage, fill in Q, f, A, b
+		// For last stage, fill in H, f
 		Matrix<X_DIM>& xT = X[T-1];
 
 		idx = (T-1)*(X_DIM+U_DIM);
@@ -557,8 +561,10 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 		for(int i = 0; i < X_DIM; ++i) { H[T-1][i] = HMat(i,i); }
 
 		for(int i = 0; i < X_DIM; ++i) {
-			hessian_constant += HfMat(i,i)*xT[i]*xT[i];
-			jac_constant -= Grad[idx+i]*xT[i];
+		if (T <= T_MPC) {
+				hessian_constant += HfMat(i,i)*xT[i]*xT[i];
+				jac_constant -= Grad[idx+i]*xT[i];
+			}
 			f[T-1][i] = Grad[idx+i] - HfMat(i,i)*xT[i];
 		}
 
@@ -567,10 +573,6 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 		LOG_DEBUG("  hessian cost: %4.10f", 0.5*hessian_constant);
 		LOG_DEBUG("  jacobian cost: %4.10f", jac_constant);
 		LOG_DEBUG("  constant cost: %4.10f", constant_cost);
-
-		//std::cout << "PAUSED INSIDE MINIMIZEMERITFUNCTION" << std::endl;
-		//int k;
-		//std::cin >> k;
 
 
 		// trust region size adjustment
@@ -629,7 +631,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 				ub[t][index++] = MIN(uMax[1], ut[1] + Uangle_eps);
 			}
 
-			Matrix<X_DIM>& xT = X[T-1];
+			Matrix<X_DIM>& xT_MPC = X[T_MPC-1];
 
 			// Fill in lb, ub
 			index = 0;
@@ -637,26 +639,42 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			double finalAngleDelta = M_PI/4;
 
 			// xGoal lower bound
-			for(int i = 0; i < P_DIM; ++i) { lb[T-1][index++] = xGoal[i] - finalPosDelta; }
+			for(int i = 0; i < P_DIM; ++i) { lb[T_MPC-1][index++] = xGoal[i] - finalPosDelta; }
 			// loose on car angle and landmarks
-			//lb[T-1][index++] = xGoal[2] - finalAngleDelta;
-			lb[T-1][index++] = nearestAngleFromTo(xT[2], xGoal[2] - finalAngleDelta);
-			for(int i = C_DIM; i < X_DIM; ++i) { lb[T-1][index++] = MAX(xMin[i], xT[i] - Xpos_eps); }
+			//lb[T_MPC-1][index++] = xGoal[2] - finalAngleDelta;
+			lb[T_MPC-1][index++] = nearestAngleFromTo(xT_MPC[2], xGoal[2] - finalAngleDelta);
+			for(int i = C_DIM; i < X_DIM; ++i) { lb[T_MPC-1][index++] = MAX(xMin[i], xT_MPC[i] - Xpos_eps); }
 
 			index = 0;
 			// xGoal upper bound
-			for(int i = 0; i < P_DIM; ++i) { ub[T-1][index++] = xGoal[i] + finalPosDelta; }
+			for(int i = 0; i < P_DIM; ++i) { ub[T_MPC-1][index++] = xGoal[i] + finalPosDelta; }
 			// loose on car angle and landmarks
-			//ub[T-1][index++] = xGoal[2] + finalAngleDelta;
-			ub[T-1][index++] = nearestAngleFromTo(xT[2], xGoal[2] + finalAngleDelta);
-			for(int i = C_DIM; i < X_DIM; ++i) { ub[T-1][index++] = MIN(xMax[i], xT[i] + Xpos_eps); }
+			//ub[T_MPC-1][index++] = xGoal[2] + finalAngleDelta;
+			ub[T_MPC-1][index++] = nearestAngleFromTo(xT_MPC[2], xGoal[2] + finalAngleDelta);
+			for(int i = C_DIM; i < X_DIM; ++i) { ub[T_MPC-1][index++] = MIN(xMax[i], xT_MPC[i] + Xpos_eps); }
+
+
+			// set timesteps after T_MPC to stay in goal region
+			for(int t = T_MPC; t < T; ++t) {
+				for(int i = 0; i < X_DIM; ++i) { lb[t][i] = lb[T_MPC-1][i]; }
+				if (t < T-1) {
+					for(int i = X_DIM; i < (X_DIM+U_DIM); ++i) { lb[t][i] = lb[T_MPC-1][i]; }
+				}
+
+				for(int i = 0; i < X_DIM; ++i) { ub[t][i] = ub[T_MPC-1][i]; }
+				if (t < T-1) {
+					for(int i = X_DIM; i < (X_DIM+U_DIM); ++i) { ub[t][i] = ub[T_MPC-1][i]; }
+				}
+
+			}
+
+
 
 			// Verify problem inputs
 			//if (!isValidInputs()) {
 			//	std::cout << "Inputs are not valid!" << std::endl;
 			//	exit(-1);
 			//}
-
 
 			int exitflag = stateMPC_solve(&problem, &output, &info);
 			if (exitflag == 1) {
@@ -682,6 +700,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 				exit(-1);
 			}
 
+
 			LOG_DEBUG("       Optimized cost: %4.10f", optcost);
 
 			model_merit = optcost + constant_cost;
@@ -701,8 +720,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			LOG_DEBUG("       merit_improve_ratio: %1.6f", merit_improve_ratio);
 
 			//std::cout << "PAUSED INSIDE minimizeMeritFunction AFTER OPTIMIZATION" << std::endl;
-			//int num;
-			//std::cin >> num;
+			//std::cin.ignore();
 
 			if (approx_merit_improve < -1e-5) {
 				//LOG_ERROR("Approximate merit function got worse: %1.6f", approx_merit_improve);
@@ -847,10 +865,9 @@ double statePenaltyCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Mat
 	return casadiComputeCost(X, U);
 }
 
-
-
-int main(int argc, char* argv[])
-{
+// plans waypoint to waypoint in a MPC fashion
+void planMPC() {
+	T_MPC = T-1;
 
 	LOG_INFO("Initializing problem parameters");
 	initProblemParams();
@@ -880,9 +897,6 @@ int main(int argc, char* argv[])
 		// goal is waypoint position + direct angle + landmarks
 		xGoal.insert(0, 0, waypoints[i]);
 
-		//xGoal[2] = x0[2];
-		//x0[2] = atan2(xGoal[1] - x0[1], xGoal[0] - x0[0]);
-
 		// want to be facing the next waypoint
 		if (i < NUM_WAYPOINTS - 1) {
 			xGoal[2] = atan2(waypoints[i+1][1] - waypoints[i][1], waypoints[i+1][0] - waypoints[i][0]);
@@ -894,19 +908,10 @@ int main(int argc, char* argv[])
 		xGoal.insert(C_DIM, 0, x0.subMatrix<L_DIM,1>(C_DIM,0));
 
 
-		/*
-		// initialize velocity to dist / timesteps
-		uinit[0] = sqrt((x0[0] - xGoal[0])*(x0[0] - xGoal[0]) + (x0[1] - xGoal[1])*(x0[1] - xGoal[1])) / (double)((T-1)*DT);
-		// angle already pointed at goal, so is 0
-		uinit[1] = 0;
-
-		std::vector<Matrix<U_DIM> > U(T-1, uinit);
-		*/
-
 		util::Timer_tic(&trajTimer);
 
 		std::vector<Matrix<U_DIM> > U(T-1);
-		bool initTrajSuccess = initTraj(x0.subMatrix<C_DIM,1>(0,0), xGoal.subMatrix<C_DIM,1>(0,0), U);
+		bool initTrajSuccess = initTraj(x0.subMatrix<C_DIM,1>(0,0), xGoal.subMatrix<C_DIM,1>(0,0), U, T_MPC);
 		if (!initTrajSuccess) {
 			LOG_ERROR("Failed to initialize trajectory, exiting slam-state");
 			exit(-1);
@@ -956,17 +961,161 @@ int main(int argc, char* argv[])
 		totalTrajCost += computeCost(X,U);
 
 		/*
-		std::cout << "X car" << std::endl;
-		for(int t=0; t < T; ++t) {
-			std::cout << ~X[t].subMatrix<C_DIM,1>(0,0);
-		}
-		std::cout << std::endl << std::endl;
+				std::cout << "X car" << std::endl;
+				for(int t=0; t < T; ++t) {
+					std::cout << ~X[t].subMatrix<C_DIM,1>(0,0);
+				}
+				std::cout << std::endl << std::endl;
 
-		std::cout << "U" << std::endl;
-		for(int t=0; t < T-1; ++t) {
-			std::cout << ~U[t];
+				std::cout << "U" << std::endl;
+				for(int t=0; t < T-1; ++t) {
+					std::cout << ~U[t];
+				}
+				std::cout << std::endl;
+		 */
+
+		LOG_INFO("Initial cost: %4.10f", initTrajCost);
+		LOG_INFO("Optimized cost: %4.10f", cost);
+		LOG_INFO("Actual cost: %4.10f", computeCost(X,U));
+		LOG_INFO("Trajectory solve time: %5.3f ms", initTrajTime*1000);
+		LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
+
+
+		unVec(B[T-1], x0, SqrtSigma0);
+
+		pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
+
+	}
+
+
+
+	LOG_INFO("Total trajectory cost: %4.10f", totalTrajCost);
+	LOG_INFO("Total trajectory solve time: %5.3f ms", trajTime*1000);
+	LOG_INFO("Total solve time: %5.3f ms", totalSolveTime*1000);
+
+
+	pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, true);
+
+	cleanupStateMPCVars();
+}
+
+// plans entire path
+void plan() {
+	LOG_INFO("Initializing problem parameters");
+	initProblemParams();
+
+	stateMPC_params problem;
+	stateMPC_output output;
+	stateMPC_info info;
+	setupStateVars(problem, output);
+
+	util::Timer solveTimer, trajTimer;
+	double totalSolveTime = 0, trajTime = 0;
+
+	double totalTrajCost = 0;
+
+	std::vector<Matrix<B_DIM> > B_total(T*NUM_WAYPOINTS);
+	std::vector<Matrix<U_DIM> > U_total((T-1)*NUM_WAYPOINTS);
+
+	std::vector<Matrix<B_DIM> > B(T);
+	std::vector<Matrix<X_DIM> > X(T);
+
+	Matrix<U_DIM> uinit;
+
+	Matrix<X_DIM,1> x;
+	Matrix<X_DIM,X_DIM> s;
+	for(int i=0; i < NUM_WAYPOINTS; ++i) {
+		LOG_INFO("Going to waypoint %d",i);
+		// goal is waypoint position + direct angle + landmarks
+		xGoal.insert(0, 0, waypoints[i]);
+
+		//xGoal[2] = x0[2];
+		//x0[2] = atan2(xGoal[1] - x0[1], xGoal[0] - x0[0]);
+
+		// want to be facing the next waypoint
+		if (i < NUM_WAYPOINTS - 1) {
+			xGoal[2] = atan2(waypoints[i+1][1] - waypoints[i][1], waypoints[i+1][0] - waypoints[i][0]);
+		} else {
+			xGoal[2] = atan2(xGoal[1] - x0[1], xGoal[0] - x0[0]);
 		}
-		std::cout << std::endl;
+
+
+		xGoal.insert(C_DIM, 0, x0.subMatrix<L_DIM,1>(C_DIM,0));
+
+
+		/*
+			// initialize velocity to dist / timesteps
+			uinit[0] = sqrt((x0[0] - xGoal[0])*(x0[0] - xGoal[0]) + (x0[1] - xGoal[1])*(x0[1] - xGoal[1])) / (double)((T-1)*DT);
+			// angle already pointed at goal, so is 0
+			uinit[1] = 0;
+
+			std::vector<Matrix<U_DIM> > U(T-1, uinit);
+		 */
+
+		util::Timer_tic(&trajTimer);
+
+		std::vector<Matrix<U_DIM> > U(T-1);
+		bool initTrajSuccess = initTraj(x0.subMatrix<C_DIM,1>(0,0), xGoal.subMatrix<C_DIM,1>(0,0), U, T);
+		if (!initTrajSuccess) {
+			LOG_ERROR("Failed to initialize trajectory, exiting slam-state");
+			exit(-1);
+		}
+
+		double initTrajTime = util::Timer_toc(&trajTimer);
+		trajTime += initTrajTime;
+
+		vec(x0, SqrtSigma0, B[0]);
+		for(int t=0; t < T-1; ++t) {
+			X[t] = B[t].subMatrix<X_DIM,1>(0,0);
+			B[t+1] = beliefDynamics(B[t], U[t]);
+		}
+		X[T-1] = B[T-1].subMatrix<X_DIM,1>(0,0);
+
+		//std::cout << ~X[0].subMatrix<C_DIM,1>(0,0);
+
+		double initTrajCost = computeCost(X, U);
+		LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
+
+		double initCasadiTrajCost = casadiComputeCost(X, U);
+		LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
+
+		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
+
+		util::Timer_tic(&solveTimer);
+
+		double cost = statePenaltyCollocation(X, U, problem, output, info);
+
+		double solvetime = util::Timer_toc(&solveTimer);
+		totalSolveTime += solvetime;
+
+		vec(x0, SqrtSigma0, B[0]);
+		X[0] = x0;
+		for (int t = 0; t < T-1; ++t) {
+			B[t+1] = beliefDynamics(B[t], U[t]);
+			unVec(B[t+1], x, s);
+			X[t+1] = x;
+		}
+
+		for (int t = 0; t < T-1; ++t) {
+			B_total[t+T*i] = B[t];
+			U_total[t+(T-1)*i] = U[t];
+		}
+		B_total[T-1+T*i] = B[T-1];
+
+		totalTrajCost += computeCost(X,U);
+
+		/*
+			std::cout << "X car" << std::endl;
+			for(int t=0; t < T; ++t) {
+				std::cout << ~X[t].subMatrix<C_DIM,1>(0,0);
+			}
+			std::cout << std::endl << std::endl;
+
+			std::cout << "U" << std::endl;
+			for(int t=0; t < T-1; ++t) {
+				std::cout << ~U[t];
+			}
+			std::cout << std::endl;
 		 */
 
 		LOG_INFO("Initial cost: %4.10f", initTrajCost);
@@ -989,10 +1138,18 @@ int main(int argc, char* argv[])
 	LOG_INFO("Total solve time: %5.3f ms", totalSolveTime*1000);
 
 
-	//pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, true);
+	pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, true);
 
 	cleanupStateMPCVars();
 
+}
+
+
+int main(int argc, char* argv[])
+{
+
+	//plan();
+	planMPC();
 
 	return 0;
 }

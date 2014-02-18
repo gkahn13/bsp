@@ -258,7 +258,7 @@ int main(int argc, char* argv[])
 	int nXU = T*X_DIM+(T-1)*U_DIM;
 	SXMatrix XU = ssym("XU",nXU,1);
 	SXMatrix Sigma_0 = ssym("S0",X_DIM,X_DIM);
-	SXMatrix params = ssym("params",3);
+	SXMatrix params = ssym("params",3); // alpha_control, alpha_belief, alpha_final_belief
 
 	// Objective
 	SXMatrix f = costfunc(XU, Sigma_0, params);

@@ -386,6 +386,17 @@ $(OBJ_DIR)/slamStateMPC.o : $(SLAM_STATE_DIR)/stateMPC.c
 $(OBJ_DIR)/slam-state.o : $(SLAM_STATE_DIR)/slam-state.cpp $(SLAM_HEADERS)
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
 	
+# make slam-state-mpc
+SLAM_STATE_MPC_DIR = slam/state
+SLAM_STATE_MPC_FILES = slam-state-cost slam-state-grad slamStateMPC slam-state-mpc logging slam trajMPC slam-traj
+SLAM_STATE_MPC_OBJS = $(SLAM_STATE_MPC_FILES:%=$(OBJ_DIR)/%.o)
+
+slam-state-mpc: | slam-state-setup slam-traj-setup $(SLAM_STATE_MPC_OBJS)
+	$(CXX) $(BFLAGS) $(SLAM_STATE_MPC_OBJS) -o $(BIN_DIR)/slam-state-mpc $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
+	
+$(OBJ_DIR)/slam-state-mpc.o : $(SLAM_STATE_DIR)/slam-state-mpc.cpp $(SLAM_HEADERS)
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
+
 
 
 

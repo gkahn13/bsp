@@ -17,8 +17,8 @@ stateMPC_FLOAT **H, **f, **lb, **ub, **C, **e, **z;
 #include "boost/preprocessor.hpp"
 
 const double alpha_belief = 10; // 10;
-const double alpha_final_belief = 50; // 50;
-const double alpha_control = .01; // .01
+const double alpha_final_belief = 10; // 50;
+const double alpha_control = 1; // .01
 
 
 namespace cfg {
@@ -989,7 +989,7 @@ int main(int argc, char* argv[])
 	LOG_INFO("Total solve time: %5.3f ms", totalSolveTime*1000);
 
 
-	//pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, true);
+	pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, true);
 
 	cleanupStateMPCVars();
 

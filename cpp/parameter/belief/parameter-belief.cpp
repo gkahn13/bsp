@@ -186,8 +186,8 @@ bool isValidInputs()
 		*/
 
 
-		std::cout << "lb b: ";
-		for(int i = 0; i < B_DIM; ++i) {
+		std::cout << "lb x: ";
+		for(int i = 0; i < X_DIM; ++i) {
 			std::cout << lb[t][i] << " ";
 		}
 		std::cout << std::endl;
@@ -199,14 +199,16 @@ bool isValidInputs()
 		}
 		std::cout << std::endl;
 
+		/*
 		std::cout << "lb s, t: ";
 		for(int i = 0; i < 2*B_DIM; ++i) {
 			std::cout << lb[t][B_DIM+U_DIM+i] << " ";
 		}
 		std::cout << std::endl;
+		*/
 
-		std::cout << "ub b: ";
-		for(int i = 0; i < B_DIM; ++i) {
+		std::cout << "ub x: ";
+		for(int i = 0; i < X_DIM; ++i) {
 			std::cout << ub[t][i] << " ";
 		}
 		std::cout << std::endl;
@@ -416,10 +418,10 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			for(int i = 0; i < S_DIM; ++i) { ub[T-1][index] = bT[index] + Beps; index++; }
 
 			// Verify problem inputs
-			//if (!isValidInputs()) {
-			//	std::cout << "Inputs are not valid!" << std::endl;
-			//	exit(-1);
-			//}
+			if (!isValidInputs()) {
+				std::cout << "Inputs are not valid!" << std::endl;
+				exit(-1);
+			}
 
 
 			//std::cerr << "PAUSING INSIDE MINIMIZE MERIT FUNCTION FOR INPUT VERIFICATION" << std::endl;

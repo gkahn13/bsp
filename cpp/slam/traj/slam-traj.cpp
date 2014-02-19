@@ -668,6 +668,7 @@ bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 
 	Matrix<U_DIM> uinit;
 	uinit[0] = sqrt((c0[0] - cGoal[0])*(c0[0] - cGoal[0]) + (c0[1] - cGoal[1])*(c0[1] - cGoal[1])) / (double)((T_TRAJ_MPC-1)*DT);
+	uinit[0] = uinit[0] / ((double)((T_TRAJ_MPC-1)*DT) ? T_TRAJ_MPC > 1 : 1);
 	uinit[1] = 0;
 	//uinit[1] = atan2(cGoal[1] - c0[1], cGoal[0] - c0[0]) / (double)((T-1)*DT);
 

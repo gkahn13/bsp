@@ -19,7 +19,7 @@ namespace py = boost::python;
 // horizon is total lifetime of planning
 // timesteps is how far into future accounting for during MPC
 #define HORIZON 100
-#define TIMESTEPS 25
+#define TIMESTEPS 15
 #define DT 1.0/5.0
 
 
@@ -333,7 +333,7 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	Sigma = (identity<X_DIM>() - K*H)*Sigma;
 
 	Matrix<B_DIM> g;
-	vec(x, sqrt(Sigma), g);
+	vec(x, sqrtm(Sigma), g);
 
 	return g;
 }
@@ -380,7 +380,7 @@ Matrix<B_DIM> executeControlStep(const Matrix<X_DIM>& x_t_real, const Matrix<B_D
 	Matrix<X_DIM,X_DIM> Sigma_tp1_adj = Sigma_tp1 - W;
 
 	Matrix<B_DIM> b_tp1_adj;
-	vec(x_tp1_adj, sqrt(Sigma_tp1_adj), b_tp1_adj);
+	vec(x_tp1_adj, sqrtm(Sigma_tp1_adj), b_tp1_adj);
 	return b_tp1_adj;
 }
 

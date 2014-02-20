@@ -47,7 +47,7 @@ stages(i).dims.q = 0;                 % number of quadratic constraints
 
 % cost
 %stages(i).cost.H = 2*blkdiag(zeros(nx,nx), Q, R, zeros(nb,nb), zeros(nb, nb));
-params(1) = newParam(['Q',istr], i, 'cost.H','diag');
+params(1) = newParam(['H',istr], i, 'cost.H','diag');
 params(end+1) = newParam(['f',istr], i, 'cost.f');
 
 % lower bounds
@@ -75,7 +75,7 @@ for i = 2:N
     
     % cost
     %stages(i).cost.H = 2*blkdiag(zeros(nx,nx), Q, R, zeros(nb,nb), zeros(nb, nb));
-    params(end+1) = newParam(['Q',istr], i, 'cost.H','diag');
+    params(end+1) = newParam(['H',istr], i, 'cost.H','diag');
     params(end+1) = newParam(['f',istr], i, 'cost.f');
     
     % lower bounds
@@ -102,11 +102,11 @@ stages(i).dims.n = nb;    % number of stage variables
 stages(i).dims.r = nb;    % number of equality constraints
 stages(i).dims.l = nb;    % number of lower bounds
 stages(i).dims.u = nb;    % number of upper bounds
-stages(i).dims.p = 2*nx;     % number of polytopic constraints
+stages(i).dims.p = 0;     % number of polytopic constraints
 stages(i).dims.q = 0;     % number of quadratic constraints
 
 % cost
-params(end+1) = newParam(['Q',istr], i, 'cost.H', 'diag');
+params(end+1) = newParam(['H',istr], i, 'cost.H', 'diag');
 params(end+1) = newParam(['f',istr], i, 'cost.f');
 
 % lower bounds
@@ -122,8 +122,6 @@ params(end+1) = newParam(['ub',istr], i, 'ineq.b.ub');
 params(end+1) = newParam(['e',istr], i, 'eq.c');
 stages(i).eq.D = -eye(nb);
 
-stages(i).ineq.p.A = [eye(nx), zeros(nx,ns);-eye(nx), zeros(nx,ns)];
-params(end+1) = newParam(['b',istr], i, 'ineq.p.b');
 
 %--------------------------------------------------------------------------
 % define outputs of the solver
@@ -138,7 +136,7 @@ outputs(i) = newOutput(var,i,1:nb);
 % solver settings
 mpcname = 'beliefPenaltyMPC';
 codeoptions = getOptions(mpcname);
-codeoptions.printlevel = 0;
+codeoptions.printlevel = 2;
 codeoptions.timing=0;
 
 % generate code

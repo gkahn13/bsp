@@ -848,8 +848,8 @@ int main(int argc, char* argv[])
 	stateMPC_info info;
 	setupStateVars(problem, output);
 
-	util::Timer solveTimer;
-	double totalSolveTime = 0;
+	util::Timer solveTimer, trajTimer;
+	double totalSolveTime = 0, trajTime = 0;
 
 	double totalTrajCost = 0;
 
@@ -891,6 +891,7 @@ int main(int argc, char* argv[])
 		std::vector<Matrix<U_DIM> > U(T-1, uinit);
 		*/
 
+		util::Timer_tic(&trajTimer);
 
 		std::vector<Matrix<U_DIM> > U(T-1);
 		bool initTrajSuccess = initTraj(x0.subMatrix<C_DIM,1>(0,0), xGoal.subMatrix<C_DIM,1>(0,0), U);
@@ -899,7 +900,8 @@ int main(int argc, char* argv[])
 			exit(-1);
 		}
 
-
+		double initTrajTime = util::Timer_toc(&trajTimer);
+		trajTime += initTrajTime;
 
 		vec(x0, SqrtSigma0, B[0]);
 		for(int t=0; t < T-1; ++t) {
@@ -907,6 +909,8 @@ int main(int argc, char* argv[])
 			B[t+1] = beliefDynamics(B[t], U[t]);
 		}
 		X[T-1] = B[T-1].subMatrix<X_DIM,1>(0,0);
+
+		std::cout << ~X[0].subMatrix<C_DIM,1>(0,0);
 
 		double initTrajCost = computeCost(X, U);
 		LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
@@ -916,7 +920,7 @@ int main(int argc, char* argv[])
 
 		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, false);
 
-		Timer_tic(&solveTimer);
+		util::Timer_tic(&solveTimer);
 
 		double cost = statePenaltyCollocation(X, U, problem, output, info);
 
@@ -956,18 +960,20 @@ int main(int argc, char* argv[])
 		LOG_INFO("Initial cost: %4.10f", initTrajCost);
 		LOG_INFO("Optimized cost: %4.10f", cost);
 		LOG_INFO("Actual cost: %4.10f", computeCost(X,U));
+		LOG_INFO("Trajectory solve time: %5.3f ms", initTrajTime*1000);
 		LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 
 
 		unVec(B[T-1], x0, SqrtSigma0);
 
-		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, false);
+		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 
 	}
 
 
 
 	LOG_INFO("Total trajectory cost: %4.10f", totalTrajCost);
+	LOG_INFO("Total trajectory solve time: %5.3f", trajTime*1000);
 	LOG_INFO("Total solve time: %5.3f ms", totalSolveTime*1000);
 
 

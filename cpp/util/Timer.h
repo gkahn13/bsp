@@ -6,6 +6,12 @@
 // from /usr/include/linux/time.h
 #ifndef CLOCK_MONOTONIC_RAW
 #define CLOCK_MONOTONIC_RAW 4
+
+#ifdef __MACH__
+#include <mach/clock.h>
+#include <mach/mach.h>
+#endif
+
 #endif
 
 namespace util {
@@ -17,14 +23,14 @@ typedef struct Timer{
 
 /* read current time */
 inline void Timer_tic(Timer* t) {
-	clock_gettime(CLOCK_MONOTONIC_RAW, &t->tic);
+	clock_get_time(CLOCK_MONOTONIC_RAW, &t->tic);
 }
 
 /* return time passed since last call to tic on this timer */
 inline double Timer_toc(Timer* t)
 {
 	struct timespec temp;
-	clock_gettime(CLOCK_MONOTONIC_RAW, &t->toc);
+	clock_get_time(CLOCK_MONOTONIC_RAW, &t->toc);
 
 	if ((t->toc.tv_nsec - t->tic.tv_nsec)<0) {
 		temp.tv_sec = t->toc.tv_sec - t->tic.tv_sec-1;

@@ -25,16 +25,21 @@ const double alpha_goal = 10;
 
 namespace cfg {
 const double improve_ratio_threshold = .1; // .1
-const double min_approx_improve = 1e-3; // 1e-3
-const double min_trust_box_size = 1e-3; // 1e-3
+const double min_approx_improve = 1e-2; // 1e-3
+const double min_trust_box_size = 1e-2; // 1e-3
 
-const double trust_shrink_ratio = .1; // .1
-const double trust_expand_ratio = 1.5; // 1.5
+const double trust_shrink_ratio = .5; // .1
+const double trust_expand_ratio = 2; // 1.5
 
-const double cnt_tolerance = 1e-4;
+const double cnt_tolerance = 1e-2;
 const double penalty_coeff_increase_ratio = 10; // 10
-const double initial_penalty_coeff = 10; // 10
+const double initial_penalty_coeff = 20; // 20
+
 const double initial_trust_box_size = 1; // 1
+const double initial_Xpos_trust_box_size = 1; // 1;
+const double initial_Xangle_trust_box_size = M_PI/6; // M_PI/6;
+const double initial_Uvel_trust_box_size = 1; // 1;
+const double initial_Uangle_trust_box_size = M_PI/8; // M_PI/8;
 
 const int max_penalty_coeff_increases = 2; // 2
 const int max_sqp_iterations = 50; // 50
@@ -177,20 +182,20 @@ double computeMerit(const std::vector< Matrix<C_DIM> >& X, const std::vector< Ma
 	return merit;
 }
 
-/*
-bool isValidInputs()
+
+bool isValidTrajInputs()
 {
 	for(int t = 0; t < T-1; ++t) {
 
 		std::cout << "t: " << t << std::endl << std::endl;
 
-
+		/*
 		std::cout << "f_traj: ";
 		for(int i = 0; i < (2*C_DIM+U_DIM); ++i) {
 			std::cout << f_traj[t][i] << " ";
 		}
 		std::cout << std::endl;
-
+		*/
 
 		std::cout << "lb_traj c: ";
 		for(int i = 0; i < C_DIM; ++i) {
@@ -225,7 +230,7 @@ bool isValidInputs()
 		std::cout << std::endl;
 
 
-
+		/*
 		std::cout << "C_traj:" << std::endl;
 		if (t == 0) {
 			for(int i = 0; i < 2*B_DIM*(3*B_DIM+U_DIM); ++i) {
@@ -256,16 +261,16 @@ bool isValidInputs()
 		}
 
 		std::cout << std::endl << std::endl;
-
+		 */
 	}
 
-
+	/*
 	std::cout << "e_traj:" << std::endl;
 	for(int i = 0; i < C_DIM; ++i) {
 		std::cout << e_traj[T-1][i] << " ";
 	}
 	std::cout << std::endl << std::endl;
-
+	*/
 
 	std::cout << "lb_traj c: ";
 	for(int i = 0; i < C_DIM; ++i) {
@@ -281,10 +286,10 @@ bool isValidInputs()
 	std::cout << std::endl;
 	return true;
 }
-*/
 
 
-bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<U_DIM> >& U, trajMPC_params &problem, trajMPC_output &output, trajMPC_info &info, double penalty_coeff, double trust_box_size)
+
+bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<U_DIM> >& U, trajMPC_params &problem, trajMPC_output &output, trajMPC_info &info, double penalty_coeff)
 {
 	LOG_DEBUG("Solving sqp problem with penalty parameter: %2.4f", penalty_coeff);
 
@@ -294,8 +299,13 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 	std::vector< Matrix<C_DIM,U_DIM> > G(T-1);
 	std::vector< Matrix<C_DIM> > h(T-1);
 
-	double Xeps = trust_box_size;
-	double Ueps = trust_box_size;
+	double Xeps = cfg::initial_trust_box_size;
+	double Ueps = cfg::initial_trust_box_size;
+
+	double Xpos_eps = cfg::initial_Xpos_trust_box_size;
+	double Xangle_eps = cfg::initial_Xangle_trust_box_size;
+	double Uvel_eps = cfg::initial_Uvel_trust_box_size;
+	double Uangle_eps = cfg::initial_Uangle_trust_box_size;
 
 	double optcost;
 
@@ -391,19 +401,27 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 				// Fill in lb_traj, ub_traj
 
 				index = 0;
-				// x lower bound
-				for(int i = 0; i < C_DIM; ++i) { lb_traj[t][index++] = MAX(xMin[i], xt[i] - Xeps); }
+				// x pos lower bound
+				for(int i = 0; i < P_DIM; ++i) { lb_traj[t][index++] = MAX(xMin[i], xt[i] - Xpos_eps); }
+				// x angle lower bound
+				lb_traj[t][index++] = MAX(xMin[P_DIM], xt[P_DIM] - Xangle_eps);
 				// u lower bound
-				for(int i = 0; i < U_DIM; ++i) { lb_traj[t][index++] = MAX(uMinTraj[i], ut[i] - Ueps); }
+				lb_traj[t][index++] = MAX(uMinTraj[0], ut[0] - Uvel_eps);
+				lb_traj[t][index++] = MAX(uMinTraj[1], ut[1] - Uangle_eps);
+				//for(int i = 0; i < U_DIM; ++i) { lb_traj[t][index++] = MAX(uMinTraj[i], ut[i] - Ueps); }
 
 				// for lower bound on L1 slacks
 				for(int i = 0; i < 2*C_DIM; ++i) { lb_traj[t][index++] = 0; }
 
 				index = 0;
-				// x upper bound
-				for(int i = 0; i < C_DIM; ++i) { ub_traj[t][index++] = MIN(xMax[i], xt[i] + Xeps); }
+				// x pos upper bound
+				for(int i = 0; i < P_DIM; ++i) { ub_traj[t][index++] = MIN(xMax[i], xt[i] + Xpos_eps); }
+				// x angle upper bound
+				ub_traj[t][index++] = MIN(xMax[P_DIM], xt[P_DIM] + Xangle_eps);
 				// u upper bound
-				for(int i = 0; i < U_DIM; ++i) { ub_traj[t][index++] = MIN(uMaxTraj[i], ut[i] + Ueps); }
+				ub_traj[t][index++] = MIN(uMaxTraj[0], ut[0] + Uvel_eps);
+				ub_traj[t][index++] = MIN(uMaxTraj[1], ut[1] + Uangle_eps);
+				//for(int i = 0; i < U_DIM; ++i) { ub_traj[t][index++] = MIN(uMaxTraj[i], ut[i] + Ueps); }
 
 				//for(int i = 0; i < 2*B_DIM; ++i) { ub_traj[t][index++] = INFTY; }
 			}
@@ -430,14 +448,10 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			LOG_DEBUG("Constant cost: %10.4f", constant_cost);
 
 			// Verify problem inputs
-			//if (!isValidInputs()) {
+			//if (!isValidTrajInputs()) {
 			//	std::cout << "Inputs are not valid!" << std::endl;
 			//	exit(-1);
 			//}
-
-			//std::cerr << "PAUSING INSIDE MINIMIZE MERIT FUNCTION FOR INPUT VERIFICATION" << std::endl;
-			//int num;
-			//std::cin >> num;
 
 
 			int exitflag = trajMPC_solve(&problem, &output, &info);
@@ -462,6 +476,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 				LOG_ERROR("Some problem in traj solver, retrying");
 				throw exit_exception(-1);
 			}
+
 
 			LOG_DEBUG("Optimized cost: %4.10f", optcost);
 
@@ -489,10 +504,6 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			LOG_DEBUG("merit_improve_ratio: %1.6f", merit_improve_ratio);
 			
 
-			//std::cout << "PAUSED INSIDE minimizeMeritFunction" << std::endl;
-			//int num;
-			//std::cin >> num;
-			//std::cin.ignore();
 
 			if (approx_merit_improve < -1e-3) {
 				LOG_ERROR("Approximate merit function got worse: %1.6f", approx_merit_improve);
@@ -505,14 +516,22 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 				X = Xopt; U = Uopt;
 				return true;
 			} else if ((exact_merit_improve < 0) || (merit_improve_ratio < cfg::improve_ratio_threshold)) {
-				Xeps *= cfg::trust_shrink_ratio;
-				Ueps *= cfg::trust_shrink_ratio;
-				LOG_DEBUG("Shrinking trust region size to: %2.6f %2.6f", Xeps, Ueps);
+				//Xeps *= cfg::trust_shrink_ratio;
+				//Ueps *= cfg::trust_shrink_ratio;
+				Xpos_eps *= cfg::trust_shrink_ratio;
+				Xangle_eps *= cfg::trust_shrink_ratio;
+				Uvel_eps *= cfg::trust_shrink_ratio;
+				Uangle_eps *= cfg::trust_shrink_ratio;
+				LOG_DEBUG("Shrinking trust region size to: %2.6f %2.6f %2.6f %2.6f", Xpos_eps, Xangle_eps, Uvel_eps, Uangle_eps);
 			} else {
-				Xeps *= cfg::trust_expand_ratio;
-				Ueps *= cfg::trust_expand_ratio;
+				//Xeps *= cfg::trust_expand_ratio;
+				//Ueps *= cfg::trust_expand_ratio;
+				Xpos_eps *= cfg::trust_expand_ratio;
+				Xangle_eps *= cfg::trust_expand_ratio;
+				Uvel_eps *= cfg::trust_expand_ratio;
+				Uangle_eps *= cfg::trust_expand_ratio;
 				X = Xopt; U = Uopt;
-				LOG_DEBUG("Accepted, Increasing trust region size to:  %2.6f %2.6f", Xeps, Ueps);
+				LOG_DEBUG("Accepted, Increasing trust region size to:  %2.6f %2.6f %2.6f %2.6f", Xpos_eps, Xangle_eps, Uvel_eps, Uangle_eps);
 				break;
 			}
 
@@ -520,6 +539,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			    LOG_DEBUG("Converged: x tolerance");
 			    return true;
 			}
+
 
 		} // trust region loop
 		sqp_iter++;
@@ -531,7 +551,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 double trajCollocation(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<U_DIM> >& U, trajMPC_params &problem, trajMPC_output &output, trajMPC_info &info)
 {
 	double penalty_coeff = cfg::initial_penalty_coeff;
-	double trust_box_size = cfg::initial_trust_box_size;
+	//double trust_box_size = cfg::initial_trust_box_size;
 
 	int penalty_increases = 0;
 
@@ -540,7 +560,7 @@ double trajCollocation(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<U_DI
 	// penalty loop
 	while(penalty_increases < cfg::max_penalty_coeff_increases)
 	{
-		bool success = minimizeMeritFunction(X, U, problem, output, info, penalty_coeff, trust_box_size);
+		bool success = minimizeMeritFunction(X, U, problem, output, info, penalty_coeff);
 
 		double cntviol = 0;
 		for(int t = 0; t < T-1; ++t) {
@@ -554,7 +574,7 @@ double trajCollocation(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<U_DI
 	    if (!success) {
 	        penalty_increases++;
 	        penalty_coeff = penalty_coeff*cfg::penalty_coeff_increase_ratio;
-	        trust_box_size = cfg::initial_trust_box_size;
+	        //trust_box_size = cfg::initial_trust_box_size;
 	    }
 	    else {
 	    	return computeCost(X, U);
@@ -589,12 +609,16 @@ bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 	double initTrajCost = 0, cost = 0;
 
 	util::Timer solveTimer;
-	Timer_tic(&solveTimer);
+	util::Timer_tic(&solveTimer);
 
 	std::vector<Matrix<C_DIM> > X(T);
 	for(int scalingIndex=0; scalingIndex < 4; scalingIndex++) {
 
+		//std::cout << "scaling factor: " << scaling[scalingIndex] << std::endl;
+
 		for(int i=0; i < T-1; ++i) { U[i] = uinit*scaling[scalingIndex]; }
+
+		//pythonDisplayTrajectory(U, T, true);
 
 		//std::cout << "X initial" << std::endl;
 		X[0].insert(0,0,c0);
@@ -606,7 +630,6 @@ bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 
 		initTrajCost = computeCost(X, U);
 		LOG_DEBUG("Initial trajectory cost: %4.10f", initTrajCost);
-
 
 		try {
 			trajCollocation(X, U, problem, output, info);
@@ -620,6 +643,7 @@ bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 			break;
 		}
 
+
 	}
 
 
@@ -631,6 +655,7 @@ bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 		std::cout << "cGoal: " << ~cGoal;
 		return false;
 	}
+
 
 	/*
 	std::cout << "Final input" << std::endl;
@@ -652,6 +677,8 @@ bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 	//LOG_DEBUG("Actual cost: %4.10f", computeCost(X,U));
 	LOG_DEBUG("Solve time: %5.3f ms", solvetime*1000);
 
+	//pythonDisplayTrajectory(U, T, true);
+
 	return true;
 }
 
@@ -664,15 +691,20 @@ int main(int argc, char* argv[])
 	Matrix<C_DIM> cStart, cEnd;
 	std::vector<Matrix<U_DIM> > U(T-1, zeros<U_DIM,1>());
 
-	cStart[0] = 0;
-	cStart[1] = 0;
+	cStart[0] = 60; // 60
+	cStart[1] = 20; // 20
+	cStart[2] = 2.47; // 2.47
 
-	cEnd[0] = 60;
-	cEnd[1] = 0;
+	cEnd[0] = 0; // 0
+	cEnd[1] = 20; // 20
+
+	for(int i=0; i < C_DIM; ++i) { x0[i] = cStart[i]; }
+	for(int i=0; i < C_DIM; ++i) { xGoal[i] = cEnd[i]; }
+
 
 	//cStart[2] = atan2(cEnd[1] - cStart[1], cEnd[0] - cStart[0]);
-	cStart[2] = 0;
-	cEnd[2] = atan2(cEnd[1] - cStart[1], cEnd[0] - cStart[0]);
+	//cStart[2] = 0;
+	//cEnd[2] = atan2(cEnd[1] - cStart[1], cEnd[0] - cStart[0]);
 
 	initTraj(cStart, cEnd, U);
 
@@ -680,3 +712,5 @@ int main(int argc, char* argv[])
 	
 }
 */
+
+

@@ -1,6 +1,5 @@
 import numpy as np
 from numpy import matlib as ml
-import cvxpy
 
 from math_util import numerical_jac
 

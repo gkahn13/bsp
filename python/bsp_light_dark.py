@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 
 import model
 import belief
-import belief_opt
-import belief_grad_free
+#import belief_opt
+#import belief_grad_free
 import plot
 
 import IPython
@@ -123,11 +123,12 @@ def test_bsp_light_dark():
         # display initialization
         if plotting:
             plot.plot_belief_trajectory(B, U, model)
-    
+        """
         if gradient_free :
             [Bopt, Uopt] = belief_grad_free.STOMP_BSP(B,model,plotting,profile)
         else:
             [Bopt, Uopt] = belief_opt.belief_opt_penalty_sqp(B, U, model, plotting, profile)
+        """
         if plotting:
             plot.plot_belief_trajectory(Bopt, Uopt, model);
     

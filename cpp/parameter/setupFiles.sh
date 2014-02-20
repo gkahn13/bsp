@@ -45,4 +45,5 @@ cp ${MPC_H_FILE} ${DIR}/${MPC_FILE_NAME}".h"
 # modify parameter.h
 echo "replacing TIMESTEPS definition with new TIMESTEPS for parameter.h in ${PARAM_DIR}"
 H_WRITE="${PARAM_DIR}/parameter.h"
-sed -i "s/^${CPP_TIMESTEP_DEF}.*/${CPP_TIMESTEP_DEF} ${TIMESTEPS}/" $H_WRITE
+sed -i .bk "s/^${CPP_TIMESTEP_DEF}.*/${CPP_TIMESTEP_DEF} ${TIMESTEPS}/" $H_WRITE
+rm *.bk

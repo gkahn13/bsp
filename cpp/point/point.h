@@ -149,7 +149,7 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	Sigma = (identity<X_DIM>() - K*H)*Sigma;
 
 	Matrix<B_DIM> g;
-	vec(x, sqrt(Sigma), g);
+	vec(x, sqrtm(Sigma), g);
 
 	return g;
 }
@@ -210,6 +210,7 @@ void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matri
 		py::object plot_traj = plot_mod.attr("plot_belief_trajectory_cpp");
 
 		plot_traj(Bvec, Uvec, model, x0_list, xGoal_list, T);
+		py::exec("raw_input()",main_namespace);
 	}
 	catch(py::error_already_set const &)
 	{

@@ -1,7 +1,7 @@
 CXX = g++
 
 CPP_FLAGS = -DNDEBUG -fopenmp
-CASADI_FLAGS = -I/home/gkahn/source/casadi/ -L/home/gkahn/source/casadi/build/lib
+CASADI_FLAGS = -I$(CASADIPATH) -L$(CASADIPATH)/build/lib
 CASADI_LIBS = -lcasadi -ldl
 
 # default to debug build

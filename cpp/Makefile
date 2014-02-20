@@ -5,7 +5,8 @@ C_FLAGS = -std=gnu99
 CPP_FLAGS = -std=c++0x -fpermissive -I.
 PYTHON_FLAGS = -I/usr/include/python2.7 -lpython2.7
 BOOST_FLAGS = -lboost_python -lboost_filesystem -lboost_system
-LINKER_FLAGS = -lrt -lm
+#LINKER_FLAGS = -lrt -lm
+LINKER_FLAGS = -lm
 ADOLC_FLAGS = -I/home/gkahn/adolc_base/include -L/home/gkahn/adolc_base/lib64 -ladolc -lColPack
 #ADOLC_FLAGS = -I/usr/include/adolc -ladolc -lColPack
 EIGEN_FLAGS = -I/usr/include/eigen3
@@ -391,7 +392,7 @@ $(OBJ_DIR)/slam-state.o : $(SLAM_STATE_DIR)/slam-state.cpp $(SLAM_HEADERS)
 ###### CLEAN ########
 
 clean:
-	rm -f $(BIN_DIR)/*
+	rm -r $(BIN_DIR)/*
 	rm -f $(OBJ_DIR)/*.o
 	
 #### NOT FILES ######

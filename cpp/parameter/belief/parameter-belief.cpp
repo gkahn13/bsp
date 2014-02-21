@@ -342,7 +342,7 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 		merit = computeMerit(B, U, penalty_coeff);
 		LOG_DEBUG("  merit: %4.10f", merit);
 		//pythonPlotRobot(U, SqrtSigma0, x0, xGoal);
-		pythonDisplayTrajectory(U, SqrtSigma0, x0, xGoal);
+		//pythonDisplayTrajectory(U, SqrtSigma0, x0, xGoal);
 		std::cout<<344<<"\n";
 		for (int t = 0; t < T-1; ++t) {
 			
@@ -446,10 +446,12 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			for(int i = 0; i < S_DIM; ++i) { ub[T-1][index] = bT[index] + Beps; index++; }
 
 			// Verify problem inputs
+			/*
 			if (!isValidInputs()) {
 			    std::cout << "Inputs are not valid!" << std::endl;
 			    exit(-1);
 			}
+			*/
 
 
 			//std::cerr << "PAUSING INSIDE MINIMIZE MERIT FUNCTION FOR INPUT VERIFICATION" << std::endl;

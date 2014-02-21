@@ -40,7 +40,7 @@ typedef double beliefPenaltyMPC_FLOAT;
 /* #define PRINTNUMERICALWARNINGS */
 
 /* maximum number of iterations  */
-#define beliefPenaltyMPC_SET_MAXIT         (30) 
+#define beliefPenaltyMPC_SET_MAXIT         (30)	
 
 /* scaling factor of line search (affine direction) */
 #define beliefPenaltyMPC_SET_LS_SCALE_AFF  (0.9)      
@@ -412,34 +412,34 @@ typedef struct beliefPenaltyMPC_info
 {
     /* iteration number */
     int it;
-    
+	
     /* inf-norm of equality constraint residuals */
     beliefPenaltyMPC_FLOAT res_eq;
-    
+	
     /* inf-norm of inequality constraint residuals */
     beliefPenaltyMPC_FLOAT res_ineq;
 
     /* primal objective */
-    beliefPenaltyMPC_FLOAT pobj;    
-    
+    beliefPenaltyMPC_FLOAT pobj;	
+	
     /* dual objective */
-    beliefPenaltyMPC_FLOAT dobj;    
+    beliefPenaltyMPC_FLOAT dobj;	
 
     /* duality gap := pobj - dobj */
-    beliefPenaltyMPC_FLOAT dgap;        
-    
+    beliefPenaltyMPC_FLOAT dgap;		
+	
     /* relative duality gap := |dgap / pobj | */
-    beliefPenaltyMPC_FLOAT rdgap;       
+    beliefPenaltyMPC_FLOAT rdgap;		
 
     /* duality measure */
     beliefPenaltyMPC_FLOAT mu;
 
-    /* duality measure (after affine step) */
+	/* duality measure (after affine step) */
     beliefPenaltyMPC_FLOAT mu_aff;
-    
+	
     /* centering parameter */
     beliefPenaltyMPC_FLOAT sigma;
-    
+	
     /* number of backtracking line search steps (affine direction) */
     int lsit_aff;
     
@@ -452,8 +452,8 @@ typedef struct beliefPenaltyMPC_info
     /* step size (combined direction) */
     beliefPenaltyMPC_FLOAT step_cc;    
 
-    /* solvertime */
-    beliefPenaltyMPC_FLOAT solvetime;   
+	/* solvertime */
+	beliefPenaltyMPC_FLOAT solvetime;   
 
 } beliefPenaltyMPC_info;
 

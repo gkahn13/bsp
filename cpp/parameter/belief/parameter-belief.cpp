@@ -115,11 +115,11 @@ inline void fillCol(double *X, const Matrix<_numRows>& XCol) {
 void setupBeliefVars(beliefPenaltyMPC_params& problem, beliefPenaltyMPC_output& output)
 {
 	H = new beliefPenaltyMPC_FLOAT*[T];
-	f = new beliefPenaltyMPC_FLOAT*[T-1];
+	f = new beliefPenaltyMPC_FLOAT*[T];
 	lb = new beliefPenaltyMPC_FLOAT*[T];
 	ub = new beliefPenaltyMPC_FLOAT*[T];
 	C = new beliefPenaltyMPC_FLOAT*[T-1];
-	e = new beliefPenaltyMPC_FLOAT*[T-1];
+	e = new beliefPenaltyMPC_FLOAT*[T];
 	z = new beliefPenaltyMPC_FLOAT*[T];
 
 #define SET_VARS(n)    \
@@ -140,6 +140,8 @@ void setupBeliefVars(beliefPenaltyMPC_params& problem, beliefPenaltyMPC_output& 
 		lb[ BOOST_PP_SUB(n,1) ] = problem.lb##n ;	\
 		ub[ BOOST_PP_SUB(n,1) ] = problem.ub##n ;	\
 		z[ BOOST_PP_SUB(n,1) ] = output.z##n ; \
+		e[ BOOST_PP_SUB(n,1) ] = problem.e##n ; \
+		f[ BOOST_PP_SUB(n,1) ] = problem.f##n ; \
 		H[ BOOST_PP_SUB(n,1) ] = problem.H##n ;
 
 #define BOOST_PP_LOCAL_MACRO(n) SET_LAST_VARS(n)
@@ -151,7 +153,7 @@ void setupBeliefVars(beliefPenaltyMPC_params& problem, beliefPenaltyMPC_output& 
 			for(int i=0; i < X_DIM; ++i) { H[t][index++] = 0; }
 			for(int i=0; i < S_DIM; ++i) { H[t][index++] = alpha_belief; }
 			for(int i=0; i < U_DIM; ++i) { H[t][index++] = alpha_control; }
-			for(int i=0; i < 2*B_DIM; ++i) { H[t][index++] = 1; }
+			for(int i=0; i < 2*B_DIM; ++i) { H[t][index++] = 0; }
 
 		}
 
@@ -366,15 +368,14 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			
 			fillColMajor(C[t], CMat);
 
+
 			if (t == 0) {
 				eVec.insert<B_DIM,1>(0,0,B[0]);
 				fillCol(e[0], eVec);
 			} 
 			
-
 			eVec = -h[t] + F[t]*bt + G[t]*ut;
-			
-			fillCol(e[t], eVec);
+			fillCol(e[t+1], eVec);
 
 			/*
 			eVec = -h[t] + F[t]*bt + G[t]*ut;

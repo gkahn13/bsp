@@ -205,7 +205,7 @@ double computeCost(const std::vector< Matrix<X_DIM> >& X, const std::vector< Mat
 	Matrix<X_DIM, X_DIM> SqrtSigma;
 	vec(x0, SqrtSigma0, b);
 
-	for(int t = 0; t < T_MPC-1; ++t) {
+	for(int t = 0; t < T-1; ++t) {
 		unVec(b, x, SqrtSigma);
 		cost += alpha_belief*tr(SqrtSigma*SqrtSigma);
 		cost += alpha_control*tr(~U[t]*U[t]);
@@ -224,7 +224,7 @@ double computeMerit(const std::vector< Matrix<X_DIM> >& X, const std::vector< Ma
 	Matrix<B_DIM> b, b_tp1;
 	vec(x0, SqrtSigma0, b);
 
-	for(int t = 0; t < T_MPC-1; ++t) {
+	for(int t = 0; t < T-1; ++t) {
 		unVec(b, x, SqrtSigma);
 		merit += alpha_belief*tr(SqrtSigma*SqrtSigma) + alpha_control*tr(~U[t]*U[t]);
 		b_tp1 = beliefDynamics(b, U[t]);
@@ -307,24 +307,32 @@ void setupStateVars(stateMPC_params& problem, stateMPC_output& output)
 }
 
 void resetStateMPCVars() {
+	for(int t = 0; t < T-1; ++t) {
+		for(int i=0; i < (3*X_DIM+U_DIM); ++i) { H[t][i] = 0; }
+		for(int i=0; i < (3*X_DIM+U_DIM); ++i) { f[t][i] = 0; }
+		for(int i=0; i < (3*X_DIM+U_DIM); ++i) { lb[t][i] = -1e2; }
+		for(int i=0; i < (X_DIM+U_DIM); ++i) { ub[t][i] = 1e2; }
+		for(int i=0; i < (X_DIM*(3*X_DIM+U_DIM)); ++i) { C[t][i] = 0; }
+		for(int i=0; i < X_DIM; ++i) { e[t][i] = 0; }
+		for(int i=0; i < (X_DIM+U_DIM); ++i) { z[t][i] = 0; }
+	}
+	for(int i=0; i < (X_DIM); ++i) { H[T-1][i] = 0; }
+	for(int i=0; i < (X_DIM); ++i) { f[T-1][i] = 0; }
+	for(int i=0; i < (X_DIM); ++i) { lb[T-1][i] = -1e2; }
+	for(int i=0; i < (X_DIM); ++i) { ub[T-1][i] = 1e2; }
+	for(int i=0; i < X_DIM; ++i) { e[T-1][i] = 0; }
+	for(int i=0; i < (X_DIM); ++i) { z[T-1][i] = 0; }
+
+
 	Matrix<X_DIM,3*X_DIM+U_DIM> CMat;
-	Matrix<X_DIM> eVec;
-
 	CMat.reset();
-	eVec.reset();
-
 	CMat.insert<X_DIM,X_DIM>(0,0,identity<X_DIM>());
 
 	for(int t = 0; t < T-1; ++t) {
-		for(int i = 0; i < (3*X_DIM + U_DIM); ++i) { f[t][i] = 0; }
-		for(int i = 0; i < (3*X_DIM + U_DIM); ++i) { H[t][i] = 0; }
-
 		fillColMajor(C[t], CMat);
-		fillCol(e[t+1], eVec);
 	}
-	for(int i = 0; i < X_DIM; ++i) { f[T-1][i] = 0; }
-	for(int i = 0; i < X_DIM; ++i) { H[T-1][i] = 0; }
 
+	/*
 	int index = 0;
 	for(int t = 0; t < T-1; ++t) {
 		index = 0;
@@ -340,6 +348,7 @@ void resetStateMPCVars() {
 
 	for(int i = 0; i < X_DIM; ++i) { lb[T-1][i] = -INFTY; }
 	for(int i = 0; i < X_DIM; ++i) { ub[T-1][i] = INFTY; }
+	*/
 }
 
 void cleanupStateMPCVars()
@@ -507,14 +516,14 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 		// In this loop, we repeatedly construct a linear approximation to the nonlinear belief dynamics constraint
 		LOG_DEBUG("  sqp iter: %d", sqp_iter);
 
-		//merit = casadiComputeMerit(X, U, penalty_coeff);
-		merit = computeMerit(X, U, penalty_coeff);
+		merit = casadiComputeMerit(X, U, penalty_coeff);
+		//merit = computeMerit(X, U, penalty_coeff);
 
 		LOG_DEBUG("  merit: %4.10f", merit);
 
 		// Compute gradients
 		casadiComputeCostGrad(X, U, cost, Grad);
-		cost = computeCost(X, U);
+		//cost = computeCost(X, U);
 
 		// Problem linearization and definition
 		// fill in H, f
@@ -523,7 +532,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 		jac_constant = 0;
 		idx = 0;
 
-		for (int t = 0; t < T_MPC-1; ++t)
+		for (int t = 0; t < T-1; ++t)
 		{
 			Matrix<X_DIM>& xt = X[t];
 			Matrix<U_DIM>& ut = U[t];
@@ -542,7 +551,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			// since diagonal, fill directly
 			for(int i = 0; i < (X_DIM+U_DIM); ++i) { H[t][i] = HMat(i,i); }
 			// TODO: why does this work???
-			for(int i = 0; i < (2*X_DIM); ++i) { H[t][i + (X_DIM+U_DIM)] = 1e2; } //1e4
+			for(int i = 0; i < (2*X_DIM); ++i) { H[t][i + (X_DIM+U_DIM)] = 1e3; } //1e4
 
 			zbar.insert(0,0,xt);
 			zbar.insert(X_DIM,0,ut);
@@ -581,7 +590,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			fillCol(e[t+1], eVec);
 		}
 
-		if (T <= T_MPC) {
+		//if (T <= T_MPC) {
 			// For last stage, fill in H, f
 			Matrix<X_DIM>& xT = X[T-1];
 
@@ -604,7 +613,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 				//}
 				f[T-1][i] = Grad[idx+i] - HfMat(i,i)*xT[i];
 			}
-		}
+		//}
 
 
 		constant_cost = 0.5*hessian_constant + jac_constant + cost;
@@ -619,7 +628,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			LOG_DEBUG("       trust region size: %2.6f %2.6f", Xeps, Ueps);
 
 			// solve the innermost QP here
-			for(int t = 0; t < T_MPC-1; ++t)
+			for(int t = 0; t < T-1; ++t)
 			{
 				Matrix<X_DIM>& xt = X[t];
 				Matrix<U_DIM>& ut = U[t];
@@ -712,10 +721,10 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 
 
 			// Verify problem inputs
-			//if (!isValidInputs()) {
-			//	std::cout << "Inputs are not valid!" << std::endl;
-			//	exit(-1);
-			//}
+			if (!isValidInputs()) {
+				std::cout << "Inputs are not valid!" << std::endl;
+				exit(-1);
+			}
 
 
 			int exitflag = stateMPC_solve(&problem, &output, &info);
@@ -747,8 +756,8 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 
 			model_merit = optcost + constant_cost;
 
-			//new_merit = casadiComputeMerit(Xopt, Uopt, penalty_coeff);
-			new_merit = computeMerit(Xopt, Uopt, penalty_coeff);
+			new_merit = casadiComputeMerit(Xopt, Uopt, penalty_coeff);
+			//new_merit = computeMerit(Xopt, Uopt, penalty_coeff);
 
 			LOG_DEBUG("       merit: %4.10f", merit);
 			LOG_DEBUG("       model_merit: %4.10f", model_merit);
@@ -766,6 +775,8 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 				LOG_DEBUG("approx_merit_improve < 0")
 				//pythonDisplayTrajectory(Uopt, T, true);
 				//pythonDisplayTrajectory(Xopt, T, true);
+				std::cout << "PAUSED INSIDE minimizeMeritFunction" << std::endl;
+				std::cin.ignore();
 			}
 
 			//std::cout << "PAUSED INSIDE minimizeMeritFunction AFTER OPTIMIZATION" << std::endl;
@@ -985,13 +996,13 @@ int main(int argc, char* argv[])
 			}
 
 
-			/*
+
 			bool initTrajSuccess = initTraj(x0.subMatrix<C_DIM,1>(0,0), xGoal.subMatrix<C_DIM,1>(0,0), U, T_MPC);
 			if (!initTrajSuccess) {
 				LOG_ERROR("Failed to initialize trajectory, using last inputs attempted");
 				exit(-1);
 			}
-			*/
+
 
 
 			X[0] = x0;

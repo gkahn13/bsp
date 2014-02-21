@@ -107,7 +107,8 @@ stages(i).dims.q = 0;     % number of quadratic constraints
 
 % cost
 params(end+1) = newParam(['H',istr], i, 'cost.H', 'diag');
-params(end+1) = newParam(['f',istr], i, 'cost.f');
+% params(end+1) = newParam(['f',istr], i, 'cost.f');
+stages(i).cost.f = zeros(stages(i).dims.n,1);
 
 % lower bounds
 stages(i).ineq.b.lbidx = 1:stages(i).dims.l; % lower bound acts on these indices
@@ -136,8 +137,9 @@ outputs(i) = newOutput(var,i,1:nb);
 % solver settings
 mpcname = 'beliefPenaltyMPC';
 codeoptions = getOptions(mpcname);
-codeoptions.printlevel = 2;
+codeoptions.printlevel = 0;
 codeoptions.timing=0;
+codeoptions.maxit=50;
 
 % generate code
 generateCode(stages,params,codeoptions,outputs);

@@ -51,8 +51,8 @@ void initProblemParams()
 	// landmarks will be the same for all waypoint-waypoint optimizations
 	x0.insert(0, 0, zeros<C_DIM,1>());
 
-	//x0[0] = 60;
-	//x0[1] = 0;
+	//x0[0] = 8;
+	//x0[1] = 3;
 	//x0[2] = -.65;
 	for(int i = 0; i < NUM_LANDMARKS; ++i) {
 		x0.insert(C_DIM+2*i, 0, landmarks[i]);
@@ -81,7 +81,7 @@ void initProblemParams()
 	*/
 
 	// TODO: think of better values for these
-	uMin[0] = 1;
+	uMin[0] = 1; // 1
 	uMin[1] = -M_PI/3;
 	uMax[0] = 10;
 	uMax[1] = M_PI/3;
@@ -386,7 +386,7 @@ void pythonDisplayTrajectory(std::vector< Matrix<U_DIM> >& U, int time_steps, bo
 	std::vector<Matrix<B_DIM> > B(time_steps);
 
 	vec(x0, SqrtSigma0, B[0]);
-	for (int t = 0; t < T-1; ++t) {
+	for (int t = 0; t < time_steps-1; ++t) {
 		B[t+1] = beliefDynamics(B[t], U[t]);
 	}
 

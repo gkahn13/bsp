@@ -17,8 +17,8 @@ stateMPC_FLOAT **H, **f, **lb, **ub, **C, **e, **z;
 #include "boost/preprocessor.hpp"
 
 const double alpha_belief = 10; // 10;
-const double alpha_final_belief = 50; // 50;
-const double alpha_control = .01; // .01
+const double alpha_final_belief = 10; // 50;
+const double alpha_control = 1; // .01
 
 
 namespace cfg {
@@ -61,6 +61,10 @@ inline void fillColMajor(double *X, const Matrix<_numRows, _numColumns>& XMat) {
 			X[idx++] = XMat[c + r*_numColumns];
 		}
 	}
+}
+
+inline double wrapAngle(double angle) {
+	return angle - 2*M_PI * floor(angle/(2*M_PI));
 }
 
 double nearestAngleFromTo(double from, double to) {
@@ -160,7 +164,11 @@ double casadiComputeMerit(const std::vector< Matrix<X_DIM> >& X, const std::vect
 		b_tp1 = beliefDynamics(b, U[t]);
 		dynviol = (X[t+1] - b_tp1.subMatrix<X_DIM,1>(0,0) );
 		for(int i = 0; i < X_DIM; ++i) {
-			merit += penalty_coeff*fabs(dynviol[i]);
+			if (i != P_DIM) {
+				merit += penalty_coeff*fabs(dynviol[i]);
+			} else {
+				merit += penalty_coeff*wrapAngle(fabs(dynviol[i])); // since angles wrap
+			}
 		}
 		b = b_tp1;
 	}
@@ -221,7 +229,11 @@ double computeMerit(const std::vector< Matrix<X_DIM> >& X, const std::vector< Ma
 		b_tp1 = beliefDynamics(b, U[t]);
 		dynviol = (X[t+1] - b_tp1.subMatrix<X_DIM,1>(0,0) );
 		for(int i = 0; i < X_DIM; ++i) {
-			merit += penalty_coeff*fabs(dynviol[i]);
+			if (i != P_DIM) {
+				merit += penalty_coeff*fabs(dynviol[i]);
+			} else {
+				merit += penalty_coeff*wrapAngle(fabs(dynviol[i]));
+			}
 		}
 		b = b_tp1;
 	}
@@ -466,7 +478,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 		casadiComputeCostGrad(X, U, cost, Grad);
 
 		// Problem linearization and definition
-		// fill in Q, f
+		// fill in H, f
 
 		hessian_constant = 0;
 		jac_constant = 0;
@@ -894,9 +906,9 @@ int main(int argc, char* argv[])
 		util::Timer_tic(&trajTimer);
 
 		std::vector<Matrix<U_DIM> > U(T-1);
-		bool initTrajSuccess = initTraj(x0.subMatrix<C_DIM,1>(0,0), xGoal.subMatrix<C_DIM,1>(0,0), U);
+		bool initTrajSuccess = initTraj(x0.subMatrix<C_DIM,1>(0,0), xGoal.subMatrix<C_DIM,1>(0,0), U, T);
 		if (!initTrajSuccess) {
-			LOG_ERROR("Failed to initialize trajectory, exiting slam-belief");
+			LOG_ERROR("Failed to initialize trajectory, exiting slam-state");
 			exit(-1);
 		}
 
@@ -910,7 +922,7 @@ int main(int argc, char* argv[])
 		}
 		X[T-1] = B[T-1].subMatrix<X_DIM,1>(0,0);
 
-		std::cout << ~X[0].subMatrix<C_DIM,1>(0,0);
+		//std::cout << ~X[0].subMatrix<C_DIM,1>(0,0);
 
 		double initTrajCost = computeCost(X, U);
 		LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
@@ -918,7 +930,7 @@ int main(int argc, char* argv[])
 		double initCasadiTrajCost = casadiComputeCost(X, U);
 		LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
 
-		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, false);
+		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 
 		util::Timer_tic(&solveTimer);
 
@@ -973,7 +985,7 @@ int main(int argc, char* argv[])
 
 
 	LOG_INFO("Total trajectory cost: %4.10f", totalTrajCost);
-	LOG_INFO("Total trajectory solve time: %5.3f", trajTime*1000);
+	LOG_INFO("Total trajectory solve time: %5.3f ms", trajTime*1000);
 	LOG_INFO("Total solve time: %5.3f ms", totalSolveTime*1000);
 
 

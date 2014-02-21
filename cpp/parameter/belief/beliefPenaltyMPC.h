@@ -28,7 +28,7 @@ typedef double beliefPenaltyMPC_FLOAT;
 /* SOLVER SETTINGS ------------------------------------------------------*/
 /* print level */
 #ifndef beliefPenaltyMPC_SET_PRINTLEVEL
-#define beliefPenaltyMPC_SET_PRINTLEVEL    (2)
+#define beliefPenaltyMPC_SET_PRINTLEVEL    (0)
 #endif
 
 /* timing */
@@ -40,7 +40,7 @@ typedef double beliefPenaltyMPC_FLOAT;
 /* #define PRINTNUMERICALWARNINGS */
 
 /* maximum number of iterations  */
-#define beliefPenaltyMPC_SET_MAXIT         (30)	
+#define beliefPenaltyMPC_SET_MAXIT         (50)	
 
 /* scaling factor of line search (affine direction) */
 #define beliefPenaltyMPC_SET_LS_SCALE_AFF  (0.9)      
@@ -338,9 +338,6 @@ typedef struct beliefPenaltyMPC_params
 
     /* diagonal matrix of size [44 x 44] (only the diagonal is stored) */
     beliefPenaltyMPC_FLOAT H15[44];
-
-    /* vector of size 44 */
-    beliefPenaltyMPC_FLOAT f15[44];
 
     /* vector of size 44 */
     beliefPenaltyMPC_FLOAT lb15[44];

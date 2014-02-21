@@ -16,6 +16,10 @@ private:
 	double _elems[_numRows * _numColumns];
 
 public:
+	Matrix() {
+		reset();
+	}
+
 	// Retrieval
 	inline size_t numRows() const {
 		return _numRows;

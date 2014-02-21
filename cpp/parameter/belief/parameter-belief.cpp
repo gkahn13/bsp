@@ -115,7 +115,7 @@ inline void fillCol(double *X, const Matrix<_numRows>& XCol) {
 void setupBeliefVars(beliefPenaltyMPC_params& problem, beliefPenaltyMPC_output& output)
 {
 	H = new beliefPenaltyMPC_FLOAT*[T];
-	f = new beliefPenaltyMPC_FLOAT*[T];
+	f = new beliefPenaltyMPC_FLOAT*[T-1];
 	lb = new beliefPenaltyMPC_FLOAT*[T];
 	ub = new beliefPenaltyMPC_FLOAT*[T];
 	C = new beliefPenaltyMPC_FLOAT*[T-1];
@@ -136,30 +136,46 @@ void setupBeliefVars(beliefPenaltyMPC_params& problem, beliefPenaltyMPC_output& 
 #include BOOST_PP_LOCAL_ITERATE()
 
 
+	//f[ BOOST_PP_SUB(n,1) ] = problem.f##n ;
 #define SET_LAST_VARS(n)    \
 		lb[ BOOST_PP_SUB(n,1) ] = problem.lb##n ;	\
 		ub[ BOOST_PP_SUB(n,1) ] = problem.ub##n ;	\
 		z[ BOOST_PP_SUB(n,1) ] = output.z##n ; \
 		e[ BOOST_PP_SUB(n,1) ] = problem.e##n ; \
-		f[ BOOST_PP_SUB(n,1) ] = problem.f##n ; \
 		H[ BOOST_PP_SUB(n,1) ] = problem.H##n ;
 
 #define BOOST_PP_LOCAL_MACRO(n) SET_LAST_VARS(n)
 #define BOOST_PP_LOCAL_LIMITS (TIMESTEPS, TIMESTEPS)
 #include BOOST_PP_LOCAL_ITERATE()
 
-		for(int t=0; t < T-1; ++t) {
-			int index = 0;
-			for(int i=0; i < X_DIM; ++i) { H[t][index++] = 0; }
-			for(int i=0; i < S_DIM; ++i) { H[t][index++] = alpha_belief; }
-			for(int i=0; i < U_DIM; ++i) { H[t][index++] = alpha_control; }
-			for(int i=0; i < 2*B_DIM; ++i) { H[t][index++] = 0; }
+	for(int t = 0; t < T-1; ++t) {
+		for(int i=0; i < (3*B_DIM+U_DIM); ++i) { H[t][i] = INFTY; }
+		for(int i=0; i < (3*B_DIM+U_DIM); ++i) { f[t][i] = INFTY; }
+		for(int i=0; i < (3*B_DIM+U_DIM); ++i) { lb[t][i] = INFTY; }
+		for(int i=0; i < (B_DIM+U_DIM); ++i) { ub[t][i] = INFTY; }
+		for(int i=0; i < (B_DIM*(3*B_DIM+U_DIM)); ++i) { C[t][i] = INFTY; }
+		for(int i=0; i < B_DIM; ++i) { e[t][i] = INFTY; }
+		for(int i=0; i < (B_DIM+U_DIM); ++i) { z[t][i] = INFTY; }
+	}
+	for(int i=0; i < (B_DIM); ++i) { H[T-1][i] = INFTY; }
+	//for(int i=0; i < (B_DIM); ++i) { f[T-1][i] = INFTY; }
+	for(int i=0; i < (B_DIM); ++i) { lb[T-1][i] = INFTY; }
+	for(int i=0; i < (B_DIM); ++i) { ub[T-1][i] = INFTY; }
+	for(int i=0; i < B_DIM; ++i) { e[T-1][i] = INFTY; }
+	for(int i=0; i < (B_DIM); ++i) { z[T-1][i] = INFTY; }
 
-		}
-
+	for(int t=0; t < T-1; ++t) {
 		int index = 0;
-		for(int i=0; i < X_DIM; ++i) { H[T-1][index++] = 0; }
-		for(int i=0; i < S_DIM; ++i) { H[T-1][index++] = alpha_final_belief; }
+		for(int i=0; i < X_DIM; ++i) { H[t][index++] = 0; }
+		for(int i=0; i < S_DIM; ++i) { H[t][index++] = alpha_belief; }
+		for(int i=0; i < U_DIM; ++i) { H[t][index++] = alpha_control; }
+		for(int i=0; i < 2*B_DIM; ++i) { H[t][index++] = 0; }
+
+	}
+
+	int index = 0;
+	for(int i=0; i < X_DIM; ++i) { H[T-1][index++] = 0; }
+	for(int i=0; i < S_DIM; ++i) { H[T-1][index++] = alpha_final_belief; }
 
 
 		
@@ -206,16 +222,33 @@ bool isValidInputs()
 	bool boundsCorrect = true;
 
 	for(int t = 0; t < T-1; ++t) {
+		std::cout << "t: " << t << "\n";
+		for(int i=0; i < (3*B_DIM+U_DIM); ++i) { if (H[t][i] > INFTY/2) { std::cout << "H error: " << i << "\n"; } }
+		for(int i=0; i < (3*B_DIM+U_DIM); ++i) { if (f[t][i] > INFTY/2) { std::cout << "f error: " << i << "\n"; } }
+		for(int i=0; i < (3*B_DIM+U_DIM); ++i) { if (lb[t][i] > INFTY/2) { std::cout << "lb error: " << i << "\n"; } }
+		for(int i=0; i < (B_DIM+U_DIM); ++i) {if (lb[t][i] > INFTY/2) { std::cout << "ub error: " << i << "\n"; } }
+		for(int i=0; i < (B_DIM*(3*B_DIM+U_DIM)); ++i) { if (C[t][i] > INFTY/2) { std::cout << "C error: " << i << "\n"; } }
+		for(int i=0; i < B_DIM; ++i) { if (e[t][i] > INFTY/2) { std::cout << "e error: " << i; } }
+	}
+	std::cout << "t: " << T-1 << "\n";
+	for(int i=0; i < (B_DIM); ++i) { if (H[T-1][i] > INFTY/2) { std::cout << "H error: " << i << "\n"; } }
+	for(int i=0; i < (B_DIM); ++i) { if (lb[T-1][i] > INFTY/2) { std::cout << "lb error: " << i << "\n"; } }
+	for(int i=0; i < (B_DIM); ++i) { if (ub[T-1][i] > INFTY/2) { std::cout << "ub error: " << i << "\n"; } }
+	for(int i=0; i < B_DIM; ++i) { if (e[T-1][i] > INFTY/2) { std::cout << "e error: " << i << "\n"; } }
+
+	return true;
+
+	for(int t = 0; t < T-1; ++t) {
 
 		std::cout << "t: " << t << std::endl << std::endl;
 
-		/*
+
 		std::cout << "f: ";
 		for(int i = 0; i < (3*B_DIM+U_DIM); ++i) {
 			std::cout << f[t][i] << " ";
 		}
 		std::cout << std::endl;
-		*/
+
 
 
 		std::cout << "lb x: ";
@@ -231,11 +264,13 @@ bool isValidInputs()
 		}
 		std::cout << std::endl;
 
+		/*
 		std::cout << "lb s, t: ";
 		for(int i = 0; i < 2*B_DIM; ++i) {
 			std::cout << lb[t][B_DIM+U_DIM+i] << " ";
 		}
 		std::cout << std::endl;
+		*/
 
 		std::cout << "ub x: ";
 		for(int i = 0; i < X_DIM; ++i) {
@@ -329,7 +364,7 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 	for(int i = 0; i < B_DIM; ++i) {
 		minusIB(i,i) = -1;
 	}
-	std::cout<<330<<"\n";
+	//std::cout<<330<<"\n";
 	Matrix<B_DIM,3*B_DIM+U_DIM> CMat;
 	Matrix<B_DIM> eVec;
 
@@ -343,7 +378,7 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 		LOG_DEBUG("  merit: %4.10f", merit);
 		//pythonPlotRobot(U, SqrtSigma0, x0, xGoal);
 		//pythonDisplayTrajectory(U, SqrtSigma0, x0, xGoal);
-		std::cout<<344<<"\n";
+		//std::cout<<344<<"\n";
 		for (int t = 0; t < T-1; ++t) {
 			
 			Matrix<B_DIM>& bt = B[t];
@@ -389,7 +424,7 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 		// trust region size adjustment
 		while(true)
 		{
-			std::cout<<383<<'\n';
+			//std::cout<<383<<'\n';
 			LOG_DEBUG("       trust region size: %2.6f %2.6f", Beps, Ueps);
 
 			// solve the innermost QP here
@@ -446,18 +481,18 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			for(int i = 0; i < S_DIM; ++i) { ub[T-1][index] = bT[index] + Beps; index++; }
 
 			// Verify problem inputs
-			/*
-			if (!isValidInputs()) {
-			    std::cout << "Inputs are not valid!" << std::endl;
-			    exit(-1);
-			}
-			*/
+
+			//if (!isValidInputs()) {
+			//    std::cout << "Inputs are not valid!" << std::endl;
+			//    exit(-1);
+			//}
+
 
 
 			//std::cerr << "PAUSING INSIDE MINIMIZE MERIT FUNCTION FOR INPUT VERIFICATION" << std::endl;
 			//int num;
 			//std::cin >> num;
-			std::cout<<448<<'\n';
+			//std::cout<<448<<'\n';
 			int exitflag = beliefPenaltyMPC_solve(&problem, &output, &info);
 			if (exitflag == 1) {
 				for(int t = 0; t < T-1; ++t) {
@@ -575,6 +610,7 @@ double beliefPenaltyCollocation(std::vector< Matrix<B_DIM> >& B, std::vector< Ma
 
 int main(int argc, char* argv[])
 {
+
 	// actual: 6.66, 6.66, 10.86, 13
 	double length1_est = .05, // inverse = 20
 			length2_est = .05, // inverse = 20
@@ -645,11 +681,11 @@ int main(int argc, char* argv[])
 
 	for(int h = 0; h < HORIZON; ++h) {
 		for (int t = 0; t < T-1; ++t) {
-			std::cout<<"Belief at"<<t<<'\n';
+			//std::cout<<"Belief at"<<t<<'\n';
 			for(int i=0; i<B_DIM; i++){
-				std::cout<<B[t][i]<<" ";
+				//std::cout<<B[t][i]<<" ";
 			}
-			std::cout<<'\n';
+			//std::cout<<'\n';
 			B[t+1] = beliefDynamics(B[t], U[t]);
 		}
 
@@ -658,14 +694,19 @@ int main(int argc, char* argv[])
 	
 		double cost = beliefPenaltyCollocation(B, U, problem, output, info);
 		
+		exit(0);
+
+		//pythonDisplayTrajectory(U, SqrtSigma0, x0, xGoal);
+		pythonPlotRobot(U, SqrtSigma0, x0, xGoal);
+
 		//double solvetime = util::Timer_toc(&solveTimer);
 		//LOG_INFO("Optimized cost: %4.10f", cost);
 		//LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 
 		unVec(B[0], x0, SqrtSigma0);
 
-		std::cout << "x0 before control step" << std::endl << ~x0;
-		std::cout << "control u: " << std::endl << ~U[0];
+		//std::cout << "x0 before control step" << std::endl << ~x0;
+		//std::cout << "control u: " << std::endl << ~U[0];
 
 		//pythonDisplayTrajectory(U, SqrtSigma0, x0, xGoal);
 
@@ -674,7 +715,7 @@ int main(int argc, char* argv[])
 		x_real = dynfunc(x_real, U[0]);
 
 		unVec(B[0], x0, SqrtSigma0);
-		std::cout << "x0 after control step" << std::endl << ~x0;
+		//std::cout << "x0 after control step" << std::endl << ~x0;
 
 		for(int t = 0; t < T-2; ++t) {
 			U[t] = U[t+1];
@@ -683,7 +724,7 @@ int main(int argc, char* argv[])
 	cleanupBeliefMPCVars();
 
 	for (int t = 0; t < T; ++t) {
-		std::cout << ~B[t].subMatrix<X_DIM,1>(0,0) << std::endl;
+		//std::cout << ~B[t].subMatrix<X_DIM,1>(0,0) << std::endl;
 	}
 
 

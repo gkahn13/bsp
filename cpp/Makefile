@@ -1,12 +1,17 @@
 CXX = g++
 CC = gcc
+INTELCC = icc
+
+OS := linux
+
+LINKER_FLAGS.mac = -lm
+LINKER_FLAGS.linux = -lrt
+LINKER_FLAGS = $(LINKER_FLAGS.$(OS))
 
 C_FLAGS = -std=gnu99
 CPP_FLAGS = -std=c++0x -fpermissive -I.
 PYTHON_FLAGS = -I/usr/include/python2.7 -lpython2.7
 BOOST_FLAGS = -lboost_python -lboost_filesystem -lboost_system
-#LINKER_FLAGS = -lrt -lm
-LINKER_FLAGS = -lm
 ADOLC_FLAGS = -I/home/gkahn/adolc_base/include -L/home/gkahn/adolc_base/lib64 -ladolc -lColPack
 #ADOLC_FLAGS = -I/usr/include/adolc -ladolc -lColPack
 EIGEN_FLAGS = -I/usr/include/eigen3
@@ -15,7 +20,7 @@ EIGEN_FLAGS = -I/usr/include/eigen3
 BUILD := debug
 
 BFLAGS.debug = -g -Wall
-BFLAGS.release = -O3
+BFLAGS.release = -O -g -Wall
 BFLAGS := $(BFLAGS.$(BUILD))
 
 OBJ_DIR = build/$(BUILD)
@@ -338,10 +343,10 @@ slam-traj-setup:
 	bash $(SLAM_SETUP_FILE) traj $(T)
 
 slam-traj: | slam-traj-setup $(SLAM_TRAJ_OBJS)
-	$(CXX) $(BFLAGS) $(SLAM_TRAJ_OBJS) -o $(BIN_DIR)/slam-traj $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
+	$(CXX) $(SLAM_TRAJ_OBJS) $(BFLAGS) -o $(BIN_DIR)/slam-traj $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
 	
 $(OBJ_DIR)/trajMPC.o : $(SLAM_TRAJ_DIR)/trajMPC.c
-	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+	$(CC) $(C_FLAGS) -c -o $@ $^
 	
 $(OBJ_DIR)/slam-traj.o : $(SLAM_TRAJ_DIR)/slam-traj.cpp $(SLAM_TRAJ_DIR)/trajMPC.c
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
@@ -375,10 +380,10 @@ slam-state: | slam-state-setup slam-traj-setup $(SLAM_STATE_OBJS)
 	$(CXX) $(BFLAGS) $(SLAM_STATE_OBJS) -o $(BIN_DIR)/slam-state $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
 	
 $(OBJ_DIR)/slam-state-cost.o : $(SLAM_STATE_DIR)/slam-state-cost.c
-	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+	$(CC) $(C_FLAGS) -c -o $@ $^
 
 $(OBJ_DIR)/slam-state-grad.o : $(SLAM_STATE_DIR)/slam-state-grad.c
-	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+	$(CC) $(C_FLAGS) -c -o $@ $^
 	
 $(OBJ_DIR)/slamStateMPC.o : $(SLAM_STATE_DIR)/stateMPC.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
@@ -386,6 +391,17 @@ $(OBJ_DIR)/slamStateMPC.o : $(SLAM_STATE_DIR)/stateMPC.c
 $(OBJ_DIR)/slam-state.o : $(SLAM_STATE_DIR)/slam-state.cpp $(SLAM_HEADERS)
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
 	
+# make slam-state-mpc
+SLAM_STATE_MPC_DIR = slam/state
+SLAM_STATE_MPC_FILES = slam-state-cost slam-state-grad slamStateMPC slam-state-mpc logging slam trajMPC slam-traj
+SLAM_STATE_MPC_OBJS = $(SLAM_STATE_MPC_FILES:%=$(OBJ_DIR)/%.o)
+
+slam-state-mpc: | slam-state-setup slam-traj-setup $(SLAM_STATE_MPC_OBJS)
+	$(CXX) $(BFLAGS) $(SLAM_STATE_MPC_OBJS) -o $(BIN_DIR)/slam-state-mpc $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
+	
+$(OBJ_DIR)/slam-state-mpc.o : $(SLAM_STATE_DIR)/slam-state-mpc.cpp $(SLAM_HEADERS)
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
+
 
 
 

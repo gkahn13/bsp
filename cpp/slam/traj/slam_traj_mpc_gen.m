@@ -33,7 +33,7 @@ istr = sprintf('%d',i);
 stages(i).dims.n = 3*nx+nu;           % number of stage variables
 stages(i).dims.l = 3*nx+nu;           % number of lower bounds
 stages(i).dims.u = nx+nu;             % number of upper bounds
-stages(i).dims.r = nx;              % number of equality constraints
+stages(i).dims.r = nx;                % number of equality constraints
 stages(i).dims.p = 0;                 % number of affine constraints
 stages(i).dims.q = 0;                 % number of quadratic constraints
 
@@ -132,7 +132,7 @@ mpcname = 'trajMPC';
 codeoptions = getOptions(mpcname);
 codeoptions.printlevel = 0;
 codeoptions.timing=0;
-codeoptions.maxit = 100;
+codeoptions.maxit = 50;
 
 % generate code
 generateCode(stages,params,codeoptions,outputs);

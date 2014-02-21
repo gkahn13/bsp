@@ -38,9 +38,15 @@ if [ ! -f $MPC_C_FILE ] || [ ! -f $MPC_H_FILE ]; then
     cd $SLAM_DIR
 fi
 
-echo "Copying ${MPC_FILE_NAME}${TIMESTEPS}.c/h to ${MPC_FILE_NAME}.c/h"
-cp ${MPC_C_FILE} ${DIR}/${MPC_FILE_NAME}".c"
-cp ${MPC_H_FILE} ${DIR}/${MPC_FILE_NAME}".h"
+
+if [ ! -f ${DIR}/${MPC_FILE_NAME}".c" ] || [ $(diff ${MPC_C_FILE} ${DIR}/${MPC_FILE_NAME}".c" | wc -w) -gt 0 ]; then
+    echo "Copying ${MPC_FILE_NAME}${TIMESTEPS}.c to ${MPC_FILE_NAME}.c"
+    cp ${MPC_C_FILE} ${DIR}/${MPC_FILE_NAME}".c"
+fi
+if [ ! -f ${DIR}/${MPC_FILE_NAME}".h" ] || [ $(diff ${MPC_H_FILE} ${DIR}/${MPC_FILE_NAME}".h" | wc -w) -gt 0 ]; then
+    echo "Copying ${MPC_FILE_NAME}${TIMESTEPS}.h to ${MPC_FILE_NAME}.h"
+    cp ${MPC_H_FILE} ${DIR}/${MPC_FILE_NAME}".h"
+fi
 
 # modify slam.h
 echo "replacing TIMESTEPS definition with new TIMESTEPS for slam.h in ${SLAM_DIR}"

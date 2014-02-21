@@ -158,6 +158,21 @@ void setupTrajVars(trajMPC_params &problem, trajMPC_output &output)
 #define BOOST_PP_LOCAL_LIMITS (TIMESTEPS, TIMESTEPS)
 #include BOOST_PP_LOCAL_ITERATE()
 
+	for(int t = 0; t < T-1; ++t) {
+		for(int i=0; i < (3*C_DIM+U_DIM); ++i) { f_traj[t][i] = 0; }
+		for(int i=0; i < (3*C_DIM+U_DIM); ++i) { lb_traj[t][i] = 0; }
+		for(int i=0; i < (C_DIM+U_DIM); ++i) { ub_traj[t][i] = 0; }
+		for(int i=0; i < (C_DIM*(3*C_DIM+U_DIM)); ++i) { C_traj[t][i] = 0; }
+		for(int i=0; i < C_DIM; ++i) { e_traj[t][i] = 0; }
+		for(int i=0; i < (C_DIM+U_DIM); ++i) { z_traj[t][i] = 0; }
+	}
+
+	for(int i=0; i < (C_DIM); ++i) { f_traj[T-1][i] = 0; }
+	for(int i=0; i < (C_DIM); ++i) { lb_traj[T-1][i] = 0; }
+	for(int i=0; i < (C_DIM); ++i) { ub_traj[T-1][i] = 0; }
+	for(int i=0; i < C_DIM; ++i) { e_traj[T-1][i] = 0; }
+	for(int i=0; i < (C_DIM); ++i) { z_traj[T-1][i] = 0; }
+
 
 	Matrix<C_DIM,3*C_DIM+U_DIM> CMat;
 	Matrix<C_DIM> eVec;
@@ -168,10 +183,10 @@ void setupTrajVars(trajMPC_params &problem, trajMPC_output &output)
 	CMat.insert<C_DIM,C_DIM>(0,0,identity<C_DIM>());
 
 	for(int t = 0; t < T-1; ++t) {
-			for(int i = 0; i < (3*C_DIM + U_DIM); ++i) { f_traj[t][i] = 0; }
+		for(int i = 0; i < (3*C_DIM + U_DIM); ++i) { f_traj[t][i] = 0; }
 
-			fillColMajor(C_traj[t], CMat);
-			fillCol(e_traj[t+1], eVec);
+		fillColMajor(C_traj[t], CMat);
+		fillCol(e_traj[t+1], eVec);
 	}
 	for(int i = 0; i < C_DIM; ++i) { f_traj[T-1][i] = 0; }
 
@@ -351,7 +366,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 	double Uvel_eps = cfg::initial_Uvel_trust_box_size;
 	double Uangle_eps = cfg::initial_Uangle_trust_box_size;
 
-	double optcost;
+	double optcost = 0;
 
 	std::vector<Matrix<C_DIM> > Xopt(T);
 	std::vector<Matrix<U_DIM> > Uopt(T-1);
@@ -360,7 +375,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 	double approx_merit_improve, exact_merit_improve, merit_improve_ratio;
 
 	int sqp_iter = 1, index = 0;
-	bool success;
+	bool success = false;
 
 	Matrix<C_DIM,C_DIM> IB = identity<C_DIM>();
 	Matrix<C_DIM,C_DIM> minusIB = -identity<C_DIM>();
@@ -417,6 +432,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 		for(int i=0; i < P_DIM; ++i) { f_traj[T_TRAJ_MPC-1][i] = -2*alpha_goal*cGoal[i]; }
 		f_traj[T_TRAJ_MPC-1][2] = 0;
 
+
 		//std::cout << "PAUSED INSIDE MINIMIZEMERITFUNCTION" << std::endl;
 		//int k;
 		//std::cin >> k;
@@ -464,6 +480,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 
 			}
 
+
 			Matrix<C_DIM>& xT = X[T_TRAJ_MPC-1];
 
 			// Fill in lb_traj, ub_traj, C_traj, e_traj
@@ -499,7 +516,6 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 				}
 
 			}
-
 
 			double constant_cost = 0;
 
@@ -537,6 +553,8 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 				LOG_ERROR("Some problem in traj solver, retrying");
 				throw exit_exception(-1);
 			}
+
+
 
 			//for(int t=0; t < T-1; ++t) {
 			//	std::cout << ~Uopt[t];
@@ -606,6 +624,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			    LOG_DEBUG("Converged: x tolerance");
 			    return true;
 			}
+
 
 		} // trust region loop
 		sqp_iter++;
@@ -713,7 +732,6 @@ bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 
 	}
 
-
 	double solvetime = util::Timer_toc(&solveTimer);
 
 	if (!success) {
@@ -760,12 +778,12 @@ int main(int argc, char* argv[])
 	Matrix<C_DIM> cStart, cEnd;
 	std::vector<Matrix<U_DIM> > U(T-1, zeros<U_DIM,1>());
 
-	cStart[0] = 0; // 60
-	cStart[1] = 0; // 20
-	cStart[2] = 0; // 2.47
+	cStart[0] = 60; // 60
+	cStart[1] = 20; // 20
+	cStart[2] = 2.47; // 2.47
 
-	cEnd[0] = 60; // 0
-	cEnd[1] = 0; // 20
+	cEnd[0] = 0; // 0
+	cEnd[1] = 20; // 20
 
 	for(int i=0; i < C_DIM; ++i) { x0[i] = cStart[i]; }
 	for(int i=0; i < C_DIM; ++i) { xGoal[i] = cEnd[i]; }
@@ -775,11 +793,9 @@ int main(int argc, char* argv[])
 	//cStart[2] = 0;
 	//cEnd[2] = atan2(cEnd[1] - cStart[1], cEnd[0] - cStart[0]);
 
-	initTraj(cStart, cEnd, U, T-4);
+	initTraj(cStart, cEnd, U, T);
 
 	cleanupTrajMPCVars();
 	
 }
 */
-
-

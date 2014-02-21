@@ -478,7 +478,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 		casadiComputeCostGrad(X, U, cost, Grad);
 
 		// Problem linearization and definition
-		// fill in Q, f
+		// fill in H, f
 
 		hessian_constant = 0;
 		jac_constant = 0;

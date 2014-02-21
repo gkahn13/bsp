@@ -17,7 +17,7 @@ stateMPC_FLOAT **H, **f, **lb, **ub, **C, **e, **z;
 #include "boost/preprocessor.hpp"
 
 const double alpha_belief = 10; // 10;
-const double alpha_final_belief = 10; // 50;
+const double alpha_final_belief = 50; // 50;
 const double alpha_control = .01; // .01
 
 int T_MPC = T;
@@ -35,10 +35,10 @@ const double penalty_coeff_increase_ratio = 5; // 5
 const double initial_penalty_coeff = 5; // 5
 
 const double initial_trust_box_size = 1; // 5 // split up trust box size for X and U
-const double initial_Xpos_trust_box_size = 1; // 1;
-const double initial_Xangle_trust_box_size = M_PI/6; // M_PI/6;
-const double initial_Uvel_trust_box_size = 1; // 1;
-const double initial_Uangle_trust_box_size = M_PI/8; // M_PI/8;
+double initial_Xpos_trust_box_size = 1; // 1;
+double initial_Xangle_trust_box_size = M_PI/6; // M_PI/6;
+double initial_Uvel_trust_box_size = 1; // 1;
+double initial_Uangle_trust_box_size = M_PI/8; // M_PI/8;
 
 const int max_penalty_coeff_increases = 8; // 8
 const int max_sqp_iterations = 50; // 50
@@ -542,7 +542,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			// since diagonal, fill directly
 			for(int i = 0; i < (X_DIM+U_DIM); ++i) { H[t][i] = HMat(i,i); }
 			// TODO: why does this work???
-			for(int i = 0; i < (2*X_DIM); ++i) { H[t][i + (X_DIM+U_DIM)] = 1e4; } //1e4
+			for(int i = 0; i < (2*X_DIM); ++i) { H[t][i + (X_DIM+U_DIM)] = 1e2; } //1e4
 
 			zbar.insert(0,0,xt);
 			zbar.insert(X_DIM,0,ut);
@@ -669,6 +669,9 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 				ub[t][index++] = MIN(uMax[1], ut[1] + Uangle_eps);
 			}
 
+			// TODO: hardcoded first large step!
+			//lb[0][X_DIM] = 4;
+
 			Matrix<X_DIM>& xT_MPC = X[T_MPC-1];
 
 			// Fill in lb, ub
@@ -709,10 +712,10 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 
 
 			// Verify problem inputs
-			if (!isValidInputs()) {
-				std::cout << "Inputs are not valid!" << std::endl;
-				exit(-1);
-			}
+			//if (!isValidInputs()) {
+			//	std::cout << "Inputs are not valid!" << std::endl;
+			//	exit(-1);
+			//}
 
 
 			int exitflag = stateMPC_solve(&problem, &output, &info);
@@ -759,8 +762,15 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			LOG_DEBUG("       exact_merit_improve: %1.6f", exact_merit_improve);
 			LOG_DEBUG("       merit_improve_ratio: %1.6f", merit_improve_ratio);
 
+			if (approx_merit_improve < 0) {
+				LOG_DEBUG("approx_merit_improve < 0")
+				//pythonDisplayTrajectory(Uopt, T, true);
+				//pythonDisplayTrajectory(Xopt, T, true);
+			}
+
 			//std::cout << "PAUSED INSIDE minimizeMeritFunction AFTER OPTIMIZATION" << std::endl;
 			//std::cin.ignore();
+
 
 			if (approx_merit_improve < -1e-5) {
 				//LOG_ERROR("Approximate merit function got worse: %1.6f", approx_merit_improve);
@@ -966,13 +976,23 @@ int main(int argc, char* argv[])
 		for(int t=0; t < T; ++t) {
 			T_MPC = T - t;
 
+
+			if (t >= 0) {
+				cfg::initial_Xpos_trust_box_size = 1; // 1;
+				cfg::initial_Xangle_trust_box_size = M_PI/6; // M_PI/6;
+				cfg::initial_Uvel_trust_box_size = 1; // 1;
+				cfg::initial_Uangle_trust_box_size = M_PI/8; // M_PI/8;
+			}
+
+
 			/*
 			bool initTrajSuccess = initTraj(x0.subMatrix<C_DIM,1>(0,0), xGoal.subMatrix<C_DIM,1>(0,0), U, T_MPC);
 			if (!initTrajSuccess) {
-				LOG_ERROR("Failed to initialize trajectory, exiting slam-state");
+				LOG_ERROR("Failed to initialize trajectory, using last inputs attempted");
 				exit(-1);
 			}
 			*/
+
 
 			X[0] = x0;
 			for(int t=0; t < T-1; ++t) {
@@ -1009,6 +1029,13 @@ int main(int argc, char* argv[])
 			// shift X "forward" (to the left)
 			// shift U "forward" (to the left)
 
+			LOG_INFO("Optimized cost: %4.10f", cost);
+			LOG_INFO("Actual cost: %4.10f", computeCost(X,U));
+
+			for(int i=0; i < T-1; ++i) {
+				std::cout << ~U[i];
+			}
+			std::cout << std::endl;
 
 			//pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, (i*T) + (t+1), true);
 		}

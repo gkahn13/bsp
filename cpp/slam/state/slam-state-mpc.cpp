@@ -16,6 +16,13 @@ stateMPC_FLOAT **H, **f, **lb, **ub, **C, **e, **z;
 
 #include "boost/preprocessor.hpp"
 
+
+// full Hessian from current timstep
+Matrix<XU_DIM,XU_DIM> Hess;
+
+std::vector<Matrix<X_DIM> > X_MPC_past;
+std::vector<Matrix<U_DIM> > U_MPC_past;
+
 const double alpha_belief = 10; // 10;
 const double alpha_final_belief = 50; // 50;
 const double alpha_control = .01; // .01
@@ -40,9 +47,13 @@ double initial_Xangle_trust_box_size = M_PI/6; // M_PI/6;
 double initial_Uvel_trust_box_size = 1; // 1;
 double initial_Uangle_trust_box_size = M_PI/8; // M_PI/8;
 
-const int max_penalty_coeff_increases = 8; // 8
+const int max_penalty_coeff_increases = 4; // 8
 const int max_sqp_iterations = 50; // 50
 }
+
+struct forces_exception {
+	forces_exception() { }
+};
 
 
 // utility to fill Matrix in column major format in FORCES array
@@ -504,7 +515,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 	Matrix<X_DIM+U_DIM> zbar;
 
 	// full Hessian from current timstep
-	Matrix<XU_DIM,XU_DIM> B = identity<XU_DIM>();
+	// Hess = identity<XU_DIM>();
 
 	Matrix<XU_DIM> Grad, Gradopt;
 	double cost;
@@ -544,14 +555,14 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 
 			HMat.reset();
 			for(int i = 0; i < (X_DIM+U_DIM); ++i) {
-				double val = B(idx+i,idx+i);
+				double val = Hess(idx+i,idx+i);
 				HMat(i,i) = (val < 0) ? 0 : val;
 			}
 
 			// since diagonal, fill directly
 			for(int i = 0; i < (X_DIM+U_DIM); ++i) { H[t][i] = HMat(i,i); }
 			// TODO: why does this work???
-			for(int i = 0; i < (2*X_DIM); ++i) { H[t][i + (X_DIM+U_DIM)] = 1e3; } //1e4
+			for(int i = 0; i < (2*X_DIM); ++i) { H[t][i + (X_DIM+U_DIM)] = 1; } //1e3
 
 			zbar.insert(0,0,xt);
 			zbar.insert(X_DIM,0,ut);
@@ -599,7 +610,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 
 			HfMat.reset();
 			for(int i = 0; i < X_DIM; ++i) {
-				double val = B(idx+i,idx+i);
+				double val = Hess(idx+i,idx+i);
 				HfMat(i,i) = (val < 0) ? 0 : val;
 			}
 
@@ -678,9 +689,6 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 				ub[t][index++] = MIN(uMax[1], ut[1] + Uangle_eps);
 			}
 
-			// TODO: hardcoded first large step!
-			//lb[0][X_DIM] = 4;
-
 			Matrix<X_DIM>& xT_MPC = X[T_MPC-1];
 
 			// Fill in lb, ub
@@ -721,10 +729,10 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 
 
 			// Verify problem inputs
-			if (!isValidInputs()) {
-				std::cout << "Inputs are not valid!" << std::endl;
-				exit(-1);
-			}
+			//if (!isValidInputs()) {
+			//	std::cout << "Inputs are not valid!" << std::endl;
+			//	exit(-1);
+			//}
 
 
 			int exitflag = stateMPC_solve(&problem, &output, &info);
@@ -747,8 +755,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			}
 			else {
 				LOG_ERROR("Some problem in solver");
-				pythonDisplayTrajectory(U, T, true);
-				exit(-1);
+				throw forces_exception();
 			}
 
 
@@ -834,7 +841,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 				}
 
 				double theta;
-				Matrix<XU_DIM> Bs = B*s;
+				Matrix<XU_DIM> Bs = Hess*s;
 
 				bool decision = ((~s*y)[0] >= .2*(~s*Bs)[0]);
 				if (decision) {
@@ -852,7 +859,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 				//B = B + (rBs*~rBs)/((~rBs*s)[0]);
 
 				// L-BFGS update
-				B = B - (Bs*~Bs)/((~s*Bs)[0]) + (r*~r)/((~s*r)[0]);
+				Hess = Hess - (Bs*~Bs)/((~s*Bs)[0]) + (r*~r)/((~s*r)[0]);
 
 				// Do not update B
 				//B = identity<XU_DIM>();
@@ -984,6 +991,9 @@ int main(int argc, char* argv[])
 		double initTrajTime = util::Timer_toc(&trajTimer);
 		trajTime += initTrajTime;
 
+		// reset Hessian at beginning of each MPC
+		Hess = identity<XU_DIM>();
+
 		for(int t=0; t < T; ++t) {
 			T_MPC = T - t;
 
@@ -996,13 +1006,13 @@ int main(int argc, char* argv[])
 			}
 
 
-
+			/*
 			bool initTrajSuccess = initTraj(x0.subMatrix<C_DIM,1>(0,0), xGoal.subMatrix<C_DIM,1>(0,0), U, T_MPC);
 			if (!initTrajSuccess) {
 				LOG_ERROR("Failed to initialize trajectory, using last inputs attempted");
 				exit(-1);
 			}
-
+			*/
 
 
 			X[0] = x0;
@@ -1023,7 +1033,23 @@ int main(int argc, char* argv[])
 
 			util::Timer_tic(&solveTimer);
 
-			double cost = statePenaltyCollocation(X, U, problem, output, info);
+			double cost = 0;
+			int iter = 0;
+			while(true) {
+				try {
+					cost = statePenaltyCollocation(X, U, problem, output, info);
+					break;
+				}
+				catch (forces_exception &e) {
+					if (iter > 3) {
+						LOG_ERROR("Tried too many times, giving up");
+						exit(-1);
+					}
+					LOG_ERROR("Forces exception, trying again");
+					pythonDisplayTrajectory(U, T, true);
+					iter++;
+				}
+			}
 
 			double solvetime = util::Timer_toc(&solveTimer);
 			totalSolveTime += solvetime;

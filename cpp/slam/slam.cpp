@@ -374,7 +374,7 @@ void pythonDisplayTrajectory(std::vector< Matrix<X_DIM> >& X, int time_steps, bo
 	std::vector<Matrix<B_DIM> > B(time_steps);
 	std::vector<Matrix<U_DIM> > U(time_steps-1,zeros<U_DIM,1>());
 
-	for (int t = 0; t < T; ++t) {
+	for (int t = 0; t < time_steps; ++t) {
 		vec(X[t], zeros<X_DIM,X_DIM>(), B[t]);
 	}
 

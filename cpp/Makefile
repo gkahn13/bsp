@@ -2,7 +2,7 @@ CXX = g++
 CC = gcc
 INTELCC = icc
 
-OS := linux
+OS := mac
 
 LINKER_FLAGS.mac = -lm
 LINKER_FLAGS.linux = -lrt
@@ -19,8 +19,8 @@ EIGEN_FLAGS = -I/usr/include/eigen3
 # default to debug build
 BUILD := debug
 
-BFLAGS.debug = -g -Wall
-BFLAGS.release = -O -g -Wall
+BFLAGS.debug = -g -Wall 
+BFLAGS.release = -O3 -g -Wall
 BFLAGS := $(BFLAGS.$(BUILD))
 
 OBJ_DIR = build/$(BUILD)
@@ -148,7 +148,16 @@ parameter-ilqg: $(PARAM_ILQG_OBJS)
 $(OBJ_DIR)/parameter-ilqg.o : $(PARAM_ILQG_DIR)/parameter-ilqg.cpp $(PARAM_ILQG_DIR)/ilqg.h
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) -c -o $@ $<
 
+# make parameter-random
+PARAM_RANDOM_DIR = parameter/random
+PARAM_RANDOM_FILES = parameter-random logging
+PARAM_RANDOM_OBJS = $(PARAM_RANDOM_FILES:%=$(OBJ_DIR)/%.o)
 
+parameter-random: $(PARAM_RANDOM_OBJS)
+	$(CXX) $(BFLAGS) $(PARAM_RANDOM_OBJS) -o $(BIN_DIR)/parameter-random $(PYTHON_FLAGS) $(BOOST_FLAGS) $(LINKER_FLAGS)
+	
+$(OBJ_DIR)/parameter-random.o : $(PARAM_RANDOM_DIR)/parameter-random.cpp $(ARM_HEADERS)
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) -c -o $@ $<
 
 
 
@@ -408,8 +417,10 @@ $(OBJ_DIR)/slam-state-mpc.o : $(SLAM_STATE_DIR)/slam-state-mpc.cpp $(SLAM_HEADER
 ###### CLEAN ########
 
 clean:
-	rm -r $(BIN_DIR)/*
-	rm -f $(OBJ_DIR)/*.o
+	rm -f -r bin/debug/*
+	rm -f -r bin/release/*
+	rm -f bin/debug/*.o
+	rm -f bin/release/*.o
 	
 #### NOT FILES ######
 .PHONY: point-belief-setup point-state-setup point-lp-setup point-control-setup arm-belief-setup

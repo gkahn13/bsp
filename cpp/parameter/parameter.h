@@ -3,6 +3,8 @@
 
 #include <fstream>
 
+#include <boost/random.hpp>
+#include <boost/random/normal_distribution.hpp>
 #include "util/matrix.h"
 
 
@@ -18,7 +20,7 @@ namespace py = boost::python;
 
 // horizon is total lifetime of planning
 // timesteps is how far into future accounting for during MPC
-#define HORIZON 100
+#define HORIZON 500
 #define TIMESTEPS 15
 #define DT 1.0/5.0
 
@@ -34,7 +36,7 @@ namespace py = boost::python;
 #define X_DIM 8
 #define U_DIM 2
 #define Z_DIM 4
-#define Q_DIM 2
+#define Q_DIM 8
 #define R_DIM 4
 
 #define S_DIM (((X_DIM+1)*X_DIM)/2)
@@ -75,12 +77,17 @@ const double INFTY = 1e10;
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
-const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 1, alpha_goal_state = 1;
+const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 0, alpha_goal_state = 1;
 const double alpha_joint_belief = 0, alpha_param_belief = 10,
 			  alpha_final_joint_belief = 0, alpha_final_param_belief = 10, alpha_goal_joint_state = 10, alpha_goal_param_state = 1;
 
 double *inputVars, *vars;
 std::vector<int> maskIndices;
+
+boost::mt19937 rng; 
+boost::normal_distribution<> nd(0.0, 1.0);
+boost::variate_generator<boost::mt19937&, 
+                           boost::normal_distribution<> > var_nor(rng, nd);
 
 double sgn(double x) {
 	double delta = 1e-10;
@@ -88,40 +95,6 @@ double sgn(double x) {
 	else if (x < delta) { return -1; }
 	else { return 0; }
 }
-
-/*
-Matrix<J_DIM> jointdynfunc_mine(const Matrix<J_DIM>& j, const Matrix<U_DIM>& u, double length1, double length2, double mass1, double mass2)
-{
-	Matrix<J_DIM> jNew;
-	double phi1 = j[0], phi2 = j[1], phi1dot = j[2], phi2dot = j[3];
-	double i1 = u[0], i2 = u[1];
-
-	double H11 = dynamics::gear1_ratio*dynamics::gear1_ratio*dynamics::motor1_inertia +
-				  dynamics::rotational1_inertia +
-				  mass2*length1*length1;
-
-	double H12 = length1*dynamics::mass_center2*mass2*cos(phi2 - phi1);
-	double H21 = H12;
-
-	double H22 = dynamics::gear2_ratio*dynamics::gear2_ratio*dynamics::motor2_inertia +
-				  dynamics::rotational2_inertia;
-
-	double h = length1*dynamics::mass_center2*mass2*sin(phi2 - phi1);
-
-	double G1 = (dynamics::mass_center1*mass1 + length1*mass2)*dynamics::gravity*cos(phi1);
-	double G2 = dynamics::mass_center2*mass2*dynamics::gravity*cos(phi2);
-
-	double F1 = dynamics::damping1*phi1dot + dynamics::coulomb1*sgn(phi1dot);
-	double F2 = dynamics::damping2*phi2dot + dynamics::coulomb2*sgn(phi2dot);
-
-	double tau1 = dynamics::gear1_ratio*dynamics::motor1_torque_const*i1;
-	double tau2 = dynamics::gear2_ratio*dynamics::motor2_torque_const*i2;
-
-
-	return jNew;
-}
-*/
-
 
 
 Matrix<J_DIM> jointdynfunc(const Matrix<J_DIM>& j, const Matrix<U_DIM>& u, double length1, double length2, double mass1, double mass2)
@@ -246,6 +219,30 @@ inline Matrix<X_DIM,X_DIM> getMMT(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u
 }
 
 
+SymmetricMatrix<Q_DIM> varQ() {
+
+	SymmetricMatrix<Q_DIM> S = identity<Q_DIM>();
+	S(0,0) = 0.25*0.001;
+	S(1,1) = 0.25*0.001;
+	S(2,2) = 1.0*0.001;
+	S(3,3) = 1.0*0.001;
+	S(4,4) = 0.0005;
+	S(5,5) = 0.0005;
+	S(6,6) = 0.0001;
+	S(7,7) = 0.0001;
+	return S;
+}
+
+SymmetricMatrix<R_DIM> varR(){ 
+	SymmetricMatrix<R_DIM> S = identity<R_DIM>();	
+	S(0,0) = 0.0001;	
+	S(1,1) = 0.0001;	
+	S(2,2) = 0.00001;	
+	S(3,3) = 0.00001;	
+	return S;	\
+}
+
+
 // Jacobians: df(x,u,q)/dx
 void linearizeDynamics(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, Matrix<X_DIM,X_DIM>& A)
 {
@@ -307,6 +304,30 @@ void vec(const Matrix<X_DIM>& x, const Matrix<X_DIM,X_DIM>& S, Matrix<B_DIM>& b)
 	}
 }
 
+Matrix<Q_DIM> qNoise(){
+
+	Matrix<Q_DIM> q; 
+
+	for(int i = 0; i<Q_DIM; i++){
+		q[i] =  var_nor();
+	}
+
+	return q;
+}
+
+
+Matrix<R_DIM> rNoise(){
+
+	Matrix<R_DIM> r; 
+
+	
+
+	for(int i = 0; i<R_DIM; i++){
+		r[i] =  var_nor();
+	}
+
+	return r;
+}
 
 // Belief dynamics
 Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
@@ -339,12 +360,20 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 }
 
 // returns updated belief based on real current state, estimated current belief, and input
-Matrix<B_DIM> executeControlStep(const Matrix<X_DIM>& x_t_real, const Matrix<B_DIM>& b_t, const Matrix<U_DIM>& u_t) {
+Matrix<B_DIM> executeControlStep(Matrix<X_DIM>& x_t_real, const Matrix<B_DIM>& b_t, const Matrix<U_DIM>& u_t) {
 	// useRealParams = true
 	// update real state (maximum likelihood)
-	Matrix<X_DIM> x_tp1_real = dynfunc(x_t_real, u_t);
+	Matrix<R_DIM,R_DIM> Rchol;
+	Matrix<Q_DIM,Q_DIM> Qchol; 
+
+	chol(varR(),Rchol);
+	chol(varQ(),Qchol); 
+
+
+	Matrix<X_DIM> x_tp1_real = dynfunc(x_t_real, u_t)+ ~Qchol*qNoise();
+	x_t_real = x_tp1_real; 
 	// sense real state (maximum likelihood)
-	Matrix<Z_DIM> z_tp1_real = obsfunc(x_tp1_real);
+	Matrix<Z_DIM> z_tp1_real = obsfunc(x_tp1_real) + ~Rchol*rNoise();
 
 	// now do EKF on belief and incorporate discrepancy
 	// using the kalman gain
@@ -435,6 +464,43 @@ void pythonDisplayTrajectory(std::vector< Matrix<U_DIM> >& U, Matrix<X_DIM,X_DIM
 	plot_traj(Bvec, Uvec, B_DIM, X_DIM, U_DIM, T);
 
 }
+
+
+
+void pythonDisplayHistory(std::vector< Matrix<U_DIM> >& U,std::vector< Matrix<B_DIM> >& B, Matrix<X_DIM,X_DIM> SqrtSigma0, Matrix<X_DIM> x0, int H)
+{
+	
+	Py_Initialize();
+
+	py::list Bvec;
+	for(int j=0; j < B_DIM; j++) {
+		for(int i=0; i < H; i++) {
+			Bvec.append(B[i][j]);
+		}
+	}
+
+	py::list Uvec;
+	for(int j=0; j < U_DIM; j++) {
+		for(int i=0; i < H-1; i++) {
+			Uvec.append(U[i][j]);
+		}
+	}
+
+	std::string workingDir = boost::filesystem::current_path().normalize().string();
+
+	py::object main_module = py::import("__main__");
+	py::object main_namespace = main_module.attr("__dict__");
+	py::exec("import sys, os", main_namespace);
+	py::exec(py::str("sys.path.append('"+workingDir+"/parameter')"), main_namespace);
+	py::object plot_mod = py::import("plot_parameter");
+	py::object plot_traj = plot_mod.attr("plot_parameter_trajectory");
+
+	plot_traj(Bvec, Uvec, B_DIM, X_DIM, U_DIM, H);
+
+}
+
+
+
 
 void pythonPlotRobot(std::vector< Matrix<U_DIM> >& U, Matrix<X_DIM,X_DIM> SqrtSigma0, Matrix<X_DIM> x0, Matrix<X_DIM> xGoal)
 {

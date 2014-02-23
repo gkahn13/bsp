@@ -125,6 +125,7 @@ PARAM_BELIEF_FILES = parameterBeliefPenaltyMPC parameter-belief logging
 PARAM_BELIEF_OBJS = $(PARAM_BELIEF_FILES:%=$(OBJ_DIR)/%.o)
 
 parameter-belief-setup:
+	touch $(PARAM_BELIEF_DIR)/parameter-belief.cpp
 	bash $(PARAM_SETUP_FILE) belief $(T)
 
 parameter-belief: | parameter-belief-setup $(PARAM_BELIEF_OBJS)
@@ -153,7 +154,10 @@ PARAM_RANDOM_DIR = parameter/random
 PARAM_RANDOM_FILES = parameter-random logging
 PARAM_RANDOM_OBJS = $(PARAM_RANDOM_FILES:%=$(OBJ_DIR)/%.o)
 
-parameter-random: $(PARAM_RANDOM_OBJS)
+touch-parameter-random:
+	touch $(PARAM_RANDOM_DIR)/parameter-random.cpp
+
+parameter-random: | touch-parameter-random $(PARAM_RANDOM_OBJS)
 	$(CXX) $(BFLAGS) $(PARAM_RANDOM_OBJS) -o $(BIN_DIR)/parameter-random $(PYTHON_FLAGS) $(BOOST_FLAGS) $(LINKER_FLAGS)
 	
 $(OBJ_DIR)/parameter-random.o : $(PARAM_RANDOM_DIR)/parameter-random.cpp $(ARM_HEADERS)

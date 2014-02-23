@@ -22,6 +22,8 @@ namespace py = boost::python;
 // timesteps is how far into future accounting for during MPC
 #define HORIZON 500
 #define TIMESTEPS 15
+#define RSCALE 1e4
+#define QSCALE 1
 #define DT 1.0/5.0
 
 
@@ -84,10 +86,7 @@ const double alpha_joint_belief = 0, alpha_param_belief = 10,
 double *inputVars, *vars;
 std::vector<int> maskIndices;
 
-boost::mt19937 rng; 
-boost::normal_distribution<> nd(0.0, 1.0);
-boost::variate_generator<boost::mt19937&, 
-                           boost::normal_distribution<> > var_nor(rng, nd);
+
 
 double sgn(double x) {
 	double delta = 1e-10;
@@ -215,6 +214,7 @@ inline Matrix<X_DIM,X_DIM> getMMT(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u
 	S(5,5) = 0.0005;
 	S(6,6) = 0.0001;
 	S(7,7) = 0.0001;
+	S *= QSCALE;
 	return S;
 }
 
@@ -230,6 +230,7 @@ SymmetricMatrix<Q_DIM> varQ() {
 	S(5,5) = 0.0005;
 	S(6,6) = 0.0001;
 	S(7,7) = 0.0001;
+	S *= QSCALE;
 	return S;
 }
 
@@ -239,7 +240,8 @@ SymmetricMatrix<R_DIM> varR(){
 	S(1,1) = 0.0001;	
 	S(2,2) = 0.00001;	
 	S(3,3) = 0.00001;	
-	return S;	\
+	S *= RSCALE; 
+	return S;	
 }
 
 
@@ -265,6 +267,7 @@ inline Matrix<Z_DIM,Z_DIM> getNNT(const Matrix<X_DIM>& x)
 	S(1,1) = 0.0001;
 	S(2,2) = 0.00001;
 	S(3,3) = 0.00001;
+	S *= RSCALE; 
 	return S;
 }
 
@@ -363,17 +366,12 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 Matrix<B_DIM> executeControlStep(Matrix<X_DIM>& x_t_real, const Matrix<B_DIM>& b_t, const Matrix<U_DIM>& u_t) {
 	// useRealParams = true
 	// update real state (maximum likelihood)
-	Matrix<R_DIM,R_DIM> Rchol;
-	Matrix<Q_DIM,Q_DIM> Qchol; 
-
-	chol(varR(),Rchol);
-	chol(varQ(),Qchol); 
 
 
-	Matrix<X_DIM> x_tp1_real = dynfunc(x_t_real, u_t)+ ~Qchol*qNoise();
+	Matrix<X_DIM> x_tp1_real = dynfunc(x_t_real, u_t)+ sampleGaussian(zeros<Q_DIM,1>(),varQ());
 	x_t_real = x_tp1_real; 
 	// sense real state (maximum likelihood)
-	Matrix<Z_DIM> z_tp1_real = obsfunc(x_tp1_real) + ~Rchol*rNoise();
+	Matrix<Z_DIM> z_tp1_real = obsfunc(x_tp1_real) + sampleGaussian(zeros<R_DIM,1>(),varR());
 
 	// now do EKF on belief and incorporate discrepancy
 	// using the kalman gain
@@ -405,8 +403,10 @@ Matrix<B_DIM> executeControlStep(Matrix<X_DIM>& x_t_real, const Matrix<B_DIM>& b
 	Matrix<X_DIM> x_tp1_adj = x_tp1 + K*(z_tp1_real - obsfunc(x_tp1));
 
 	// correct the new covariance
-	Matrix<X_DIM,X_DIM> W = ~(H*Sigma_tp1)*(((H*Sigma_tp1*~H) + NNT) % (H*Sigma_tp1));
-	Matrix<X_DIM,X_DIM> Sigma_tp1_adj = Sigma_tp1 - W;
+	//Matrix<X_DIM,X_DIM> W = ~(H*Sigma_tp1)*(((H*Sigma_tp1*~H) + NNT) % (H*Sigma_tp1));
+	//Matrix<X_DIM,X_DIM> Sigma_tp1_adj = Sigma_tp1 - W;
+
+	Matrix<X_DIM,X_DIM> Sigma_tp1_adj = Sigma_tp1 - K*H*Sigma_tp1;
 
 	Matrix<B_DIM> b_tp1_adj;
 	vec(x_tp1_adj, sqrtm(Sigma_tp1_adj), b_tp1_adj);

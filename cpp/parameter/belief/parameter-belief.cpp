@@ -618,6 +618,10 @@ int main(int argc, char* argv[])
 	xGoal[4] = 1/length1_est; xGoal[5] = 1/length2_est; xGoal[6] = 1/mass1_est; xGoal[7] = 1/mass2_est;
 
 	// from original file, possibly change
+	SqrtSigma0(0,0) = 1.0; 
+	SqrtSigma0(1,1) = 1.0; 
+	SqrtSigma0(2,2) = 1.0; 
+	SqrtSigma0(3,3) = 1.0; 
 	SqrtSigma0(4,4) = sqrt(0.5);
 	SqrtSigma0(5,5) = sqrt(0.5);
 	SqrtSigma0(6,6) = 1.0;
@@ -655,7 +659,7 @@ int main(int argc, char* argv[])
 	std::vector<Matrix<B_DIM> > B(T);
 
 	std::vector<Matrix<U_DIM> > HistoryU(HORIZON);
-	std::vector<Matrix<B_DIM> > HistoryB(HORIZON);
+	std::vector<Matrix<B_DIM> > HistoryB(HORIZON); 
 
 	// pythonPlotRobot(U, SqrtSigma0, x0, xGoal);
 
@@ -700,9 +704,10 @@ int main(int argc, char* argv[])
 
 		std::cout<<U[0]<<"\n";
 
-
+	
 		B[0] = executeControlStep(x_real, B[0], U[0]);
 		
+
 
 		unVec(B[0], x0, SqrtSigma0);
 		//std::cout << "x0 after control step" << std::endl << ~x0;
@@ -710,6 +715,8 @@ int main(int argc, char* argv[])
 		for(int t = 0; t < T-2; ++t) {
 			U[t] = U[t+1];
 		}
+
+
 	}
 	pythonDisplayHistory(HistoryU,HistoryB, SqrtSigma0, x0, HORIZON);
 	cleanupBeliefMPCVars();

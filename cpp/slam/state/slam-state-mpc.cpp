@@ -738,10 +738,10 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 
 
 			// Verify problem inputs
-			if (!isValidInputs()) {
-				std::cout << "Inputs are not valid!" << std::endl;
-				exit(-1);
-			}
+			//if (!isValidInputs()) {
+			//	std::cout << "Inputs are not valid!" << std::endl;
+			//	exit(-1);
+			//}
 
 
 			int exitflag = stateMPC_solve(&problem, &output, &info);
@@ -1015,7 +1015,7 @@ Matrix<X_DIM,X_DIM> finalSqrtSigma(Matrix<X_DIM> xStart, Matrix<X_DIM,X_DIM> SS0
 
 int main(int argc, char* argv[])
 {
-	srand(time(NULL));
+	//srand(time(NULL));
 
 	LOG_INFO("Initializing problem parameters");
 	initProblemParams();
@@ -1074,7 +1074,24 @@ int main(int argc, char* argv[])
 
 			xGoal = X_lookahead[t];
 
-			double cost = statePenaltyCollocation(X_current_mpc, U_current_mpc, problem, output, info);
+			double cost = 0;
+			int iter = 0;
+			while(true) {
+				try {
+					cost = statePenaltyCollocation(X_current_mpc, U_current_mpc, problem, output, info);
+					break;
+				}
+				catch (forces_exception &e) {
+					Hess = identity<XU_DIM>();
+					if (iter > 3) {
+						LOG_ERROR("Tried too many times, giving up");
+						exit(-1);
+					}
+					LOG_ERROR("Forces exception, trying again");
+					pythonDisplayTrajectory(U, T, true);
+					iter++;
+				}
+			}
 
 			std::cout << "x0: " << ~x0.subMatrix<C_DIM,1>(0,0);
 			std::cout << "xMidpoint: " << ~xMidpoint.subMatrix<C_DIM,1>(0,0);
@@ -1098,14 +1115,12 @@ int main(int argc, char* argv[])
 			counter_inner_loop = 0;
 			counter_approx_hess_neg = 0;
 
-			//if (i >= NUM_WAYPOINTS - 1) {
-				std::cout << "Displaying mpc\n";
-				pythonDisplayTrajectory(U_current_mpc, T, true);
-			//}
+			//std::cout << "Displaying mpc\n";
+			//pythonDisplayTrajectory(U_current_mpc, T, true);
 
 			vec(x0, SqrtSigma0, b);
 
-//#define SIMULATE_NOISE
+#define SIMULATE_NOISE
 #ifdef SIMULATE_NOISE
 			executeControlStep(x_t_real, B_total[Bidx], U_current_mpc[0], x_tp1_real, b_tp1_tp1);
 			x_t_real = x_tp1_real;
@@ -1138,15 +1153,22 @@ int main(int argc, char* argv[])
 			}
 
 			// shift Hess forward in time by one
-			Hess.insert(0, 0, Hess.subMatrix<XU_DIM-(X_DIM+U_DIM),XU_DIM-(X_DIM+U_DIM)>((X_DIM+U_DIM),(X_DIM+U_DIM)));
-			Hess.insert(XU_DIM-(X_DIM+U_DIM), XU_DIM-(X_DIM+U_DIM), (Matrix<X_DIM,X_DIM>)identity<X_DIM>());
+			Matrix<XU_DIM, XU_DIM> tempHess;
+			tempHess.reset();
+			tempHess.insert(0, 0, Hess.subMatrix<XU_DIM-(X_DIM+U_DIM),XU_DIM-(X_DIM+U_DIM)>((X_DIM+U_DIM),(X_DIM+U_DIM)));
+			tempHess.insert(XU_DIM-(X_DIM+U_DIM), XU_DIM-(X_DIM+U_DIM), (Matrix<X_DIM,X_DIM>)identity<X_DIM>());
+			Hess = tempHess;
 			//Hess = identity<XU_DIM>();
 
 		}
 
 		X_current_mpc = X_lookahead;
 		U_current_mpc = U_lookahead;
+
+		pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*(i+1), true);
 	}
+
+	pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, true);
 
 	exit(0);
 

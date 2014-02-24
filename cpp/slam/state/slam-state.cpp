@@ -27,19 +27,19 @@ const double min_approx_improve = 1e-3; // 1e-3
 const double min_trust_box_size = 1e-2; // 1e-2
 
 const double trust_shrink_ratio = .5; // .5
-const double trust_expand_ratio = 1.2; // 1.2
+const double trust_expand_ratio = 1.5; // 1.2
 
 const double cnt_tolerance = 1e-2; // 1e-2
 const double penalty_coeff_increase_ratio = 5; // 5
-const double initial_penalty_coeff = 5; // 5
+const double initial_penalty_coeff = 3; // 5
 
 const double initial_trust_box_size = 1; // 5 // split up trust box size for X and U
-const double initial_Xpos_trust_box_size = 1; // 1;
-const double initial_Xangle_trust_box_size = M_PI/6; // M_PI/6;
-const double initial_Uvel_trust_box_size = 1; // 1;
-const double initial_Uangle_trust_box_size = M_PI/8; // M_PI/8;
+const double initial_Xpos_trust_box_size = 5; // 1;
+const double initial_Xangle_trust_box_size = M_PI/4; // M_PI/6;
+const double initial_Uvel_trust_box_size = 5; // 1;
+const double initial_Uangle_trust_box_size = M_PI/4; // M_PI/8;
 
-const int max_penalty_coeff_increases = 4; // 8
+const int max_penalty_coeff_increases = 3; // 8
 const int max_sqp_iterations = 50; // 50
 }
 
@@ -535,15 +535,14 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 
 			HMat.reset();
 			for(int i = 0; i < (X_DIM+U_DIM); ++i) {
-				double val = B(idx+i,idx+i);
-				HMat(i,i) = (val < 0) ? 0 : val;
+				HMat(i,i) = B(idx+i,idx+i);
 			}
 
 			// since diagonal, fill directly
 			// TODO: check if H is 0 for the landmarks. if so, pull out of the state
 			for(int i = 0; i < (X_DIM+U_DIM); ++i) { H[t][i] = HMat(i,i); }
 			// TODO: why does this work???
-			for(int i = 0; i < (2*X_DIM); ++i) { H[t][i + (X_DIM+U_DIM)] = 1e4; } //1e4
+			for(int i = 0; i < (2*X_DIM); ++i) { H[t][i + (X_DIM+U_DIM)] = 0; } //1e4
 
 			zbar.insert(0,0,xt);
 			zbar.insert(X_DIM,0,ut);
@@ -813,6 +812,25 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 
 				// L-BFGS update
 				B = B - (Bs*~Bs)/((~s*Bs)[0]) + (r*~r)/((~s*r)[0]);
+
+				// take in diagonal of B
+				// find minimum value among diagonal elements
+				// negate and add to other vals
+				double minValue = INFTY;
+				double maxValue = -INFTY;
+				for(int i=0; i < XU_DIM; ++i) {
+					minValue = MIN(minValue, B(i,i));
+					maxValue = MAX(maxValue, B(i,i));
+				}
+
+				std::cout << "minValue: " << minValue << "\n";
+				std::cout << "maxValue: " << maxValue << "\n\n";
+				if (minValue < 0) {
+					std::cout << "negative minValue, press enter\n";
+					std::cin.ignore();
+					B = B + fabs(minValue)*identity<XU_DIM>();
+				}
+
 
 				// Do not update B
 				//B = identity<XU_DIM>();

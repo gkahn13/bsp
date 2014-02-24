@@ -1052,19 +1052,20 @@ int main(int argc, char* argv[])
 	Matrix<XU_DIM, XU_DIM> curr_mpc_Hess = Hess;
 
 	for(int i=0; i < NUM_WAYPOINTS; ++i) {
-		// integrate from waypoint i to waypoint i+1
-		planBspPath(X_current_mpc[T-1].subMatrix<C_DIM,1>(0,0), i+1, finalSqrtSigma(x0, SqrtSigma0, U_current_mpc, T), problem, output, info, X_lookahead, U_lookahead);
 
-		//std::cout << "X_lookahead:\n";
-		//for(int t=0; t < T; ++t) { std::cout << ~X_lookahead[t].subMatrix<C_DIM,1>(0,0); }
-
-		//std::cout << "Display X_lookahead\n";
-		//pythonDisplayTrajectory(X_lookahead, T, true);
+		if (i < NUM_WAYPOINTS - 1) {
+			// integrate from waypoint i to waypoint i+1
+			planBspPath(X_current_mpc[T-1].subMatrix<C_DIM,1>(0,0), i+1, finalSqrtSigma(x0, SqrtSigma0, U_current_mpc, T), problem, output, info, X_lookahead, U_lookahead);
+		} else {
+			X_current_mpc = X_lookahead;
+			U_current_mpc = U_lookahead;
+		}
 
 		xMidpoint = X_current_mpc[T-1];
 		std::cout << "xMidpoint: " << ~xMidpoint.subMatrix<C_DIM,1>(0,0);
 
 		x0 = X_current_mpc[0];
+
 		Hess = curr_mpc_Hess;
 		for(int t=0; t < T - 1; ++t) {
 			std::cout << "Going to waypoint " << i << ", timestep " << t << "\n";
@@ -1097,21 +1098,39 @@ int main(int argc, char* argv[])
 			counter_inner_loop = 0;
 			counter_approx_hess_neg = 0;
 
-			std::cout << "Displaying mpc\n";
-			pythonDisplayTrajectory(U_current_mpc, T, true);
+			//if (i >= NUM_WAYPOINTS - 1) {
+				std::cout << "Displaying mpc\n";
+				pythonDisplayTrajectory(U_current_mpc, T, true);
+			//}
 
 			vec(x0, SqrtSigma0, b);
+
+//#define SIMULATE_NOISE
+#ifdef SIMULATE_NOISE
+			executeControlStep(x_t_real, B_total[Bidx], U_current_mpc[0], x_tp1_real, b_tp1_tp1);
+			x_t_real = x_tp1_real;
+			B_total[++Bidx] = b_tp1_tp1;
+
+			unVec(b_tp1_tp1, x0, SqrtSigma0);
+#else
 			b_tp1 = beliefDynamics(b, U_current_mpc[0]);
 			B_total[++Bidx] = b_tp1;
 
+			unVec(b_tp1, x0, SqrtSigma0);
+#endif
+
 			U_total[Uidx++] = U_current_mpc[0];
 
-			unVec(b_tp1, x0, SqrtSigma0);
 
 			// shift controls forward in time by one, then reintegrate trajectory
 			// should give a better initialization for next iteration
 			for(int j=0; j < T-2; ++j) { U_current_mpc[j] = U_current_mpc[j+1]; }
-			U_current_mpc[T-2] = U_lookahead[t];
+			if (i < NUM_WAYPOINTS - 1) {
+				U_current_mpc[T-2] = U_lookahead[t];
+			} else {
+				U_current_mpc[T-2][0] = uMin[0];
+				U_current_mpc[T-2][1] = 0;
+			}
 
 			X_current_mpc[0] = x0;
 			for(int j=0; j < T-1; ++j) {
@@ -1119,9 +1138,9 @@ int main(int argc, char* argv[])
 			}
 
 			// shift Hess forward in time by one
-			//Hess.insert(0, 0, Hess.subMatrix<XU_DIM-(X_DIM+U_DIM),XU_DIM-(X_DIM+U_DIM)>((X_DIM+U_DIM),(X_DIM+U_DIM)));
-			//Hess.insert(XU_DIM-(X_DIM+U_DIM), XU_DIM-(X_DIM+U_DIM), (Matrix<X_DIM,X_DIM>)identity<X_DIM>());
-			Hess = identity<XU_DIM>();
+			Hess.insert(0, 0, Hess.subMatrix<XU_DIM-(X_DIM+U_DIM),XU_DIM-(X_DIM+U_DIM)>((X_DIM+U_DIM),(X_DIM+U_DIM)));
+			Hess.insert(XU_DIM-(X_DIM+U_DIM), XU_DIM-(X_DIM+U_DIM), (Matrix<X_DIM,X_DIM>)identity<X_DIM>());
+			//Hess = identity<XU_DIM>();
 
 		}
 

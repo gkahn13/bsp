@@ -14,8 +14,8 @@ Matrix<X_DIM,X_DIM> SqrtSigma0;
 Matrix<X_DIM> xGoal;
 Matrix<X_DIM> xMin, xMax;
 Matrix<U_DIM> uMin, uMax;
-Matrix<Q_DIM, Q_DIM> Q;
-Matrix<R_DIM, R_DIM> R;
+SymmetricMatrix<Q_DIM> Q;
+SymmetricMatrix<R_DIM> R;
 
 const int T = TIMESTEPS;
 const double INFTY = 1e10;
@@ -27,11 +27,11 @@ const double INFTY = 1e10;
 
 void initProblemParams()
 {
-	Q = zeros<Q_DIM,Q_DIM>();
+	Q.reset();
 	Q(0,0) = 1*config::VELOCITY_NOISE*config::VELOCITY_NOISE; // 20
 	Q(1,1) = 1*config::TURNING_NOISE*config::TURNING_NOISE; // 1e-2
 
-	R = zeros<R_DIM, R_DIM>();
+	R.reset();
 	for(int i = 0; i < R_DIM-1; i+=2) {
 		R(i,i) = 1*config::OBS_DIST_NOISE*config::OBS_DIST_NOISE; // 1
 		R(i+1,i+1) = 1*config::OBS_ANGLE_NOISE*config::OBS_ANGLE_NOISE; // 1e-5
@@ -106,6 +106,7 @@ void initProblemParams()
 
 Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<Q_DIM>& q)
 {
+	// TODO: add noise to control inputs or to state????
 	Matrix<X_DIM> xAdd = zeros<X_DIM,1>();
 
 	xAdd[0] = (u[0]+q[0]) * DT * cos(x[2]+u[1]+q[1]);
@@ -288,9 +289,6 @@ void vec(const Matrix<X_DIM>& x, const Matrix<X_DIM,X_DIM>& SqrtSigma, Matrix<B_
 
 // Belief dynamics
 Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
-  //Need to approximate not recieving observations for landmarks out of range
-  //Is it necessary to approximate augment somehow?
-	// we can try adding the binary matrix
 	Matrix<X_DIM> x;
 	Matrix<X_DIM,X_DIM> SqrtSigma;
 	unVec(b, x, SqrtSigma);
@@ -322,19 +320,6 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 
 	Matrix<Z_DIM,Z_DIM> delta = deltaMatrix(x);
 
-	//std::cout << "A" << std::endl << A << std::endl;
-	//std::cout << "M" << std::endl << M << std::endl;
-	//std::cout << "Sigma" << std::endl << Sigma << std::endl;
-	//std::cout << "x" << std::endl << x << std::endl;
-	//std::cout << "H" << std::endl << H << std::endl;
-	//std::cout << "N" << std::endl << N << std::endl;
-	//std::cout << "deltaMatrix" << std::endl;
-	//for(int i=0; i < Z_DIM; ++i) {
-	//	std::cout << delta(i,i) << " ";
-	//}
-	//std::cout << std::endl;
-	//std::cout << "Sigma*~H*delta" << std::endl << Sigma*~H*delta << std::endl;
-
 	Matrix<X_DIM,Z_DIM> K = ((Sigma*~H*delta)/(delta*H*Sigma*~H*delta + R))*delta;//N*R*~N);
 
 	Sigma = (identity<X_DIM>() - K*H)*Sigma;
@@ -342,10 +327,57 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	Matrix<B_DIM> g;
 	vec(x, sqrtm(Sigma), g);
 
-	//std::cout << "K" << std::endl << K << std::endl;
-	//std::cout << "Sigma" << std::endl << Sigma << std::endl;
-
 	return g;
+}
+
+// returns updated belief based on real current state, estimated current belief, and input
+void executeControlStep(const Matrix<X_DIM>& x_t_real, const Matrix<B_DIM>& b_t_t, const Matrix<U_DIM>& u_t, Matrix<X_DIM>& x_tp1_real, Matrix<B_DIM>& b_tp1_tp1) {
+	// find next real state from input + noise
+	Matrix<Q_DIM> control_noise = sampleGaussian(zeros<Q_DIM,1>(), Q);
+	std::cout << "control_noise: " << ~control_noise;
+	x_tp1_real = dynfunc(x_t_real, u_t, control_noise);
+	// sense real state + noise
+	Matrix<R_DIM> obs_noise = sampleGaussian(zeros<R_DIM,1>(), R);
+	std::cout << "obs_noise: " << ~obs_noise;
+	Matrix<Z_DIM> z_tp1_real = obsfunc(x_tp1_real, obs_noise);
+
+
+	// now do update based on current belief (b_t_t)
+	Matrix<X_DIM> x_t_t;
+	Matrix<X_DIM,X_DIM> SqrtSigma_t_t;
+	unVec(b_t_t, x_t_t, SqrtSigma_t_t);
+
+	Matrix<X_DIM,X_DIM> Sigma_t_t = SqrtSigma_t_t*SqrtSigma_t_t;
+
+	// linearize dynamics
+	Matrix<C_DIM,C_DIM> Acar;
+	Matrix<C_DIM,Q_DIM> Mcar;
+	linearizeDynamics(x_t_t, u_t, zeros<Q_DIM,1>(), Acar, Mcar);
+
+	Matrix<X_DIM,X_DIM> A = identity<X_DIM>();
+	A.insert<C_DIM,C_DIM>(0, 0, Acar);
+	Matrix<X_DIM,Q_DIM> M = zeros<X_DIM,Q_DIM>();
+	M.insert<C_DIM, 2>(0, 0, Mcar);
+
+	// dynamics update (maximum likelihood)
+	Matrix<X_DIM> x_tp1_t = dynfunc(x_t_t, u_t, zeros<Q_DIM,1>());
+	Matrix<X_DIM,X_DIM> Sigma_tp1_t = A*Sigma_t_t*~A + M*Q*~M;
+
+	// linearize observation
+	Matrix<Z_DIM,X_DIM> H;
+	Matrix<Z_DIM,R_DIM> N;
+	linearizeObservation(x_tp1_t, zeros<R_DIM,1>(), H, N);
+
+	Matrix<Z_DIM,Z_DIM> delta = deltaMatrix(x_tp1_t);
+
+	// calculate Kalman gain
+	Matrix<X_DIM,Z_DIM> K = ((Sigma_tp1_t*~H*delta)/(delta*H*Sigma_tp1_t*~H*delta + R))*delta;
+
+	// update based on noisy measurement
+	Matrix<X_DIM> x_tp1_tp1 = x_tp1_t + K*(z_tp1_real - obsfunc(x_tp1_t, zeros<R_DIM,1>()));
+	Matrix<X_DIM,X_DIM> Sigma_tp1_tp1 = (identity<X_DIM>() - K*H)*Sigma_tp1_t;
+
+	vec(x_tp1_tp1, sqrtm(Sigma_tp1_tp1), b_tp1_tp1);
 }
 
 // Jacobians: dg(b,u)/db, dg(b,u)/du

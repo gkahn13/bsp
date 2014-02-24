@@ -10,6 +10,7 @@
 
 #include "../util/matrix.h"
 #include "../util/logging.h"
+#include "../util/utils.h"
 
 //#include <pythonrun.h>
 #include <boost/python.hpp>
@@ -48,8 +49,8 @@ extern Matrix<X_DIM,X_DIM> SqrtSigma0;
 extern Matrix<X_DIM> xGoal;
 extern Matrix<X_DIM> xMin, xMax;
 extern Matrix<U_DIM> uMin, uMax;
-extern Matrix<Q_DIM, Q_DIM> Q;
-extern Matrix<R_DIM, R_DIM> R;
+extern SymmetricMatrix<Q_DIM> Q;
+extern SymmetricMatrix<R_DIM> R;
 
 extern const int T;
 extern const double INFTY;
@@ -108,6 +109,8 @@ void vec(const Matrix<X_DIM>& x, const Matrix<X_DIM,X_DIM>& SqrtSigma, Matrix<B_
 
 // Belief dynamics
 Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u);
+
+void executeControlStep(const Matrix<X_DIM>& x_t_real, const Matrix<B_DIM>& b_t_t, const Matrix<U_DIM>& u_t, Matrix<X_DIM>& x_tp1_real, Matrix<B_DIM>& b_tp1_tp1);
 
 // Jacobians: dg(b,u)/db, dg(b,u)/du
 void linearizeBeliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u, Matrix<B_DIM,B_DIM>& F, Matrix<B_DIM,U_DIM>& G, Matrix<B_DIM>& h);

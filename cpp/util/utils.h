@@ -68,7 +68,7 @@ at certain points the relative error could be much higher than
 indicated.
    IEEE    -200, -4             10000     4.8e-16     1.3e-16
 *************************************************************************/
-double lngamma(double x, double& sgngam)
+inline double lngamma(double x, double& sgngam)
 {
     double result;
     double a;
@@ -219,7 +219,7 @@ arithmetic   domain   domain     # trials      peak         rms
 double incompletegamma(double a, double x);
 double incompletegammac(double a, double x);
 
-double incompletegammac(double a, double x)
+inline double incompletegammac(double a, double x)
 {
     double result;
     double igammaepsilon;
@@ -330,7 +330,7 @@ arithmetic   domain     # trials      peak         rms
    IEEE      0,30       200000       3.6e-14     2.9e-15
    IEEE      0,100      300000       9.9e-14     1.5e-14
 *************************************************************************/
-double incompletegamma(double a, double x)
+inline double incompletegamma(double a, double x)
 {
 	//std::cout << "a: " << a << " x: " << x << std::endl;
 
@@ -446,7 +446,7 @@ inline std::pair<double, double> normal() {
 template <size_t dim>
 inline Matrix<dim> sampleGaussian() {
   Matrix<dim> sample;
-  for (int j = 0; j < dim / 2; ++j) {
+  for (size_t j = 0; j < dim / 2; ++j) {
 	std::pair<double,double> n = normal();
     sample[j*2] = n.first;
 	sample[j*2+1] = n.second;

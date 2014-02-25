@@ -30,30 +30,30 @@ std::vector<Matrix<X_DIM> > X_MPC_past(T);
 std::vector<Matrix<U_DIM> > U_MPC_past(T-1);
 
 const double alpha_belief = 10; // 10;
-const double alpha_final_belief = 50; // 50;
+const double alpha_final_belief = 10; // 50;
 const double alpha_control = .01; // .01
 
 int T_MPC = T;
 
 namespace cfg {
 const double improve_ratio_threshold = .1; // .1
-const double min_approx_improve = 1e-3; // 1e-4
-const double min_trust_box_size = 1e-2; // 1e-3
+const double min_approx_improve = 1e-3; // 1e-3
+const double min_trust_box_size = 1e-2; // 1e-2
 
-const double trust_shrink_ratio = .5; // .5
-const double trust_expand_ratio = 1.2; // 1.2
+const double trust_shrink_ratio = .25; // .25
+const double trust_expand_ratio = 1.5; // 1.5
 
 const double cnt_tolerance = 1e-2; // 1e-2
-const double penalty_coeff_increase_ratio = 5; // 5
-const double initial_penalty_coeff = 5; // 5
+const double penalty_coeff_increase_ratio = 4.5; // 5
+const double initial_penalty_coeff = 4; // 4
 
 const double initial_trust_box_size = 1; // 5 // split up trust box size for X and U
-const double initial_Xpos_trust_box_size = 1; // 1;
+const double initial_Xpos_trust_box_size = 5; // 5;
 const double initial_Xangle_trust_box_size = M_PI/6; // M_PI/6;
-const double initial_Uvel_trust_box_size = 1; // 1;
+const double initial_Uvel_trust_box_size = 5; // 5;
 const double initial_Uangle_trust_box_size = M_PI/8; // M_PI/8;
 
-const int max_penalty_coeff_increases = 4; // 8
+const int max_penalty_coeff_increases = 3; // 3
 const int max_sqp_iterations = 50; // 50
 }
 
@@ -545,7 +545,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 	Matrix<X_DIM+U_DIM> zbar;
 
 	// full Hessian from current timstep
-	//Hess = identity<XU_DIM>();
+	Hess = identity<XU_DIM>();
 
 	Matrix<XU_DIM> Grad, Gradopt;
 	double cost;
@@ -589,7 +589,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			// since diagonal, fill directly
 			for(int i = 0; i < (X_DIM+U_DIM); ++i) { H[t][i] = HMat(i,i); }
 			// TODO: why does this work???
-			for(int i = 0; i < (2*X_DIM); ++i) { H[t][i + (X_DIM+U_DIM)] = 1e4; } //1e3
+			for(int i = 0; i < (2*X_DIM); ++i) { H[t][i + (X_DIM+U_DIM)] = 0; } //1e3
 
 			zbar.insert(0,0,xt);
 			zbar.insert(X_DIM,0,ut);
@@ -989,10 +989,10 @@ void planBspPath(const Matrix<C_DIM>& cStart, int endWaypointIndex, const Matrix
 		catch (forces_exception &e) {
 			if (iter > 3) {
 				LOG_ERROR("Tried too many times, giving up");
+				pythonDisplayTrajectory(U, T, true);
 				exit(-1);
 			}
 			LOG_ERROR("Forces exception from planBspPath, trying again");
-			pythonDisplayTrajectory(U, T, true);
 			iter++;
 		}
 	}
@@ -1085,10 +1085,10 @@ int main(int argc, char* argv[])
 					Hess = identity<XU_DIM>();
 					if (iter > 3) {
 						LOG_ERROR("Tried too many times, giving up");
+						pythonDisplayTrajectory(U, T, true);
 						exit(-1);
 					}
 					LOG_ERROR("Forces exception, trying again");
-					pythonDisplayTrajectory(U, T, true);
 					iter++;
 				}
 			}
@@ -1116,11 +1116,11 @@ int main(int argc, char* argv[])
 			counter_approx_hess_neg = 0;
 
 			//std::cout << "Displaying mpc\n";
-			//pythonDisplayTrajectory(U_current_mpc, T, true);
+			//pythonDisplayTrajectory(U_current_mpc, T, false);
 
 			vec(x0, SqrtSigma0, b);
 
-#define SIMULATE_NOISE
+//#define SIMULATE_NOISE
 #ifdef SIMULATE_NOISE
 			executeControlStep(x_t_real, B_total[Bidx], U_current_mpc[0], x_tp1_real, b_tp1_tp1);
 			x_t_real = x_tp1_real;

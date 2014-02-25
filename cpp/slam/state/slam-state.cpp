@@ -823,11 +823,11 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 					maxValue = MAX(maxValue, B(i,i));
 				}
 
-				std::cout << "minValue: " << minValue << "\n";
-				std::cout << "maxValue: " << maxValue << "\n\n";
+				//std::cout << "minValue: " << minValue << "\n";
+				//std::cout << "maxValue: " << maxValue << "\n\n";
 				if (minValue < 0) {
-					std::cout << "negative minValue, press enter\n";
-					std::cin.ignore();
+					//std::cout << "negative minValue, press enter\n";
+					//std::cin.ignore();
 					B = B + fabs(minValue)*identity<XU_DIM>();
 				}
 
@@ -904,10 +904,59 @@ double statePenaltyCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Mat
 	return casadiComputeCost(X, U);
 }
 
+void testCasadi() {
+	initProblemParams();
 
+	Matrix<U_DIM> uinit;
+
+	xGoal = x0;
+	xGoal.insert(0, 0, waypoints[0]);
+
+	std::cout << "x0: " << ~x0;
+	std::cout << "xGoal: " << ~xGoal << "\n";
+
+	// initialize velocity to dist / timesteps
+	uinit[0] = sqrt((x0[0] - xGoal[0])*(x0[0] - xGoal[0]) + (x0[1] - xGoal[1])*(x0[1] - xGoal[1])) / (double)((T-1)*DT);
+	// angle already pointed at goal, so is 0
+	uinit[1] = 0;
+
+	std::vector<Matrix<U_DIM> > U(T-1, uinit);
+	std::vector<Matrix<X_DIM> > X(T);
+
+	X[0] = x0;
+	for(int t=0; t < T-1; ++t) {
+		X[t+1] = dynfunc(X[t], U[t], zeros<Q_DIM,1>());
+	}
+
+	std::cout << "U\n";
+	for(int t=0; t < T-1; ++t) { std::cout << ~U[t]; }
+	std::cout << "\n";
+
+	std::cout << "X\n";
+	for(int t=0; t < T; ++t) { std::cout << ~X[t]; }
+	std::cout << "\n";
+
+	Matrix<B_DIM> b;
+	vec(x0, SqrtSigma0, b);
+
+	for(int t=0; t < T-1; ++t) {
+		std::cout << "\n\n\n\nt: " << t << "\n";
+		b = beliefDynamics(b, U[0]);
+	}
+	/*
+	double initTrajCost = computeCost(X, U);
+	LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
+
+	double initCasadiTrajCost = casadiComputeCost(X, U);
+	LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
+	*/
+
+}
 
 int main(int argc, char* argv[])
 {
+	testCasadi();
+	exit(0);
 
 	LOG_INFO("Initializing problem parameters");
 	initProblemParams();
@@ -1001,10 +1050,10 @@ int main(int argc, char* argv[])
 			catch (forces_exception &e) {
 				if (iter > 3) {
 					LOG_ERROR("Tried too many times, giving up");
+					pythonDisplayTrajectory(U, T, true);
 					exit(-1);
 				}
 				LOG_ERROR("Forces exception, trying again");
-				pythonDisplayTrajectory(U, T, true);
 				iter++;
 			}
 		}
@@ -1051,7 +1100,7 @@ int main(int argc, char* argv[])
 
 		unVec(B[T-1], x0, SqrtSigma0);
 
-		pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
+		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 
 	}
 

@@ -22,9 +22,9 @@ namespace py = boost::python;
 // timesteps is how far into future accounting for during MPC
 #define HORIZON 500
 #define TIMESTEPS 15
-#define RSCALE 1
+#define RSCALE 10
 #define QSCALE 1
-#define DT 0.1
+#define DT 0.01
 
 
 // for ILQG
@@ -47,23 +47,23 @@ namespace py = boost::python;
 
 namespace dynamics {
 
-const double mass1 = 0.5;
-const double mass2 = 0.5; 
+const double mass1 = 0.1;
+const double mass2 = 0.1; 
 
 
 //coefficient of friction 
 const double b1 = 0.0; 
 const double b2 = 0.0; 
 
-const double length1 = 0.5; 
-const double length2 = 0.5; 
+const double length1 = 0.15; 
+const double length2 = 0.15; 
 
-const double gravity = 9.82; 
+const double gravity = 9.86; 
 
 }
 
 
-const double diffEps = 1e-5;
+const double diffEps = 0.0078125 / 16;
 
 
 const int T = TIMESTEPS;
@@ -128,13 +128,16 @@ Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matr
 
 	jinit = x.subMatrix<J_DIM>(0,0);
 
-	double l1 = x[4]; 
-	double l2 = x[5]; 
-
-	double m1 = x[6]; 
-	double m2 = x[7]; 
+	double x4 = x[4];
+	double x5 = x[5];
+	double x6 = x[6];
+	double x7 = x[7];
 	
-	
+	double l1, l2, m1, m2;
+	l1 = (x4 == 0 ? 0.0 : 1/x4);
+	l2 = (x5 == 0 ? 0.0 : 1/x5);
+	m1 = (x6 == 0 ? 0.0 : 1/x6);
+	m2 = (x7 == 0 ? 0.0 : 1/x7);
 
 	k1 = jointdynfunc(jinit, u, l1, l2, m1, m2);
 	k2 = jointdynfunc(jinit + 0.5*DT*k1, u, l1, l2, m1, m2);
@@ -144,10 +147,10 @@ Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matr
 
 	Matrix<X_DIM> xNew = zeros<X_DIM,1>();
 	xNew.insert(0, 0, jinit + DT*(k1 + 2.0*(k2 + k3) + k4)/6.0);
-	xNew[4] = l1;
-	xNew[5] = l2;
-	xNew[6] = m1;
-	xNew[7] = m2;
+	xNew[4] = x4;
+	xNew[5] = x5;
+	xNew[6] = x6;
+	xNew[7] = x7;
 
 	xNew += q; 
 
@@ -165,8 +168,8 @@ Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM> & r)
 	double x3 = x[3];
 
 	double length1, length2;
-	length1 = (x[4] == 0 ? 0 : x[4]);
-	length2 = (x[5] == 0 ? 0 : x[5]);
+	length1 = (x[4] == 0 ? 0 : 1/x[4]);
+	length2 = (x[5] == 0 ? 0 : 1/x[5]);
 
 	double cosx0 = cos(x0);
 	double sinx0 = sin(x0);
@@ -193,8 +196,8 @@ SymmetricMatrix<Q_DIM> varQ() {
 	S(3,3) = 1.0*0.001;
 	S(4,4) = 0.0005;
 	S(5,5) = 0.0005;
-	S(6,6) = 0.0001;
-	S(7,7) = 0.0001;
+	S(6,6) = 0.0005;
+	S(7,7) = 0.0005;
 	S *= QSCALE;
 	return S;
 }
@@ -204,7 +207,7 @@ SymmetricMatrix<R_DIM> varR(){
 	S(0,0) = 0.0001;	
 	S(1,1) = 0.0001;	
 	S(2,2) = 0.00001;	
-	S(3,3) = 0.00001;	
+	S(3,3) = 0.00001;
 	S *= RSCALE; 
 	return S;	
 }
@@ -241,11 +244,8 @@ void linearizeObservation(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r, Matrix
 	for (size_t i = 0; i < X_DIM; ++i) {
 
 		xr[i] += diffEps; xl[i] -= diffEps;
-	
-		
-
 		H.insert(0,i, (obsfunc(xr, r) - obsfunc(xl, r)) / (xr[i] - xl[i]));
-		//H.insert(0,i, (obsfunc(xr, r) - obsfunc(xl, r)) / (2*diffEps));
+		
 		xr[i] = x[i]; xl[i] = x[i];
 	}
 
@@ -335,7 +335,7 @@ Matrix<B_DIM> executeControlStep(Matrix<X_DIM>& x_t_real, const Matrix<B_DIM>& b
 	Matrix<Q_DIM> q =  sampleGaussian(zeros<Q_DIM,1>(),Q);
 	Matrix<R_DIM> r = sampleGaussian(zeros<R_DIM,1>(),R);
 
-	Matrix<X_DIM> x_tp1_real = dynfunc(x_t_real, u_t,q);
+	Matrix<X_DIM> x_tp1_real = dynfunc(x_t_real,u_t,q);
 	x_t_real = x_tp1_real; 
 	// sense real state (maximum likelihood)
 	Matrix<Z_DIM> z_tp1_real = obsfunc(x_tp1_real,r);
@@ -361,8 +361,8 @@ Matrix<B_DIM> executeControlStep(Matrix<X_DIM>& x_t_real, const Matrix<B_DIM>& b
 
 	// propagate estimated state
 	Matrix<X_DIM> x_tp1 = dynfunc(x_t, u_t,q);
-	Matrix<X_DIM,X_DIM> Sigma_tp1 = A*Sigma_t*~A + M*Q*~M;
-
+	//Matrix<X_DIM,X_DIM> Sigma_tp1 = A*Sigma_t*~A + M*Q*~M;
+	Matrix<X_DIM,X_DIM> Sigma_tp1 = A*Sigma_t*~A + Q;
 	// calculate dh/dx and dh/dn
 	Matrix<Z_DIM,X_DIM> H = zeros<Z_DIM,X_DIM>();
 	Matrix<Z_DIM,R_DIM> N; 
@@ -370,12 +370,16 @@ Matrix<B_DIM> executeControlStep(Matrix<X_DIM>& x_t_real, const Matrix<B_DIM>& b
 	linearizeObservation(x_tp1,r, H,N);
 
 	// calculate Kalman gain for estimated state
-	Matrix<X_DIM,Z_DIM> K = Sigma_tp1*~H/(H*Sigma_tp1*~H + N*R*~N);
-
+	//Matrix<X_DIM,Z_DIM> K = Sigma_tp1*~H/(H*Sigma_tp1*~H + N*R*~N);
+	Matrix<X_DIM,Z_DIM> K = Sigma_tp1*~H/(H*Sigma_tp1*~H + R);
+	//std::cout<<"x_tp1"<<x_tp1<<"\n";
 	// correct the new state using Kalman gain and the observation
+
 	Matrix<X_DIM> x_tp1_adj = x_tp1 + K*(z_tp1_real - obsfunc(x_tp1,r));
 
-
+	//std::cout<<"x_tp1"<<x_tp1_adj<<"\n";
+	//Matrix<X_DIM,X_DIM> W = ~(H*Sigma_tp1)*(((H*Sigma_tp1*~H) + N*R*~N) % (H*Sigma_tp1));
+	//Matrix<X_DIM,X_DIM> Sigma_tp1_adj = Sigma_tp1 - W;
 	Matrix<X_DIM,X_DIM> Sigma_tp1_adj = Sigma_tp1 - K*H*Sigma_tp1;
 
 	Matrix<B_DIM> b_tp1_adj;

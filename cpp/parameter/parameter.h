@@ -6,7 +6,7 @@
 #include <boost/random.hpp>
 #include <boost/random/normal_distribution.hpp>
 #include "util/matrix.h"
-
+#include <cmath>
 
 #include "util/utils.h"
 #include "util/logging.h"
@@ -22,9 +22,9 @@ namespace py = boost::python;
 // timesteps is how far into future accounting for during MPC
 #define HORIZON 500
 #define TIMESTEPS 15
-#define RSCALE 1e4
+#define RSCALE 1
 #define QSCALE 1
-#define DT 1.0/5.0
+#define DT 0.1
 
 
 // for ILQG
@@ -46,31 +46,24 @@ namespace py = boost::python;
 #define XU_DIM (X_DIM*T+U_DIM*(T-1))
 
 namespace dynamics {
-const double gravity = 9.86;
 
-const double mass1 = 0.092;
-const double mass_center1 = 0.062;
-const double length1 = 0.15;
-const double damping1 = 0.015;
-const double coulomb1 = 0.006;
-const double rotational1_inertia = 0.00064;
-const double motor1_inertia = 0.00000065;
-const double motor1_torque_const = 0.0077;
-const double gear1_ratio = 70;
+const double mass1 = 0.5;
+const double mass2 = 0.5; 
 
-const double mass2 = 0.077;
-const double mass_center2 = 0.036;
-const double length2 = 0.15;
-const double damping2 = 0.015;
-const double coulomb2 = 0.006;
-const double rotational2_inertia = 0.0003;
-const double motor2_inertia = 0.00000065;
-const double motor2_torque_const = 0.0077;
-const double gear2_ratio = 70;
+
+//coefficient of friction 
+const double b1 = 0.0; 
+const double b2 = 0.0; 
+
+const double length1 = 0.5; 
+const double length2 = 0.5; 
+
+const double gravity = 9.82; 
+
 }
 
 
-const double diffEps = 0.0078125 / 16;
+const double diffEps = 1e-5;
 
 
 const int T = TIMESTEPS;
@@ -88,94 +81,81 @@ std::vector<int> maskIndices;
 
 
 
-double sgn(double x) {
-	double delta = 1e-10;
-	if (x > delta) { return 1; }
-	else if (x < delta) { return -1; }
-	else { return 0; }
-}
+
+Matrix<J_DIM> jointdynfunc(const Matrix<J_DIM>& x, const Matrix<U_DIM>& u, double l1, double l2, double m1, double m2){
+
+	double I1 = m1*pow(l1,2)/12; 
+	double I2 = m2*pow(l2,2)/12;
+
+	Matrix<U_DIM,U_DIM> A; 
+
+	A(0,0) = pow(l1,2)*(0.25*m2+m1)+I1; 
+
+	A(0,1) = 0.5*m2*l1*l2*cos(x[0]-x[1]);
+
+	A(1,0) = 0.5*m2*l1*l2*cos(x[0]-x[1]);
+
+	A(1,1) = pow(l2,2)*0.25*m2+I2; 
+
+	Matrix<U_DIM> B; 
 
 
-Matrix<J_DIM> jointdynfunc(const Matrix<J_DIM>& j, const Matrix<U_DIM>& u, double length1, double length2, double mass1, double mass2)
-{
+	B[0] = dynamics::gravity*l1*sin(x[0])*(0.5*m1+m2) - 0.5*m2*l1*l2*pow(x[3],2)*sin(x[0]-x[1])+u[0]-dynamics::b1*x[2];
 
-	Matrix<J_DIM> jNew;
+	B[1] = 0.5*m2*l2*(l1*pow(x[2],2)*sin(x[0]-x[1])+dynamics::gravity*sin(x[1])) + u[1]-dynamics::b2*x[3];
+   
 
-	double j0 = j[0];
-	double j1 = j[1];
-	double j2 = j[2];
-	double j3 = j[3];
-	//double mass2_sq = mass2*mass2;
-	//double mass_center2_sq = dynamics::mass_center2*dynamics::mass_center2;
-	double gear1_ratio_sq = dynamics::gear1_ratio*dynamics::gear1_ratio;
-	double gear2_ratio_sq = dynamics::gear2_ratio*dynamics::gear2_ratio;
-	double length1_sq = length1*length1;
-	//double length2_sq = length2*length2;
-	double cos2minus1 = cos(j1 - j0);
-	//double cos2minus1_sq = cos2minus1*cos2minus1;
+	Matrix<U_DIM> xd = A%B;
 
-	double unknown_h = length1*dynamics::mass_center2*mass2*sin(j1 - j0);
 
-	double H11 = dynamics::motor1_inertia*gear1_ratio_sq + dynamics::rotational1_inertia + mass2*length1_sq;
-	double H12 = length1*dynamics::mass_center2*mass2*cos2minus1;
-	double H22 = dynamics::motor2_inertia*gear2_ratio_sq + dynamics::rotational2_inertia;
+	Matrix<J_DIM> jNew = zeros<J_DIM,1>();
 
-	double D = H11*H22 - H12*H12;
-
-	double v1 = dynamics::gear1_ratio*dynamics::motor1_torque_const*u[0]
-				+ unknown_h*j3*j3
-				- (dynamics::mass_center1*mass1 + length1*mass2)*dynamics::gravity*cos(j0)
-				- (dynamics::damping1*j2 + dynamics::coulomb1*sgn(j2));
-	double v2 = dynamics::gear2_ratio*dynamics::motor2_torque_const*u[1]
-				- unknown_h*j2*j2
-				- dynamics::mass_center2*mass2*dynamics::gravity*cos(j1)
-				- (dynamics::damping2*j3 + dynamics::coulomb2*sgn(j3));
-
-	jNew[0] = j2;
-	jNew[1] = j3;
-	jNew[2] = (H22*v1 - H12*v2)/D;
-	jNew[3] = (-H12*v1 + H11*v2)/D;
+	jNew[0] = x[2];
+	jNew[1] = x[3];
+	jNew[2] = xd[0];
+	jNew[3] = xd[1];
 
 	return jNew;
+
 
 }
 
 // for both joints and params
-Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u)
+Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<Q_DIM> q)
 {
-	// RK4 integration
+
 	Matrix<J_DIM> k1, k2, k3, k4, jinit;
 
 	jinit = x.subMatrix<J_DIM>(0,0);
 
-	double x4 = x[4];
-	double x5 = x[5];
-	double x6 = x[6];
-	double x7 = x[7];
+	double l1 = x[4]; 
+	double l2 = x[5]; 
 
-	double length1, length2, mass1, mass2;
-	length1 = (x4 == 0 ? 0.0 : 1/x4);
-	length2 = (x5 == 0 ? 0.0 : 1/x5);
-	mass1 = (x6 == 0 ? 0.0 : 1/x6);
-	mass2 = (x7 == 0 ? 0.0 : 1/x7);
+	double m1 = x[6]; 
+	double m2 = x[7]; 
+	
+	
 
-	k1 = jointdynfunc(jinit, u, length1, length2, mass1, mass2);
-	k2 = jointdynfunc(jinit + 0.5*DT*k1, u, length1, length2, mass1, mass2);
-	k3 = jointdynfunc(jinit + 0.5*DT*k2, u, length1, length2, mass1, mass2);
-	k4 = jointdynfunc(jinit + DT*k3, u, length1, length2, mass1, mass2);
+	k1 = jointdynfunc(jinit, u, l1, l2, m1, m2);
+	k2 = jointdynfunc(jinit + 0.5*DT*k1, u, l1, l2, m1, m2);
+	k3 = jointdynfunc(jinit + 0.5*DT*k2, u, l1, l2, m1, m2);
+	k4 = jointdynfunc(jinit + DT*k3, u, l1, l2, m1, m2);
+
 
 	Matrix<X_DIM> xNew = zeros<X_DIM,1>();
 	xNew.insert(0, 0, jinit + DT*(k1 + 2.0*(k2 + k3) + k4)/6.0);
-	xNew[4] = x4;
-	xNew[5] = x5;
-	xNew[6] = x6;
-	xNew[7] = x7;
+	xNew[4] = l1;
+	xNew[5] = l2;
+	xNew[6] = m1;
+	xNew[7] = m2;
+
+	xNew += q; 
 
 	return xNew;
 }
 
 // Observation model
-Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x)
+Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM> & r)
 {
 	Matrix<Z_DIM> z;
 
@@ -185,8 +165,8 @@ Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x)
 	double x3 = x[3];
 
 	double length1, length2;
-	length1 = (x[4] == 0 ? 0 : 1/x[4]);
-	length2 = (x[5] == 0 ? 0 : 1/x[5]);
+	length1 = (x[4] == 0 ? 0 : x[4]);
+	length2 = (x[5] == 0 ? 0 : x[5]);
 
 	double cosx0 = cos(x0);
 	double sinx0 = sin(x0);
@@ -198,24 +178,9 @@ Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x)
 	z[2] = x2;
 	z[3] = x3;
 
-	return z;
-}
+	z += r; 
 
-// for M = df(x,u,q)/dq
-// this returns M*~M
-inline Matrix<X_DIM,X_DIM> getMMT(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u)
-{
-	Matrix<X_DIM,X_DIM> S = identity<X_DIM>();
-	S(0,0) = 0.25*0.001 + 0.0000000000001;
-	S(1,1) = 0.25*0.001 + 0.0000000000001;
-	S(2,2) = 1.0*0.001 + 0.0000000000001;
-	S(3,3) = 1.0*0.001 + 0.0000000000001;
-	S(4,4) = 0.0005;
-	S(5,5) = 0.0005;
-	S(6,6) = 0.0001;
-	S(7,7) = 0.0001;
-	S *= QSCALE;
-	return S;
+	return z;
 }
 
 
@@ -245,41 +210,51 @@ SymmetricMatrix<R_DIM> varR(){
 }
 
 
-// Jacobians: df(x,u,q)/dx
-void linearizeDynamics(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, Matrix<X_DIM,X_DIM>& A)
+// Jacobians: df(x,u,q)/dx, df(x,u,q)/dq
+void linearizeDynamics(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<Q_DIM>& q, Matrix<X_DIM,X_DIM>& A, Matrix<X_DIM,Q_DIM>& M)
 {
 	A.reset();
 	Matrix<X_DIM> xr(x), xl(x);
 	for (size_t i = 0; i < X_DIM; ++i) {
 		xr[i] += diffEps; xl[i] -= diffEps;
-		A.insert(0,i, (dynfunc(xr, u) - dynfunc(xl, u)) / (xr[i] - xl[i]));
+		A.insert(0,i, (dynfunc(xr, u, q) - dynfunc(xl, u, q)) / (xr[i] - xl[i]));
 		xr[i] = x[i]; xl[i] = x[i];
 	}
 
+	M.reset();
+	Matrix<Q_DIM> qr(q), ql(q);
+	for (size_t i = 0; i < Q_DIM; ++i) {
+		qr[i] += diffEps; ql[i] -= diffEps;
+		M.insert(0,i, (dynfunc(x, u, qr) - dynfunc(x, u, ql)) / (qr[i] - ql[i]));
+		qr[i] = q[i]; ql[i] = q[i];
+	}
 }
 
 // for N = dh(x,r)/dr
 // this returns N*~N
-inline Matrix<Z_DIM,Z_DIM> getNNT(const Matrix<X_DIM>& x)
-{
-	Matrix<Z_DIM,Z_DIM> S = identity<Z_DIM>();
-	S(0,0) = 0.0001;
-	S(1,1) = 0.0001;
-	S(2,2) = 0.00001;
-	S(3,3) = 0.00001;
-	S *= RSCALE; 
-	return S;
-}
 
-// Jacobians: dh(x,r)/dx
-void linearizeObservation(const Matrix<X_DIM>& x, Matrix<Z_DIM,X_DIM>& H)
+// Jacobians: dh(x,r)/dx, dh(x,r)/dr
+void linearizeObservation(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r, Matrix<Z_DIM,X_DIM>& H, Matrix<Z_DIM,R_DIM>& N)
 {
 	H.reset();
 	Matrix<X_DIM> xr(x), xl(x);
 	for (size_t i = 0; i < X_DIM; ++i) {
+
 		xr[i] += diffEps; xl[i] -= diffEps;
-		H.insert(0,i, (obsfunc(xr) - obsfunc(xl)) / (xr[i] - xl[i]));
+	
+		
+
+		H.insert(0,i, (obsfunc(xr, r) - obsfunc(xl, r)) / (xr[i] - xl[i]));
+		//H.insert(0,i, (obsfunc(xr, r) - obsfunc(xl, r)) / (2*diffEps));
 		xr[i] = x[i]; xl[i] = x[i];
+	}
+
+	N.reset();
+	Matrix<R_DIM> rr(r), rl(r);
+	for (size_t i = 0; i < R_DIM; ++i) {
+		rr[i] += diffEps; rl[i] -= diffEps;
+		N.insert(0,i, (obsfunc(x, rr) - obsfunc(x, rl)) / (rr[i] - rl[i]));
+		rr[i] = r[i]; rl[i] = r[i];
 	}
 }
 
@@ -307,30 +282,7 @@ void vec(const Matrix<X_DIM>& x, const Matrix<X_DIM,X_DIM>& S, Matrix<B_DIM>& b)
 	}
 }
 
-Matrix<Q_DIM> qNoise(){
 
-	Matrix<Q_DIM> q; 
-
-	for(int i = 0; i<Q_DIM; i++){
-		q[i] =  var_nor();
-	}
-
-	return q;
-}
-
-
-Matrix<R_DIM> rNoise(){
-
-	Matrix<R_DIM> r; 
-
-	
-
-	for(int i = 0; i<R_DIM; i++){
-		r[i] =  var_nor();
-	}
-
-	return r;
-}
 
 // Belief dynamics
 Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
@@ -338,21 +290,33 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	Matrix<X_DIM,X_DIM> Sigma;
 	unVec(b, x, Sigma);
 
+	SymmetricMatrix<Q_DIM> Q = varQ(); 
+	SymmetricMatrix<R_DIM> R = varR(); 
+	Matrix<Q_DIM> q;
+	Matrix<R_DIM> r; 
+
+
 	Sigma = Sigma*Sigma;
 
 	Matrix<X_DIM,X_DIM> A;
-	linearizeDynamics(x, u, A);
-	Matrix<X_DIM,X_DIM> MMT = getMMT(x, u);
+	Matrix<X_DIM,Q_DIM> M;
+	 
+	linearizeDynamics(x,u,q,A,M);
+	
 
-	x = dynfunc(x, u);
-	Sigma = A*Sigma*~A + MMT;
+	x = dynfunc(x, u,q);
+	std::cout<<"X "<<x<<"\n";
+	Sigma = A*Sigma*~A + M*Q*(~M);
 
 	Matrix<Z_DIM,X_DIM> H = zeros<Z_DIM,X_DIM>();
-	linearizeObservation(x, H);
-	Matrix<Z_DIM,R_DIM> NNT = getNNT(x);
+	Matrix<Z_DIM,R_DIM> N; 
+
+	linearizeObservation(x,r, H,N);
+	
 
 
-	Matrix<X_DIM,Z_DIM> K = Sigma*~H/(H*Sigma*~H + NNT);
+
+	Matrix<X_DIM,Z_DIM> K = Sigma*~H/(H*Sigma*~H + N*R*~N);
 
 	Sigma = (identity<X_DIM>() - K*H)*Sigma;
 
@@ -366,15 +330,22 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 Matrix<B_DIM> executeControlStep(Matrix<X_DIM>& x_t_real, const Matrix<B_DIM>& b_t, const Matrix<U_DIM>& u_t) {
 	// useRealParams = true
 	// update real state (maximum likelihood)
+	SymmetricMatrix<Q_DIM> Q = varQ(); 
+	SymmetricMatrix<R_DIM> R = varR(); 
+	Matrix<Q_DIM> q =  sampleGaussian(zeros<Q_DIM,1>(),Q);
+	Matrix<R_DIM> r = sampleGaussian(zeros<R_DIM,1>(),R);
 
-
-	Matrix<X_DIM> x_tp1_real = dynfunc(x_t_real, u_t)+ sampleGaussian(zeros<Q_DIM,1>(),varQ());
+	Matrix<X_DIM> x_tp1_real = dynfunc(x_t_real, u_t,q);
 	x_t_real = x_tp1_real; 
 	// sense real state (maximum likelihood)
-	Matrix<Z_DIM> z_tp1_real = obsfunc(x_tp1_real) + sampleGaussian(zeros<R_DIM,1>(),varR());
+	Matrix<Z_DIM> z_tp1_real = obsfunc(x_tp1_real,r);
 
 	// now do EKF on belief and incorporate discrepancy
 	// using the kalman gain
+
+
+	q = zeros<Q_DIM,1>();
+	r = zeros<R_DIM,1>();
 
 	Matrix<X_DIM> x_t;
 	Matrix<X_DIM,X_DIM> SqrtSigma_t;
@@ -384,27 +355,26 @@ Matrix<B_DIM> executeControlStep(Matrix<X_DIM>& x_t_real, const Matrix<B_DIM>& b
 
 	// calculate df/dx and df/dm
 	Matrix<X_DIM,X_DIM> A;
-	linearizeDynamics(x_t, u_t, A);
-	Matrix<X_DIM,X_DIM> MMT = getMMT(x_t, u_t);
+	Matrix<X_DIM,Q_DIM> M;
+	 
+	linearizeDynamics(x_t,u_t,q,A,M);
 
 	// propagate estimated state
-	Matrix<X_DIM> x_tp1 = dynfunc(x_t, u_t);
-	Matrix<X_DIM,X_DIM> Sigma_tp1 = A*Sigma_t*~A + MMT;
+	Matrix<X_DIM> x_tp1 = dynfunc(x_t, u_t,q);
+	Matrix<X_DIM,X_DIM> Sigma_tp1 = A*Sigma_t*~A + M*Q*~M;
 
 	// calculate dh/dx and dh/dn
 	Matrix<Z_DIM,X_DIM> H = zeros<Z_DIM,X_DIM>();
-	linearizeObservation(x_tp1, H);
-	Matrix<Z_DIM,R_DIM> NNT = getNNT(x_tp1);
+	Matrix<Z_DIM,R_DIM> N; 
+
+	linearizeObservation(x_tp1,r, H,N);
 
 	// calculate Kalman gain for estimated state
-	Matrix<X_DIM,Z_DIM> K = Sigma_tp1*~H/(H*Sigma_tp1*~H + NNT);
+	Matrix<X_DIM,Z_DIM> K = Sigma_tp1*~H/(H*Sigma_tp1*~H + N*R*~N);
 
 	// correct the new state using Kalman gain and the observation
-	Matrix<X_DIM> x_tp1_adj = x_tp1 + K*(z_tp1_real - obsfunc(x_tp1));
+	Matrix<X_DIM> x_tp1_adj = x_tp1 + K*(z_tp1_real - obsfunc(x_tp1,r));
 
-	// correct the new covariance
-	//Matrix<X_DIM,X_DIM> W = ~(H*Sigma_tp1)*(((H*Sigma_tp1*~H) + NNT) % (H*Sigma_tp1));
-	//Matrix<X_DIM,X_DIM> Sigma_tp1_adj = Sigma_tp1 - W;
 
 	Matrix<X_DIM,X_DIM> Sigma_tp1_adj = Sigma_tp1 - K*H*Sigma_tp1;
 
@@ -413,19 +383,6 @@ Matrix<B_DIM> executeControlStep(Matrix<X_DIM>& x_t_real, const Matrix<B_DIM>& b
 	return b_tp1_adj;
 }
 
-
-void setupDstarInterface(std::string mask) {
-	std::stringstream ss(mask);
-	int val, i=0;
-	while (ss >> val) {
-		if (val == 1) {
-			maskIndices.push_back(i);
-		}
-		i++;
-	}
-
-	inputVars = new double[i];
-}
 
 void pythonDisplayTrajectory(std::vector< Matrix<U_DIM> >& U, Matrix<X_DIM,X_DIM> SqrtSigma0, Matrix<X_DIM> x0, Matrix<X_DIM> xGoal)
 {

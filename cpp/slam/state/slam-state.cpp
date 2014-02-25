@@ -26,18 +26,18 @@ const double improve_ratio_threshold = .1; // .1
 const double min_approx_improve = 1e-3; // 1e-3
 const double min_trust_box_size = 1e-2; // 1e-2
 
-const double trust_shrink_ratio = .5; // .5
+const double trust_shrink_ratio = .25; // .5
 const double trust_expand_ratio = 1.5; // 1.2
 
 const double cnt_tolerance = 1e-2; // 1e-2
 const double penalty_coeff_increase_ratio = 5; // 5
-const double initial_penalty_coeff = 3; // 5
+const double initial_penalty_coeff = 4; // 5
 
 const double initial_trust_box_size = 1; // 5 // split up trust box size for X and U
-const double initial_Xpos_trust_box_size = 5; // 1;
-const double initial_Xangle_trust_box_size = M_PI/4; // M_PI/6;
-const double initial_Uvel_trust_box_size = 5; // 1;
-const double initial_Uangle_trust_box_size = M_PI/4; // M_PI/8;
+const double initial_Xpos_trust_box_size = 5; // 5;
+const double initial_Xangle_trust_box_size = M_PI/6; // M_PI/6;
+const double initial_Uvel_trust_box_size = 5; // 5;
+const double initial_Uangle_trust_box_size = M_PI/8; // M_PI/8;
 
 const int max_penalty_coeff_increases = 3; // 8
 const int max_sqp_iterations = 50; // 50
@@ -717,6 +717,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			}
 			else {
 				LOG_ERROR("Some problem in solver");
+				std::cout << "penalty coeff: " << penalty_coeff << "\n";
 				throw forces_exception();
 			}
 
@@ -1029,10 +1030,10 @@ int main(int argc, char* argv[])
 		//std::cout << ~X[0].subMatrix<C_DIM,1>(0,0);
 
 		double initTrajCost = computeCost(X, U);
-		LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
+		//LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
 
 		double initCasadiTrajCost = casadiComputeCost(X, U);
-		LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
+		//LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
 
 		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 
@@ -1089,16 +1090,17 @@ int main(int argc, char* argv[])
 		std::cout << std::endl;
 		 */
 
+		/*
 		LOG_INFO("Initial cost: %4.10f", initTrajCost);
 		LOG_INFO("Optimized cost: %4.10f", cost);
 		LOG_INFO("Actual cost: %4.10f", computeCost(X,U));
 		LOG_INFO("Trajectory solve time: %5.3f ms", initTrajTime*1000);
 		LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
-
+		 */
 
 		unVec(B[T-1], x0, SqrtSigma0);
 
-		pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
+		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 
 	}
 

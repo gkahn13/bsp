@@ -940,23 +940,21 @@ void testCasadi() {
 	vec(x0, SqrtSigma0, b);
 
 	for(int t=0; t < T-1; ++t) {
-		std::cout << "\n\n\n\nt: " << t << "\n";
 		b = beliefDynamics(b, U[0]);
 	}
-	/*
+
+
 	double initTrajCost = computeCost(X, U);
 	LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
 
 	double initCasadiTrajCost = casadiComputeCost(X, U);
 	LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
-	*/
+
 
 }
 
 int main(int argc, char* argv[])
 {
-	testCasadi();
-	exit(0);
 
 	LOG_INFO("Initializing problem parameters");
 	initProblemParams();
@@ -1100,7 +1098,7 @@ int main(int argc, char* argv[])
 
 		unVec(B[T-1], x0, SqrtSigma0);
 
-		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
+		pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 
 	}
 

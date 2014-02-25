@@ -55,7 +55,7 @@ sed -i "s/^${CPP_TIMESTEP_DEF}.*/${CPP_TIMESTEP_DEF} ${TIMESTEPS}/" $H_WRITE
 
 # make casadi files
 # move casadi files over if different
-if ["false" = "true"] && [ $SLAM_TYPE = "state" ]; then
+if [ $SLAM_TYPE = "state" ]; then
     CASADI_SLAM_DIR="${BSP_DIR}/casadi/slam"
     echo "Making casadi files"
     make -C ${CASADI_SLAM_DIR} all T=${TIMESTEPS}

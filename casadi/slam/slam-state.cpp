@@ -131,25 +131,25 @@ void linearizeObservation(const SXMatrix& x, SXMatrix& H, SXMatrix& N)
 SXMatrix deltaMatrix(const SXMatrix& x) {
 	SXMatrix delta(Z_DIM, Z_DIM);
 	SXMatrix l0, l1, dist;
-	cout << "x(0): " << x(0) << endl;
-	cout << "x(1): " << x(1) << endl;
+	//cout << "x(0): " << x(0) << endl;
+	//cout << "x(1): " << x(1) << endl;
 	for(int i=C_DIM; i < X_DIM; i += 2) {
-		cout << "i: " << i << endl;
+		//cout << "i: " << i << endl;
 		l0 = x(i);
 		l1 = x(i+1);
 
-		cout << "l0: " << l0 << endl;
-		cout << "l1: " << l1 << endl;
+		//cout << "l0: " << l0 << endl;
+		//cout << "l1: " << l1 << endl;
 
 		dist = sqrt((x(0) - l0)*(x(0) - l0) + (x(1) - l1)*(x(1) - l1));
 
-		cout << "dist: " << dist << endl;
+		//cout << "dist: " << dist << endl;
 
 		SXMatrix signed_dist = 1/(1+exp(-config::ALPHA_OBS*(config::MAX_RANGE-dist)));
 		delta(i-C_DIM,i-C_DIM) = signed_dist;
 		delta(i-C_DIM+1,i-C_DIM+1) = signed_dist;
 
-		cout << "signed_dist: " << signed_dist << endl;
+		//cout << "signed_dist: " << signed_dist << endl;
 	}
 
 	return delta;
@@ -159,38 +159,38 @@ void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMa
 {
 	SXMatrix A(X_DIM,X_DIM), M(X_DIM,Q_DIM), QC(U_DIM,U_DIM);
 
-	cout << "x_t\n" << x_t << "\n";
-	cout << "Sigma_t\n" << Sigma_t << "\n";
+	//cout << "x_t\n" << x_t << "\n";
+	//cout << "Sigma_t\n" << Sigma_t << "\n";
 
 	linearizeDynamics(x_t, u_t, A, M);
 
-	cout << "A" << endl << A << endl;
-	cout << "M" << endl << M << endl;
+	//cout << "A" << endl << A << endl;
+	//cout << "M" << endl << M << endl;
 
 	QC(0,0) = config::VELOCITY_NOISE*config::VELOCITY_NOISE;
 	QC(1,1) = config::TURNING_NOISE*config::TURNING_NOISE;
 
-	cout << "M*Q*~M\n" << mul(mul(M,QC),trans(M)) << "\n";
+	//cout << "M*Q*~M\n" << mul(mul(M,QC),trans(M)) << "\n";
 
 	Sigma_tp1 = mul(mul(A,Sigma_t),trans(A)) + mul(mul(M,QC),trans(M));
 
-	cout << "Sigma_tp1 first" << endl << Sigma_tp1 << endl;
+	//cout << "Sigma_tp1 first" << endl << Sigma_tp1 << endl;
 
 	x_tp1 = dynfunc(x_t, u_t);
 
-	cout << "x_tp1" << endl << x_tp1 << endl;
+	//cout << "x_tp1" << endl << x_tp1 << endl;
 
 
 	SXMatrix H(Z_DIM,X_DIM), N(Z_DIM,R_DIM), RC(Z_DIM,Z_DIM);
 
 	linearizeObservation(x_tp1, H, N);
 
-	cout << "H" << endl << H << endl;
-	cout << "N" << endl << N << endl;
+	//cout << "H" << endl << H << endl;
+	//cout << "N" << endl << N << endl;
 
 	SXMatrix delta = deltaMatrix(x_tp1);
 
-	cout << "delta\n" << delta << "\n";
+	//cout << "delta\n" << delta << "\n";
 
 	for(int i=0; i < R_DIM-1; i += 2) {
 		RC(i,i) = config::OBS_DIST_NOISE*config::OBS_DIST_NOISE;
@@ -200,11 +200,11 @@ void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMa
 	//K = ((Sigma_tp1*~H*delta)/(delta*H*Sigma_tp1*~H*delta + RC))*delta;
 	SXMatrix K = mul(mul(mul(Sigma_tp1, mul(trans(H), delta)), solve(mul(delta, mul(H, mul(Sigma_tp1, mul(trans(H), delta)))) + RC, SXMatrix(DMatrix::eye(Z_DIM)))), delta);
 
-	cout << "K\n" << K << endl;
+	//cout << "K\n" << K << endl;
 
 	Sigma_tp1 = Sigma_tp1 - mul(K,mul(H,Sigma_tp1));
 
-	cout << "Sigma_tp1 final\n" << Sigma_tp1 << endl;
+	//cout << "Sigma_tp1 final\n" << Sigma_tp1 << endl;
 }
 
 // params[0] = alpha_belief
@@ -278,8 +278,6 @@ void test() {
 
 int main(int argc, char* argv[])
 {
-	test();
-	exit(0);
 
 	if (argc > 1) {
 		T = atoi(argv[1]);

@@ -146,25 +146,15 @@ Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r)
 Matrix<Z_DIM,Z_DIM> deltaMatrix(const Matrix<X_DIM>& x) {
 	Matrix<Z_DIM,Z_DIM> delta = zeros<Z_DIM,Z_DIM>();
 	double l0, l1, dist;
-	std::cout << "x(0): " << x[0] << std::endl;
-	std::cout << "x(1): " << x[1] << std::endl;
 	for(int i=C_DIM; i < X_DIM; i += 2) {
-		std::cout << "i: " << i << std::endl;
 		l0 = x[i];
 		l1 = x[i+1];
 
-		std::cout << "l0: " << l0 << std::endl;
-		std::cout << "l1: " << l1 << std::endl;
-
 		dist = sqrt((x[0] - l0)*(x[0] - l0) + (x[1] - l1)*(x[1] - l1));
-
-		std::cout << "dist: " << dist << std::endl;
 
 		double signed_dist = 1/(1+exp(-config::ALPHA_OBS*(config::MAX_RANGE-dist)));
 		delta(i-C_DIM,i-C_DIM) = signed_dist;
 		delta(i-C_DIM+1,i-C_DIM+1) = signed_dist;
-
-		std::cout << "signed_dist: " << signed_dist << std::endl;
 	}
 
 	return delta;
@@ -305,9 +295,6 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 
 	Matrix<X_DIM,X_DIM> Sigma = SqrtSigma*SqrtSigma;
 
-	std::cout << "x_t\n" << ~x << std::endl;
-	std::cout << "Sigma_t\n" << Sigma << std::endl;
-
 	Matrix<C_DIM,C_DIM> Acar;
 	Matrix<C_DIM,Q_DIM> Mcar;
 	linearizeDynamics(x, u, zeros<Q_DIM,1>(), Acar, Mcar);
@@ -317,42 +304,25 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	Matrix<X_DIM,Q_DIM> M = zeros<X_DIM,Q_DIM>();
 	M.insert<C_DIM, 2>(0, 0, Mcar);
 
-	std::cout << "A\n" << A << "\n";
-	std::cout << "M\n" << M << "\n";
-
 	//Matrix<X_DIM,X_DIM> A = zeros<X_DIM,X_DIM>();
 	//Matrix<X_DIM,Q_DIM> M = zeros<X_DIM,Q_DIM>();
 	//linearizeDynamicsFiniteDiff(x, u, zeros<Q_DIM,1>(), A, M);
 
-	std::cout << "M*Q*~M\n" << M*Q*~M << "\n";
-
 	Sigma = A*Sigma*~A + M*Q*~M;
 	//Sigma.insert(0,C_DIM, Acar*(Sigma.subMatrix<C_DIM,X_DIM-C_DIM>(0,3)));
-	std::cout << "Sigma_tp1 first\n" << Sigma << "\n";
 
 	x = dynfunc(x, u, zeros<Q_DIM,1>());
-
-	std::cout << "x_tp1\n" << ~x << std::endl;
 
 	Matrix<Z_DIM,X_DIM> H;
 	Matrix<Z_DIM,R_DIM> N;
 	linearizeObservation(x, zeros<R_DIM,1>(), H, N);
 	//Should include an R here
 
-	std::cout << "H\n" << H << "\n";
-	std::cout << "N\n" << N << "\n";
-
 	Matrix<Z_DIM,Z_DIM> delta = deltaMatrix(x);
-
-	std::cout << "delta\n" << delta << "\n";
 
 	Matrix<X_DIM,Z_DIM> K = ((Sigma*~H*delta)/(delta*H*Sigma*~H*delta + R))*delta;//N*R*~N);
 
-	std::cout << "K\n" << K << "\n";
-
 	Sigma = (identity<X_DIM>() - K*H)*Sigma;
-
-	std::cout << "Sigma_tp1 final\n" << Sigma << std::endl;
 
 	Matrix<B_DIM> g;
 	vec(x, sqrtm(Sigma), g);

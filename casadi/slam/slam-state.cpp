@@ -8,7 +8,7 @@
 
 //#define TIMESTEPS 15
 #define NUM_LANDMARKS 3
-#define NUM_WAYPOINTS 3
+#define NUM_WAYPOINTS 4
 
 #define C_DIM 3 // car dimension [x, y, theta]
 #define P_DIM 2 // Position dimension [x,y]
@@ -131,15 +131,25 @@ void linearizeObservation(const SXMatrix& x, SXMatrix& H, SXMatrix& N)
 SXMatrix deltaMatrix(const SXMatrix& x) {
 	SXMatrix delta(Z_DIM, Z_DIM);
 	SXMatrix l0, l1, dist;
+	//cout << "x(0): " << x(0) << endl;
+	//cout << "x(1): " << x(1) << endl;
 	for(int i=C_DIM; i < X_DIM; i += 2) {
+		//cout << "i: " << i << endl;
 		l0 = x(i);
 		l1 = x(i+1);
 
+		//cout << "l0: " << l0 << endl;
+		//cout << "l1: " << l1 << endl;
+
 		dist = sqrt((x(0) - l0)*(x(0) - l0) + (x(1) - l1)*(x(1) - l1));
+
+		//cout << "dist: " << dist << endl;
 
 		SXMatrix signed_dist = 1/(1+exp(-config::ALPHA_OBS*(config::MAX_RANGE-dist)));
 		delta(i-C_DIM,i-C_DIM) = signed_dist;
 		delta(i-C_DIM+1,i-C_DIM+1) = signed_dist;
+
+		//cout << "signed_dist: " << signed_dist << endl;
 	}
 
 	return delta;
@@ -149,6 +159,9 @@ void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMa
 {
 	SXMatrix A(X_DIM,X_DIM), M(X_DIM,Q_DIM), QC(U_DIM,U_DIM);
 
+	//cout << "x_t\n" << x_t << "\n";
+	//cout << "Sigma_t\n" << Sigma_t << "\n";
+
 	linearizeDynamics(x_t, u_t, A, M);
 
 	//cout << "A" << endl << A << endl;
@@ -156,6 +169,8 @@ void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMa
 
 	QC(0,0) = config::VELOCITY_NOISE*config::VELOCITY_NOISE;
 	QC(1,1) = config::TURNING_NOISE*config::TURNING_NOISE;
+
+	//cout << "M*Q*~M\n" << mul(mul(M,QC),trans(M)) << "\n";
 
 	Sigma_tp1 = mul(mul(A,Sigma_t),trans(A)) + mul(mul(M,QC),trans(M));
 
@@ -173,7 +188,9 @@ void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMa
 	//cout << "H" << endl << H << endl;
 	//cout << "N" << endl << N << endl;
 
-	SXMatrix delta = deltaMatrix(x_t);
+	SXMatrix delta = deltaMatrix(x_tp1);
+
+	//cout << "delta\n" << delta << "\n";
 
 	for(int i=0; i < R_DIM-1; i += 2) {
 		RC(i,i) = config::OBS_DIST_NOISE*config::OBS_DIST_NOISE;
@@ -183,7 +200,11 @@ void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMa
 	//K = ((Sigma_tp1*~H*delta)/(delta*H*Sigma_tp1*~H*delta + RC))*delta;
 	SXMatrix K = mul(mul(mul(Sigma_tp1, mul(trans(H), delta)), solve(mul(delta, mul(H, mul(Sigma_tp1, mul(trans(H), delta)))) + RC, SXMatrix(DMatrix::eye(Z_DIM)))), delta);
 
+	//cout << "K\n" << K << endl;
+
 	Sigma_tp1 = Sigma_tp1 - mul(K,mul(H,Sigma_tp1));
+
+	//cout << "Sigma_tp1 final\n" << Sigma_tp1 << endl;
 }
 
 // params[0] = alpha_belief
@@ -225,27 +246,39 @@ void generateCode(FX fcn, const std::string& name){
 }
 
 void test() {
+	T = 15;
+
 	SXMatrix x_t(X_DIM,1), u_t(U_DIM,1), Sigma_t(X_DIM,X_DIM), x_tp1(X_DIM,1), Sigma_tp1(X_DIM,X_DIM);
 
 	for(int i=0; i < X_DIM; ++i) { x_t(i) = 0; }
-	x_t(3) = 30; x_t(4) = 10;
-	x_t(5) = 40; x_t(6) = -10;
+	x_t(3) = 30; x_t(4) = -10;
+	x_t(5) = 70; x_t(6) = 12.5;
+	x_t(7) = 20; x_t(8) = 10;
 
 	u_t(0) = (60.0 - 0.0)/((double)(T-1));
 	u_t(1) = 0;
 
+	cout << "x0: " << x_t << endl;
+	cout << "u0: " << u_t << endl;
+
 	for(int i = 0; i < C_DIM; ++i) { Sigma_t(i,i) = .1*.1; }
 	for(int i = 0; i < L_DIM; ++i) { Sigma_t(C_DIM+i,C_DIM+i) = 1*1; }
 
-	EKF(x_t, u_t, Sigma_t, x_tp1, Sigma_tp1);
+	for(int t=0; t < T-1; ++t) {
+		cout << "\n\n\n\nt: " << t << endl;
+		EKF(x_t, u_t, Sigma_t, x_tp1, Sigma_tp1);
+		x_t = x_tp1;
+		Sigma_t = Sigma_tp1;
+	}
 
-	cout << "Sigma_t" << endl << Sigma_t << endl;
-	cout << "x_tp1" << endl << x_tp1 << endl;
-	cout << "Sigma_tp1" << endl << Sigma_tp1 << endl;
+	//cout << "Sigma_t" << endl << Sigma_t << endl;
+	//cout << "x_tp1" << endl << x_tp1 << endl;
+	//cout << "Sigma_tp1" << endl << Sigma_tp1 << endl;
 }
 
 int main(int argc, char* argv[])
 {
+
 	if (argc > 1) {
 		T = atoi(argv[1]);
 	} else {
@@ -304,13 +337,14 @@ int main(int argc, char* argv[])
 	double Sigma0[X_DIM][X_DIM];
 
 	x0[0] = 0; x0[1] = 0; x0[2] = 0;
-	x0[3] = 30; x0[4] = 10;
-	x0[5] = 40; x0[6] = -10;
+	x0[3] = 30; x0[4] = -10;
+	x0[5] = 70; x0[6] = 12.5;
+	x0[7] = 20; x0[8] = 10;
 
 	xGoal[0] = 60; xGoal[1] = 0; xGoal[2] = 0;
-	xGoal[3] = 30; xGoal[4] = 10;
-	xGoal[5] = 40; xGoal[6] = -10;
-
+	xGoal[3] = 30; xGoal[4] = -10;
+	xGoal[5] = 70; xGoal[6] = 12.5;
+	xGoal[7] = 20; xGoal[8] = 10;
 
 	for(int i = 0; i < X_DIM; ++i) {
 		for(int j = 0; j < X_DIM; ++j) {
@@ -366,7 +400,7 @@ int main(int argc, char* argv[])
 		}
 	}
 
-	t_x2[0] = 10; t_x2[1] = 0.01; t_x2[2] = 50;
+	t_x2[0] = 10; t_x2[1] = 1; t_x2[2] = 10;
 
 
 	int index = 0;
@@ -388,15 +422,17 @@ int main(int argc, char* argv[])
 		cout << t_x0[index++] << " ";
 	}
 	cout << endl;
+
 	/*
-		for(int i = 0; i < 174; ++i) {
-			cout << t_x0[i] << " ";
-			if ((i+1)%12 == 0) {
-				cout << endl;
-			}
+	index = 0;
+	cout << "SqrtSigma0\n";
+	for(int i=0; i < X_DIM; ++i) {
+		for(int j=0; j < X_DIM; ++j) {
+			cout << t_x1[index++] << " ";
 		}
-		cout << endl;
-	 */
+		cout << "\n";
+	}
+	*/
 
 	f_fcn.setInput(t_x0,0);
 	f_fcn.setInput(t_x1,1);

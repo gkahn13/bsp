@@ -23,25 +23,29 @@ const double alpha_control = 1; // .01
 
 namespace cfg {
 const double improve_ratio_threshold = .1; // .1
-const double min_approx_improve = 1e-3; // 1e-4
-const double min_trust_box_size = 1e-2; // 1e-3
+const double min_approx_improve = 1e-3; // 1e-3
+const double min_trust_box_size = 1e-2; // 1e-2
 
-const double trust_shrink_ratio = .5; // .5
-const double trust_expand_ratio = 1.2; // 1.2
+const double trust_shrink_ratio = .25; // .5
+const double trust_expand_ratio = 1.5; // 1.2
 
 const double cnt_tolerance = 1e-2; // 1e-2
 const double penalty_coeff_increase_ratio = 5; // 5
-const double initial_penalty_coeff = 5; // 5
+const double initial_penalty_coeff = 4; // 5
 
 const double initial_trust_box_size = 1; // 5 // split up trust box size for X and U
-const double initial_Xpos_trust_box_size = 1; // 1;
+const double initial_Xpos_trust_box_size = 5; // 5;
 const double initial_Xangle_trust_box_size = M_PI/6; // M_PI/6;
-const double initial_Uvel_trust_box_size = 1; // 1;
+const double initial_Uvel_trust_box_size = 5; // 5;
 const double initial_Uangle_trust_box_size = M_PI/8; // M_PI/8;
 
-const int max_penalty_coeff_increases = 8; // 8
+const int max_penalty_coeff_increases = 3; // 8
 const int max_sqp_iterations = 50; // 50
 }
+
+struct forces_exception {
+	forces_exception() { }
+};
 
 
 // utility to fill Matrix in column major format in FORCES array
@@ -303,6 +307,22 @@ void setupStateVars(stateMPC_params& problem, stateMPC_output& output)
 #define BOOST_PP_LOCAL_LIMITS (TIMESTEPS, TIMESTEPS)
 #include BOOST_PP_LOCAL_ITERATE()
 
+	for(int t = 0; t < T-1; ++t) {
+		for(int i=0; i < (3*X_DIM+U_DIM); ++i) { H[t][i] = INFTY; }
+		for(int i=0; i < (3*X_DIM+U_DIM); ++i) { f[t][i] = INFTY; }
+		for(int i=0; i < (3*X_DIM+U_DIM); ++i) { lb[t][i] = INFTY; }
+		for(int i=0; i < (X_DIM+U_DIM); ++i) { ub[t][i] = INFTY; }
+		for(int i=0; i < (X_DIM*(3*X_DIM+U_DIM)); ++i) { C[t][i] = INFTY; }
+		for(int i=0; i < X_DIM; ++i) { e[t][i] = INFTY; }
+		for(int i=0; i < (X_DIM+U_DIM); ++i) { z[t][i] = INFTY; }
+	}
+	for(int i=0; i < (X_DIM); ++i) { H[T-1][i] = INFTY; }
+	for(int i=0; i < (X_DIM); ++i) { f[T-1][i] = INFTY; }
+	for(int i=0; i < (X_DIM); ++i) { lb[T-1][i] = INFTY; }
+	for(int i=0; i < (X_DIM); ++i) { ub[T-1][i] = INFTY; }
+	for(int i=0; i < X_DIM; ++i) { e[T-1][i] = INFTY; }
+	for(int i=0; i < (X_DIM); ++i) { z[T-1][i] = INFTY; }
+
 }
 
 void cleanupStateMPCVars()
@@ -318,6 +338,25 @@ void cleanupStateMPCVars()
 
 bool isValidInputs()
 {
+
+	for(int t = 0; t < T-1; ++t) {
+		std::cout << "t: " << t << "\n";
+		for(int i=0; i < (3*X_DIM+U_DIM); ++i) { if (H[t][i] > INFTY/2) { std::cout << "H error: " << i << "\n"; } }
+		for(int i=0; i < (3*X_DIM+U_DIM); ++i) { if (f[t][i] > INFTY/2) { std::cout << "f error: " << i << "\n"; } }
+		for(int i=0; i < (3*X_DIM+U_DIM); ++i) { if (lb[t][i] > INFTY/2) { std::cout << "lb error: " << i << "\n"; } }
+		for(int i=0; i < (X_DIM+U_DIM); ++i) {if (lb[t][i] > INFTY/2) { std::cout << "ub error: " << i << "\n"; } }
+		for(int i=0; i < (X_DIM*(3*X_DIM+U_DIM)); ++i) { if (C[t][i] > INFTY/2) { std::cout << "C error: " << i << "\n"; } }
+		for(int i=0; i < X_DIM; ++i) { if (e[t][i] > INFTY/2) { std::cout << "e error: " << i; } }
+	}
+	std::cout << "t: " << T-1 << "\n";
+	for(int i=0; i < (X_DIM); ++i) { if (H[T-1][i] > INFTY/2) { std::cout << "H error: " << i << "\n"; } }
+	for(int i=0; i < (X_DIM); ++i) { if (f[T-1][i] > INFTY/2) { std::cout << "f error: " << i << "\n"; } }
+	for(int i=0; i < (X_DIM); ++i) { if (lb[T-1][i] > INFTY/2) { std::cout << "lb error: " << i << "\n"; } }
+	for(int i=0; i < (X_DIM); ++i) { if (ub[T-1][i] > INFTY/2) { std::cout << "ub error: " << i << "\n"; } }
+	for(int i=0; i < X_DIM; ++i) { if (e[T-1][i] > INFTY/2) { std::cout << "e error: " << i << "\n"; } }
+
+	return true;
+
 	for(int t = 0; t < T; ++t) {
 
 		std::cout << "t: " << t << std::endl << std::endl;
@@ -496,15 +535,14 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 
 			HMat.reset();
 			for(int i = 0; i < (X_DIM+U_DIM); ++i) {
-				double val = B(idx+i,idx+i);
-				HMat(i,i) = (val < 0) ? 0 : val;
+				HMat(i,i) = B(idx+i,idx+i);
 			}
 
 			// since diagonal, fill directly
 			// TODO: check if H is 0 for the landmarks. if so, pull out of the state
 			for(int i = 0; i < (X_DIM+U_DIM); ++i) { H[t][i] = HMat(i,i); }
 			// TODO: why does this work???
-			for(int i = 0; i < (2*X_DIM); ++i) { H[t][i + (X_DIM+U_DIM)] = 1e4; } //1e4
+			for(int i = 0; i < (2*X_DIM); ++i) { H[t][i + (X_DIM+U_DIM)] = 0; } //1e4
 
 			zbar.insert(0,0,xt);
 			zbar.insert(X_DIM,0,ut);
@@ -541,7 +579,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			fillCol(e[t+1], eVec);
 		}
 
-		// For last stage, fill in Q, f, A, b
+		// For last stage, fill in H, f, A, b
 		Matrix<X_DIM>& xT = X[T-1];
 
 		idx = (T-1)*(X_DIM+U_DIM);
@@ -658,6 +696,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			//}
 
 
+
 			int exitflag = stateMPC_solve(&problem, &output, &info);
 			if (exitflag == 1) {
 				for(int t = 0; t < T-1; ++t) {
@@ -678,8 +717,8 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			}
 			else {
 				LOG_ERROR("Some problem in solver");
-				pythonDisplayTrajectory(U, T, true);
-				exit(-1);
+				std::cout << "penalty coeff: " << penalty_coeff << "\n";
+				throw forces_exception();
 			}
 
 			LOG_DEBUG("       Optimized cost: %4.10f", optcost);
@@ -775,6 +814,25 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 				// L-BFGS update
 				B = B - (Bs*~Bs)/((~s*Bs)[0]) + (r*~r)/((~s*r)[0]);
 
+				// take in diagonal of B
+				// find minimum value among diagonal elements
+				// negate and add to other vals
+				double minValue = INFTY;
+				double maxValue = -INFTY;
+				for(int i=0; i < XU_DIM; ++i) {
+					minValue = MIN(minValue, B(i,i));
+					maxValue = MAX(maxValue, B(i,i));
+				}
+
+				//std::cout << "minValue: " << minValue << "\n";
+				//std::cout << "maxValue: " << maxValue << "\n\n";
+				if (minValue < 0) {
+					//std::cout << "negative minValue, press enter\n";
+					//std::cin.ignore();
+					B = B + fabs(minValue)*identity<XU_DIM>();
+				}
+
+
 				// Do not update B
 				//B = identity<XU_DIM>();
 
@@ -847,7 +905,54 @@ double statePenaltyCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Mat
 	return casadiComputeCost(X, U);
 }
 
+void testCasadi() {
+	initProblemParams();
 
+	Matrix<U_DIM> uinit;
+
+	xGoal = x0;
+	xGoal.insert(0, 0, waypoints[0]);
+
+	std::cout << "x0: " << ~x0;
+	std::cout << "xGoal: " << ~xGoal << "\n";
+
+	// initialize velocity to dist / timesteps
+	uinit[0] = sqrt((x0[0] - xGoal[0])*(x0[0] - xGoal[0]) + (x0[1] - xGoal[1])*(x0[1] - xGoal[1])) / (double)((T-1)*DT);
+	// angle already pointed at goal, so is 0
+	uinit[1] = 0;
+
+	std::vector<Matrix<U_DIM> > U(T-1, uinit);
+	std::vector<Matrix<X_DIM> > X(T);
+
+	X[0] = x0;
+	for(int t=0; t < T-1; ++t) {
+		X[t+1] = dynfunc(X[t], U[t], zeros<Q_DIM,1>());
+	}
+
+	std::cout << "U\n";
+	for(int t=0; t < T-1; ++t) { std::cout << ~U[t]; }
+	std::cout << "\n";
+
+	std::cout << "X\n";
+	for(int t=0; t < T; ++t) { std::cout << ~X[t]; }
+	std::cout << "\n";
+
+	Matrix<B_DIM> b;
+	vec(x0, SqrtSigma0, b);
+
+	for(int t=0; t < T-1; ++t) {
+		b = beliefDynamics(b, U[0]);
+	}
+
+
+	double initTrajCost = computeCost(X, U);
+	LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
+
+	double initCasadiTrajCost = casadiComputeCost(X, U);
+	LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
+
+
+}
 
 int main(int argc, char* argv[])
 {
@@ -925,16 +1030,32 @@ int main(int argc, char* argv[])
 		//std::cout << ~X[0].subMatrix<C_DIM,1>(0,0);
 
 		double initTrajCost = computeCost(X, U);
-		LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
+		//LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
 
 		double initCasadiTrajCost = casadiComputeCost(X, U);
-		LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
+		//LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
 
 		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 
 		util::Timer_tic(&solveTimer);
 
-		double cost = statePenaltyCollocation(X, U, problem, output, info);
+		double cost = 0;
+		int iter = 0;
+		while(true) {
+			try {
+				cost = statePenaltyCollocation(X, U, problem, output, info);
+				break;
+			}
+			catch (forces_exception &e) {
+				if (iter > 3) {
+					LOG_ERROR("Tried too many times, giving up");
+					pythonDisplayTrajectory(U, T, true);
+					exit(-1);
+				}
+				LOG_ERROR("Forces exception, trying again");
+				iter++;
+			}
+		}
 
 		double solvetime = util::Timer_toc(&solveTimer);
 		totalSolveTime += solvetime;
@@ -969,12 +1090,13 @@ int main(int argc, char* argv[])
 		std::cout << std::endl;
 		 */
 
+		/*
 		LOG_INFO("Initial cost: %4.10f", initTrajCost);
 		LOG_INFO("Optimized cost: %4.10f", cost);
 		LOG_INFO("Actual cost: %4.10f", computeCost(X,U));
 		LOG_INFO("Trajectory solve time: %5.3f ms", initTrajTime*1000);
 		LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
-
+		 */
 
 		unVec(B[T-1], x0, SqrtSigma0);
 

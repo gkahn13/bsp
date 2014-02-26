@@ -26,18 +26,18 @@ const double improve_ratio_threshold = .1; // .1
 const double min_approx_improve = 1e-3; // 1e-3
 const double min_trust_box_size = 1e-2; // 1e-2
 
-const double trust_shrink_ratio = .5; // .5
+const double trust_shrink_ratio = .25; // .5
 const double trust_expand_ratio = 1.5; // 1.2
 
 const double cnt_tolerance = 1e-2; // 1e-2
 const double penalty_coeff_increase_ratio = 5; // 5
-const double initial_penalty_coeff = 3; // 5
+const double initial_penalty_coeff = 4; // 5
 
 const double initial_trust_box_size = 1; // 5 // split up trust box size for X and U
-const double initial_Xpos_trust_box_size = 5; // 1;
-const double initial_Xangle_trust_box_size = M_PI/4; // M_PI/6;
-const double initial_Uvel_trust_box_size = 5; // 1;
-const double initial_Uangle_trust_box_size = M_PI/4; // M_PI/8;
+const double initial_Xpos_trust_box_size = 5; // 5;
+const double initial_Xangle_trust_box_size = M_PI/6; // M_PI/6;
+const double initial_Uvel_trust_box_size = 5; // 5;
+const double initial_Uangle_trust_box_size = M_PI/8; // M_PI/8;
 
 const int max_penalty_coeff_increases = 3; // 8
 const int max_sqp_iterations = 50; // 50
@@ -717,6 +717,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			}
 			else {
 				LOG_ERROR("Some problem in solver");
+				std::cout << "penalty coeff: " << penalty_coeff << "\n";
 				throw forces_exception();
 			}
 
@@ -823,11 +824,11 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 					maxValue = MAX(maxValue, B(i,i));
 				}
 
-				std::cout << "minValue: " << minValue << "\n";
-				std::cout << "maxValue: " << maxValue << "\n\n";
+				//std::cout << "minValue: " << minValue << "\n";
+				//std::cout << "maxValue: " << maxValue << "\n\n";
 				if (minValue < 0) {
-					std::cout << "negative minValue, press enter\n";
-					std::cin.ignore();
+					//std::cout << "negative minValue, press enter\n";
+					//std::cin.ignore();
 					B = B + fabs(minValue)*identity<XU_DIM>();
 				}
 
@@ -904,7 +905,54 @@ double statePenaltyCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Mat
 	return casadiComputeCost(X, U);
 }
 
+void testCasadi() {
+	initProblemParams();
 
+	Matrix<U_DIM> uinit;
+
+	xGoal = x0;
+	xGoal.insert(0, 0, waypoints[0]);
+
+	std::cout << "x0: " << ~x0;
+	std::cout << "xGoal: " << ~xGoal << "\n";
+
+	// initialize velocity to dist / timesteps
+	uinit[0] = sqrt((x0[0] - xGoal[0])*(x0[0] - xGoal[0]) + (x0[1] - xGoal[1])*(x0[1] - xGoal[1])) / (double)((T-1)*DT);
+	// angle already pointed at goal, so is 0
+	uinit[1] = 0;
+
+	std::vector<Matrix<U_DIM> > U(T-1, uinit);
+	std::vector<Matrix<X_DIM> > X(T);
+
+	X[0] = x0;
+	for(int t=0; t < T-1; ++t) {
+		X[t+1] = dynfunc(X[t], U[t], zeros<Q_DIM,1>());
+	}
+
+	std::cout << "U\n";
+	for(int t=0; t < T-1; ++t) { std::cout << ~U[t]; }
+	std::cout << "\n";
+
+	std::cout << "X\n";
+	for(int t=0; t < T; ++t) { std::cout << ~X[t]; }
+	std::cout << "\n";
+
+	Matrix<B_DIM> b;
+	vec(x0, SqrtSigma0, b);
+
+	for(int t=0; t < T-1; ++t) {
+		b = beliefDynamics(b, U[0]);
+	}
+
+
+	double initTrajCost = computeCost(X, U);
+	LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
+
+	double initCasadiTrajCost = casadiComputeCost(X, U);
+	LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
+
+
+}
 
 int main(int argc, char* argv[])
 {
@@ -982,10 +1030,10 @@ int main(int argc, char* argv[])
 		//std::cout << ~X[0].subMatrix<C_DIM,1>(0,0);
 
 		double initTrajCost = computeCost(X, U);
-		LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
+		//LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
 
 		double initCasadiTrajCost = casadiComputeCost(X, U);
-		LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
+		//LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
 
 		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 
@@ -1001,10 +1049,10 @@ int main(int argc, char* argv[])
 			catch (forces_exception &e) {
 				if (iter > 3) {
 					LOG_ERROR("Tried too many times, giving up");
+					pythonDisplayTrajectory(U, T, true);
 					exit(-1);
 				}
 				LOG_ERROR("Forces exception, trying again");
-				pythonDisplayTrajectory(U, T, true);
 				iter++;
 			}
 		}
@@ -1042,16 +1090,17 @@ int main(int argc, char* argv[])
 		std::cout << std::endl;
 		 */
 
+		/*
 		LOG_INFO("Initial cost: %4.10f", initTrajCost);
 		LOG_INFO("Optimized cost: %4.10f", cost);
 		LOG_INFO("Actual cost: %4.10f", computeCost(X,U));
 		LOG_INFO("Trajectory solve time: %5.3f ms", initTrajTime*1000);
 		LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
-
+		 */
 
 		unVec(B[T-1], x0, SqrtSigma0);
 
-		pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
+		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 
 	}
 

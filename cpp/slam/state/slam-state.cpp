@@ -1053,6 +1053,11 @@ int main(int argc, char* argv[])
 					exit(-1);
 				}
 				LOG_ERROR("Forces exception, trying again");
+				X[0] = x0;
+				for(int j=0; j < T-1; ++j) {
+					X[j+1] = dynfunc(X[j], U[j], zeros<Q_DIM,1>());
+				}
+				X[T-1] = xGoal;
 				iter++;
 			}
 		}
@@ -1100,7 +1105,7 @@ int main(int argc, char* argv[])
 
 		unVec(B[T-1], x0, SqrtSigma0);
 
-		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
+		pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 
 	}
 

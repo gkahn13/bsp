@@ -26,9 +26,6 @@ Matrix<XU_DIM,XU_DIM> Hess;
 
 Matrix<X_DIM> xMidpoint;
 
-std::vector<Matrix<X_DIM> > X_MPC_past(T);
-std::vector<Matrix<U_DIM> > U_MPC_past(T-1);
-
 const double alpha_belief = 10; // 10;
 const double alpha_final_belief = 10; // 10;
 const double alpha_control = 1; // .01
@@ -852,6 +849,24 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 				// L-BFGS update
 				Hess = Hess - (Bs*~Bs)/((~s*Bs)[0]) + (r*~r)/((~s*r)[0]);
 
+				// take in diagonal of B
+				// find minimum value among diagonal elements
+				// negate and add to other vals
+				double minValue = INFTY;
+				double maxValue = -INFTY;
+				for(int i=0; i < XU_DIM; ++i) {
+					minValue = MIN(minValue, Hess(i,i));
+					maxValue = MAX(maxValue, Hess(i,i));
+				}
+
+				std::cout << "minValue: " << minValue << "\n";
+				std::cout << "maxValue: " << maxValue << "\n\n";
+				if (minValue < 0) {
+					std::cout << "negative minValue, press enter\n";
+					std::cin.ignore();
+					Hess = Hess + fabs(minValue)*identity<XU_DIM>();
+				}
+
 				// Do not update B
 				//B = identity<XU_DIM>();
 
@@ -919,12 +934,12 @@ double statePenaltyCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Mat
 	        //trust_box_size = cfg::initial_trust_box_size;
 	    }
 	    else {
-	    	return computeCost(X, U);
-	    	//return casadiComputeCost(X, U);
+	    	//return computeCost(X, U);
+	    	return casadiComputeCost(X, U);
 	    }
 	}
-	return computeCost(X, U);
-	//return casadiComputeCost(X, U);
+	//return computeCost(X, U);
+	return casadiComputeCost(X, U);
 }
 
 void planBspPath(const Matrix<C_DIM>& cStart, int endWaypointIndex, const Matrix<X_DIM,X_DIM>& SS0, stateMPC_params& problem, stateMPC_output& output, stateMPC_info& info, std::vector<Matrix<X_DIM> >& X, std::vector<Matrix<U_DIM> >& U) {
@@ -1049,6 +1064,9 @@ int main(int argc, char* argv[])
 		xMidpoint = X_current_mpc[T-1];
 		std::cout << "xMidpoint: " << ~xMidpoint.subMatrix<C_DIM,1>(0,0);
 
+		std::cout << "Display lookahead\n";
+		pythonDisplayTrajectory(U_lookahead, T, true);
+
 		x0 = X_current_mpc[0];
 
 		Hess = curr_mpc_Hess;
@@ -1078,15 +1096,15 @@ int main(int argc, char* argv[])
 						exit(-1);
 					}
 					LOG_ERROR("Forces exception, trying again");
-					//cfg::initial_trust_box_factor *= .5;
+					cfg::initial_trust_box_factor *= .5;
 					//cfg::initial_penalty_coeff_factor += 1;
-					X_current_mpc[0] = x0;
-					for(int j=0; j < T-1; ++j) {
-						X_current_mpc[j+1] = dynfunc(X_current_mpc[j], U_current_mpc[j], zeros<Q_DIM,1>());
-					}
-					X_current_mpc[T-1] = xGoal;
-					//X_current_mpc = X_past_mpc;
-					//U_current_mpc = U_past_mpc;
+					//X_current_mpc[0] = x0;
+					//for(int j=0; j < T-1; ++j) {
+					//	X_current_mpc[j+1] = dynfunc(X_current_mpc[j], U_current_mpc[j], zeros<Q_DIM,1>());
+					//}
+					//X_current_mpc[T-1] = xGoal;
+					X_current_mpc = X_past_mpc;
+					U_current_mpc = U_past_mpc;
 					iter++;
 				}
 			}
@@ -1113,9 +1131,10 @@ int main(int argc, char* argv[])
 			counter_inner_loop = 0;
 			counter_approx_hess_neg = 0;
 
-			//std::cout << "Displaying mpc\n";
-			//pythonDisplayTrajectory(U_current_mpc, T, false);
-
+			if (i >= 2) {
+				std::cout << "Displaying mpc\n";
+				pythonDisplayTrajectory(U_current_mpc, T, true);
+			}
 			vec(x0, SqrtSigma0, b);
 
 //#define SIMULATE_NOISE

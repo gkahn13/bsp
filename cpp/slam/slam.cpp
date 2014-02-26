@@ -80,10 +80,10 @@ void initProblemParams()
 	}
 	*/
 
-	// TODO: think of better values for these
+	// TODO: change xMin and xMax bounds
 	uMin[0] = 1.5; // 1
 	uMin[1] = -M_PI/3;
-	uMax[0] = 8; // 10
+	uMax[0] = 10; // 10
 	uMax[1] = M_PI/3;
 
 	xMin[0] = -20;
@@ -333,11 +333,12 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 // returns updated belief based on real current state, estimated current belief, and input
 void executeControlStep(const Matrix<X_DIM>& x_t_real, const Matrix<B_DIM>& b_t_t, const Matrix<U_DIM>& u_t, Matrix<X_DIM>& x_tp1_real, Matrix<B_DIM>& b_tp1_tp1) {
 	// find next real state from input + noise
-	Matrix<Q_DIM> control_noise = sampleGaussian(zeros<Q_DIM,1>(), Q);
+	// TODO: sample from smaller Q and R and try with zero noise
+	Matrix<Q_DIM> control_noise = sampleGaussian(zeros<Q_DIM,1>(), .2*Q);
 	std::cout << "control_noise: " << ~control_noise;
 	x_tp1_real = dynfunc(x_t_real, u_t, control_noise);
 	// sense real state + noise
-	Matrix<R_DIM> obs_noise = sampleGaussian(zeros<R_DIM,1>(), R);
+	Matrix<R_DIM> obs_noise = sampleGaussian(zeros<R_DIM,1>(), .2*R);
 	std::cout << "obs_noise: " << ~obs_noise;
 	Matrix<Z_DIM> z_tp1_real = obsfunc(x_tp1_real, obs_noise);
 

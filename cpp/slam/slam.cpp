@@ -81,9 +81,9 @@ void initProblemParams()
 	*/
 
 	// TODO: think of better values for these
-	uMin[0] = 1; // 1
+	uMin[0] = 1.5; // 1
 	uMin[1] = -M_PI/3;
-	uMax[0] = 10;
+	uMax[0] = 8; // 10
 	uMax[1] = M_PI/3;
 
 	xMin[0] = -20;

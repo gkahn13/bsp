@@ -152,7 +152,7 @@ Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matr
 	xNew[6] = x6;
 	xNew[7] = x7;
 
-	xNew += q; 
+	xNew += q*DT; 
 
 	return xNew;
 }
@@ -220,7 +220,7 @@ void linearizeDynamics(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Mat
 	Matrix<X_DIM> xr(x), xl(x);
 	for (size_t i = 0; i < X_DIM; ++i) {
 		xr[i] += diffEps; xl[i] -= diffEps;
-		A.insert(0,i, (dynfunc(xr, u, q) - dynfunc(xl, u, q)) / (xr[i] - xl[i]));
+		A.insert(0,i, (dynfunc(xr, u, q) - dynfunc(xl, u, q)) / (2.0*diffEps));
 		xr[i] = x[i]; xl[i] = x[i];
 	}
 
@@ -228,7 +228,7 @@ void linearizeDynamics(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Mat
 	Matrix<Q_DIM> qr(q), ql(q);
 	for (size_t i = 0; i < Q_DIM; ++i) {
 		qr[i] += diffEps; ql[i] -= diffEps;
-		M.insert(0,i, (dynfunc(x, u, qr) - dynfunc(x, u, ql)) / (qr[i] - ql[i]));
+		M.insert(0,i, (dynfunc(x, u, qr) - dynfunc(x, u, ql)) / (2.0*diffEps));
 		qr[i] = q[i]; ql[i] = q[i];
 	}
 }
@@ -244,7 +244,7 @@ void linearizeObservation(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r, Matrix
 	for (size_t i = 0; i < X_DIM; ++i) {
 
 		xr[i] += diffEps; xl[i] -= diffEps;
-		H.insert(0,i, (obsfunc(xr, r) - obsfunc(xl, r)) / (xr[i] - xl[i]));
+		H.insert(0,i, (obsfunc(xr, r) - obsfunc(xl, r)) / (2.0*diffEps));
 		
 		xr[i] = x[i]; xl[i] = x[i];
 	}
@@ -253,7 +253,7 @@ void linearizeObservation(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r, Matrix
 	Matrix<R_DIM> rr(r), rl(r);
 	for (size_t i = 0; i < R_DIM; ++i) {
 		rr[i] += diffEps; rl[i] -= diffEps;
-		N.insert(0,i, (obsfunc(x, rr) - obsfunc(x, rl)) / (rr[i] - rl[i]));
+		N.insert(0,i, (obsfunc(x, rr) - obsfunc(x, rl)) / (2.0*diffEps));
 		rr[i] = r[i]; rl[i] = r[i];
 	}
 }
@@ -305,21 +305,25 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	
 
 	x = dynfunc(x, u,q);
-	std::cout<<"X "<<x<<"\n";
+	
 	Sigma = A*Sigma*~A + M*Q*(~M);
 
 	Matrix<Z_DIM,X_DIM> H = zeros<Z_DIM,X_DIM>();
 	Matrix<Z_DIM,R_DIM> N; 
 
 	linearizeObservation(x,r, H,N);
-	
+	/*
+	std::cout<<"X_BELIEF "<<x<<"\n";
 
 
+	std::cout<<"X_BELIEF "<<(H*Sigma*~H + N*R*~N)<<"\n";
+
+	*/
 
 	Matrix<X_DIM,Z_DIM> K = Sigma*~H/(H*Sigma*~H + N*R*~N);
 
 	Sigma = (identity<X_DIM>() - K*H)*Sigma;
-
+	
 	Matrix<B_DIM> g;
 	vec(x, sqrtm(Sigma), g);
 
@@ -377,7 +381,7 @@ Matrix<B_DIM> executeControlStep(Matrix<X_DIM>& x_t_real, const Matrix<B_DIM>& b
 
 	Matrix<X_DIM> x_tp1_adj = x_tp1 + K*(z_tp1_real - obsfunc(x_tp1,r));
 
-	//std::cout<<"x_tp1"<<x_tp1_adj<<"\n";
+	std::cout<<"x_tp1"<<x_tp1_adj<<"\n";
 	//Matrix<X_DIM,X_DIM> W = ~(H*Sigma_tp1)*(((H*Sigma_tp1*~H) + N*R*~N) % (H*Sigma_tp1));
 	//Matrix<X_DIM,X_DIM> Sigma_tp1_adj = Sigma_tp1 - W;
 	Matrix<X_DIM,X_DIM> Sigma_tp1_adj = Sigma_tp1 - K*H*Sigma_tp1;

@@ -599,8 +599,8 @@ int main(int argc, char* argv[])
 	// actual: 6.66, 6.66, 10.86, 13
 	double length1_est = .05, // inverse = 20
 			length2_est = .05, // inverse = 20
-			mass1_est = .105, // inverse = 9.52
-			mass2_est = .089; // inverse = 11.24
+			mass1_est = .12, // inverse = 9.52
+			mass2_est = .13; // inverse = 11.24
 
 
 	// position, then velocity
@@ -618,10 +618,11 @@ int main(int argc, char* argv[])
 	xGoal[4] = 1/length1_est; xGoal[5] = 1/length2_est; xGoal[6] = 1/mass1_est; xGoal[7] = 1/mass2_est;
 
 	// from original file, possibly change
-	SqrtSigma0(0,0) = 1.0; 
+	/*SqrtSigma0(0,0) = 1.0; 
 	SqrtSigma0(1,1) = 1.0; 
 	SqrtSigma0(2,2) = 1.0; 
 	SqrtSigma0(3,3) = 1.0; 
+	*/
 	SqrtSigma0(4,4) = sqrt(0.5);
 	SqrtSigma0(5,5) = sqrt(0.5);
 	SqrtSigma0(6,6) = 1.0;
@@ -646,8 +647,8 @@ int main(int argc, char* argv[])
 	xMax[7] = 1/.01; // 1/mass2
 
 	for(int i = 0; i < U_DIM; ++i) {
-		uMin[i] = -1;
-		uMax[i] = 1;
+		uMin[i] = -0.4;
+		uMax[i] = 0.4;
 	}
 
 	//Matrix<U_DIM> uinit = (xGoal.subMatrix<U_DIM,1>(0,0) - x0.subMatrix<U_DIM,1>(0,0))/(double)(T-1);

@@ -210,22 +210,26 @@ void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMa
 // params[0] = alpha_belief
 // params[1] = alpha_control
 // params[2] = alpha_final_belief
-SXMatrix costfunc(const SXMatrix& XU, const SXMatrix& Sigma_0, const SXMatrix& params)
+SXMatrix costfunc(const SXMatrix& XU, const SXMatrix& Sigma_0, const SXMatrix& landmarks, const SXMatrix& params)
 {
 	SXMatrix cost = 0;
 
 	SXMatrix x_tp1(X_DIM,1);
 	SXMatrix Sigma_t = Sigma_0, Sigma_tp1(X_DIM,X_DIM);
-	SXMatrix x_t(X_DIM,1), u_t(U_DIM,1);
+	SXMatrix c_t(C_DIM,1), x_t(X_DIM,1), u_t(U_DIM,1);
 
 	int offset = 0;
 
 	for (int t = 0; t < (T-1); ++t)
 	{
-		x_t = XU(Slice(offset,offset+X_DIM));
-		offset += X_DIM;
+		c_t = XU(Slice(offset,offset+C_DIM));
+		offset += C_DIM;
 		u_t = XU(Slice(offset,offset+U_DIM));
 		offset += U_DIM;
+
+		for(int i=0; i < X_DIM; ++i) {
+			x_t(i) = (i < C_DIM) ? c_t(i) : landmarks(i-C_DIM);
+		}
 
 		cost += params[0]*trace(Sigma_t);
 		cost += params[1]*inner_prod(u_t, u_t);
@@ -288,29 +292,22 @@ int main(int argc, char* argv[])
 	cout << "Creating casadi file for T = " << T << endl;
 
 	vector<SXMatrix> X, U;
-	int nXU = T*X_DIM+(T-1)*U_DIM;
+	int nXU = T*C_DIM+(T-1)*U_DIM;
 	SXMatrix XU = ssym("XU",nXU,1);
 	SXMatrix Sigma_0 = ssym("S0",X_DIM,X_DIM);
+	SXMatrix landmarks = ssym("landmarks",L_DIM);
 	SXMatrix params = ssym("params",3); // alpha_control, alpha_belief, alpha_final_belief
 
 	// Objective
-	SXMatrix f = costfunc(XU, Sigma_0, params);
+	SXMatrix f = costfunc(XU, Sigma_0, landmarks, params);
 
 	SXMatrix grad_f = gradient(f,XU);
-
-	/*
-	SXMatrix hess_f = hessian(f,XU);
-
-	SXMatrix diag_hess_f(nXU,1);
-	for(int i = 0; i < nXU; ++i) {
-		diag_hess_f(i) = hess_f(i,i);
-	}
-	*/
 
 	// Create functions
 	vector<SXMatrix> inp;
 	inp.push_back(XU);
 	inp.push_back(Sigma_0);
+	inp.push_back(landmarks);
 	inp.push_back(params);
 
 	SXFunction f_fcn(inp,f);
@@ -322,13 +319,10 @@ int main(int argc, char* argv[])
 	SXFunction grad_f_fcn(inp,out);
 	grad_f_fcn.init();
 
-	//SXFunction hess_f_fcn(inp,diag_hess_f);
-	//hess_f_fcn.init();
 
 	// Generate code
 	generateCode(f_fcn,"slam-state-cost");
 	generateCode(grad_f_fcn,"slam-state-grad");
-	//generateCode(hess_f_fcn,"slam-state-diag-hess");
 
 //#define TEST
 #ifdef TEST

@@ -304,12 +304,7 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	Matrix<X_DIM,Q_DIM> M = zeros<X_DIM,Q_DIM>();
 	M.insert<C_DIM, 2>(0, 0, Mcar);
 
-	//Matrix<X_DIM,X_DIM> A = zeros<X_DIM,X_DIM>();
-	//Matrix<X_DIM,Q_DIM> M = zeros<X_DIM,Q_DIM>();
-	//linearizeDynamicsFiniteDiff(x, u, zeros<Q_DIM,1>(), A, M);
-
 	Sigma = A*Sigma*~A + M*Q*~M;
-	//Sigma.insert(0,C_DIM, Acar*(Sigma.subMatrix<C_DIM,X_DIM-C_DIM>(0,3)));
 
 	x = dynfunc(x, u, zeros<Q_DIM,1>());
 
@@ -320,7 +315,7 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 
 	Matrix<Z_DIM,Z_DIM> delta = deltaMatrix(x);
 
-	Matrix<X_DIM,Z_DIM> K = ((Sigma*~H*delta)/(delta*H*Sigma*~H*delta + R))*delta;//N*R*~N);
+	Matrix<X_DIM,Z_DIM> K = ((Sigma*~H*delta)/(delta*H*Sigma*~H*delta + R))*delta;
 
 	Sigma = (identity<X_DIM>() - K*H)*Sigma;
 

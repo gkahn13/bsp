@@ -547,7 +547,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			// since diagonal, fill directly
 			for(int i = 0; i < (C_DIM+U_DIM); ++i) { H[t][i] = HMat(i,i); }
 			// TODO: why does this work???
-			for(int i = 0; i < (2*C_DIM); ++i) { H[t][i + (C_DIM+U_DIM)] = 1e4; } //1e4
+			for(int i = 0; i < (2*C_DIM); ++i) { H[t][i + (C_DIM+U_DIM)] = 5e2; } //1e4
 
 			zbar.insert(0,0,xt);
 			zbar.insert(C_DIM,0,ut);
@@ -1108,7 +1108,7 @@ int main(int argc, char* argv[])
 
 			std::cout << SqrtSigma0 << "\n";
 
-			//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
+			pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 
 		}
 

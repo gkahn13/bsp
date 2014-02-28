@@ -16,27 +16,30 @@ beliefPenaltyMPC_FLOAT **H, **f, **lb, **ub, **C, **D, **e, **z;
 #include "../slam.h"
 #include "../traj/slam-traj.h"
 
-const double alpha_belief = 10, alpha_final_belief = 50, alpha_control = .01;
+const double alpha_belief = 10; // 10;
+const double alpha_final_belief = 10; // 10;
+const double alpha_control = .1; // .1
+
 
 namespace cfg {
 const double improve_ratio_threshold = .1; // .1
-const double min_approx_improve = 1e-3; // 1e-4
-const double min_trust_box_size = 1e-2; // 1e-3
+const double min_approx_improve = 1e-2; // 1e-3
+const double min_trust_box_size = 1e-3; // 1e-2
 
-const double trust_shrink_ratio = .5; // .5
-const double trust_expand_ratio = 1.2; // 1.5
+const double trust_shrink_ratio = .75; // .5
+const double trust_expand_ratio = 1.25; // 1.2
 
 const double cnt_tolerance = 1;
 const double penalty_coeff_increase_ratio = 5; // 2
 const double initial_penalty_coeff = 10; // 15
 
 const double initial_trust_box_size = 10; // 5 // split up trust box size for X and U
-const double initial_Xpos_trust_box_size = 10; // 10;
-const double initial_Xangle_trust_box_size = 10*M_PI/6; // 10*M_PI/6;
-const double initial_Uvel_trust_box_size = 10; // 10;
-const double initial_Uangle_trust_box_size = 10*M_PI/8; // 10*M_PI/8;
+const double initial_Xpos_trust_box_size = 5; // 10;
+const double initial_Xangle_trust_box_size = M_PI/6; // 10*M_PI/6;
+const double initial_Uvel_trust_box_size = 5; // 10;
+const double initial_Uangle_trust_box_size = M_PI/8; // 10*M_PI/8;
 
-const int max_penalty_coeff_increases = 4; // 8
+const int max_penalty_coeff_increases = 3; // 4
 const int max_sqp_iterations = 50; // 50
 }
 
@@ -161,7 +164,7 @@ void setupBeliefVars(beliefPenaltyMPC_params &problem, beliefPenaltyMPC_output &
 		for(int i=0; i < X_DIM; ++i) { H[t][index++] = 0; }
 		for(int i=0; i < S_DIM; ++i) { H[t][index++] = 2*alpha_belief; }
 		for(int i=0; i < U_DIM; ++i) { H[t][index++] = 2*alpha_control; }
-		for(int i=0; i < 2*B_DIM; ++i) { H[t][index++] = 0; } // TODO: maybe penalize like in slam-state
+		for(int i=0; i < 2*B_DIM; ++i) { H[t][index++] = 1e4; } // TODO: maybe penalize like in slam-state
 	}
 
 	index = 0;
@@ -218,7 +221,6 @@ double computeMerit(const std::vector< Matrix<B_DIM> >& B, const std::vector< Ma
 	return merit;
 }
 
-// TODO: Check if all inputs are valid, H, f, lb, ub, C, e, D at last time step
 bool isValidInputs()
 {
 	for(int t = 0; t < T-1; ++t) {
@@ -590,7 +592,8 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 				LOG_ERROR("Either convexification is wrong to zeroth order, or you are in numerical trouble");
 				LOG_ERROR("Failure!");
 
-				success = false;
+				return false;
+				//success = false;
 			} else if (approx_merit_improve < cfg::min_approx_improve) {
 				LOG_DEBUG("Converged: improvement small enough");
 				B = Bopt; U = Uopt;

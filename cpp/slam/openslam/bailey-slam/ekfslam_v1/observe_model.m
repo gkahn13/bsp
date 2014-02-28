@@ -17,6 +17,7 @@ function [z,H]= observe_model(x, idf)
 Nxv= 3; % number of vehicle pose states
 fpos= Nxv + idf*2 - 1; % position of xf in state
 H= zeros(2, length(x));
+disp(size(H));
 
 % auxiliary values
 dx= x(fpos)  -x(1); 

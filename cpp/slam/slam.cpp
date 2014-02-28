@@ -28,8 +28,8 @@ const double INFTY = 1e10;
 void initProblemParams()
 {
 	Q.reset();
-	Q(0,0) = 1*config::VELOCITY_NOISE*config::VELOCITY_NOISE; // 20
-	Q(1,1) = 1*config::TURNING_NOISE*config::TURNING_NOISE; // 1e-2
+	Q(0,0) = 1*config::VELOCITY_NOISE*config::VELOCITY_NOISE;
+	Q(1,1) = 1*config::TURNING_NOISE*config::TURNING_NOISE;
 
 	R.reset();
 	for(int i = 0; i < R_DIM-1; i+=2) {
@@ -51,36 +51,15 @@ void initProblemParams()
 	// landmarks will be the same for all waypoint-waypoint optimizations
 	x0.insert(0, 0, zeros<C_DIM,1>());
 
-	//x0[0] = 8;
-	//x0[1] = 3;
-	//x0[2] = -.65;
 	for(int i = 0; i < NUM_LANDMARKS; ++i) {
 		x0.insert(C_DIM+2*i, 0, landmarks[i]);
 	}
 
 	//This starts out at 0 for car, landmarks are set based on the car's sigma when first seen
 	SqrtSigma0 = zeros<X_DIM, X_DIM>();
-	for(int i = 0; i < C_DIM; ++i) { SqrtSigma0(i,i) = .1; }
-	for(int i = 0; i < L_DIM; ++i) { SqrtSigma0(C_DIM+i,C_DIM+i) = 1; }
+	for(int i = 0; i < C_DIM; ++i) { SqrtSigma0(i,i) = .1; } // .1
+	for(int i = 0; i < L_DIM; ++i) { SqrtSigma0(C_DIM+i,C_DIM+i) = 1; } // 1
 
-	/*
-	double SqrtSigma0arr[X_DIM*X_DIM] = {0.86099, -0.13141, -0.0174449,  0.142165, 0.0154876,   0.209152, 0.03075,
-		-0.13141,    2.36482,    0.128894,   -0.144078,  0.0425713,  0.353772,   0.304487,
-		-0.0174449, 0.128894,   0.108498,   0.00684147, -0.0122736, 0.0030617,  -0.0221395,
-		0.142165,   -0.144078,  0.00684147, 0.544522,   -0.0109736, 0.090779,   -0.0904568,
-		0.0154876,  0.0425713,  -0.0122736, -0.0109736, 0.622794,   -0.0959134, 0.279871,
-		0.209152,   0.353772,   0.0030617,  0.090779,   -0.0959134, 0.751839,   0.0735089,
-		0.03075,    0.304487,   -0.0221395, -0.0904568, 0.279871,   0.0735089,  0.6638};
-
-	int index = 0;
-	for(int i=0; i < X_DIM; ++i) {
-		for(int j=0; j < X_DIM; ++j) {
-			SqrtSigma0(i,j) = SqrtSigma0arr[index++];
-		}
-	}
-	*/
-
-	// TODO: change xMin and xMax bounds
 	uMin[0] = 1.5; // 1
 	uMin[1] = -M_PI/3;
 	uMax[0] = 10; // 10
@@ -120,7 +99,7 @@ Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matr
 
 Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r)
 {
-  //Matrix<L_DIM,1> landmarks = x.subMatrix<L_DIM,1>(P_DIM, 0);
+	//Matrix<L_DIM,1> landmarks = x.subMatrix<L_DIM,1>(P_DIM, 0);
 	double xPos = x[0], yPos = x[1], angle = x[2];
 	double dx, dy;
 
@@ -135,8 +114,8 @@ Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r)
 		//	(dx*cos(angle) + dy*sin(angle) > 0) &&
 		//	(dx*dx + dy*dy < config::MAX_RANGE*config::MAX_RANGE))
 		//{
-			obs[i] = sqrt(dx*dx + dy*dy) + r[i];
-			obs[i+1] = atan2(dy, dx) - angle + r[i+1];
+		obs[i] = sqrt(dx*dx + dy*dy) + r[i];
+		obs[i+1] = atan2(dy, dx) - angle + r[i+1];
 		//}
 	}
 
@@ -237,6 +216,52 @@ void linearizeObservation(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r, Matrix
 
 }
 
+int numberLandmarksInRange(const Matrix<X_DIM>& x) {
+	int num_obs = 0;
+	double xPos = x[0], yPos = x[1], angle = x[2];
+
+	for (int i=0; i < L_DIM; i+=2) {
+		double dx = x[C_DIM+i] - xPos;
+		double dy = x[C_DIM+i+1] - yPos;
+
+		if ((fabs(dx) < config::MAX_RANGE) &&
+				(fabs(dy) < config::MAX_RANGE) &&
+				(dx*cos(angle) + dy*sin(angle) > 0) &&
+				(dx*dx + dy*dy < config::MAX_RANGE*config::MAX_RANGE))
+		{
+			num_obs++;
+		}
+	}
+
+	return num_obs;
+}
+
+template <size_t _z_dim_observed>
+void filteredLinearizeObservation(const Matrix<X_DIM>& x, Matrix<_z_dim_observed,X_DIM>& H, Matrix<_z_dim_observed,_z_dim_observed>& N) {
+	Matrix<Z_DIM,X_DIM> Hfull;
+	Matrix<Z_DIM,R_DIM> Nfull;
+
+	linearizeObservation(x, zeros<R_DIM,1>(), Hfull, Nfull);
+
+	int num_obs = 0;
+	double xPos = x[0], yPos = x[1], angle = x[2];
+
+	for (int i=0; i < L_DIM; i+=2) {
+		double dx = x[C_DIM+i] - xPos;
+		double dy = x[C_DIM+i+1] - yPos;
+
+		if ((fabs(dx) < config::MAX_RANGE) &&
+				(fabs(dy) < config::MAX_RANGE) &&
+				(dx*cos(angle) + dy*sin(angle) > 0) &&
+				(dx*dx + dy*dy < config::MAX_RANGE*config::MAX_RANGE))
+		{
+			H.insert(2*num_obs, 0, Hfull.subMatrix<1,X_DIM>(i,0));
+		}
+	}
+
+	N = identity<_z_dim_observed>(); // s
+}
+
 // Jacobians: dh(x,r)/dx, dh(x,r)/dr
 void linearizeObservationFiniteDiff(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r, Matrix<Z_DIM,X_DIM>& H, Matrix<Z_DIM,R_DIM>& N)
 {
@@ -281,8 +306,7 @@ void vec(const Matrix<X_DIM>& x, const Matrix<X_DIM,X_DIM>& SqrtSigma, Matrix<B_
 	for (size_t j = 0; j < X_DIM; ++j) {
 		for (size_t i = j; i < X_DIM; ++i) {
 			b[idx] = 0.5 * (SqrtSigma(i,j) + SqrtSigma(j,i));
-			//waypoints[4][0] = 0; waypoints[4][1] = 20;
-				++idx;
+			++idx;
 		}
 	}
 }
@@ -318,6 +342,59 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	Matrix<X_DIM,Z_DIM> K = ((Sigma*~H*delta)/(delta*H*Sigma*~H*delta + R))*delta;
 
 	Sigma = (identity<X_DIM>() - K*H)*Sigma;
+
+	Matrix<B_DIM> g;
+	vec(x, sqrtm(Sigma), g);
+
+	return g;
+}
+
+// Belief dynamics
+Matrix<B_DIM> beliefDynamicsNoDelta(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
+	Matrix<X_DIM> x;
+	Matrix<X_DIM,X_DIM> SqrtSigma;
+	unVec(b, x, SqrtSigma);
+
+	Matrix<X_DIM,X_DIM> Sigma = SqrtSigma*SqrtSigma;
+
+	Matrix<C_DIM,C_DIM> Acar;
+	Matrix<C_DIM,Q_DIM> Mcar;
+	linearizeDynamics(x, u, zeros<Q_DIM,1>(), Acar, Mcar);
+
+	Matrix<X_DIM,X_DIM> A = identity<X_DIM>();
+	A.insert<C_DIM,C_DIM>(0, 0, Acar);
+	Matrix<X_DIM,Q_DIM> M = zeros<X_DIM,Q_DIM>();
+	M.insert<C_DIM, 2>(0, 0, Mcar);
+
+	Sigma = A*Sigma*~A + M*Q*~M;
+
+	x = dynfunc(x, u, zeros<Q_DIM,1>());
+
+	int z_dim_observed = numberLandmarksInRange(x);
+	if (z_dim_observed > 0) {
+		if (z_dim_observed == 1) {
+			Matrix<P_DIM, X_DIM> H;
+			Matrix<P_DIM, P_DIM> N;
+			filteredLinearizeObservation(x, H, N);
+
+			Matrix<X_DIM,P_DIM> K = (Sigma*~H)/(H*Sigma*~H + R.subSymmetricMatrix<P_DIM>(0));
+			Sigma = (identity<X_DIM>() - K*H)*Sigma;
+		} else if (z_dim_observed == 2) {
+			Matrix<2*P_DIM, X_DIM> H;
+			Matrix<2*P_DIM, 2*P_DIM> N;
+			filteredLinearizeObservation(x, H, N);
+
+			Matrix<X_DIM,2*P_DIM> K = (Sigma*~H)/(H*Sigma*~H + R.subSymmetricMatrix<2*P_DIM>(0));
+			Sigma = (identity<X_DIM>() - K*H)*Sigma;
+		} else if (z_dim_observed == 3) {
+			Matrix<3*P_DIM, X_DIM> H;
+			Matrix<3*P_DIM, 3*P_DIM> N;
+			filteredLinearizeObservation(x, H, N);
+
+			Matrix<X_DIM,3*P_DIM> K = (Sigma*~H)/(H*Sigma*~H + R.subSymmetricMatrix<3*P_DIM>(0));
+			Sigma = (identity<X_DIM>() - K*H)*Sigma;
+		}
+	}
 
 	Matrix<B_DIM> g;
 	vec(x, sqrtm(Sigma), g);

@@ -40,7 +40,8 @@ def plot_point_trajectory(B, U, waypoints, landmarks, max_range, alpha_obs, xDim
     plt.axis(extent)
     #plt.axis('equal')
     
-    plot_domain(landmarks, max_range, alpha_obs, extent)
+    #plot_domain(landmarks, max_range, alpha_obs, extent)
+    plot_landmarks(B, landmarks, max_range, bDim, xDim, T)
     
     # plot mean of trajectory
     plot_mean(B[0:3,:], U, DT)
@@ -65,6 +66,17 @@ def plot_point_trajectory(B, U, waypoints, landmarks, max_range, alpha_obs, xDim
     plt.pause(.05)
     
     #raw_input()
+    
+def plot_landmarks(B, landmarks, max_range, bDim, xDim, T):
+    for i in xrange(landmarks.shape[1]):
+        pos = landmarks[:,i]
+        plot_cov(pos, max_range*max_range*ml.identity(2), 'b-')
+        for t in xrange(T):
+            x, SqrtSigma = decompose_belief(B[:,t], bDim, xDim)
+            Sigma = SqrtSigma*SqrtSigma
+            
+            plot_cov(pos, Sigma[3+2*i:3+2*i+2,3+2*i:3+2*i+2], 'r-', alpha=(t+1)/float(T))
+        
     
 def plot_domain(landmarks, max_range, alpha_obs, extent):
     # note x and y are flipped for plotting!
@@ -174,7 +186,7 @@ def plot_mean(X, U, DT, interp=False):
     """
     
 
-def plot_cov(mu, sigma):
+def plot_cov(mu, sigma, plotType = 'y-', alpha=1):
     mu = np.asarray(mu)
     sigma = np.asarray(sigma)
 
@@ -188,4 +200,4 @@ def plot_cov(mu, sigma):
 
     z = np.dot(np.vstack((x.T,y.T)).T,A)
 
-    plt.plot(z[:,0]+mu[0], z[:,1]+mu[1], 'y-')
+    plt.plot(z[:,0]+mu[0], z[:,1]+mu[1], plotType, alpha=alpha)

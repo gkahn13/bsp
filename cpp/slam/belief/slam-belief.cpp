@@ -18,22 +18,6 @@ beliefPenaltyMPC_FLOAT **H, **f, **lb, **ub, **C, **D, **e, **z;
 
 const double alpha_belief = 10, alpha_final_belief = 50, alpha_control = .01;
 
-/*
-namespace cfg {
-const double improve_ratio_threshold = .1;
-const double min_approx_improve = 1e-4;
-const double min_trust_box_size = 1e-3;
-const double trust_shrink_ratio = .5;
-const double trust_expand_ratio = 1.5;
-const double cnt_tolerance = 1e-4;
-const double penalty_coeff_increase_ratio = 5;
-const double initial_penalty_coeff = 5;
-const double initial_trust_box_size = 10;
-const int max_penalty_coeff_increases = 3;
-const int max_sqp_iterations = 50;
-}
-*/
-
 namespace cfg {
 const double improve_ratio_threshold = .1; // .1
 const double min_approx_improve = 1e-3; // 1e-4
@@ -42,15 +26,15 @@ const double min_trust_box_size = 1e-2; // 1e-3
 const double trust_shrink_ratio = .5; // .5
 const double trust_expand_ratio = 1.2; // 1.5
 
-const double cnt_tolerance = 1e-4;
-const double penalty_coeff_increase_ratio = 2; // 2
-const double initial_penalty_coeff = 15; // 10
+const double cnt_tolerance = 1;
+const double penalty_coeff_increase_ratio = 5; // 2
+const double initial_penalty_coeff = 10; // 15
 
 const double initial_trust_box_size = 10; // 5 // split up trust box size for X and U
-const double initial_Xpos_trust_box_size = 10; // 1;
-const double initial_Xangle_trust_box_size = 10*M_PI/6; // M_PI/6;
-const double initial_Uvel_trust_box_size = 10; // 1;
-const double initial_Uangle_trust_box_size = 10*M_PI/8; // M_PI/8;
+const double initial_Xpos_trust_box_size = 10; // 10;
+const double initial_Xangle_trust_box_size = 10*M_PI/6; // 10*M_PI/6;
+const double initial_Uvel_trust_box_size = 10; // 10;
+const double initial_Uangle_trust_box_size = 10*M_PI/8; // 10*M_PI/8;
 
 const int max_penalty_coeff_increases = 4; // 8
 const int max_sqp_iterations = 50; // 50
@@ -412,12 +396,6 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			linearizeBeliefDynamics(bt, ut, F[t], G[t], h[t]);
 			linearizeTime += util::Timer_toc(&linearizeTimer);
 
-			//std::cout << "F[" << t << "]" << std::endl << F[t] << std::endl;
-			//std::cout << "G[" << t << "]" << std::endl << G[t] << std::endl;
-			//std::cout << "h[" << t << "]" << std::endl << h[t] << std::endl;
-			//int k;
-			//std::cin >> k;
-
 			
 			util::Timer_tic(&fillCETimer);
 			// initialize f in cost function to penalize
@@ -768,7 +746,7 @@ int main(int argc, char* argv[])
 		 */
 
 		std::vector<Matrix<U_DIM> > U(T-1);
-		bool initTrajSuccess = initTraj(x0.subMatrix<C_DIM,1>(0,0), xGoal.subMatrix<C_DIM,1>(0,0), U);
+		bool initTrajSuccess = initTraj(x0.subMatrix<C_DIM,1>(0,0), xGoal.subMatrix<C_DIM,1>(0,0), U, T);
 		if (!initTrajSuccess) {
 			LOG_ERROR("Failed to initialize trajectory, exiting slam-belief");
 			exit(-1);
@@ -847,7 +825,7 @@ int main(int argc, char* argv[])
 		LOG_INFO("Actual cost: %4.10f", computeCost(B,U));
 		LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 
-		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, false);
+		pythonDisplayTrajectory(B, U, waypoints, landmarks, T, false);
 
 		unVec(B[T-1], x0, SqrtSigma0);
 

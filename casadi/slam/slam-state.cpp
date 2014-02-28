@@ -188,7 +188,9 @@ void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMa
 	//cout << "H" << endl << H << endl;
 	//cout << "N" << endl << N << endl;
 
+	// TODO: temp!
 	SXMatrix delta = deltaMatrix(x_tp1);
+	//SXMatrix delta = DMatrix::eye(Z_DIM);
 
 	//cout << "delta\n" << delta << "\n";
 

@@ -310,22 +310,22 @@ bool isValidInputs()
 
 	bool boundsCorrect = true;
 
-	for(int t = 0; t < T-1; ++t) {
+	/*for(int t = 0; t < T-1; ++t) {
 		std::cout << "t: " << t << "\n";
-		for(int i=0; i < (3*B_DIM+U_DIM); ++i) { if (H[t][i] > INFTY/2) { std::cout << "H error: " << i << "\n"; } }
-		for(int i=0; i < (3*B_DIM+U_DIM); ++i) { if (f[t][i] > INFTY/2) { std::cout << "f error: " << i << "\n"; } }
-		for(int i=0; i < (3*B_DIM+U_DIM); ++i) { if (lb[t][i] > INFTY/2) { std::cout << "lb error: " << i << "\n"; } }
-		for(int i=0; i < (B_DIM+U_DIM); ++i) {if (lb[t][i] > INFTY/2) { std::cout << "ub error: " << i << "\n"; } }
-		for(int i=0; i < (B_DIM*(3*B_DIM+U_DIM)); ++i) { if (C[t][i] > INFTY/2) { std::cout << "C error: " << i << "\n"; } }
-		for(int i=0; i < B_DIM; ++i) { if (e[t][i] > INFTY/2) { std::cout << "e error: " << i; } }
+		for(int i=0; i < (3*Xß_DIM+U_DIM); ++i) { if (H[t][i] > INFTY/2) { std::cout << "H error: " << i << "\n"; } }
+		for(int i=0; i < (3*X_DIM+U_DIM); ++i) { if (f[t][i] > INFTY/2) { std::cout << "f error: " << i << "\n"; } }
+		for(int i=0; i < (3*X_DIM+U_DIM); ++i) { if (lb[t][i] > INFTY/2) { std::cout << "lb error: " << i << "\n"; } }
+		for(int i=0; i < (X_DIM+U_DIM); ++i) {if (lb[t][i] > INFTY/2) { std::cout << "ub error: " << i << "\n"; } }
+		for(int i=0; i < (X_DIM*(3*X_DIM+U_DIM)); ++i) { if (C[t][i] > INFTY/2) { std::cout << "C error: " << i << "\n"; } }
+		for(int i=0; i < X_DIM; ++i) { if (e[t][i] > INFTY/2) { std::cout << "e error: " << i; } }
 	}
 	std::cout << "t: " << T-1 << "\n";
-	for(int i=0; i < (B_DIM); ++i) { if (H[T-1][i] > INFTY/2) { std::cout << "H error: " << i << "\n"; } }
-	for(int i=0; i < (B_DIM); ++i) { if (lb[T-1][i] > INFTY/2) { std::cout << "lb error: " << i << "\n"; } }
-	for(int i=0; i < (B_DIM); ++i) { if (ub[T-1][i] > INFTY/2) { std::cout << "ub error: " << i << "\n"; } }
-	for(int i=0; i < B_DIM; ++i) { if (e[T-1][i] > INFTY/2) { std::cout << "e error: " << i << "\n"; } }
-
-	return true;
+	for(int i=0; i < (X_DIM); ++i) { if (H[T-1][i] > INFTY/2) { std::cout << "H error: " << i << "\n"; } }
+	for(int i=0; i < (X_DIM); ++i) { if (lb[T-1][i] > INFTY/2) { std::cout << "lb error: " << i << "\n"; } }
+	for(int i=0; i < (X_DIM); ++i) { if (ub[T-1][i] > INFTY/2) { std::cout << "ub error: " << i << "\n"; } }
+	for(int i=0; i < X_DIM; ++i) { if (e[T-1][i] > INFTY/2) { std::cout << "e error: " << i << "\n"; } }
+	*/
+	
 
 	for(int t = 0; t < T-1; ++t) {
 
@@ -333,7 +333,7 @@ bool isValidInputs()
 
 
 		std::cout << "f: ";
-		for(int i = 0; i < (3*B_DIM+U_DIM); ++i) {
+		for(int i = 0; i < (3*X_DIM+U_DIM); ++i) {
 			std::cout << f[t][i] << " ";
 		}
 		std::cout << std::endl;
@@ -349,14 +349,14 @@ bool isValidInputs()
 
 		std::cout << "lb u: ";
 		for(int i = 0; i < U_DIM; ++i) {
-			std::cout << lb[t][B_DIM+i] << " ";
+			std::cout << lb[t][X_DIM+i] << " ";
 		}
 		std::cout << std::endl;
 
 		/*
 		std::cout << "lb s, t: ";
-		for(int i = 0; i < 2*B_DIM; ++i) {
-			std::cout << lb[t][B_DIM+U_DIM+i] << " ";
+		for(int i = 0; i < 2*X_DIM; ++i) {
+			std::cout << lb[t][X_DIM+U_DIM+i] << " ";
 		}
 		std::cout << std::endl;
 		*/
@@ -369,7 +369,7 @@ bool isValidInputs()
 
 		std::cout << "ub u: ";
 		for(int i = 0; i < U_DIM; ++i) {
-			std::cout << ub[t][B_DIM+i] << " ";
+			std::cout << ub[t][X_DIM+i] << " ";
 		}
 		std::cout << std::endl;
 		
@@ -388,19 +388,19 @@ bool isValidInputs()
 		std::cout << std::endl;
 		*/
 		std::cout << "e:" << std::endl;
-		for(int i = 0; i < B_DIM; ++i) {
+		for(int i = 0; i < X_DIM; ++i) {
 			std::cout << e[t][i] << " ";
 		}
 		std::cout << std::endl;
 		
 		std::cout << std::endl << std::endl;
 
-		for(int i = 0; i < B_DIM; ++i) {
+		for(int i = 0; i < X_DIM; ++i) {
 			boundsCorrect &= (lb[t][i] < ub[t][i]);
 		}
 	}
 
-	for(int i = 0; i < B_DIM; ++i) {
+	for(int i = 0; i < X_DIM; ++i) {
 		boundsCorrect &= (lb[T-1][i] < ub[T-1][i]);
 	}
 
@@ -646,10 +646,10 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			for(int i = 0; i < X_DIM; ++i) { ub[T-1][index++] = MIN(xMax[i], xT[i] + Xeps); }
 
 			// Verify problem inputs
-			//if (!isValidInputs()) {
-			//	std::cout << "Inputs are not valid!" << std::endl;
-			//	exit(-1);
-			//}
+			if (!isValidInputs()) {
+				std::cout << "Inputs are not valid!" << std::endl;
+				exit(-1);
+			}
 
 
 

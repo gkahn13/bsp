@@ -2,14 +2,14 @@
 
 # $1 := source file
 # $2 := casadi type (Cost, Grad, Hess)
-# $3 := example name (i.e. slam)
+# $3 := example name (i.e. state, control)
 
 SRC_C=$1
 CASADI_TYPE=$2
 EXAMPLE_NAME=$3
 
 # replace #include<math.h> with our own header file
-sed -i "s/<math.h>/\"${EXAMPLE_NAME}-state-casadi.h\"/" $SRC_C
+sed -i "s/<math.h>/\"slam-${EXAMPLE_NAME}-casadi.h\"/" $SRC_C
 
 # replace sparsity names so no conflicts between files
 sed -i "s/s[0-9]/&${CASADI_TYPE}/" $SRC_C

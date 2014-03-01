@@ -21,6 +21,7 @@ def plot_point_trajectory(B, U, waypoints, landmarks, max_range, alpha_obs, xDim
     sDim = (xDim*(xDim+1))/2.
     bDim = xDim + sDim
     uDim = 2
+    cDim = 3
     
     B = np.matrix(B)
     B = B.reshape(bDim, T)
@@ -39,6 +40,8 @@ def plot_point_trajectory(B, U, waypoints, landmarks, max_range, alpha_obs, xDim
     extent = [-10,70,-25,40]
     plt.axis(extent)
     #plt.axis('equal')
+    
+    smooth_trajectory(B, U, cDim, uDim, T, DT)
     
     #plot_domain(landmarks, max_range, alpha_obs, extent)
     plot_landmarks(B, landmarks, max_range, bDim, xDim, T)
@@ -106,13 +109,35 @@ def plot_domain(landmarks, max_range, alpha_obs, extent):
                     
     imz = imz / imz.max()
     plt.imshow(imz,cmap=matplotlib.cm.Greys_r,extent=extent,aspect='equal',origin='lower')
+    
+def smooth_trajectory(B, U, cDim, uDim, T, DT):
+    smooth_factor = 10
+    dt = DT / float(smooth_factor)
+    
+    X = B[0:cDim,0]
+    xidx = 0
+    x = X[:,0]
+    for t in xrange(T-1):
+        u = U[:,t]
+        x = B[0:cDim,t]
+        X = np.hstack((X,x))
+        for i in xrange(1,smooth_factor+1):
+            x = dynfunc(x, u, dt)
+            X = np.hstack((X,x))
+            
+    X = np.asarray(X)
+    plt.plot(X[0,:],X[1,:])
+    plt.show(block=False)
+    plt.pause(.5)
+    IPython.embed()
+    
  
 def dynfunc(x, u, dt, wheelbase=4.):
     xAdd = np.matrix(x)
     
-    xAdd[0,0] = u[0,0] * dt * math.cos(x[2,0] + u[1,0])
-    xAdd[1,0] = u[0,0] * dt * math.sin(x[2,0] + u[1,0])
-    xAdd[2,0] = u[0,0] * dt * math.sin(u[1,0]) / wheelbase
+    xAdd[0,0] = u[0,0] * dt * math.cos(x[2,0] + u[1,0]*dt)
+    xAdd[1,0] = u[0,0] * dt * math.sin(x[2,0] + u[1,0]*dt)
+    xAdd[2,0] = u[0,0] * dt * math.sin(u[1,0]*dt) / wheelbase
     
     return x + xAdd 
         

@@ -37,6 +37,7 @@
 
 #define XU_DIM (TIMESTEPS*X_DIM + (TIMESTEPS-1)*U_DIM)
 #define CU_DIM (TIMESTEPS*C_DIM + (TIMESTEPS-1)*U_DIM)
+#define TU_DIM ((TIMESTEPS-1)*U_DIM)
 
 
 extern const double step;

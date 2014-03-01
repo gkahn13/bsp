@@ -401,6 +401,29 @@ slam-state-mpc: | slam-state-setup slam-traj-setup $(SLAM_STATE_MPC_OBJS)
 	
 $(OBJ_DIR)/slam-state-mpc.o : $(SLAM_STATE_DIR)/slam-state-mpc.cpp $(SLAM_HEADERS)
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
+	
+# make slam-control
+SLAM_CONTROL_DIR = slam/control
+SLAM_CONTROL_FILES = slam-control-cost slam-control-grad slamControlMPC slam-control logging slam trajMPC slam-traj
+SLAM_CONTROL_OBJS = $(SLAM_CONTROL_FILES:%=$(OBJ_DIR)/%.o)
+
+slam-control-setup:
+	bash $(SLAM_SETUP_FILE) control $(T)
+
+slam-control: | slam-control-setup slam-traj-setup $(SLAM_CONTROL_OBJS)
+	$(CXX) $(BFLAGS) $(SLAM_CONTROL_OBJS) -o $(BIN_DIR)/slam-control $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
+	
+$(OBJ_DIR)/slam-control-cost.o : $(SLAM_CONTROL_DIR)/slam-control-cost.c
+	$(CC) $(C_FLAGS) -c -o $@ $^
+
+$(OBJ_DIR)/slam-control-grad.o : $(SLAM_CONTROL_DIR)/slam-control-grad.c
+	$(CC) $(C_FLAGS) -c -o $@ $^
+	
+$(OBJ_DIR)/slamControlMPC.o : $(SLAM_CONTROL_DIR)/controlMPC.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+	
+$(OBJ_DIR)/slam-control.o : $(SLAM_CONTROL_DIR)/slam-control.cpp $(SLAM_HEADERS)
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
 
 
 

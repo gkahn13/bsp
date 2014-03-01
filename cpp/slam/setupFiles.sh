@@ -55,16 +55,16 @@ sed -i "s/^${CPP_TIMESTEP_DEF}.*/${CPP_TIMESTEP_DEF} ${TIMESTEPS}/" $H_WRITE
 
 # make casadi files
 # move casadi files over if different
-if [ $SLAM_TYPE = "state" ]; then
+if [ $SLAM_TYPE = "state" ] || [ $SLAM_TYPE = "control" ]; then
     CASADI_SLAM_DIR="${BSP_DIR}/casadi/slam"
     echo "Making casadi files"
-    make -C ${CASADI_SLAM_DIR} all T=${TIMESTEPS}
+    make -C ${CASADI_SLAM_DIR} "slam-${SLAM_TYPE}" T=${TIMESTEPS}
 
     CASADI_FILES=${CASADI_SLAM_DIR}/*.c
     for CASADI_FILE in $CASADI_FILES
     do
 	CASADI_FILE_NAME=$(basename $CASADI_FILE)
-	SLAM_CASADI_FILE=${SLAM_DIR}/state/${CASADI_FILE_NAME}
+	SLAM_CASADI_FILE=${SLAM_DIR}/${SLAM_TYPE}/${CASADI_FILE_NAME}
 
 	if [ ! -f $SLAM_CASADI_FILE ]; then
 	    echo "casadi file ${CASADI_FILE_NAME} does not exit, copying over"

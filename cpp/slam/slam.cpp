@@ -85,7 +85,6 @@ void initProblemParams()
 
 Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<Q_DIM>& q)
 {
-	// TODO: add noise to control inputs or to state????
 	Matrix<X_DIM> xAdd = zeros<X_DIM,1>();
 
 	xAdd[0] = (u[0]+q[0]) * DT * cos(x[2]+u[1]+q[1]);

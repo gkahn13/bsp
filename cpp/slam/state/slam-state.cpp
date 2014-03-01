@@ -1043,10 +1043,10 @@ int main(int argc, char* argv[])
 			//std::cout << ~X[0].subMatrix<C_DIM,1>(0,0);
 
 			double initTrajCost = computeCost(X, U);
-			//LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
+			LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
 
 			double initCasadiTrajCost = casadiComputeCost(X, U);
-			//LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
+			LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
 
 			//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 

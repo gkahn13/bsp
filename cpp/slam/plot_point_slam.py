@@ -41,7 +41,7 @@ def plot_point_trajectory(B, U, waypoints, landmarks, max_range, alpha_obs, xDim
     plt.axis(extent)
     #plt.axis('equal')
     
-    smooth_trajectory(B, U, cDim, uDim, T, DT)
+    #smooth_trajectory(B, U, cDim, uDim, T, DT)
     
     #plot_domain(landmarks, max_range, alpha_obs, extent)
     plot_landmarks(B, landmarks, max_range, bDim, xDim, T)

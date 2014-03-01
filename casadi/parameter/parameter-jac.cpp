@@ -445,7 +445,7 @@ int main(int argc, char* argv[])
     dyn_fcn.evaluate();
 
     double A[X_DIM*X_DIM];
-    dyn_fcn.getOutput(&A,0);
+    dyn_fcn.getOutput(A,0);
 
     //cout << "cost: " << setprecision(12) << cost << endl;
     

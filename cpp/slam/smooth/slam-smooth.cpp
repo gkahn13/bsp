@@ -20,6 +20,8 @@ Matrix<C_DIM> cGoal;
 
 Matrix<U_DIM> uMinSmooth, uMaxSmooth;
 
+const int T_SMOOTH = 100;
+
 const double alpha_control = 1;
 const double alpha_goal = 10;
 
@@ -112,11 +114,11 @@ inline double wrapAngle(double angle) {
 double computeSmoothCost(const std::vector< Matrix<C_DIM> >& X, const std::vector< Matrix<U_DIM> >& U)
 {
 	double cost = 0;
-	for(int t = 0; t < T-1; ++t) {
+	for(int t = 0; t < T_SMOOTH-1; ++t) {
 		// assuming controls don't wrap around
 		cost += alpha_control*tr(~U[t]*U[t]);
 	}
-	Matrix<P_DIM> pT = X[T-1].subMatrix<P_DIM,1>(0, 0);
+	Matrix<P_DIM> pT = X[T_SMOOTH-1].subMatrix<P_DIM,1>(0, 0);
 	Matrix<P_DIM> pGoal = cGoal.subMatrix<P_DIM,1>(0, 0);
 	cost += alpha_goal*tr(~(pT-pGoal)*(pT-pGoal));
 	return cost;
@@ -126,14 +128,14 @@ double computeSmoothCost(const std::vector< Matrix<C_DIM> >& X, const std::vecto
 void setupSmoothVars(smoothMPC_params &problem, smoothMPC_output &output)
 {
 	// problem inputs
-	f_smooth = new smoothMPC_FLOAT*[T];
-	lb_smooth = new smoothMPC_FLOAT*[T];
-	ub_smooth = new smoothMPC_FLOAT*[T];
-	C_smooth = new smoothMPC_FLOAT*[T-1];
-	e_smooth = new smoothMPC_FLOAT*[T];
+	f_smooth = new smoothMPC_FLOAT*[T_SMOOTH];
+	lb_smooth = new smoothMPC_FLOAT*[T_SMOOTH];
+	ub_smooth = new smoothMPC_FLOAT*[T_SMOOTH];
+	C_smooth = new smoothMPC_FLOAT*[T_SMOOTH-1];
+	e_smooth = new smoothMPC_FLOAT*[T_SMOOTH];
 
 	// problem outputs
-	z_smooth = new smoothMPC_FLOAT*[T];
+	z_smooth = new smoothMPC_FLOAT*[T_SMOOTH];
 
 #define SET_VARS(n)    \
 		f_smooth[ BOOST_PP_SUB(n,1) ] = problem.f##n ;  \
@@ -156,7 +158,7 @@ void setupSmoothVars(smoothMPC_params &problem, smoothMPC_output &output)
 #define BOOST_PP_LOCAL_LIMITS (TIMESTEPS, TIMESTEPS)
 #include BOOST_PP_LOCAL_ITERATE()
 
-	for(int t = 0; t < T-1; ++t) {
+	for(int t = 0; t < T_SMOOTH-1; ++t) {
 		for(int i=0; i < (3*C_DIM+U_DIM); ++i) { f_smooth[t][i] = 0; }
 		for(int i=0; i < (3*C_DIM+U_DIM); ++i) { lb_smooth[t][i] = 0; }
 		for(int i=0; i < (C_DIM+U_DIM); ++i) { ub_smooth[t][i] = 0; }
@@ -165,11 +167,11 @@ void setupSmoothVars(smoothMPC_params &problem, smoothMPC_output &output)
 		for(int i=0; i < (C_DIM+U_DIM); ++i) { z_smooth[t][i] = 0; }
 	}
 
-	for(int i=0; i < (C_DIM); ++i) { f_smooth[T-1][i] = 0; }
-	for(int i=0; i < (C_DIM); ++i) { lb_smooth[T-1][i] = 0; }
-	for(int i=0; i < (C_DIM); ++i) { ub_smooth[T-1][i] = 0; }
-	for(int i=0; i < C_DIM; ++i) { e_smooth[T-1][i] = 0; }
-	for(int i=0; i < (C_DIM); ++i) { z_smooth[T-1][i] = 0; }
+	for(int i=0; i < (C_DIM); ++i) { f_smooth[T_SMOOTH-1][i] = 0; }
+	for(int i=0; i < (C_DIM); ++i) { lb_smooth[T_SMOOTH-1][i] = 0; }
+	for(int i=0; i < (C_DIM); ++i) { ub_smooth[T_SMOOTH-1][i] = 0; }
+	for(int i=0; i < C_DIM; ++i) { e_smooth[T_SMOOTH-1][i] = 0; }
+	for(int i=0; i < (C_DIM); ++i) { z_smooth[T_SMOOTH-1][i] = 0; }
 
 
 	Matrix<C_DIM,3*C_DIM+U_DIM> CMat;
@@ -180,16 +182,16 @@ void setupSmoothVars(smoothMPC_params &problem, smoothMPC_output &output)
 
 	CMat.insert<C_DIM,C_DIM>(0,0,identity<C_DIM>());
 
-	for(int t = 0; t < T-1; ++t) {
+	for(int t = 0; t < T_SMOOTH-1; ++t) {
 		for(int i = 0; i < (3*C_DIM + U_DIM); ++i) { f_smooth[t][i] = 0; }
 
 		fillColMajor(C_smooth[t], CMat);
 		fillCol(e_smooth[t+1], eVec);
 	}
-	for(int i = 0; i < C_DIM; ++i) { f_smooth[T-1][i] = 0; }
+	for(int i = 0; i < C_DIM; ++i) { f_smooth[T_SMOOTH-1][i] = 0; }
 
 	int index = 0;
-	for(int t = 0; t < T-1; ++t) {
+	for(int t = 0; t < T_SMOOTH-1; ++t) {
 		index = 0;
 		for(int i = 0; i < C_DIM; ++i) { lb_smooth[t][index++] = -INFTY; }
 		for(int i = 0; i < U_DIM; ++i) { lb_smooth[t][index++] = -INFTY; }
@@ -201,8 +203,8 @@ void setupSmoothVars(smoothMPC_params &problem, smoothMPC_output &output)
 		for(int i = 0; i < U_DIM; ++i) { ub_smooth[t][index++] = INFTY; }
 	}
 
-	for(int i = 0; i < C_DIM; ++i) { lb_smooth[T-1][i] = -INFTY; }
-	for(int i = 0; i < C_DIM; ++i) { ub_smooth[T-1][i] = INFTY; }
+	for(int i = 0; i < C_DIM; ++i) { lb_smooth[T_SMOOTH-1][i] = -INFTY; }
+	for(int i = 0; i < C_DIM; ++i) { ub_smooth[T_SMOOTH-1][i] = INFTY; }
 
 
 }
@@ -221,7 +223,7 @@ double computeSmoothMerit(const std::vector< Matrix<C_DIM> >& X, const std::vect
 {
 	double merit = 0;
 	Matrix<C_DIM> dynviol;
-	for(int t = 0; t < T-1; ++t) {
+	for(int t = 0; t < T_SMOOTH-1; ++t) {
 		// assuming controls don't wrap around
 		merit += alpha_control*tr(~U[t]*U[t]);
 		dynviol = (X[t+1] - dynfunccar(X[t], U[t]) );
@@ -232,7 +234,7 @@ double computeSmoothMerit(const std::vector< Matrix<C_DIM> >& X, const std::vect
 		merit += penalty_coeff*fabs(dynviol[1]);
 		merit += penalty_coeff*wrapAngle(fabs(dynviol[2])); // since angles wrap
 	}
-	Matrix<P_DIM> pT = X[T-1].subMatrix<P_DIM,1>(0, 0);
+	Matrix<P_DIM> pT = X[T_SMOOTH-1].subMatrix<P_DIM,1>(0, 0);
 	Matrix<P_DIM> pGoal = cGoal.subMatrix<P_DIM,1>(0, 0);
 	merit += alpha_goal*tr(~(pT-pGoal)*(pT-pGoal));
 	return merit;
@@ -241,7 +243,7 @@ double computeSmoothMerit(const std::vector< Matrix<C_DIM> >& X, const std::vect
 
 bool isValidSmoothInputs()
 {
-	for(int t = 0; t < T-1; ++t) {
+	for(int t = 0; t < T_SMOOTH-1; ++t) {
 
 		std::cout << "t: " << t << std::endl << std::endl;
 
@@ -328,17 +330,17 @@ bool isValidSmoothInputs()
 	std::cout << std::endl << std::endl;
 	*/
 
-	std::cout << "t: " << T-1 << std::endl << std::endl;
+	std::cout << "t: " << T_SMOOTH-1 << std::endl << std::endl;
 
 	std::cout << "lb_smooth c: ";
 	for(int i = 0; i < C_DIM; ++i) {
-		std::cout << lb_smooth[T-1][i] << " ";
+		std::cout << lb_smooth[T_SMOOTH-1][i] << " ";
 	}
 	std::cout << std::endl;
 
 	std::cout << "ub_smooth c: ";
 	for(int i = 0; i < C_DIM; ++i) {
-		std::cout << ub_smooth[T-1][i] << " ";
+		std::cout << ub_smooth[T_SMOOTH-1][i] << " ";
 	}
 	std::cout << std::endl;
 	std::cout << std::endl;
@@ -352,9 +354,9 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 	LOG_DEBUG("Solving sqp problem with penalty parameter: %2.4f", penalty_coeff);
 
 
-	std::vector< Matrix<C_DIM,C_DIM> > F(T-1);
-	std::vector< Matrix<C_DIM,U_DIM> > G(T-1);
-	std::vector< Matrix<C_DIM> > h(T-1);
+	std::vector< Matrix<C_DIM,C_DIM> > F(T_SMOOTH-1);
+	std::vector< Matrix<C_DIM,U_DIM> > G(T_SMOOTH-1);
+	std::vector< Matrix<C_DIM> > h(T_SMOOTH-1);
 
 	double Xeps = cfg::initial_trust_box_size;
 	double Ueps = cfg::initial_trust_box_size;
@@ -366,8 +368,8 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 
 	double optcost = 0;
 
-	std::vector<Matrix<C_DIM> > Xopt(T);
-	std::vector<Matrix<U_DIM> > Uopt(T-1);
+	std::vector<Matrix<C_DIM> > Xopt(T_SMOOTH);
+	std::vector<Matrix<U_DIM> > Uopt(T_SMOOTH-1);
 
 	double merit, model_merit, new_merit;
 	double approx_merit_improve, exact_merit_improve, merit_improve_ratio;
@@ -394,7 +396,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 		// Problem linearization and definition
 		// fill in f_smooth, C_smooth, e_smooth
 		
-		for (int t = 0; t < T-1; ++t)
+		for (int t = 0; t < T_SMOOTH-1; ++t)
 		{
 			Matrix<C_DIM>& xt = X[t];
 			Matrix<U_DIM>& ut = U[t];
@@ -427,8 +429,8 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 
 		}
 		
-		for(int i=0; i < P_DIM; ++i) { f_smooth[T-1][i] = -2*alpha_goal*cGoal[i]; }
-		f_smooth[T-1][2] = 0;
+		for(int i=0; i < P_DIM; ++i) { f_smooth[T_SMOOTH-1][i] = -2*alpha_goal*cGoal[i]; }
+		f_smooth[T_SMOOTH-1][2] = 0;
 
 
 		//std::cout << "PAUSED INSIDE MINIMIZEMERITFUNCTION" << std::endl;
@@ -439,12 +441,12 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 		// trust region size adjustment
 		while(true)
 		{
-			LOG_DEBUG("       trust region size: %2.6f %2.6f", Xeps, Ueps);
+			LOG_DEBUG("       trust region size: %2.6f %2.6f %2.6f %2.6f", Xpos_eps, Xangle_eps, Uvel_eps, Uangle_eps);
 
 			util::Timer fillVarsTimer;
 			util::Timer_tic(&fillVarsTimer);
 			// solve the innermost QP here
-			for(int t = 0; t < T-1; ++t)
+			for(int t = 0; t < T_SMOOTH-1; ++t)
 			{
 				Matrix<C_DIM>& xt = X[t];
 				Matrix<U_DIM>& ut = U[t];
@@ -479,19 +481,19 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			}
 
 
-			Matrix<C_DIM>& xT = X[T-1];
+			Matrix<C_DIM>& xT = X[T_SMOOTH-1];
 
 			// Fill in lb_smooth, ub_smooth, C_smooth, e_smooth
 			index = 0;
 			double delta = .5;
 			// cGoal lower bound
-			for(int i = 0; i < P_DIM; ++i) { lb_smooth[T-1][index++] = cGoal[i] - delta; }
-			lb_smooth[T-1][index++] = MIN(xMin[2], xT[2] - Xeps); // none on angles
+			for(int i = 0; i < P_DIM; ++i) { lb_smooth[T_SMOOTH-1][index++] = cGoal[i] - delta; }
+			lb_smooth[T_SMOOTH-1][index++] = MIN(xMin[2], xT[2] - Xeps); // none on angles
 
 			index = 0;
 			// cGoal upper bound
-			for(int i = 0; i < P_DIM; ++i) { ub_smooth[T-1][index++] = cGoal[i] + delta; }
-			ub_smooth[T-1][index++] = MAX(xMax[2], xT[2] + Xeps);
+			for(int i = 0; i < P_DIM; ++i) { ub_smooth[T_SMOOTH-1][index++] = cGoal[i] + delta; }
+			ub_smooth[T_SMOOTH-1][index++] = MAX(xMax[2], xT[2] + Xeps);
 
 			double constant_cost = 0;
 
@@ -510,7 +512,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			int exitflag = smoothMPC_solve(&problem, &output, &info);
 			if (exitflag == 1) {
 				optcost = info.pobj;
-				for(int t = 0; t < T-1; ++t) {
+				for(int t = 0; t < T_SMOOTH-1; ++t) {
 					Matrix<C_DIM>& xt = Xopt[t];
 					Matrix<U_DIM>& ut = Uopt[t];
 
@@ -522,7 +524,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 					}
 				}
 				for(int i = 0; i < C_DIM; ++i) {
-					Xopt[T-1][i] = z_smooth[T-1][i];
+					Xopt[T_SMOOTH-1][i] = z_smooth[T_SMOOTH-1][i];
 				}
 			}
 			else {
@@ -532,7 +534,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 
 
 
-			//for(int t=0; t < T-1; ++t) {
+			//for(int t=0; t < T_SMOOTH-1; ++t) {
 			//	std::cout << ~Uopt[t];
 			//}
 			//pythonDisplayTrajectory(U, T_TRAJ_MPC, true);
@@ -544,11 +546,11 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			new_merit = computeTrajMerit(Xopt, Uopt, penalty_coeff);
 
 			//std::cout << "Xopt" << std::endl;
-			//for(int t=0; t < T; ++t) { std::cout << ~Xopt[t]; }
+			//for(int t=0; t < T_SMOOTH; ++t) { std::cout << ~Xopt[t]; }
 			//std::cout << std::endl << std::endl;
 
 			//std::cout << "Uopt" << std::endl;
-			//for(int t=0; t < T-1; ++t) { std::cout << ~Uopt[t]; }
+			//for(int t=0; t < T_SMOOTH-1; ++t) { std::cout << ~Uopt[t]; }
 			//std::cout << std::endl << std::endl;
 
 			LOG_DEBUG("merit: %4.10f", merit);
@@ -642,7 +644,11 @@ double smoothCollocation(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<U_
 	return computeSmoothCost(X, U);
 }
 
-bool smoothTraj(const std::vector<Matrix<X_DIM> >& X_unsmooth, const std::vector<Matrix<U_DIM> >& U_unsmooth)
+bool smoothTraj(const std::vector<Matrix<X_DIM> >& X_unsmooth, const std::vector<Matrix<U_DIM> >& U_unsmooth) {
+	int unsmooth_timesteps = X_unsmooth.size();
+
+	return true;
+}
 
 bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vector<Matrix<U_DIM> >& U, int timesteps) {
 	T_TRAJ_MPC = timesteps;
@@ -664,7 +670,7 @@ bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 	uinit[0] = sqrt((c0[0] - cGoal[0])*(c0[0] - cGoal[0]) + (c0[1] - cGoal[1])*(c0[1] - cGoal[1])) / (double)((T_TRAJ_MPC-1)*DT);
 	uinit[0] = uinit[0] / ((double)((T_TRAJ_MPC-1)*DT) ? T_TRAJ_MPC > 1 : 1);
 	uinit[1] = 0;
-	//uinit[1] = atan2(cGoal[1] - c0[1], cGoal[0] - c0[0]) / (double)((T-1)*DT);
+	//uinit[1] = atan2(cGoal[1] - c0[1], cGoal[0] - c0[0]) / (double)((T_SMOOTH-1)*DT);
 
 
 	double scaling[4] = {.5, .25, .05, .01};
@@ -681,7 +687,7 @@ bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 
 		for(int i=0; i < T_TRAJ_MPC-1; ++i) { U[i] = uinit*scaling[scalingIndex]; }
 
-		//pythonDisplayTrajectory(U, T, true);
+		//pythonDisplayTrajectory(U, T_SMOOTH, true);
 
 		//std::cout << "X initial" << std::endl;
 		X[0].insert(0,0,c0);
@@ -689,13 +695,13 @@ bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 			//std::cout << ~X[t];
 			X[t+1] = dynfunccar(X[t],U[t]);
 		}
-		//std::cout << ~X[T-1];
+		//std::cout << ~X[T_SMOOTH-1];
 
 		initTrajCost = computeSmoothCost(X, U);
 		LOG_DEBUG("Initial trajectory cost: %4.10f", initTrajCost);
 
 		try {
-			trajCollocation(X, U, problem, output, info);
+			smoothCollocation(X, U, problem, output, info);
 			success = true;
 		} catch(exit_exception& e) {
 			success = false;
@@ -719,17 +725,17 @@ bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 
 	/*
 	std::cout << "Final input" << std::endl;
-	for(int t = 0; t < T-1; ++t) {
+	for(int t = 0; t < T_SMOOTH-1; ++t) {
 		std::cout << ~U[t];
 	}
 	std::cout << std::endl;
 
 	std::cout << "Final trajectory" << std::endl;
-	for (size_t t = 0; t < T-1; ++t) {
+	for (size_t t = 0; t < T_SMOOTH-1; ++t) {
 		std::cout << ~X[t];
 		X[t+1] = dynfunccar(X[t], U[t]);
 	}
-	std::cout << ~X[T-1];
+	std::cout << ~X[T_SMOOTH-1];
 	*/
 
 	cost = computeSmoothCost(X, U);
@@ -751,7 +757,7 @@ int main(int argc, char* argv[])
 	initProblemParams();
 
 	Matrix<C_DIM> cStart, cEnd;
-	std::vector<Matrix<U_DIM> > U(T-1, zeros<U_DIM,1>());
+	std::vector<Matrix<U_DIM> > U(T_SMOOTH-1, zeros<U_DIM,1>());
 
 	cStart[0] = 60; // 60
 	cStart[1] = 20; // 20
@@ -768,7 +774,7 @@ int main(int argc, char* argv[])
 	//cStart[2] = 0;
 	//cEnd[2] = atan2(cEnd[1] - cStart[1], cEnd[0] - cStart[0]);
 
-	initTraj(cStart, cEnd, U, T);
+	initTraj(cStart, cEnd, U, T_SMOOTH);
 
 	cleanupTrajMPCVars();
 	

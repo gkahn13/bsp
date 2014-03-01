@@ -138,6 +138,30 @@ $(OBJ_DIR)/parameter-belief.o : $(PARAM_BELIEF_DIR)/parameter-belief.cpp $(ARM_H
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
 	
 
+# make parameter-state
+PARAM_STATE_DIR = parameter/state
+PARAM_STATE_FILES = parameter-state logging parameter-state-cost parameter-state-grad statePenaltyMPC
+PARAM_STATE_OBJS = $(PARAM_STATE_FILES:%=$(OBJ_DIR)/%.o)
+
+parameter-state-setup:
+	bash $(PARAM_SETUP_FILE) state $(T)
+
+parameter-state: | parameter-state-setup $(PARAM_STATE_OBJS)
+	$(CXX) $(BFLAGS) $(PARAM_STATE_OBJS) -o $(BIN_DIR)/parameter-state $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
+	
+$(OBJ_DIR)/parameter-state-cost.o : $(PARAM_STATE_DIR)/parameter-state-cost.c
+	$(CC) $(C_FLAGS) -c -o $@ $^
+
+$(OBJ_DIR)/parameter-state-grad.o : $(PARAM_STATE_DIR)/parameter-state-grad.c
+	$(CC) $(C_FLAGS) -c -o $@ $^
+
+$(OBJ_DIR)/statePenaltyMPC.o : $(PARAM_STATE_DIR)/statePenaltyMPC.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+	
+$(OBJ_DIR)/parameter-state.o : $(PARAM_STATE_DIR)/parameter-state.cpp $(ARM_HEADERS)
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
+
+
 # make parameter-ilqg
 PARAM_ILQG_DIR = parameter/ilqg
 PARAM_ILQG_FILES = parameter-ilqg

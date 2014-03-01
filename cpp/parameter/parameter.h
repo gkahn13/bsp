@@ -84,25 +84,34 @@ std::vector<int> maskIndices;
 
 Matrix<J_DIM> jointdynfunc(const Matrix<J_DIM>& x, const Matrix<U_DIM>& u, double l1, double l2, double m1, double m2){
 
-	double I1 = m1*pow(l1,2)/12; 
-	double I2 = m2*pow(l2,2)/12;
+
+	double l1_sqr = l1*l1; 
+	double l2_sqr = l2*l2; 
+
+	double I1 = m1*l1_sqr/12; 
+	double I2 = m2*l2_sqr/12;
+
+
 
 	Matrix<U_DIM,U_DIM> A; 
 
-	A(0,0) = pow(l1,2)*(0.25*m2+m1)+I1; 
+	A(0,0) = l1_sqr*(0.25*m2+m1)+I1; 
 
 	A(0,1) = 0.5*m2*l1*l2*cos(x[0]-x[1]);
 
 	A(1,0) = 0.5*m2*l1*l2*cos(x[0]-x[1]);
 
-	A(1,1) = pow(l2,2)*0.25*m2+I2; 
+	A(1,1) = l2_sqr*0.25*m2+I2; 
 
 	Matrix<U_DIM> B; 
 
 
-	B[0] = dynamics::gravity*l1*sin(x[0])*(0.5*m1+m2) - 0.5*m2*l1*l2*pow(x[3],2)*sin(x[0]-x[1])+u[0]-dynamics::b1*x[2];
 
-	B[1] = 0.5*m2*l2*(l1*pow(x[2],2)*sin(x[0]-x[1])+dynamics::gravity*sin(x[1])) + u[1]-dynamics::b2*x[3];
+
+
+	B[0] = dynamics::gravity*l1*sin(x[0])*(0.5*m1+m2) - 0.5*m2*l1*l2*(x[3]*x[3])*sin(x[0]-x[1])+u[0]-dynamics::b1*x[2];
+
+	B[1] = 0.5*m2*l2*(l1*(x[2]*x[2])*sin(x[0]-x[1])+dynamics::gravity*sin(x[1])) + u[1]-dynamics::b2*x[3];
    
 
 	Matrix<U_DIM> xd = A%B;
@@ -223,7 +232,6 @@ void linearizeDynamics(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Mat
 		A.insert(0,i, (dynfunc(xr, u, q) - dynfunc(xl, u, q)) / (2.0*diffEps));
 		xr[i] = x[i]; xl[i] = x[i];
 	}
-
 	M.reset();
 	Matrix<Q_DIM> qr(q), ql(q);
 	for (size_t i = 0; i < Q_DIM; ++i) {
@@ -329,6 +337,10 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 
 	return g;
 }
+
+
+
+
 
 // returns updated belief based on real current state, estimated current belief, and input
 Matrix<B_DIM> executeControlStep(Matrix<X_DIM>& x_t_real, const Matrix<B_DIM>& b_t, const Matrix<U_DIM>& u_t) {

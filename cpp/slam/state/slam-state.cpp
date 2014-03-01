@@ -1048,7 +1048,7 @@ int main(int argc, char* argv[])
 			double initCasadiTrajCost = casadiComputeCost(X, U);
 			LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
 
-			//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
+			pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 
 			util::Timer_tic(&solveTimer);
 

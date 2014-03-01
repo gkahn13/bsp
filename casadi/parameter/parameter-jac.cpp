@@ -445,10 +445,32 @@ int main(int argc, char* argv[])
     dyn_fcn.evaluate();
 
     double A[X_DIM*X_DIM];
-    dyn_fcn.getOutput(&A,0);
+    dyn_fcn.getOutput(A,0);
 
-    //cout << "cost: " << setprecision(12) << cost << endl;
+    cout << "A casadi\n";
+    for(int i=0; i < X_DIM; ++i) {
+    	for(int j=0; j < X_DIM; ++j) {
+    		cout << A[j+i*X_DIM] << " ";
+    	}
+    	cout << "\n";
+    }
     
+
+    SXMatrix A_finite(X_DIM,X_DIM);
+    SXMatrix x(X_DIM,1);
+    SXMatrix u(U_DIM,1);
+    for(int i=0; i < X_DIM; ++i) { x(i,0) = x0[i]; }
+    for(int i=0; i < U_DIM; ++i) { u(i,0) = u0[i]; }
+    linearizeDynamics(x, u, A_finite);
+
+    cout << "A finite\n";
+    for(int i=0; i < X_DIM; ++i) {
+    	for(int j=0; j < X_DIM; ++j) {
+    		cout << A_finite(i,j) << " ";
+    	}
+    	cout << "\n";
+    }
+
     #endif
 
 

@@ -8,7 +8,7 @@
 
 
 extern "C" {
-#include "parameter-state-casadi.h"
+    #include "parameter-state-casadi.h"
 }
 
 
@@ -162,51 +162,29 @@ SXMatrix dynfunc(const SXMatrix& x, const SXMatrix& u)
     return xNew;
 }
 
-// Observation model
-SXMatrix obsfunc(const SXMatrix & x)
+
+void setupDynCasadiVars(const SXMatrix& X, const SXMatrix& U, double* X_arr, double* U_arr)
 {
-    SXMatrix z(Z_DIM,1);
-
-
-
-    SXMatrix length1(1), length2(1);
-    length1 = 1/x(4);
-    length2 = 1/x(5);
-
-    SXMatrix cosx0 = cos(x(0));
-    SXMatrix sinx0 = sin(x(0));
-    SXMatrix cosx1 = cos(x(1));
-    SXMatrix sinx1 = sin(x(1));
-
-    z(0,0) = length1*cosx0 + length2*cosx1;
-    z(1,0) = length1*sinx0 + length2*sinx1;
-    z(2,0) = x(2);
-    z(3,0) = x(3);
-
-
-    return z;
-}
-
-
-
-// Jacobians: dh(x,r)/dx, dh(x,r)/dr
-void linearizeObservation(const SXMatrix& x,SXMatrix& H)
-{
-    SXMatrix xr(X_DIM), xl(X_DIM);
-    xr = x; 
-    xl = x; 
-    for (int i = 0; i < X_DIM; ++i) {
-
-        xr[i] += diffEps; xl[i] -= diffEps;
-        SXMatrix obs = (obsfunc(xr) - obsfunc(xl))/(2.0*diffEps);
-        //cout<<196<<"\n";
-        for (int j = 0; j< Z_DIM; ++j){
-           H(j,i) = obs[j]; 
-        }
-        
-        xr[i] = x[i]; xl[i] = x[i];
+    int index = 0;
+    
+    for(int t=0; t<X_DIM; ++t){  
+        X_arr[t] = double(X(t,0));    
     }
 
+    for(int t=0; t<U_DIM; ++t){  
+        U_arr[t] = U(t,0);    
+    }
+    
+
+}
+
+void setupObsCasadiVars(const SXMatrix& X,double* X_arr)
+{
+    int index = 0;
+    
+    for(int t=0; t<X_DIM; ++t){  
+        X_arr[t] = X(t,0);    
+    }
 
 }
 
@@ -240,55 +218,61 @@ inline SXMatrix getNNT()
 }
 
 
-// Jacobians: df(x,u,q)/dx, df(x,u,q)/dq
-void linearizeDynamics(const SXMatrix& x, const SXMatrix& u, SXMatrix& A)
-{
-    //g is control input steer angle
-    SXMatrix xr(X_DIM), xl(X_DIM);
-    SXMatrix dyn(X_DIM);
-
-    xr = x; 
-    xl = x; 
-
-    for (size_t i = 0; i < X_DIM; ++i) {
-
-        xr[i] += diffEps; xl[i] -= diffEps;
-        dyn = (dynfunc(xr, u) - dynfunc(xl, u)) /(2.0*diffEps);
-
-        for (int j = 0; j< X_DIM; ++j){
-           A(j,i) = dyn[j]; 
-        }
-
-         xr[i] = x[i]; xl[i] = x[i];
-    }
-
-
-    return;
-}
-
-
 void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMatrix& x_tp1, SXMatrix& Sigma_tp1)
 {
     SXMatrix A(X_DIM,X_DIM), MMT(X_DIM,X_DIM);
- 
-    linearizeDynamics(x_t, u_t, A);
 
+
+    //Calculate A using previously generated Casadi code
+
+    double X_arr[X_DIM]; 
+    double U_arr[U_DIM]; 
+    double A_arr[X_DIM*X_DIM]; 
+
+    setupDynCasadiVars(x_t, u_t, X_arr, U_arr); 
+    const double **casadi_input = new const double*[2];
+    casadi_input[0] = X_arr;
+    casadi_input[1] = U_arr;
+
+    double **casadi_out = new double*[1];
+    casadi_out[0] = A_arr;
     
-    //cout << "M" << endl << M << endl;
+    evaluateDynWrap(casadi_input, casadi_out);
+
+    for(int i=0; i < X_DIM; ++i) {
+        for(int j=0; j < X_DIM; ++j) {
+             A(i,j) = casadi_out[j+i*X_DIM]; 
+        }
+    }
+
 
     MMT = getMMT(); 
-
-
     Sigma_tp1 = mul(mul(A,Sigma_t),trans(A)) + MMT;
-
-    //cout << "Sigma_tp1 first" << endl << Sigma_tp1 << endl;
-
     x_tp1 = dynfunc(x_t, u_t);
-
-    //cout << "x_tp1" << endl << x_tp1 << endl;
 
 
     SXMatrix H(Z_DIM,X_DIM), NNT(Z_DIM), R(R_DIM,R_DIM);
+
+    //Caclulate H using previous Casadi 
+
+    double Xo_arr[X_DIM]; 
+    double H_arr[Z_DIM*X_DIM]; 
+
+    setupObsCasadiVars(x_tp1, Xo_arr); 
+    const double **casadi_input_o = new const double*[1];
+    casadi_input_o[0] = Xo_arr;
+
+    double **casadi_out_o = new double*[1];
+    casadi_out[0] = H_arr;
+    
+    evaluateObsWrap(casadi_input, casadi_out);
+
+    for(int i=0; i < Z_DIM; ++i) {
+        for(int j=0; j < X_DIM; ++j) {
+             H(i,j) = casadi_out[j+i*X_DIM];        }
+    }
+
+
     //cout<<292<<"\n";
     linearizeObservation(x_tp1, H);
 
@@ -349,63 +333,10 @@ void generateCode(FX fcn, const std::string& name){
     fcn.generateCode(name + ".c");
 }
 
-void casadiLinearizeDynamics() {
-    SXMatrix x = ssym("x",X_DIM,1);
-    SXMatrix u = ssym("u",U_DIM,1);
-
-    SXMatrix dyn = dynfunc(x,u);
-
-    SXMatrix dyndx = jacobian(dyn,x);
-
-    vector<SXMatrix> inp;
-    inp.push_back(x);
-    inp.push_back(u);
-    
-    SXFunction dyn_fcn(inp,dyndx);
-    dyn_fcn.init();
-    
-    generateCode(dyn_fcn,"parameter-dyndx");
-    
-}
-
-void casadiLinearizeObservation() {
-    SXMatrix x = ssym("x",X_DIM,1);
-
-    SXMatrix dyn = obsfunc(x);
-
-    SXMatrix dyndx = jacobian(dyn,x);
-
-    vector<SXMatrix> inp;
-    inp.push_back(x);
-    
-    SXFunction dyn_fcn(inp,dyndx);
-    dyn_fcn.init();
-    
-    generateCode(dyn_fcn,"parameter-obsdx");
-    
-}
 
 int main(int argc, char* argv[])
 {
-    casadiLinearizeDynamics();
-    casadiLinearizeObservation(); 
- 
-    /*SXMatrix x = ssym("x",X_DIM,1);
-    SXMatrix u = ssym("u",U_DIM,1);
-
-    SXMatrix dyn = dynfunc(x,u);
-
-    SXMatrix dyndx = jacobian(dyn,x);
-
-    vector<SXMatrix> inp;
-    inp.push_back(x);
-    inp.push_back(u);
     
-    SXFunction dyn_fcn(inp,dyndx);
-    dyn_fcn.init();
-    
-    generateCode(dyn_fcn,"parameter-dyndx");
-   */
     cout << "Creating casadi file for T = " << T << endl;
 
     vector<SXMatrix> X, U;
@@ -449,51 +380,7 @@ int main(int argc, char* argv[])
     generateCode(grad_f_fcn,"parameter-state-grad");
     //generateCode(hess_f_fcn,"slam-state-diag-hess");
 
-    // test evaluate function
-    #ifdef TEST
-    double x0[X_DIM];
-    double Sigma0[X_DIM][X_DIM];
 
-    x0[0] = 0; x0[1] = 0; x0[2] = 0;
-    x0[3] = 0; x0[4] = 1/0.05;
-    x0[5] = 1/0.05; x0[6] = 1/0.12;
-    x0[7] = 1/0.13; 
-
- 
-
-    for(int i = 0; i < X_DIM; ++i) {
-        for(int j = 0; j < X_DIM; ++j) {
-            Sigma0[i][j] = 0;
-        }
-    }
-    Sigma0[4][4] = sqrt(0.5); 
-    Sigma0[5][5] = sqrt(0.5); 
-    Sigma0[6][6] = 1.0; 
-    Sigma0[7][7] = 1.0; 
-
-   
-
-    //double t_r0[1];
-
-    double u0[U_DIM];
-    for(int i = 0; i < U_DIM; ++i) {
-        u0[i] = 0.0;  
-      
-    }
- 
-    
-
-    dyn_fcn.setInput(x0,0);
-    dyn_fcn.setInput(u0,1);
-  
-    dyn_fcn.evaluate();
-
-    double A[X_DIM*X_DIM];
-    dyn_fcn.getOutput(&A,0);
-
-    //cout << "cost: " << setprecision(12) << cost << endl;
-    
-    #endif
 
 
     return 0;

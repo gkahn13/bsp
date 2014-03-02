@@ -185,27 +185,6 @@ SXMatrix obsfunc(const SXMatrix & x)
 
 
 
-// Jacobians: dh(x,r)/dx, dh(x,r)/dr
-void linearizeObservation(const SXMatrix& x,SXMatrix& H)
-{
-    SXMatrix xr(X_DIM), xl(X_DIM);
-    xr = x; 
-    xl = x; 
-    for (int i = 0; i < X_DIM; ++i) {
-
-        xr[i] += diffEps; xl[i] -= diffEps;
-        SXMatrix obs = (obsfunc(xr) - obsfunc(xl))/(2.0*diffEps);
-        //cout<<196<<"\n";
-        for (int j = 0; j< Z_DIM; ++j){
-           H(j,i) = obs[j]; 
-        }
-        
-        xr[i] = x[i]; xl[i] = x[i];
-    }
-
-
-}
-
 
 inline SXMatrix  getMMT()
 {
@@ -263,78 +242,9 @@ void linearizeDynamics(const SXMatrix& x, const SXMatrix& u, SXMatrix& A)
 }
 
 
-void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMatrix& x_tp1, SXMatrix& Sigma_tp1)
-{
-    SXMatrix A(X_DIM,X_DIM), MMT(X_DIM,X_DIM);
- 
-    linearizeDynamics(x_t, u_t, A);
-
-    
-    //cout << "M" << endl << M << endl;
-
-    MMT = getMMT(); 
-
-
-    Sigma_tp1 = mul(mul(A,Sigma_t),trans(A)) + MMT;
-
-    //cout << "Sigma_tp1 first" << endl << Sigma_tp1 << endl;
-
-    x_tp1 = dynfunc(x_t, u_t);
-
-    //cout << "x_tp1" << endl << x_tp1 << endl;
-
-
-    SXMatrix H(Z_DIM,X_DIM), NNT(Z_DIM), R(R_DIM,R_DIM);
-    //cout<<292<<"\n";
-    linearizeObservation(x_tp1, H);
-
-    //cout <<  << endl << H << endl;
-    //cout << "N" << endl << N << endl;
-
-
-    NNT = getNNT(); 
-
-    //K = ((Sigma_tp1*~H)/(H*Sigma_tp1*~H*delta + RC));
-    SXMatrix K = mul(mul(Sigma_tp1, trans(H)), solve(mul(H, mul(Sigma_tp1, trans(H))) + NNT,SXMatrix(DMatrix::eye(Z_DIM))));
-
-    Sigma_tp1 = Sigma_tp1 - mul(K,mul(H,Sigma_tp1));
-}
 
 
 
-// params(0) = alpha_belief
-// params(1) = alpha_control
-// params[2] = alpha_final_belief
-SXMatrix costfunc(const SXMatrix& XU, const SXMatrix& Sigma_0, const SXMatrix& params)
-{
-    SXMatrix cost = 0;
-
-    SXMatrix x_tp1(X_DIM,1);
-    SXMatrix Sigma_t = Sigma_0, Sigma_tp1(X_DIM,X_DIM);
-    SXMatrix x_t(X_DIM,1), u_t(U_DIM,1);
-
-    int offset = 0;
-
-    for (int t = 0; t < (T-1); ++t)
-    {
-
-        x_t = XU(Slice(offset,offset+X_DIM));
-
-        offset += X_DIM;
-        u_t = XU(Slice(offset,offset+U_DIM));
-        offset += U_DIM;
-
-        cost += params(0)*trace(Sigma_t);
-        cost += params(1)*inner_prod(u_t, u_t);
-
-        EKF(x_t, u_t, Sigma_t, x_tp1, Sigma_tp1);
-        Sigma_t = Sigma_tp1;
-    }
-
-    cost += params[2]*trace(Sigma_t);
-
-    return cost;
-}
 
 
 
@@ -403,7 +313,7 @@ int main(int argc, char* argv[])
     
     generateCode(dyn_fcn,"parameter-dyndx");
    */
-    #define TEST
+    //#define TEST
 
     // test evaluate function
     #ifdef TEST
@@ -453,7 +363,7 @@ int main(int argc, char* argv[])
     		cout << A[j+i*X_DIM] << " ";
     	}
     	cout << "\n";
-
+    }
     
 
     SXMatrix A_finite(X_DIM,X_DIM);

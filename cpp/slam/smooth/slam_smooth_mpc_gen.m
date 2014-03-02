@@ -38,9 +38,9 @@ stages(i).dims.p = 0;                 % number of affine constraints
 stages(i).dims.q = 0;                 % number of quadratic constraints
 
 % cost
-% params(1) = newParam(['H',istr], i, 'cost.H', 'diag');
-stages(i).cost.H = 2*blkdiag(zeros(nx,nx), R, zeros(nx,nx), zeros(nx,nx));
-params(1) = newParam(['f',istr], i, 'cost.f');
+params(1) = newParam(['H',istr], i, 'cost.H', 'diag');
+%stages(i).cost.H = 2*blkdiag(zeros(nx,nx), R, zeros(nx,nx), zeros(nx,nx));
+params(end+1) = newParam(['f',istr], i, 'cost.f');
 
 % lower bounds
 stages(i).ineq.b.lbidx = 1:stages(i).dims.l; % lower bound acts on these indices
@@ -66,7 +66,8 @@ for i = 2:N
     stages(i).dims.q = 0;          % number of quadratic constraints
     
     % cost
-    stages(i).cost.H = 2*blkdiag(zeros(nx,nx), R);
+    %stages(i).cost.H = 2*blkdiag(zeros(nx,nx), R);
+    params(end+1) = newParam(['H',istr], i, 'cost.H', 'diag');
     params(end+1) = newParam(['f',istr], i, 'cost.f');
     
     % lower bounds
@@ -99,7 +100,8 @@ stages(i).dims.p = 0;     % number of polytopic constraints
 stages(i).dims.q = 0;     % number of quadratic constraints
 
 % cost
-stages(i).cost.H = 2*blkdiag(alpha_goal*eye(nx-1,nx-1),zeros(1,1));
+%stages(i).cost.H = 2*blkdiag(alpha_goal*eye(nx-1,nx-1),zeros(1,1));
+params(end+1) = newParam(['H',istr], i, 'cost.H', 'diag');
 params(end+1) = newParam(['f',istr], i, 'cost.f');
 %stages(i).cost.f = zeros(stages(i).dims.n,1);
 
@@ -130,7 +132,7 @@ outputs(i) = newOutput(var,i,1:nx);
 % solver settings
 mpcname = 'smoothMPC';
 codeoptions = getOptions(mpcname);
-codeoptions.printlevel = 0;
+codeoptions.printlevel = 2;
 codeoptions.timing=0;
 codeoptions.maxit = 50;
 

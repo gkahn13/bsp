@@ -1106,7 +1106,9 @@ int main(int argc, char* argv[])
 
 			unVec(B[T-1], x0, SqrtSigma0);
 
-			std::cout << SqrtSigma0 << "\n";
+			for(int t=0; t < T-1; ++t) {
+				std::cout << ~U[t];
+			}
 
 			pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 

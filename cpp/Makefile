@@ -350,6 +350,23 @@ $(OBJ_DIR)/trajMPC.o : $(SLAM_TRAJ_DIR)/trajMPC.c
 	
 $(OBJ_DIR)/slam-traj.o : $(SLAM_TRAJ_DIR)/slam-traj.cpp $(SLAM_TRAJ_DIR)/trajMPC.c
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
+	
+# make slam-smooth
+SLAM_SMOOTH_DIR = slam/smooth
+SLAM_SMOOTH_FILES = smoothMPC slam-smooth logging slam
+SLAM_SMOOTH_OBJS = $(SLAM_SMOOTH_FILES:%=$(OBJ_DIR)/%.o)
+
+slam-smooth-setup:
+	bash $(SLAM_SETUP_FILE) smooth $(T)
+
+slam-smooth: | $(SLAM_SMOOTH_OBJS)
+	$(CXX) $(SLAM_SMOOTH_OBJS) $(BFLAGS) -o $(BIN_DIR)/slam-smooth $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
+	
+$(OBJ_DIR)/smoothMPC.o : $(SLAM_SMOOTH_DIR)/smoothMPC.c
+	$(CC) $(C_FLAGS) -c -o $@ $^
+	
+$(OBJ_DIR)/slam-smooth.o : $(SLAM_SMOOTH_DIR)/slam-smooth.cpp $(SLAM_SMOOTH_DIR)/smoothMPC.c
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
 
 # make slam-belief
 SLAM_BELIEF_DIR = slam/belief

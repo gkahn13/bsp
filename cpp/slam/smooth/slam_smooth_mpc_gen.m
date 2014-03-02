@@ -132,7 +132,7 @@ outputs(i) = newOutput(var,i,1:nx);
 % solver settings
 mpcname = 'smoothMPC';
 codeoptions = getOptions(mpcname);
-codeoptions.printlevel = 2;
+codeoptions.printlevel = 0;
 codeoptions.timing=0;
 codeoptions.maxit = 50;
 

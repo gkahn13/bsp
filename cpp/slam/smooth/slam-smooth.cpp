@@ -17,7 +17,7 @@ smoothMPC_FLOAT **H_smooth, **f_smooth, **lb_smooth, **ub_smooth, **C_smooth, **
 
 Matrix<U_DIM> uMinSmooth, uMaxSmooth;
 
-#define TIMESTEPS_SMOOTH 30
+#define TIMESTEPS_SMOOTH 60
 const int T_SMOOTH = TIMESTEPS_SMOOTH;
 
 const double alpha_control = .01;

@@ -28,7 +28,7 @@ typedef double smoothMPC_FLOAT;
 /* SOLVER SETTINGS ------------------------------------------------------*/
 /* print level */
 #ifndef smoothMPC_SET_PRINTLEVEL
-#define smoothMPC_SET_PRINTLEVEL    (2)
+#define smoothMPC_SET_PRINTLEVEL    (0)
 #endif
 
 /* timing */
@@ -606,20 +606,560 @@ typedef struct smoothMPC_params
     /* vector of size 3 */
     smoothMPC_FLOAT e29[3];
 
-    /* diagonal matrix of size [3 x 3] (only the diagonal is stored) */
-    smoothMPC_FLOAT H30[3];
+    /* diagonal matrix of size [11 x 11] (only the diagonal is stored) */
+    smoothMPC_FLOAT H30[11];
 
-    /* vector of size 3 */
-    smoothMPC_FLOAT f30[3];
+    /* vector of size 11 */
+    smoothMPC_FLOAT f30[11];
 
-    /* vector of size 3 */
-    smoothMPC_FLOAT lb30[3];
+    /* vector of size 11 */
+    smoothMPC_FLOAT lb30[11];
 
-    /* vector of size 3 */
-    smoothMPC_FLOAT ub30[3];
+    /* vector of size 5 */
+    smoothMPC_FLOAT ub30[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    smoothMPC_FLOAT C30[33];
 
     /* vector of size 3 */
     smoothMPC_FLOAT e30[3];
+
+    /* diagonal matrix of size [11 x 11] (only the diagonal is stored) */
+    smoothMPC_FLOAT H31[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT f31[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT lb31[11];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT ub31[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    smoothMPC_FLOAT C31[33];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT e31[3];
+
+    /* diagonal matrix of size [11 x 11] (only the diagonal is stored) */
+    smoothMPC_FLOAT H32[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT f32[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT lb32[11];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT ub32[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    smoothMPC_FLOAT C32[33];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT e32[3];
+
+    /* diagonal matrix of size [11 x 11] (only the diagonal is stored) */
+    smoothMPC_FLOAT H33[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT f33[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT lb33[11];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT ub33[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    smoothMPC_FLOAT C33[33];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT e33[3];
+
+    /* diagonal matrix of size [11 x 11] (only the diagonal is stored) */
+    smoothMPC_FLOAT H34[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT f34[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT lb34[11];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT ub34[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    smoothMPC_FLOAT C34[33];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT e34[3];
+
+    /* diagonal matrix of size [11 x 11] (only the diagonal is stored) */
+    smoothMPC_FLOAT H35[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT f35[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT lb35[11];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT ub35[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    smoothMPC_FLOAT C35[33];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT e35[3];
+
+    /* diagonal matrix of size [11 x 11] (only the diagonal is stored) */
+    smoothMPC_FLOAT H36[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT f36[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT lb36[11];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT ub36[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    smoothMPC_FLOAT C36[33];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT e36[3];
+
+    /* diagonal matrix of size [11 x 11] (only the diagonal is stored) */
+    smoothMPC_FLOAT H37[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT f37[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT lb37[11];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT ub37[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    smoothMPC_FLOAT C37[33];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT e37[3];
+
+    /* diagonal matrix of size [11 x 11] (only the diagonal is stored) */
+    smoothMPC_FLOAT H38[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT f38[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT lb38[11];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT ub38[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    smoothMPC_FLOAT C38[33];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT e38[3];
+
+    /* diagonal matrix of size [11 x 11] (only the diagonal is stored) */
+    smoothMPC_FLOAT H39[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT f39[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT lb39[11];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT ub39[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    smoothMPC_FLOAT C39[33];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT e39[3];
+
+    /* diagonal matrix of size [11 x 11] (only the diagonal is stored) */
+    smoothMPC_FLOAT H40[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT f40[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT lb40[11];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT ub40[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    smoothMPC_FLOAT C40[33];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT e40[3];
+
+    /* diagonal matrix of size [11 x 11] (only the diagonal is stored) */
+    smoothMPC_FLOAT H41[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT f41[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT lb41[11];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT ub41[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    smoothMPC_FLOAT C41[33];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT e41[3];
+
+    /* diagonal matrix of size [11 x 11] (only the diagonal is stored) */
+    smoothMPC_FLOAT H42[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT f42[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT lb42[11];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT ub42[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    smoothMPC_FLOAT C42[33];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT e42[3];
+
+    /* diagonal matrix of size [11 x 11] (only the diagonal is stored) */
+    smoothMPC_FLOAT H43[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT f43[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT lb43[11];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT ub43[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    smoothMPC_FLOAT C43[33];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT e43[3];
+
+    /* diagonal matrix of size [11 x 11] (only the diagonal is stored) */
+    smoothMPC_FLOAT H44[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT f44[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT lb44[11];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT ub44[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    smoothMPC_FLOAT C44[33];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT e44[3];
+
+    /* diagonal matrix of size [11 x 11] (only the diagonal is stored) */
+    smoothMPC_FLOAT H45[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT f45[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT lb45[11];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT ub45[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    smoothMPC_FLOAT C45[33];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT e45[3];
+
+    /* diagonal matrix of size [11 x 11] (only the diagonal is stored) */
+    smoothMPC_FLOAT H46[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT f46[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT lb46[11];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT ub46[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    smoothMPC_FLOAT C46[33];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT e46[3];
+
+    /* diagonal matrix of size [11 x 11] (only the diagonal is stored) */
+    smoothMPC_FLOAT H47[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT f47[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT lb47[11];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT ub47[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    smoothMPC_FLOAT C47[33];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT e47[3];
+
+    /* diagonal matrix of size [11 x 11] (only the diagonal is stored) */
+    smoothMPC_FLOAT H48[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT f48[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT lb48[11];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT ub48[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    smoothMPC_FLOAT C48[33];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT e48[3];
+
+    /* diagonal matrix of size [11 x 11] (only the diagonal is stored) */
+    smoothMPC_FLOAT H49[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT f49[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT lb49[11];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT ub49[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    smoothMPC_FLOAT C49[33];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT e49[3];
+
+    /* diagonal matrix of size [11 x 11] (only the diagonal is stored) */
+    smoothMPC_FLOAT H50[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT f50[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT lb50[11];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT ub50[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    smoothMPC_FLOAT C50[33];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT e50[3];
+
+    /* diagonal matrix of size [11 x 11] (only the diagonal is stored) */
+    smoothMPC_FLOAT H51[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT f51[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT lb51[11];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT ub51[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    smoothMPC_FLOAT C51[33];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT e51[3];
+
+    /* diagonal matrix of size [11 x 11] (only the diagonal is stored) */
+    smoothMPC_FLOAT H52[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT f52[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT lb52[11];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT ub52[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    smoothMPC_FLOAT C52[33];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT e52[3];
+
+    /* diagonal matrix of size [11 x 11] (only the diagonal is stored) */
+    smoothMPC_FLOAT H53[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT f53[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT lb53[11];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT ub53[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    smoothMPC_FLOAT C53[33];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT e53[3];
+
+    /* diagonal matrix of size [11 x 11] (only the diagonal is stored) */
+    smoothMPC_FLOAT H54[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT f54[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT lb54[11];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT ub54[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    smoothMPC_FLOAT C54[33];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT e54[3];
+
+    /* diagonal matrix of size [11 x 11] (only the diagonal is stored) */
+    smoothMPC_FLOAT H55[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT f55[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT lb55[11];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT ub55[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    smoothMPC_FLOAT C55[33];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT e55[3];
+
+    /* diagonal matrix of size [11 x 11] (only the diagonal is stored) */
+    smoothMPC_FLOAT H56[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT f56[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT lb56[11];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT ub56[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    smoothMPC_FLOAT C56[33];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT e56[3];
+
+    /* diagonal matrix of size [11 x 11] (only the diagonal is stored) */
+    smoothMPC_FLOAT H57[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT f57[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT lb57[11];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT ub57[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    smoothMPC_FLOAT C57[33];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT e57[3];
+
+    /* diagonal matrix of size [11 x 11] (only the diagonal is stored) */
+    smoothMPC_FLOAT H58[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT f58[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT lb58[11];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT ub58[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    smoothMPC_FLOAT C58[33];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT e58[3];
+
+    /* diagonal matrix of size [11 x 11] (only the diagonal is stored) */
+    smoothMPC_FLOAT H59[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT f59[11];
+
+    /* vector of size 11 */
+    smoothMPC_FLOAT lb59[11];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT ub59[5];
+
+    /* matrix of size [3 x 11] (column major format) */
+    smoothMPC_FLOAT C59[33];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT e59[3];
+
+    /* diagonal matrix of size [3 x 3] (only the diagonal is stored) */
+    smoothMPC_FLOAT H60[3];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT f60[3];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT lb60[3];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT ub60[3];
+
+    /* vector of size 3 */
+    smoothMPC_FLOAT e60[3];
 
 } smoothMPC_params;
 
@@ -715,8 +1255,98 @@ typedef struct smoothMPC_output
     /* vector of size 5 */
     smoothMPC_FLOAT z29[5];
 
+    /* vector of size 5 */
+    smoothMPC_FLOAT z30[5];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT z31[5];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT z32[5];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT z33[5];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT z34[5];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT z35[5];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT z36[5];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT z37[5];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT z38[5];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT z39[5];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT z40[5];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT z41[5];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT z42[5];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT z43[5];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT z44[5];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT z45[5];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT z46[5];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT z47[5];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT z48[5];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT z49[5];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT z50[5];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT z51[5];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT z52[5];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT z53[5];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT z54[5];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT z55[5];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT z56[5];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT z57[5];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT z58[5];
+
+    /* vector of size 5 */
+    smoothMPC_FLOAT z59[5];
+
     /* vector of size 3 */
-    smoothMPC_FLOAT z30[3];
+    smoothMPC_FLOAT z60[3];
 
 } smoothMPC_output;
 

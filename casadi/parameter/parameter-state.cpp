@@ -6,19 +6,15 @@
 #include <symbolic/stl_vector_tools.hpp>
 #include <cstdlib>
 
-/*
-extern "C" {
-    #include "parameter-state-casadi.h"
-}
-*/
+
 
 // horizon is total lifetime of planning
 // timesteps is how far into future accounting for during MPC
 #define HORIZON 500
 #define TIMESTEPS 15
-#define RSCALE 1e4
+#define RSCALE 10
 #define QSCALE 1
-#define DT 1.0/5.0
+#define DT 0.01
 
 
 // for ILQG
@@ -162,32 +158,7 @@ SXMatrix dynfunc(const SXMatrix& x, const SXMatrix& u)
     return xNew;
 }
 
-/*
-void setupDynCasadiVars(const SXMatrix& X, const SXMatrix& U, double* X_arr, double* U_arr)
-{
-    int index = 0;
-    
-    for(int t=0; t<X_DIM; ++t){  
-        X_arr[t] = double(X(t,0));    
-    }
 
-    for(int t=0; t<U_DIM; ++t){  
-        U_arr[t] = U(t,0);    
-    }
-    
-
-}*/
-/*
-void setupObsCasadiVars(const SXMatrix& X,double* X_arr)
-{
-    int index = 0;
-    
-    for(int t=0; t<X_DIM; ++t){  
-        X_arr[t] = X(t,0);    
-    }
-
-}
-*/
 // Observation model
 SXMatrix obsfunc(const SXMatrix & x)
 {
@@ -248,28 +219,7 @@ void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMa
     SXMatrix A(X_DIM,X_DIM), MMT(X_DIM,X_DIM);
 
 
-    //Calculate A using previously generated Casadi code
 
-    /*double X_arr[X_DIM]; 
-    double U_arr[U_DIM]; 
-    double A_arr[X_DIM*X_DIM]; 
-
-    setupDynCasadiVars(x_t, u_t, X_arr, U_arr); 
-    const double **casadi_input = new const double*[2];
-    casadi_input[0] = X_arr;
-    casadi_input[1] = U_arr;
-
-    double **casadi_out = new double*[1];
-    casadi_out[0] = A_arr;
-    
-    evaluateDynWrap(casadi_input, casadi_out);
-
-    for(int i=0; i < X_DIM; ++i) {
-        for(int j=0; j < X_DIM; ++j) {
-             A(i,j) = casadi_out[j+i*X_DIM]; 
-        }
-    }
-    */
     
     SXMatrix dyn = dynfunc(x_t,u_t);
 
@@ -287,16 +237,9 @@ void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMa
 
     H = jacobian(obs,x_t);
 
-   
-
-
-    //cout <<  << endl << H << endl;
-    //cout << "N" << endl << N << endl;
-
 
     NNT = getNNT(); 
 
-    //K = ((Sigma_tp1*~H)/(H*Sigma_tp1*~H*delta + RC));
     SXMatrix K = mul(mul(Sigma_tp1, trans(H)), solve(mul(H, mul(Sigma_tp1, trans(H))) + NNT,SXMatrix(DMatrix::eye(Z_DIM))));
 
     Sigma_tp1 = Sigma_tp1 - mul(K,mul(H,Sigma_tp1));
@@ -377,9 +320,6 @@ int main(int argc, char* argv[])
     SXFunction f_fcn(inp,f);
     f_fcn.init();
 
-
-   
-
     vector<SXMatrix> out;
     out.push_back(f);
     out.push_back(grad_f);
@@ -393,7 +333,53 @@ int main(int argc, char* argv[])
     generateCode(f_fcn,"parameter-state-cost");
     generateCode(grad_f_fcn,"parameter-state-grad");
     //generateCode(hess_f_fcn,"slam-state-diag-hess");
+    #define TEST
+    #ifdef TEST
+    double length1_est = .05, // inverse = 20
+            length2_est = .05, // inverse = 20
+            mass1_est = .12, // inverse = 9.52
+            mass2_est = .13; // inverse = 11.24
 
+    SXMatrix x0(X_DIM,1); 
+    SXMatrix u0(U_DIM,1);
+    // position, then velocity
+    x0(0,0) = -M_PI/2.0; x0(1,0) = -M_PI/2.0; x0(2,0) = 0; x0(3,0) = 0;
+    // parameter start estimates (alphabetical, then numerical order)
+    x0(4,0) = 1/length1_est; x0(5,0) = 1/length2_est; x0(6,0) = 1/mass1_est; x0(7,0) = 1/mass2_est;
+
+    u0(0,0) = 0.1; 
+    u0(1,0) = 0.1; 
+    //Fill in X0
+    
+    double t_x0[nXU];
+    double t_x1[X_DIM*X_DIM];
+    double t_x2[3];
+
+    //Fill in X and U
+    for (int t = 0; t < T-1; ++t) {
+
+        for(int i=0; i<X_DIM; i++){
+            t_x0(i,0) = x0(i,0);
+        }
+        for(int i=0; i<U_DIM; i++){
+            t_x0(i,0) = u0(i,0);
+        }
+        x0 = dynfunc(x0, u0);
+        
+    }
+
+    for(int i=0; i<X_DIM; i++){
+            t_x0(i,0) = x0(i,0);
+    }
+
+    //Fill in Alpha
+
+    t_x2[0] = 10; t_x2[1]=0; t_x2[2] = 10; 
+
+
+
+
+    #endif
 
 
 

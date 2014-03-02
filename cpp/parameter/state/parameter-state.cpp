@@ -108,7 +108,7 @@ void setupCasadiVars(const std::vector<Matrix<X_DIM> >& X, const std::vector<Mat
 
 	params_arr[0] = alpha_belief;
 	params_arr[1] = alpha_control;
-	params_arr[2] = alpha_final_belief;
+	params_arr[2] = alpha_final_joint_belief;
 
 }
 
@@ -139,6 +139,7 @@ double casadiComputeMerit(const std::vector< Matrix<X_DIM> >& X, const std::vect
 	double merit = 0;
 
 	merit = casadiComputeCost(X, U);
+	
 
 	Matrix<X_DIM> x, dynviol;
 	Matrix<X_DIM, X_DIM> SqrtSigma;
@@ -497,7 +498,10 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 		LOG_DEBUG("  sqp iter: %d", sqp_iter);
 
 		merit = casadiComputeMerit(X, U, penalty_coeff);
+		
 
+		std::cout<<"MERIT "<<merit<<"\n";
+		exit(0);
 		LOG_DEBUG("  merit: %4.10f", merit);
 
 		// Compute gradients
@@ -537,6 +541,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			for(int i = 0; i < (X_DIM+U_DIM); ++i) {
 				hessian_constant += HMat(i,i)*zbar[i]*zbar[i];
 				jac_constant -= Grad[idx+i]*zbar[i];
+
 				f[t][i] = Grad[idx+i] - HMat(i,i)*zbar[i];
 			}
 
@@ -905,8 +910,8 @@ int main(int argc, char* argv[])
 
 	//Matrix<U_DIM> uinit = (xGoal.subMatrix<U_DIM,1>(0,0) - x0.subMatrix<U_DIM,1>(0,0))/(double)(T-1);
 	Matrix<U_DIM> uinit;
-	uinit[0] = 0;
-	uinit[1] = 0;
+	uinit[0] = 0.0;
+	uinit[1] = 0.0;
 	
 	std::vector<Matrix<U_DIM> > U(T-1, uinit); 
 	std::vector<Matrix<X_DIM> > X(T);

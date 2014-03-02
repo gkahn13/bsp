@@ -23,9 +23,11 @@ T = 15
 PARAM_STATE_FILES = parameter-state parameter-dyndx parameter-obsdx
 PARAM_STATE_OBJS = $(PARAM_STATE_FILES:%= %.o)
 
+parameter-state: parameter-state.cpp
+	$(CXX) $(BFLAGS) $(CPP_FLAGS) $(CASADI_FLAGS) -g parameter-state.cpp -o parameter-state $(CASADI_LIBS)
 
-parameter-state: | $(PARAM_STATE_OBJS)
-	$(CXX) $(BFLAGS) $(CPP_FLAGS) $(CASADI_FLAGS) $(PARAM_STATE_OBJS) -o parameter-state $(CASADI_LIBS)  $(LINKER_FLAGS)
+parameter-test: | $(PARAM_STATE_OBJS)
+	$(CXX) $(BFLAGS) $(CPP_FLAGS) $(CASADI_FLAGS) $(PARAM_STATE_OBJS) -o parameter-test $(CASADI_LIBS)  $(LINKER_FLAGS)
 	
 parameter-dyndx.o : parameter-dyndx.c
 	$(CC) $(C_FLAGS) -c -o $@ $^
@@ -41,8 +43,7 @@ parameter-state.o : parameter-state.cpp
 parameter-jac: parameter-jac.cpp
 	$(CXX) $(BFLAGS) $(CPP_FLAGS) $(CASADI_FLAGS) -g parameter-jac.cpp -o parameter-jac $(CASADI_LIBS)
 
-parameter-test: parameter-state.cpp
-	$(CXX) $(BFLAGS) $(CPP_FLAGS) $(CASADI_FLAGS) -g parameter-state.cpp -o parameter-test $(CASADI_LIBS)
+
 
 fix_jac: 
 	./parameter-jac

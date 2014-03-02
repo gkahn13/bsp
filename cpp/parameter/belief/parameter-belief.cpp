@@ -360,6 +360,8 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 		LOG_DEBUG("  sqp iter: %d", sqp_iter);
 
 		merit = computeMerit(B, U, penalty_coeff);
+		std::cout<<"MERIT "<<merit<<"\n";
+		
 		LOG_DEBUG("  merit: %4.10f", merit);
 		//pythonPlotRobot(U, SqrtSigma0, x0, xGoal);
 		//pythonDisplayTrajectory(U, SqrtSigma0, x0, xGoal);
@@ -653,13 +655,15 @@ int main(int argc, char* argv[])
 
 	//Matrix<U_DIM> uinit = (xGoal.subMatrix<U_DIM,1>(0,0) - x0.subMatrix<U_DIM,1>(0,0))/(double)(T-1);
 	Matrix<U_DIM> uinit;
-	uinit[0] = 0;
-	uinit[1] = 0;
+	uinit[0] = 0.0;
+	uinit[1] = 0.0;
 	
 	std::vector<Matrix<U_DIM> > U(T-1, uinit); 
+	std::vector<Matrix<X_DIM> > X(T);
 	std::vector<Matrix<B_DIM> > B(T);
 
 	std::vector<Matrix<U_DIM> > HistoryU(HORIZON);
+
 	std::vector<Matrix<B_DIM> > HistoryB(HORIZON); 
 
 	// pythonPlotRobot(U, SqrtSigma0, x0, xGoal);
@@ -674,7 +678,12 @@ int main(int argc, char* argv[])
 	std::cout<<"HORIZON is "<<HORIZON<<'\n';
 	for(int h = 0; h < HORIZON; ++h) {
 		for (int t = 0; t < T-1; ++t) {
+
 			B[t+1] = beliefDynamics(B[t], U[t]);
+			/*X[t] = B[t+1].subMatrix<X_DIM,1>(0,0);
+			std::cout<<"X "<<t+1<<"\n"; 
+			std::cout<<X[t]<<"\n";
+			*/ 
 		}
 
 		//util::Timer solveTimer;

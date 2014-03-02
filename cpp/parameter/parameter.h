@@ -105,10 +105,6 @@ Matrix<J_DIM> jointdynfunc(const Matrix<J_DIM>& x, const Matrix<U_DIM>& u, doubl
 
 	Matrix<U_DIM> B; 
 
-
-
-
-
 	B[0] = dynamics::gravity*l1*sin(x[0])*(0.5*m1+m2) - 0.5*m2*l1*l2*(x[3]*x[3])*sin(x[0]-x[1])+u[0]-dynamics::b1*x[2];
 
 	B[1] = 0.5*m2*l2*(l1*(x[2]*x[2])*sin(x[0]-x[1])+dynamics::gravity*sin(x[1])) + u[1]-dynamics::b2*x[3];
@@ -291,6 +287,30 @@ void vec(const Matrix<X_DIM>& x, const Matrix<X_DIM,X_DIM>& S, Matrix<B_DIM>& b)
 }
 
 
+SymmetricMatrix<X_DIM> getMMT() {
+
+	SymmetricMatrix<X_DIM> S = identity<X_DIM>();
+    S(0,0) = 0.25*0.001 + 0.0000000000001;
+    S(1,1) = 0.25*0.001 + 0.0000000000001;
+    S(2,2) = 1.0*0.001 + 0.0000000000001;
+    S(3,3) = 1.0*0.001 + 0.0000000000001;
+    S(4,4) = 0.0005;
+    S(5,5) = 0.0005;
+    S(6,6) = 0.0001;
+    S(7,7) = 0.0001;
+    S *= QSCALE;
+    return S;
+}
+
+SymmetricMatrix<R_DIM> getNNT(){ 
+	SymmetricMatrix<R_DIM> S = identity<R_DIM>();	
+    S(0,0) = 0.0001;
+    S(1,1) = 0.0001;
+    S(2,2) = 0.00001;
+    S(3,3) = 0.00001;
+    S *= RSCALE; 
+    return S;
+}
 
 // Belief dynamics
 Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
@@ -314,7 +334,9 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 
 	x = dynfunc(x, u,q);
 	
-	Sigma = A*Sigma*~A + M*Q*(~M);
+	Matrix<X_DIM,X_DIM> MMT = getMMT(); 
+
+	Sigma = A*Sigma*~A + MMT;
 
 	Matrix<Z_DIM,X_DIM> H = zeros<Z_DIM,X_DIM>();
 	Matrix<Z_DIM,R_DIM> N; 
@@ -323,12 +345,13 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	/*
 	std::cout<<"X_BELIEF "<<x<<"\n";
 
-
+	
 	std::cout<<"X_BELIEF "<<(H*Sigma*~H + N*R*~N)<<"\n";
 
 	*/
-
-	Matrix<X_DIM,Z_DIM> K = Sigma*~H/(H*Sigma*~H + N*R*~N);
+	Matrix<Z_DIM,Z_DIM> NNT = getNNT();
+	
+	Matrix<X_DIM,Z_DIM> K = Sigma*~H/(H*Sigma*~H + NNT);
 
 	Sigma = (identity<X_DIM>() - K*H)*Sigma;
 	

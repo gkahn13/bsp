@@ -6,11 +6,11 @@
 #include <symbolic/stl_vector_tools.hpp>
 #include <cstdlib>
 
-
+/*
 extern "C" {
     #include "parameter-state-casadi.h"
 }
-
+*/
 
 // horizon is total lifetime of planning
 // timesteps is how far into future accounting for during MPC
@@ -162,7 +162,7 @@ SXMatrix dynfunc(const SXMatrix& x, const SXMatrix& u)
     return xNew;
 }
 
-
+/*
 void setupDynCasadiVars(const SXMatrix& X, const SXMatrix& U, double* X_arr, double* U_arr)
 {
     int index = 0;
@@ -176,8 +176,8 @@ void setupDynCasadiVars(const SXMatrix& X, const SXMatrix& U, double* X_arr, dou
     }
     
 
-}
-
+}*/
+/*
 void setupObsCasadiVars(const SXMatrix& X,double* X_arr)
 {
     int index = 0;
@@ -186,6 +186,31 @@ void setupObsCasadiVars(const SXMatrix& X,double* X_arr)
         X_arr[t] = X(t,0);    
     }
 
+}
+*/
+// Observation model
+SXMatrix obsfunc(const SXMatrix & x)
+{
+    SXMatrix z(Z_DIM,1);
+
+
+
+    SXMatrix length1(1), length2(1);
+    length1 = 1/x(4);
+    length2 = 1/x(5);
+
+    SXMatrix cosx0 = cos(x(0));
+    SXMatrix sinx0 = sin(x(0));
+    SXMatrix cosx1 = cos(x(1));
+    SXMatrix sinx1 = sin(x(1));
+
+    z(0,0) = length1*cosx0 + length2*cosx1;
+    z(1,0) = length1*sinx0 + length2*sinx1;
+    z(2,0) = x(2);
+    z(3,0) = x(3);
+
+
+    return z;
 }
 
 
@@ -225,7 +250,7 @@ void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMa
 
     //Calculate A using previously generated Casadi code
 
-    double X_arr[X_DIM]; 
+    /*double X_arr[X_DIM]; 
     double U_arr[U_DIM]; 
     double A_arr[X_DIM*X_DIM]; 
 
@@ -244,7 +269,11 @@ void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMa
              A(i,j) = casadi_out[j+i*X_DIM]; 
         }
     }
+    */
+    
+    SXMatrix dyn = dynfunc(x_t,u_t);
 
+    A = jacobian(dyn,x_t);
 
     MMT = getMMT(); 
     Sigma_tp1 = mul(mul(A,Sigma_t),trans(A)) + MMT;
@@ -254,27 +283,12 @@ void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMa
     SXMatrix H(Z_DIM,X_DIM), NNT(Z_DIM), R(R_DIM,R_DIM);
 
     //Caclulate H using previous Casadi 
+    SXMatrix obs = obsfunc(x_t);
 
-    double Xo_arr[X_DIM]; 
-    double H_arr[Z_DIM*X_DIM]; 
+    H = jacobian(obs,x_t);
 
-    setupObsCasadiVars(x_tp1, Xo_arr); 
-    const double **casadi_input_o = new const double*[1];
-    casadi_input_o[0] = Xo_arr;
+   
 
-    double **casadi_out_o = new double*[1];
-    casadi_out[0] = H_arr;
-    
-    evaluateObsWrap(casadi_input, casadi_out);
-
-    for(int i=0; i < Z_DIM; ++i) {
-        for(int j=0; j < X_DIM; ++j) {
-             H(i,j) = casadi_out[j+i*X_DIM];        }
-    }
-
-
-    //cout<<292<<"\n";
-    linearizeObservation(x_tp1, H);
 
     //cout <<  << endl << H << endl;
     //cout << "N" << endl << N << endl;

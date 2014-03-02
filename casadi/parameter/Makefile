@@ -41,6 +41,9 @@ parameter-state.o : parameter-state.cpp
 parameter-jac: parameter-jac.cpp
 	$(CXX) $(BFLAGS) $(CPP_FLAGS) $(CASADI_FLAGS) -g parameter-jac.cpp -o parameter-jac $(CASADI_LIBS)
 
+parameter-test: parameter-state.cpp
+	$(CXX) $(BFLAGS) $(CPP_FLAGS) $(CASADI_FLAGS) -g parameter-state.cpp -o parameter-test $(CASADI_LIBS)
+
 fix_jac: 
 	./parameter-jac
 	bash modifyCasadi.sh parameter-obsdx.c Obs parameter

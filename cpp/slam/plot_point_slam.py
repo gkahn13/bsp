@@ -6,6 +6,7 @@ import time
 import matplotlib
 import matplotlib.pyplot as plt
 from scipy.interpolate import spline
+import scipy.interpolate as interp
 
 
 import IPython
@@ -47,7 +48,7 @@ def plot_point_trajectory(B, U, waypoints, landmarks, max_range, alpha_obs, xDim
     plot_landmarks(B, landmarks, max_range, bDim, xDim, T)
     
     # plot mean of trajectory
-    plot_mean(B[0:3,:], U, DT)
+    plot_mean(B[0:3,:], U, DT, interp=True)
     
     plt.plot(landmarks[0,:], landmarks[1,:], ls='None', color='red', marker='x', markersize = 5.0)
     plt.plot(waypoints[0,:], waypoints[1,:], ls='None', color='purple', marker='s', markersize=8.0)
@@ -131,6 +132,24 @@ def smooth_trajectory(B, U, cDim, uDim, T, DT):
     plt.pause(.5)
     IPython.embed()
     
+def smooth(B, U, cDim, uDim, T, Dt):
+    smooth_factor = 10
+    
+    X = B[0:cDim,0]
+    xidx = 0
+    x = X[:,0]
+    for t in xrange(T-1):
+        pass
+    
+    xdata = X[0,:]
+    ydata = X[1,:]
+    
+    xnew = np.linspace(xdata.min(), xdata.max(), 300)
+    
+    ysmooth = spline(xdata, ydata, xnew)
+    
+    plt.plot(xnew, ysmooth, color='red')
+    plt.plot(X[0,:],X[1,:],ls='None',marker='s',markerfacecolor='yellow')
  
 def dynfunc(x, u, dt, wheelbase=4.):
     xAdd = np.matrix(x)
@@ -167,12 +186,24 @@ def decompose_belief(b, bDim, xDim):
 
     return x, SqrtSigma
 
+# polyline is num_points by 2 array
+def interpolate_polyline(polyline, num_points):
+    duplicates = []
+    for i in range(1, len(polyline)):
+        if np.allclose(polyline[i], polyline[i-1]):
+            duplicates.append(i)
+    if duplicates:
+        polyline = np.delete(polyline, duplicates, axis=0)
+    tck, u = interp.splprep(polyline.T, s=0)
+    u = np.linspace(0.0, 1.0, num_points)
+    return np.column_stack(interp.splev(u, tck))
     
 def plot_mean(X, U, DT, interp=False):
     
     X = np.asarray(X)
     
     if interp:
+        """
         xdata = X[0,:]
         ydata = X[1,:]
         
@@ -180,7 +211,13 @@ def plot_mean(X, U, DT, interp=False):
         
         ysmooth = spline(xdata, ydata, xnew)
         
+        IPython.embed()
+        
         plt.plot(xnew, ysmooth, color='red')
+        """
+        Xsmooth = interpolate_polyline(X[0:2,:].T, 500).T
+        
+        plt.plot(Xsmooth[0,:], Xsmooth[1,:], color='red')
         plt.plot(X[0,:],X[1,:],ls='None',marker='s',markerfacecolor='yellow')
     else:
         plt.plot(X[0,:],X[1,:],color='red',marker='s',markerfacecolor='yellow')

@@ -86,6 +86,8 @@ void initProblemParams();
 
 Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<Q_DIM>& q);
 
+Matrix<C_DIM> dynfunccar(const Matrix<C_DIM>& x, const Matrix<U_DIM>& u);
+
 Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r);
 
 Matrix<Z_DIM,Z_DIM> deltaMatrix(const Matrix<X_DIM>& x);

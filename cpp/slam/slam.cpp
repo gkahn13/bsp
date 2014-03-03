@@ -95,6 +95,18 @@ Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matr
     return xNew;
 }
 
+Matrix<C_DIM> dynfunccar(const Matrix<C_DIM>& x, const Matrix<U_DIM>& u)
+{
+	Matrix<C_DIM> xAdd = zeros<C_DIM,1>();
+
+	xAdd[0] = u[0] * DT * cos(x[2]+u[1]);
+	xAdd[1] = u[0] * DT * sin(x[2]+u[1]);
+	xAdd[2] = u[0] * DT * sin(u[1])/config::WHEELBASE;
+
+	Matrix<C_DIM> xNew = x + xAdd;
+    return xNew;
+}
+
 
 Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r)
 {

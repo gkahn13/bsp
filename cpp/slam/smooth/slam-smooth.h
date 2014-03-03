@@ -1,8 +1,11 @@
-#ifndef _SLAM_TRAJ_H__
-#define _SLAM_TRAJ_H__
+#ifndef _SLAM_SMOOTH_H__
+#define _SLAM_SMOOTH_H__
 
 #include "../slam.h"
 
-bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vector<Matrix<U_DIM> >& U, int timesteps);
+#define TIMESTEPS_SMOOTH 60
+const int T_SMOOTH = TIMESTEPS_SMOOTH;
+
+std::vector<Matrix<U_DIM> > smoothTraj(const std::vector<Matrix<C_DIM> >& X_unsmooth);
 
 #endif

@@ -1,5 +1,6 @@
 #include "../slam.h"
 #include "../traj/slam-traj.h"
+#include "../smooth/slam-smooth.h"
 
 
 #include <vector>
@@ -26,10 +27,10 @@ const double improve_ratio_threshold = .1; // .1
 const double min_approx_improve = 1e-2; // 1e-2
 const double min_trust_box_size = 1e-3; // 1e-3
 
-const double trust_shrink_ratio = .75; // .5
+const double trust_shrink_ratio = .75; // .75
 const double trust_expand_ratio = 1.25; // 1.25
 
-const double cnt_tolerance = 1; // 1e-2
+const double cnt_tolerance = .5; // 1
 const double penalty_coeff_increase_ratio = 5; // 5
 const double initial_penalty_coeff = 10; // 10
 
@@ -547,7 +548,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			// since diagonal, fill directly
 			for(int i = 0; i < (C_DIM+U_DIM); ++i) { H[t][i] = HMat(i,i); }
 			// TODO: why does this work???
-			for(int i = 0; i < (2*C_DIM); ++i) { H[t][i + (C_DIM+U_DIM)] = 5e2; } //1e4
+			for(int i = 0; i < (2*C_DIM); ++i) { H[t][i + (C_DIM+U_DIM)] = 5e2; } //5e2
 
 			zbar.insert(0,0,xt);
 			zbar.insert(C_DIM,0,ut);
@@ -597,7 +598,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 		}
 
 		// since diagonal, fill directly
-		for(int i = 0; i < C_DIM; ++i) { H[T-1][i] = HMat(i,i); }
+		for(int i = 0; i < C_DIM; ++i) { H[T-1][i] = HfMat(i,i); } // TODO: changing to HfMat makes it not work
 
 		for(int i = 0; i < C_DIM; ++i) {
 			hessian_constant += HfMat(i,i)*xT[i]*xT[i];
@@ -996,8 +997,17 @@ int main(int argc, char* argv[])
 	std::vector<Matrix<U_DIM> > U_total((T-1)*NUM_WAYPOINTS*num_loops);
 	int B_total_idx = 0, U_total_idx = 0;
 
+	// smooth totals
+	//std::vector<Matrix<B_DIM> > B_stotal(T_SMOOTH*NUM_WAYPOINTS*num_loops);
+	//std::vector<Matrix<U_DIM> > U_stotal((T_SMOOTH-1)*NUM_WAYPOINTS*num_loops);
+	//int B_stotal_idx = 0, U_stotal_idx = 0;
+	std::vector<Matrix<B_DIM> > B_stotal;
+	std::vector<Matrix<U_DIM> > U_stotal;
+
+
 	std::vector<Matrix<B_DIM> > B(T);
 	std::vector<Matrix<C_DIM> > X(T);
+
 
 	Matrix<U_DIM> uinit;
 
@@ -1040,15 +1050,13 @@ int main(int argc, char* argv[])
 			}
 			X[T-1] = B[T-1].subMatrix<C_DIM,1>(0,0);
 
-			//std::cout << ~X[0].subMatrix<C_DIM,1>(0,0);
-
 			double initTrajCost = computeCost(X, U);
 			LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
 
 			double initCasadiTrajCost = casadiComputeCost(X, U);
 			LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
 
-			pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
+			//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 
 			util::Timer_tic(&solveTimer);
 
@@ -1088,6 +1096,19 @@ int main(int argc, char* argv[])
 				X[t+1] = x.subMatrix<C_DIM,1>(0,0);
 			}
 
+			/*
+			// smooth here
+			std::vector<Matrix<U_DIM> > U_smooth = smoothTraj(X);
+			std::vector<Matrix<B_DIM> > B_smooth(T_SMOOTH);
+			B_stotal.push_back(B[0]);
+			for(int t=0; t < T_SMOOTH-1; ++t) {
+				U_stotal.push_back(U_smooth[t]);
+				B_stotal.push_back(beliefDynamics(B_stotal.back(), U_stotal.back()));
+			}
+			*/
+
+
+
 			for (int t = 0; t < T-1; ++t) {
 				B_total[B_total_idx++] = B[t];
 				U_total[U_total_idx++] = U[t];
@@ -1106,30 +1127,23 @@ int main(int argc, char* argv[])
 
 			unVec(B[T-1], x0, SqrtSigma0);
 
+			std::cout << "x0: " << x0.subMatrix<C_DIM,1>(0,0);
+			std::cout << "U\n";
 			for(int t=0; t < T-1; ++t) {
 				std::cout << ~U[t];
+			}
+			std::cout << "\nX\n";
+			for(int t=0; t < T; ++t) {
+				std::cout << ~X[t];
 			}
 
 			pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 
 		}
 
-		/*
-		Matrix<X_DIM, X_DIM> SqrtSigma;
-		for(int i=0; i < NUM_LANDMARKS; ++i) {
-			std::cout << "landmark: (" << landmarks[i][0] << "," << landmarks[i][1] << ")\n";
-			unVec(B_total[T*NUM_WAYPOINTS*loop], x, SqrtSigma);
-			Matrix<X_DIM,X_DIM> Sigma = SqrtSigma*SqrtSigma;
-			std::cout << "initial trace: " << tr(Sigma.subMatrix<P_DIM,P_DIM>(C_DIM+2*i,C_DIM+2*i)) << "\n";
-			unVec(B_total[T*NUM_WAYPOINTS*(loop+1)-1], x, SqrtSigma);
-			Sigma = SqrtSigma*SqrtSigma;
-			std::cout << "final trace: " << tr(Sigma.subMatrix<P_DIM,P_DIM>(C_DIM+2*i,C_DIM+2*i)) << "\n";
-		}
-		*/
-
 	}
 
-
+	int timestep_ratio = (int)T_SMOOTH / T; // make sure this is divisible!
 
 	LOG_INFO("Total trajectory cost: %4.10f", totalTrajCost);
 	LOG_INFO("Total trajectory solve time: %5.3f ms", trajTime*1000);

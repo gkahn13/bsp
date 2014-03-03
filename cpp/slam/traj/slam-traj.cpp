@@ -52,17 +52,6 @@ struct exit_exception {
 	exit_exception(int c):c(c) { }
 };
 
-Matrix<C_DIM> dynfunccar(const Matrix<C_DIM>& x, const Matrix<U_DIM>& u)
-{
-	Matrix<C_DIM> xAdd = zeros<C_DIM,1>();
-
-	xAdd[0] = u[0] * DT * cos(x[2]+u[1]);
-	xAdd[1] = u[0] * DT * sin(x[2]+u[1]);
-	xAdd[2] = u[0] * DT * sin(u[1])/config::WHEELBASE;
-
-	Matrix<C_DIM> xNew = x + xAdd;
-    return xNew;
-}
 
 // Jacobians: df(x,u)/dx, df(x,u)/du
 void linearizeCarDynamicsTraj(const Matrix<C_DIM>& x, const Matrix<U_DIM>& u, Matrix<C_DIM,C_DIM>& F, Matrix<C_DIM,U_DIM>& G, Matrix<C_DIM>& h)

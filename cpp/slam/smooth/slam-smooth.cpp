@@ -13,28 +13,23 @@ extern "C" {
 smoothMPC_FLOAT **H_smooth, **f_smooth, **lb_smooth, **ub_smooth, **C_smooth, **e_smooth, **z_smooth;
 }
 
-#include "boost/preprocessor.hpp"
-
 Matrix<U_DIM> uMinSmooth, uMaxSmooth;
 
-#define TIMESTEPS_SMOOTH 60
-const int T_SMOOTH = TIMESTEPS_SMOOTH;
-
-const double alpha_control = .01;
-const double alpha_midway = 1;
-const double alpha_goal = 10;
+const double alpha_control = .01; // .1
+const double alpha_midway = 1; // 1
+const double alpha_goal = 10; // 10
 
 namespace cfg {
 const double improve_ratio_threshold = .1; // .1
 const double min_approx_improve = 1e-2; // 1e-2
 const double min_trust_box_size = 1e-2; // 1e-2
 
-const double trust_shrink_ratio = .75; // .5
-const double trust_expand_ratio = 1.25; // 2
+const double trust_shrink_ratio = .5; // .5
+const double trust_expand_ratio = 1.25; // 1.25
 
-const double cnt_tolerance = 1e-2;
-const double penalty_coeff_increase_ratio = 5; // 10
-const double initial_penalty_coeff = 10; // 20
+const double cnt_tolerance = 1e-1;
+const double penalty_coeff_increase_ratio = 5; // 5
+const double initial_penalty_coeff = 10; // 10
 
 const double initial_trust_box_size = 1; // 1
 const double initial_Xpos_trust_box_size = 1; // 1;
@@ -42,26 +37,15 @@ const double initial_Xangle_trust_box_size = M_PI/6; // M_PI/6;
 const double initial_Uvel_trust_box_size = 1; // 1;
 const double initial_Uangle_trust_box_size = M_PI/8; // M_PI/8;
 
-const int max_penalty_coeff_increases = 4; // 2
+const int max_penalty_coeff_increases = 4; // 4
 const int max_sqp_iterations = 50; // 50
 }
 
-struct exit_exception {
+struct forces_exception {
 	int c;
-	exit_exception(int c):c(c) { }
+	forces_exception(int c):c(c) { }
 };
 
-Matrix<C_DIM> dynfunccar(const Matrix<C_DIM>& x, const Matrix<U_DIM>& u)
-{
-	Matrix<C_DIM> xAdd = zeros<C_DIM,1>();
-
-	xAdd[0] = u[0] * DT * cos(x[2]+u[1]);
-	xAdd[1] = u[0] * DT * sin(x[2]+u[1]);
-	xAdd[2] = u[0] * DT * sin(u[1])/config::WHEELBASE;
-
-	Matrix<C_DIM> xNew = x + xAdd;
-    return xNew;
-}
 
 // Jacobians: df(x,u)/dx, df(x,u)/du
 void linearizeCarDynamicsSmooth(const Matrix<C_DIM>& x, const Matrix<U_DIM>& u, Matrix<C_DIM,C_DIM>& F, Matrix<C_DIM,U_DIM>& G, Matrix<C_DIM>& h)
@@ -132,6 +116,32 @@ double computeSmoothCost(const std::vector< Matrix<C_DIM> >& X, const std::vecto
 	cost += alpha_goal*tr(~(x-x_unsmooth)*(x-x_unsmooth));
 
 	return cost;
+}
+
+double deviationCost(const std::vector< Matrix<C_DIM> >& X, const std::vector< Matrix<U_DIM> >& U, const std::vector< Matrix<C_DIM> >& X_unsmooth) {
+	std::vector< Matrix<C_DIM> > X_integrated(X.size());
+	X_integrated[0] = X[0];
+	for(int t=0; t < T_SMOOTH-1; ++t) {
+		X_integrated[t+1] = dynfunccar(X_integrated[t], U[t]);
+	}
+
+	double deviation = 0;
+
+	int T_unsmooth = X_unsmooth.size();
+	int timestep_ratio = (int)T_SMOOTH / T_unsmooth;
+
+	for(int t=0; t < T_unsmooth-1; ++t) {
+		Matrix<C_DIM> x = X_integrated[t*timestep_ratio];
+		Matrix<C_DIM> x_unsmooth = X_unsmooth[t];
+		Matrix<C_DIM> x_diff = x - x_unsmooth;
+		x_diff[P_DIM] = 0; // don't care about angle
+		deviation += sqrt(tr(~x_diff*x_diff));
+	}
+	Matrix<C_DIM> x = X_integrated[T_SMOOTH-1];
+	Matrix<C_DIM> x_unsmooth = X_unsmooth[T_unsmooth-1];
+	deviation += sqrt(tr(~(x-x_unsmooth)*(x-x_unsmooth)));
+
+	return deviation;
 }
 
 
@@ -216,16 +226,16 @@ double computeSmoothMerit(const std::vector< Matrix<C_DIM> >& X, const std::vect
 	return merit;
 }
 
-void pythonDisplaySmoothTrajectory(const std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<U_DIM> >& U, bool integrate, bool pause) {
+void pythonDisplaySmoothTrajectory(const std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<U_DIM> >& U, bool integrate, bool pause, int timesteps = T_SMOOTH) {
 	Matrix<X_DIM> x;
 	x.insert(0, 0, X[0]);
 	for(int i = 0; i < NUM_LANDMARKS; ++i) {
 		x.insert(C_DIM+2*i, 0, landmarks[i]);
 	}
 
-	std::vector<Matrix<X_DIM> > X_full(T_SMOOTH, x);
+	std::vector<Matrix<X_DIM> > X_full(timesteps, x);
 	X_full[0] = x;
-	for(int t=0; t < T_SMOOTH-1; ++t) {
+	for(int t=0; t < timesteps-1; ++t) {
 		if (integrate) {
 			x.insert(0, 0, dynfunccar(x.subMatrix<C_DIM,1>(0,0), U[t]));
 			X_full[t+1] = x;
@@ -234,7 +244,7 @@ void pythonDisplaySmoothTrajectory(const std::vector< Matrix<C_DIM> >& X, std::v
 		}
 	}
 
-	pythonDisplayTrajectory(X_full, T_SMOOTH, pause);
+	pythonDisplayTrajectory(X_full, timesteps, pause);
 }
 
 
@@ -371,9 +381,6 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 	std::vector< Matrix<C_DIM,U_DIM> > G(T_SMOOTH-1);
 	std::vector< Matrix<C_DIM> > h(T_SMOOTH-1);
 
-	double Xeps = cfg::initial_trust_box_size;
-	double Ueps = cfg::initial_trust_box_size;
-
 	double Xpos_eps = cfg::initial_Xpos_trust_box_size;
 	double Xangle_eps = cfg::initial_Xangle_trust_box_size;
 	double Uvel_eps = cfg::initial_Uvel_trust_box_size;
@@ -387,7 +394,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 	double merit, model_merit, new_merit;
 	double approx_merit_improve, exact_merit_improve, merit_improve_ratio;
 
-	double hessian_constant, jac_constant;
+	double hessian_constant;
 
 	int sqp_iter = 1, index = 0;
 	bool success = false;
@@ -413,7 +420,6 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 		// fill in f_smooth, C_smooth, e_smooth
 		
 		hessian_constant = 0;
-		jac_constant = 0;
 
 		for (int t = 0; t < T_SMOOTH-1; ++t)
 		{
@@ -426,7 +432,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			index = 0;
 			for(int i=0; i < C_DIM; ++i) { H_smooth[t][index++] = 0; }
 			for(int i=0; i < U_DIM; ++i) { H_smooth[t][index++] = 2*alpha_control; }
-			for(int i=0; i < 2*C_DIM; ++i) { H_smooth[t][index++] = 0; } // TODO:
+			for(int i=0; i < 2*C_DIM; ++i) { H_smooth[t][index++] = 0; } // TODO: add constant?
 
 			// initialize f_smooth in cost function to penalize
 			// belief dynamics slack variables
@@ -444,8 +450,6 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 
 			for(int i = 0; i < (C_DIM+U_DIM); ++i) {
 				hessian_constant += H_smooth[t][i]*zbar[i]*zbar[i];
-				jac_constant -= f_smooth[t][i]*zbar[i];
-				//f[t][i] = Grad[idx+i] - HMat(i,i)*zbar[i];
 			}
 
 			CMat.reset();
@@ -473,7 +477,6 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 
 		for(int i = 0; i < (C_DIM); ++i) {
 			hessian_constant += H_smooth[T_SMOOTH-1][i]*X[T_SMOOTH-1][i]*X[T_SMOOTH-1][i];
-			jac_constant -= f_smooth[T_SMOOTH-1][i]*X[T_SMOOTH-1][i];
 		}
 
 
@@ -546,27 +549,17 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			for(int i = 0; i < P_DIM; ++i) { ub_smooth[T_SMOOTH-1][index++] = X_unsmooth[T_unsmooth-1][i] + posDelta; }
 			ub_smooth[T_SMOOTH-1][index++] = X_unsmooth[T_unsmooth-1][2] + angleDelta;
 
-			// constant cost is all of X_unsmooth x'*x weighted by alpha_midway/alpha_goal
-			double constant_cost = 0;
-			for(int t=0; t < T_unsmooth-1; ++t) {
-				Matrix<P_DIM> x = X_unsmooth[t].subMatrix<P_DIM,1>(0,0);
-				constant_cost += alpha_midway*tr(~x*x);
-			}
-			constant_cost += alpha_goal*tr(~(X_unsmooth[T_unsmooth-1])*(X_unsmooth[T_unsmooth-1]));
-			constant_cost += cost;
+			double constant_cost = 0.5*hessian_constant + cost;
 
 			LOG_DEBUG("  original cost: %4.10f", cost);
 			LOG_DEBUG("  hessian cost: %4.10f", 0.5*hessian_constant);
-			LOG_DEBUG("  jacobian cost: %4.10f", jac_constant);
 			LOG_DEBUG("  constant cost: %4.10f", constant_cost);
 
-			constant_cost = 0.5*hessian_constant + cost;
-
 			// Verify problem inputs
-			if (!isValidSmoothInputs()) {
-				LOG_ERROR("Inputs are not valid!");
-				exit(-1);
-			}
+			//if (!isValidSmoothInputs()) {
+			//	LOG_ERROR("Inputs are not valid!");
+			//	exit(-1);
+			//}
 
 			int exitflag = smoothMPC_solve(&problem, &output, &info);
 			if (exitflag == 1) {
@@ -588,14 +581,8 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			}
 			else {
 				LOG_ERROR("Some problem in smooth solver");
-				throw exit_exception(-1);
+				throw forces_exception(-1);
 			}
-
-
-
-			//for(int t=0; t < T_SMOOTH-1; ++t) {
-			//	std::cout << ~Uopt[t];
-			//}
 
 
 			LOG_DEBUG("Optimized cost: %4.10f", optcost);
@@ -603,18 +590,16 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			model_merit = optcost + constant_cost;
 			new_merit = computeSmoothMerit(Xopt, Uopt, X_unsmooth, penalty_coeff);
 
-			//std::cout << "Xopt" << std::endl;
-			//for(int t=0; t < T_SMOOTH; ++t) { std::cout << ~Xopt[t]; }
-			//std::cout << std::endl << std::endl;
-
-			//std::cout << "Uopt" << std::endl;
-			//for(int t=0; t < T_SMOOTH-1; ++t) { std::cout << ~Uopt[t]; }
-			//std::cout << std::endl << std::endl;
-
 			LOG_DEBUG("merit: %4.10f", merit);
 			LOG_DEBUG("model_merit: %4.10f", model_merit);
 			LOG_DEBUG("new_merit: %4.10f", new_merit);
 			
+			double new_cost = computeSmoothCost(Xopt, Uopt, X_unsmooth);
+			LOG_DEBUG("new_cost: %4.10f", new_cost);
+			LOG_DEBUG("dynviol: %4.10f", new_merit-new_cost);
+			double deviation = deviationCost(Xopt, Uopt, X_unsmooth);
+			LOG_DEBUG("deviationCost: %4.10f", deviation);
+
 			approx_merit_improve = merit - model_merit;
 			exact_merit_improve = merit - new_merit;
 			merit_improve_ratio = exact_merit_improve / approx_merit_improve;
@@ -623,43 +608,32 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			LOG_DEBUG("exact_merit_improve: %1.6f", exact_merit_improve);
 			LOG_DEBUG("merit_improve_ratio: %1.6f", merit_improve_ratio);
 			
-			//std::cout << "unintegrated trajectory\n";
-			//pythonDisplaySmoothTrajectory(Xopt, Uopt, false, true);
-			std::cout << "integrated trajectory\n";
-			pythonDisplaySmoothTrajectory(Xopt, Uopt, true, false);
-			//pythonDisplaySmoothTrajectory(X, U, false, false);
-
+			std::cout << "Paused in minimizeMeritFunction\n";
+			std::cin.ignore();
 
 			if (approx_merit_improve < -1) { // -1e-3
 				LOG_ERROR("Approximate merit function got worse: %1.6f", approx_merit_improve);
 				LOG_ERROR("Either convexification is wrong to zeroth order, or you are in numerical trouble");
 				LOG_ERROR("Failure!");
 
-				//throw exit_exception(-1); // TODO: keep?
+				//for(int t=0; t < T_SMOOTH-1; ++t) {
+				//	std::cout << ~U[t];
+				//}
+				//throw forces_exception(-1); // TODO: keep?
+				pythonDisplaySmoothTrajectory(X, U, true, true);
 
 				return false;
-				//Xpos_eps *= cfg::trust_shrink_ratio;
-				//Xangle_eps *= cfg::trust_shrink_ratio;
-				//Uvel_eps *= cfg::trust_shrink_ratio;
-				//Uangle_eps *= cfg::trust_shrink_ratio;
-
-				//X = Xopt; U = Uopt;
-				//break;
 			} else if (approx_merit_improve < cfg::min_approx_improve) {
 				LOG_DEBUG("Converged: improvement small enough");
 				X = Xopt; U = Uopt;
 				return true;
 			} else if ((exact_merit_improve < 0) || (merit_improve_ratio < cfg::improve_ratio_threshold)) {
-				//Xeps *= cfg::trust_shrink_ratio;
-				//Ueps *= cfg::trust_shrink_ratio;
 				Xpos_eps *= cfg::trust_shrink_ratio;
 				Xangle_eps *= cfg::trust_shrink_ratio;
 				Uvel_eps *= cfg::trust_shrink_ratio;
 				Uangle_eps *= cfg::trust_shrink_ratio;
 				LOG_DEBUG("Shrinking trust region size to: %2.6f %2.6f %2.6f %2.6f", Xpos_eps, Xangle_eps, Uvel_eps, Uangle_eps);
 			} else {
-				//Xeps *= cfg::trust_expand_ratio;
-				//Ueps *= cfg::trust_expand_ratio;
 				Xpos_eps *= cfg::trust_expand_ratio;
 				Xangle_eps *= cfg::trust_expand_ratio;
 				Uvel_eps *= cfg::trust_expand_ratio;
@@ -669,9 +643,11 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 				break;
 			}
 
-			if (Xeps < cfg::min_trust_box_size && Ueps < cfg::min_trust_box_size) {
-			    LOG_DEBUG("Converged: x tolerance");
-			    return true;
+			if (Xpos_eps < cfg::min_trust_box_size && Xangle_eps < cfg::min_trust_box_size &&
+					Uvel_eps < cfg::min_trust_box_size && Uangle_eps < cfg::min_trust_box_size) {
+				LOG_DEBUG("Converged: x tolerance");
+				X = Xopt; U = Uopt; // TODO: added
+				return true;
 			}
 
 
@@ -715,7 +691,7 @@ double smoothCollocation(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<U_
 	return computeSmoothCost(X, U, X_unsmooth);
 }
 
-bool smoothTraj(const std::vector<Matrix<C_DIM> >& X_unsmooth, const std::vector<Matrix<U_DIM> >& U_unsmooth) {
+std::vector<Matrix<U_DIM> > smoothTraj(const std::vector<Matrix<C_DIM> >& X_unsmooth, const std::vector<Matrix<U_DIM> >& U_unsmooth) {
 	int unsmooth_timesteps = X_unsmooth.size();
 
 	uMinSmooth[0] = .01;
@@ -723,14 +699,10 @@ bool smoothTraj(const std::vector<Matrix<C_DIM> >& X_unsmooth, const std::vector
 	uMaxSmooth[0] = 10;
 	uMaxSmooth[1] = M_PI/4;
 
-	std::cout << "setting up smooth vars\n";
-
 	smoothMPC_params problem;
 	smoothMPC_output output;
 	smoothMPC_info info;
 	setupSmoothVars(problem, output);
-
-	std::cout << "initializing smooth with unsmooth\n";
 
 	std::vector<Matrix<C_DIM> > X(T_SMOOTH);
 
@@ -739,13 +711,12 @@ bool smoothTraj(const std::vector<Matrix<C_DIM> >& X_unsmooth, const std::vector
 	int index = 0;
 	for(int t=0; t < T-1; ++t) {
 		for(int i=0; i < timestep_ratio; ++i) {
-			float next_weight = (i/((float)timestep_ratio));
-			X[index++] = (1-next_weight)*X_unsmooth[t] + next_weight*X_unsmooth[t+1];
+			//float next_weight = (i/((float)timestep_ratio));
+			//X[index++] = (1-next_weight)*X_unsmooth[t] + next_weight*X_unsmooth[t+1];
+			X[index++] = X_unsmooth[t]; // repeat X_unsmooth
 		}
 	}
 	for(int i=index; i < T_SMOOTH; ++i) {
-		//float next_weight = (i-index)/((float)(T_SMOOTH-index));
-		//X[i] = next_weight*X_unsmooth[unsmooth_timesteps-1] + (1-next_weight)*X[index];
 		X[i] = X_unsmooth[unsmooth_timesteps-1];
 	}
 
@@ -754,115 +725,99 @@ bool smoothTraj(const std::vector<Matrix<C_DIM> >& X_unsmooth, const std::vector
 	uinit[1] = 0;
 	std::vector<Matrix<U_DIM> > U(T_SMOOTH-1, uinit);
 
-	//for(int t=0; t < unsmooth_timesteps-1; ++t) {
-	//	U[t*timestep_ratio] = U_unsmooth[t];
-	//}
+	// U_unsmooth every timestep_ratio
+	for(int t=0; t < T_SMOOTH-1; ++t) {
+		if ((t % timestep_ratio) == 0) {
+			U[t] = U_unsmooth[(int)t / timestep_ratio];
+		}
+	}
 
-	std::cout << "initial X\n";
+	std::cout << "X:\n";
 	for(int t=0; t < T_SMOOTH; ++t) {
 		std::cout << ~X[t];
 	}
 
-	std::cout << "\ninitial U\n";
+	std::cout << "\nU:\n";
 	for(int t=0; t < T_SMOOTH-1; ++t) {
 		std::cout << ~U[t];
 	}
 
-	std::cout << "Calling smoothCollocation\n";
-	smoothCollocation(X, U, X_unsmooth, problem, output, info);
-
-
-	return true;
-}
-
-/*
-bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vector<Matrix<U_DIM> >& U, int timesteps) {
-	T_TRAJ_MPC = timesteps;
-
-	smoothMPC_params problem;
-	smoothMPC_output output;
-	smoothMPC_info info;
-	setupSmoothVars(problem, output);
-
-	c0 = cStart;
-	cGoal = cEnd;
-
-	uMinSmooth[0] = .5;
-	uMinSmooth[1] = -M_PI/4;
-	uMaxSmooth[0] = 10;
-	uMaxSmooth[1] = M_PI/4;
-
-	Matrix<U_DIM> uinit;
-	uinit[0] = sqrt((c0[0] - cGoal[0])*(c0[0] - cGoal[0]) + (c0[1] - cGoal[1])*(c0[1] - cGoal[1])) / (double)((T_TRAJ_MPC-1)*DT);
-	uinit[0] = uinit[0] / ((double)((T_TRAJ_MPC-1)*DT) ? T_TRAJ_MPC > 1 : 1);
-	uinit[1] = 0;
-	//uinit[1] = atan2(cGoal[1] - c0[1], cGoal[0] - c0[0]) / (double)((T_SMOOTH-1)*DT);
-
-
-	double scaling[4] = {.5, .25, .05, .01};
-	bool success = false;
-	double initTrajCost = 0, cost = 0;
 
 	util::Timer solveTimer;
 	util::Timer_tic(&solveTimer);
 
-	std::vector<Matrix<C_DIM> > X(T_TRAJ_MPC);
-	for(int scalingIndex=0; scalingIndex < 4; scalingIndex++) {
 
-		//std::cout << "scaling factor: " << scaling[scalingIndex] << std::endl;
-
-		for(int i=0; i < T_TRAJ_MPC-1; ++i) { U[i] = uinit*scaling[scalingIndex]; }
-
-		//pythonDisplayTrajectory(U, T_SMOOTH, true);
-
-		//std::cout << "X initial" << std::endl;
-		X[0].insert(0,0,c0);
-		for(int t=0; t < timesteps-1; ++t) {
-			//std::cout << ~X[t];
-			X[t+1] = dynfunccar(X[t],U[t]);
-		}
-		//std::cout << ~X[T_SMOOTH-1];
-
-		initTrajCost = computeSmoothCost(X, U);
-		LOG_DEBUG("Initial trajectory cost: %4.10f", initTrajCost);
-
-		try {
-			smoothCollocation(X, U, problem, output, info);
-			success = true;
-		} catch(exit_exception& e) {
-			success = false;
-		}
-
-		if (success) {
-			break;
-		}
-
+	try {
+		smoothCollocation(X, U, X_unsmooth, problem, output, info);
+	} catch (forces_exception &e) {
+		LOG_ERROR("Smooth solver failed!");
+		pythonDisplaySmoothTrajectory(X, U, true, true);
+		exit(-1);
 	}
 
-	double solvetime = util::Timer_toc(&solveTimer);
 
-	if (!success) {
-		LOG_ERROR("initTraj failed!");
-		std::cout << "c0: " << ~c0;
-		std::cout << "cGoal: " << ~cGoal;
-		return false;
+//	int iter = 0;
+//	while(true) {
+//		try {
+//			smoothCollocation(X, U, X_unsmooth, problem, output, info);
+//			break;
+//		}
+//		catch (forces_exception &e) {
+//			if (iter > 3) {
+//				LOG_ERROR("Tried too many times, giving up");
+//				pythonDisplaySmoothTrajectory(X, U, true, true);
+//				exit(-1);
+//			}
+//			LOG_ERROR("Forces exception, trying again");
+//			X[0] = X_unsmooth[0];
+//			for(int j=0; j < T_SMOOTH-1; ++j) {
+//				std::cout << ~X[j];
+//				X[j+1] = dynfunccar(X[j], U[j]);
+//			}
+//			std::cout << ~X[T_SMOOTH-1];
+//			pythonDisplaySmoothTrajectory(X, U, true, true);
+//			iter++;
+//		}
+//	}
+
+
+	double solveTime = util::Timer_toc(&solveTimer);
+
+	std::cout << "solveTime: " << solveTime*1000 << "ms\n";
+
+
+	std::cout << "X[0]: " << ~X[0];
+	std::cout << "X_unsmooth[0]: " << ~X_unsmooth[0];
+
+	double deviationBefore = deviationCost(X, U, X_unsmooth);
+	std::cout << "deviationCost before integration: " << deviationBefore << "\n";
+
+	X[0] = X_unsmooth[0];
+	for(int t=0; t < T_SMOOTH-1; ++t) {
+		X[t+1] = dynfunccar(X[t], U[t]);
 	}
 
-	cost = computeSmoothCost(X, U);
 
-	LOG_DEBUG("Initial cost: %4.10f", initTrajCost);
-	LOG_DEBUG("Optimized cost: %4.10f", cost);
-	//LOG_DEBUG("Actual cost: %4.10f", computeSmoothCost(X,U));
-	LOG_DEBUG("Solve time: %5.3f ms", solvetime*1000);
+	double cost = computeSmoothCost(X, U, X_unsmooth);
+	std::cout << "Final cost: " << cost << "\n";
 
-	//pythonDisplayTrajectory(U, T_TRAJ_MPC, true);
+	double diffCost = cost;
+	for(int t=0; t < T_SMOOTH-1; ++t) {
+		diffCost -= alpha_control*tr(~U[t]*U[t]);
+	}
+	std::cout << "Difference between smoothed and unsmoothed: " << diffCost << "\n";
 
-	return true;
+	double deviation = deviationCost(X, U, X_unsmooth);
+	std::cout << "deviationCost after integration: " << deviation << "\n";
+
+	pythonDisplaySmoothTrajectory(X, U, false, true);
+
+
+	return U;
 }
-*/
 
 
-
+/*
 int main(int argc, char* argv[])
 {
 	initProblemParams();
@@ -870,29 +825,96 @@ int main(int argc, char* argv[])
 	std::vector<Matrix<C_DIM> > X(T, zeros<C_DIM,1>());
 	std::vector<Matrix<U_DIM> > U(T-1, zeros<U_DIM,1>());
 
-	U[0][0] = 2.29551;      U[0][1] = 0.056562;
-	U[1][0] = 7.10411;      U[1][1] = 0.40421;
-	U[2][0] = 7.45238;      U[2][1] = -0.178322;
-	U[3][0] = 6.15177;      U[3][1] = -0.8003;
-	U[4][0] = 5.0965;       U[4][1] = -0.236125;
-	U[5][0] = 4.9362;       U[5][1] = 0.172297;
-	U[6][0] = 1.92251;      U[6][1] = -0.0218368;
-	U[7][0] = 2.3931;       U[7][1] = 0.526903;
-	U[8][0] = 1.86502;      U[8][1] = 0.556067;
-	U[9][0] = 1.75637;      U[9][1] = 0.322271;
-	U[10][0] = 2.71267;     U[10][1] = 0.254822;
-	U[11][0] = 3.30179;     U[11][1] = 0.122705;
-	U[12][0] = 9.99999;     U[12][1] = -0.0724144;
-	U[13][0] = 10;          U[13][1] = 0.329621;
 
-	X[0] = zeros<C_DIM,1>();
+//	U[0][0] = 2.29551;      U[0][1] = 0.056562;
+//	U[1][0] = 7.10411;      U[1][1] = 0.40421;
+//	U[2][0] = 7.45238;      U[2][1] = -0.178322;
+//	U[3][0] = 6.15177;      U[3][1] = -0.8003;
+//	U[4][0] = 5.0965;       U[4][1] = -0.236125;
+//	U[5][0] = 4.9362;       U[5][1] = 0.172297;
+//	U[6][0] = 1.92251;      U[6][1] = -0.0218368;
+//	U[7][0] = 2.3931;       U[7][1] = 0.526903;
+//	U[8][0] = 1.86502;      U[8][1] = 0.556067;
+//	U[9][0] = 1.75637;      U[9][1] = 0.322271;
+//	U[10][0] = 2.71267;     U[10][1] = 0.254822;
+//	U[11][0] = 3.30179;     U[11][1] = 0.122705;
+//	U[12][0] = 9.99999;     U[12][1] = -0.0724144;
+//	U[13][0] = 10;          U[13][1] = 0.329621;
+//
+//	X[0][0] = 0;
+//	X[0][1] = 0;
+//	X[0][2] = 0;
+
+//	U[0][0] = 1.82213;       U[0][1] = 1.0472;
+//	U[1][0] = 1.67913;       U[1][1] = 1.0472;
+//	U[2][0] = 8.06062;       U[2][1] = -0.846693;
+//	U[3][0] = 1.5;           U[3][1] = 0.0743642;
+//	U[4][0] = 1.5;           U[4][1] = 0.52193;
+//	U[5][0] = 1.5;           U[5][1] = 1.0472;
+//	U[6][0] = 1.5;           U[6][1] = 1.0472;
+//	U[7][0] = 1.5;           U[7][1] = 0.562566;
+//	U[8][0] = 1.5;           U[8][1] = 0.358109;
+//	U[9][0] = 1.5;           U[9][1] = 1.0472;
+//	U[10][0] = 1.5;          U[10][1] = 1.0472;
+//	U[11][0] = 1.5;          U[11][1] = 1.0472;
+//	U[12][0] = 1.5;          U[12][1] = 0.967156;
+//	U[13][0] = 3.61221;      U[13][1] = -0.172981;
+//
+//	X[0][0] = 59.7571;
+//	X[0][1] = -0.0704439;
+//	X[0][2] = 0.786252;
+
+//	U[0][0] = 1.5;           U[0][1] = 0.646742;
+//	U[1][0] = 1.5;           U[1][1] = 0.64126;
+//	U[2][0] = 1.5;           U[2][1] = 0.579988;
+//	U[3][0] = 2.18841;       U[3][1] = 0.75854;
+//	U[4][0] = 1.5;           U[4][1] = 0.287933;
+//	U[5][0] = 5.76078;       U[5][1] = 0.186944;
+//	U[6][0] = 10;            U[6][1] = -0.46209;
+//	U[7][0] = 10;            U[7][1] = 0.559336;
+//	U[8][0] = 3.44668;       U[8][1] = -0.461086;
+//	U[9][0] = 3.78677;       U[9][1] = -0.563789;
+//	U[10][0] = 2.41875;      U[10][1] = 0.172149;
+//	U[11][0] = 1.76995;      U[11][1] = -0.0564648;
+//	U[12][0] = 8.97079;      U[12][1] = -0.676349;
+//	U[13][0] = 10;           U[13][1] = 1.0472;
+//
+//	X[0][0] = 60.1005;
+//	X[0][1] = 19.8891;
+//	X[0][2] = 2.35812;
+
+
+	U[0][0] = 4.34473;       U[0][1] = 1.0472;
+	U[1][0] = 5.04883;       U[1][1] = 1.03323;
+	U[2][0] = 4.16264;       U[2][1] = 0.225835;
+	U[3][0] = 3.15039;       U[3][1] = -0.00538109;
+	U[4][0] = 1.84172;       U[4][1] = 0.0459601;
+	U[5][0] = 1.5;           U[5][1] = 0.0699177;
+	U[6][0] = 1.5;           U[6][1] = -0.261927;
+	U[7][0] = 1.5;           U[7][1] = -1.0472;
+	U[8][0] = 1.5;           U[8][1] = -1.0472;
+	U[9][0] = 1.5;           U[9][1] = -1.0472;
+	U[10][0] = 1.5;          U[10][1] =  -1.0472;
+	U[11][0] = 1.5;          U[11][1] =  -0.794009;
+	U[12][0] = 7.27962;      U[12][1] =  -0.991759;
+	U[13][0] = 10;           U[13][1] =  0.35943;
+
+	X[0][0] = 0.1;
+	X[0][1] = 19.9;
+	X[0][2] = 3.927;
+
 	for(int t=0; t < T-1; ++t) {
+		std::cout << ~X[t];
 		X[t+1] = dynfunccar(X[t],U[t]);
 	}
+	std::cout << ~X[T-1];
+
+	std::cout << "initial unsmoothed trajectory\n";
+	pythonDisplaySmoothTrajectory(X, U, false, true, T);
 
 	smoothTraj(X, U);
 
 	cleanupSmoothMPCVars();
 	
 }
-
+*/

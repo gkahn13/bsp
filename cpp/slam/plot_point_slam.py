@@ -110,46 +110,6 @@ def plot_domain(landmarks, max_range, alpha_obs, extent):
                     
     imz = imz / imz.max()
     plt.imshow(imz,cmap=matplotlib.cm.Greys_r,extent=extent,aspect='equal',origin='lower')
-    
-def smooth_trajectory(B, U, cDim, uDim, T, DT):
-    smooth_factor = 10
-    dt = DT / float(smooth_factor)
-    
-    X = B[0:cDim,0]
-    xidx = 0
-    x = X[:,0]
-    for t in xrange(T-1):
-        u = U[:,t]
-        x = B[0:cDim,t]
-        X = np.hstack((X,x))
-        for i in xrange(1,smooth_factor+1):
-            x = dynfunc(x, u, dt)
-            X = np.hstack((X,x))
-            
-    X = np.asarray(X)
-    plt.plot(X[0,:],X[1,:])
-    plt.show(block=False)
-    plt.pause(.5)
-    IPython.embed()
-    
-def smooth(B, U, cDim, uDim, T, Dt):
-    smooth_factor = 10
-    
-    X = B[0:cDim,0]
-    xidx = 0
-    x = X[:,0]
-    for t in xrange(T-1):
-        pass
-    
-    xdata = X[0,:]
-    ydata = X[1,:]
-    
-    xnew = np.linspace(xdata.min(), xdata.max(), 300)
-    
-    ysmooth = spline(xdata, ydata, xnew)
-    
-    plt.plot(xnew, ysmooth, color='red')
-    plt.plot(X[0,:],X[1,:],ls='None',marker='s',markerfacecolor='yellow')
  
 def dynfunc(x, u, dt, wheelbase=4.):
     xAdd = np.matrix(x)
@@ -203,18 +163,6 @@ def plot_mean(X, U, DT, interp=False):
     X = np.asarray(X)
     
     if interp:
-        """
-        xdata = X[0,:]
-        ydata = X[1,:]
-        
-        xnew = np.linspace(xdata.min(), xdata.max(), 300)
-        
-        ysmooth = spline(xdata, ydata, xnew)
-        
-        IPython.embed()
-        
-        plt.plot(xnew, ysmooth, color='red')
-        """
         Xsmooth = interpolate_polyline(X[0:2,:].T, 500).T
         
         plt.plot(Xsmooth[0,:], Xsmooth[1,:], color='red')
@@ -225,27 +173,7 @@ def plot_mean(X, U, DT, interp=False):
     
     plt.plot(X[0,0],X[1,0],ls='None',marker='s',markersize=10.0)
     plt.plot(X[0,-1],X[1,-1],ls='None',marker='s',markersize=10.0)
-    
-    """
-    X = np.asmatrix(X)
-    
-    T = X.shape[1]
-    sampling = 2
-    X_upsampled = ml.zeros([X.shape[0], T*sampling])
-    X_upsampled[:,0] = X[:,0]
-    index = 0
-    for i in xrange(0, T-1):
-        for j in xrange(0, sampling):
-            X_upsampled[:,index+1] = dynfunc(X_upsampled[:,index], U[:,i], DT/float(sampling))
-            index += 1
-    
-    X = np.asarray(X)
-    X_upsampled = np.asarray(X_upsampled)
-    plt.plot(X_upsampled[0,:],X_upsampled[1,:],color='red')
-    plt.plot(X[0,:],X[1,:],ls='None',color='red',marker='s',markerfacecolor='yellow')
-    plt.plot(X[0,0],X[1,0],ls='None',marker='s',markersize=10.0)
-    plt.plot(X[0,-1],X[1,-1],ls='None',marker='s',markersize=10.0)
-    """
+
     
 
 def plot_cov(mu, sigma, plotType = 'y-', alpha=1):

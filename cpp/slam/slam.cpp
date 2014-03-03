@@ -25,7 +25,7 @@ const double INFTY = 1e10;
 
 
 
-void initProblemParams()
+void initProblemParams(std::vector<Matrix<P_DIM> >& l)
 {
 	Q.reset();
 	Q(0,0) = 1*config::VELOCITY_NOISE*config::VELOCITY_NOISE;
@@ -42,9 +42,12 @@ void initProblemParams()
 	waypoints[2][0] = 0; waypoints[2][1] = 20;
 	waypoints[3][0] = 0; waypoints[3][1] = 0;
 
-	landmarks[0][0] = 30; landmarks[0][1] = -10;
-	landmarks[1][0] = 70; landmarks[1][1] = 12.5;
-	landmarks[2][0] = 20; landmarks[2][1] = 10;
+	for(int i=0; i < NUM_LANDMARKS; ++i) {
+		landmarks[i] = l[i];
+	}
+//	landmarks[0][0] = 30; landmarks[0][1] = -10;
+//	landmarks[1][0] = 70; landmarks[1][1] = 12.5;
+//	landmarks[2][0] = 20; landmarks[2][1] = 10;
 
 
 	// start at (0, 0)
@@ -81,6 +84,33 @@ void initProblemParams()
 		xMax[2*i+1+C_DIM] = landmarks[i][1] + 5;
 	}
 
+}
+
+std::vector<std::vector<Matrix<P_DIM>> > landmarks_list() {
+	std::vector<std::vector<Matrix<P_DIM>> > l_list;
+
+	std::string line;
+	std::string fileName = "slam/landmarks.txt";
+	std::ifstream l_file (fileName);
+	if (l_file.is_open()) {
+		while(std::getline(l_file, line)) {
+			std::vector<Matrix<P_DIM>> l(NUM_LANDMARKS);
+			int index = 0;
+
+			std::istringstream iss(line);
+			double pos;
+			while (iss >> pos) {
+				l[index / P_DIM][index % P_DIM] = pos;
+				index++;
+			}
+			l_list.push_back(l);
+		}
+	} else {
+		LOG_ERROR("Couldn't open landmarks.txt!");
+		exit(-1);
+	}
+
+	return l_list;
 }
 
 Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<Q_DIM>& q)

@@ -3,7 +3,9 @@
 
 #include <Python.h>
 
+#include <iostream>
 #include <fstream>
+#include <string>
 #include <math.h>
 
 #define _USE_MATH_DEFINES
@@ -82,7 +84,9 @@ const double ALPHA_OBS = .75;
 }
 
 
-void initProblemParams();
+void initProblemParams(std::vector<Matrix<P_DIM> >& l);
+
+std::vector<std::vector<Matrix<P_DIM>> > landmarks_list();
 
 Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<Q_DIM>& q);
 

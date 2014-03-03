@@ -1,6 +1,6 @@
 #include "../slam.h"
 #include "../traj/slam-traj.h"
-#include "../smooth/slam-smooth.h"
+//#include "../smooth/slam-smooth.h"
 
 
 #include <vector>
@@ -924,85 +924,19 @@ double statePenaltyCollocation(std::vector< Matrix<C_DIM> >& X, std::vector< Mat
 	return casadiComputeCost(X, U);
 }
 
-/*
-void testCasadi() {
-	initProblemParams();
-
-	Matrix<U_DIM> uinit;
-
-	xGoal = x0;
-	xGoal.insert(0, 0, waypoints[0]);
-
-	std::cout << "x0: " << ~x0;
-	std::cout << "xGoal: " << ~xGoal << "\n";
-
-	// initialize velocity to dist / timesteps
-	uinit[0] = sqrt((x0[0] - xGoal[0])*(x0[0] - xGoal[0]) + (x0[1] - xGoal[1])*(x0[1] - xGoal[1])) / (double)((T-1)*DT);
-	// angle already pointed at goal, so is 0
-	uinit[1] = 0;
-
-	std::vector<Matrix<U_DIM> > U(T-1, uinit);
-	std::vector<Matrix<X_DIM> > X(T);
-
-	X[0] = x0;
-	for(int t=0; t < T-1; ++t) {
-		X[t+1] = dynfunc(X[t], U[t], zeros<Q_DIM,1>());
-	}
-
-	std::cout << "U\n";
-	for(int t=0; t < T-1; ++t) { std::cout << ~U[t]; }
-	std::cout << "\n";
-
-	std::cout << "X\n";
-	for(int t=0; t < T; ++t) { std::cout << ~X[t]; }
-	std::cout << "\n";
-
-	Matrix<B_DIM> b;
-	vec(x0, SqrtSigma0, b);
-
-	for(int t=0; t < T-1; ++t) {
-		b = beliefDynamics(b, U[0]);
-	}
-
-
-	double initTrajCost = computeCost(X, U);
-	LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
-
-	double initCasadiTrajCost = casadiComputeCost(X, U);
-	LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
-
-
-}
-*/
-
-int main(int argc, char* argv[])
-{
-
+void planPath(std::vector<Matrix<P_DIM> > l, stateMPC_params& problem, stateMPC_output& output, stateMPC_info& info) {
 	LOG_INFO("Initializing problem parameters");
-	initProblemParams();
+	initProblemParams(l);
 
-	stateMPC_params problem;
-	stateMPC_output output;
-	stateMPC_info info;
-	setupStateVars(problem, output);
 
 	util::Timer solveTimer, trajTimer;
 	double totalSolveTime = 0, trajTime = 0;
 
 	double totalTrajCost = 0;
 
-	int num_loops = 1;
-
-	std::vector<Matrix<B_DIM> > B_total(T*NUM_WAYPOINTS*num_loops);
-	std::vector<Matrix<U_DIM> > U_total((T-1)*NUM_WAYPOINTS*num_loops);
+	std::vector<Matrix<B_DIM> > B_total(T*NUM_WAYPOINTS);
+	std::vector<Matrix<U_DIM> > U_total((T-1)*NUM_WAYPOINTS);
 	int B_total_idx = 0, U_total_idx = 0;
-
-	// smooth totals
-	//std::vector<Matrix<B_DIM> > B_stotal(T_SMOOTH*NUM_WAYPOINTS*num_loops);
-	//std::vector<Matrix<U_DIM> > U_stotal((T_SMOOTH-1)*NUM_WAYPOINTS*num_loops);
-	//int B_stotal_idx = 0, U_stotal_idx = 0;
-	std::vector<Matrix<B_DIM> > B_stotal;
-	std::vector<Matrix<U_DIM> > U_stotal;
 
 
 	std::vector<Matrix<B_DIM> > B(T);
@@ -1013,147 +947,135 @@ int main(int argc, char* argv[])
 
 	Matrix<X_DIM,1> x;
 	Matrix<X_DIM,X_DIM> s;
-	for(int loop=0; loop < num_loops; loop++) {
-		LOG_INFO("Loop %d",loop);
-		x0[2] = nearestAngleFromTo(0, x0[2]); // need to remod back to near 0
-		for(int i=0; i < NUM_WAYPOINTS; ++i) {
-			LOG_INFO("Going to waypoint %d",i);
-			// goal is waypoint position + direct angle + landmarks
-			xGoal.insert(0, 0, waypoints[i]);
+	x0[2] = nearestAngleFromTo(0, x0[2]); // need to remod back to near 0
+	for(int i=0; i < NUM_WAYPOINTS; ++i) {
+		LOG_INFO("Going to waypoint %d",i);
+		// goal is waypoint position + direct angle + landmarks
+		xGoal.insert(0, 0, waypoints[i]);
 
-			// want to be facing the next waypoint
-			if (i < NUM_WAYPOINTS - 1) {
-				xGoal[2] = atan2(waypoints[i+1][1] - waypoints[i][1], waypoints[i+1][0] - waypoints[i][0]);
-			} else {
-				xGoal[2] = atan2(xGoal[1] - x0[1], xGoal[0] - x0[0]);
-			}
-
-
-			xGoal.insert(C_DIM, 0, x0.subMatrix<L_DIM,1>(C_DIM,0));
-
-			util::Timer_tic(&trajTimer);
-
-			std::vector<Matrix<U_DIM> > U(T-1);
-			bool initTrajSuccess = initTraj(x0.subMatrix<C_DIM,1>(0,0), xGoal.subMatrix<C_DIM,1>(0,0), U, T);
-			if (!initTrajSuccess) {
-				LOG_ERROR("Failed to initialize trajectory, exiting slam-state");
-				exit(-1);
-			}
-
-			double initTrajTime = util::Timer_toc(&trajTimer);
-			trajTime += initTrajTime;
-
-			vec(x0, SqrtSigma0, B[0]);
-			for(int t=0; t < T-1; ++t) {
-				X[t] = B[t].subMatrix<C_DIM,1>(0,0);
-				B[t+1] = beliefDynamics(B[t], U[t]);
-			}
-			X[T-1] = B[T-1].subMatrix<C_DIM,1>(0,0);
-
-			double initTrajCost = computeCost(X, U);
-			LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
-
-			double initCasadiTrajCost = casadiComputeCost(X, U);
-			LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
-
-			//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
-
-			util::Timer_tic(&solveTimer);
-
-			double cost = 0;
-			int iter = 0;
-			while(true) {
-				try {
-					cost = statePenaltyCollocation(X, U, problem, output, info);
-					break;
-				}
-				catch (forces_exception &e) {
-					if (iter > 3) {
-						LOG_ERROR("Tried too many times, giving up");
-						pythonDisplayTrajectory(U, T, true);
-						exit(-1);
-					}
-					LOG_ERROR("Forces exception, trying again");
-					X[0] = x0.subMatrix<C_DIM,1>(0,0);
-					x = x0;
-					for(int j=0; j < T-1; ++j) {
-						x.insert<C_DIM,1>(0, 0, X[j]);
-						X[j+1] = dynfunc(x, U[j], zeros<Q_DIM,1>()).subMatrix<C_DIM,1>(0,0);
-					}
-					X[T-1] = xGoal.subMatrix<C_DIM,1>(0,0);
-					iter++;
-				}
-			}
-
-			double solvetime = util::Timer_toc(&solveTimer);
-			totalSolveTime += solvetime;
-
-			vec(x0, SqrtSigma0, B[0]);
-			X[0] = x0.subMatrix<C_DIM,1>(0,0);
-			for (int t = 0; t < T-1; ++t) {
-				B[t+1] = beliefDynamics(B[t], U[t]);
-				unVec(B[t+1], x, s);
-				X[t+1] = x.subMatrix<C_DIM,1>(0,0);
-			}
-
-			/*
-			// smooth here
-			std::vector<Matrix<U_DIM> > U_smooth = smoothTraj(X);
-			std::vector<Matrix<B_DIM> > B_smooth(T_SMOOTH);
-			B_stotal.push_back(B[0]);
-			for(int t=0; t < T_SMOOTH-1; ++t) {
-				U_stotal.push_back(U_smooth[t]);
-				B_stotal.push_back(beliefDynamics(B_stotal.back(), U_stotal.back()));
-			}
-			*/
-
-
-
-			for (int t = 0; t < T-1; ++t) {
-				B_total[B_total_idx++] = B[t];
-				U_total[U_total_idx++] = U[t];
-			}
-			B_total[B_total_idx++] = B[T-1];
-
-			totalTrajCost += computeCost(X,U);
-
-			/*
-		LOG_INFO("Initial cost: %4.10f", initTrajCost);
-		LOG_INFO("Optimized cost: %4.10f", cost);
-		LOG_INFO("Actual cost: %4.10f", computeCost(X,U));
-		LOG_INFO("Trajectory solve time: %5.3f ms", initTrajTime*1000);
-		LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
-			 */
-
-			unVec(B[T-1], x0, SqrtSigma0);
-
-			std::cout << "x0: " << x0.subMatrix<C_DIM,1>(0,0);
-			std::cout << "U\n";
-			for(int t=0; t < T-1; ++t) {
-				std::cout << ~U[t];
-			}
-			std::cout << "\nX\n";
-			for(int t=0; t < T; ++t) {
-				std::cout << ~X[t];
-			}
-
-			pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
-
+		// want to be facing the next waypoint
+		if (i < NUM_WAYPOINTS - 1) {
+			xGoal[2] = atan2(waypoints[i+1][1] - waypoints[i][1], waypoints[i+1][0] - waypoints[i][0]);
+		} else {
+			xGoal[2] = atan2(xGoal[1] - x0[1], xGoal[0] - x0[0]);
 		}
 
-	}
 
-	int timestep_ratio = (int)T_SMOOTH / T; // make sure this is divisible!
+		xGoal.insert(C_DIM, 0, x0.subMatrix<L_DIM,1>(C_DIM,0));
+
+		util::Timer_tic(&trajTimer);
+
+		std::vector<Matrix<U_DIM> > U(T-1);
+		bool initTrajSuccess = initTraj(x0.subMatrix<C_DIM,1>(0,0), xGoal.subMatrix<C_DIM,1>(0,0), U, T);
+		if (!initTrajSuccess) {
+			LOG_ERROR("Failed to initialize trajectory, exiting slam-state");
+			exit(-1);
+		}
+
+		double initTrajTime = util::Timer_toc(&trajTimer);
+		trajTime += initTrajTime;
+
+		vec(x0, SqrtSigma0, B[0]);
+		for(int t=0; t < T-1; ++t) {
+			X[t] = B[t].subMatrix<C_DIM,1>(0,0);
+			B[t+1] = beliefDynamics(B[t], U[t]);
+		}
+		X[T-1] = B[T-1].subMatrix<C_DIM,1>(0,0);
+
+		double initTrajCost = computeCost(X, U);
+		LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
+
+		double initCasadiTrajCost = casadiComputeCost(X, U);
+		LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
+
+		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
+
+		util::Timer_tic(&solveTimer);
+
+		double cost = 0;
+		int iter = 0;
+		while(true) {
+			try {
+				cost = statePenaltyCollocation(X, U, problem, output, info);
+				break;
+			}
+			catch (forces_exception &e) {
+				if (iter > 3) {
+					LOG_ERROR("Tried too many times, giving up");
+					pythonDisplayTrajectory(U, T, true);
+					exit(-1);
+				}
+				LOG_ERROR("Forces exception, trying again");
+				X[0] = x0.subMatrix<C_DIM,1>(0,0);
+				x = x0;
+				for(int j=0; j < T-1; ++j) {
+					x.insert<C_DIM,1>(0, 0, X[j]);
+					X[j+1] = dynfunc(x, U[j], zeros<Q_DIM,1>()).subMatrix<C_DIM,1>(0,0);
+				}
+				X[T-1] = xGoal.subMatrix<C_DIM,1>(0,0);
+				iter++;
+			}
+		}
+
+		double solvetime = util::Timer_toc(&solveTimer);
+		totalSolveTime += solvetime;
+
+		vec(x0, SqrtSigma0, B[0]);
+		X[0] = x0.subMatrix<C_DIM,1>(0,0);
+		for (int t = 0; t < T-1; ++t) {
+			B[t+1] = beliefDynamics(B[t], U[t]);
+			unVec(B[t+1], x, s);
+			X[t+1] = x.subMatrix<C_DIM,1>(0,0);
+		}
+
+
+		for (int t = 0; t < T-1; ++t) {
+			B_total[B_total_idx++] = B[t];
+			U_total[U_total_idx++] = U[t];
+		}
+		B_total[B_total_idx++] = B[T-1];
+
+		totalTrajCost += computeCost(X,U);
+
+		unVec(B[T-1], x0, SqrtSigma0);
+
+		std::cout << "x0: " << x0.subMatrix<C_DIM,1>(0,0);
+		std::cout << "U\n";
+		for(int t=0; t < T-1; ++t) {
+			std::cout << ~U[t];
+		}
+		std::cout << "\nX\n";
+		for(int t=0; t < T; ++t) {
+			std::cout << ~X[t];
+		}
+
+		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
+
+	}
 
 	LOG_INFO("Total trajectory cost: %4.10f", totalTrajCost);
 	LOG_INFO("Total trajectory solve time: %5.3f ms", trajTime*1000);
 	LOG_INFO("Total solve time: %5.3f ms", totalSolveTime*1000);
 
 
-	pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS*num_loops, true);
+	pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, true);
+}
 
+int main(int argc, char* argv[])
+{
+	std::vector<std::vector<Matrix<P_DIM> > > l_list = landmarks_list();
+
+	for(int i=0; i < l_list.size(); ++i) {
+		std::vector<Matrix<P_DIM> > l = l_list[i];
+
+		stateMPC_params problem;
+		stateMPC_output output;
+		stateMPC_info info;
+		setupStateVars(problem, output);
+
+		planPath(l, problem, output, info);
+	}
 	cleanupStateMPCVars();
-
 
 	return 0;
 }

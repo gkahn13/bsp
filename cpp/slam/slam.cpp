@@ -20,8 +20,7 @@ SymmetricMatrix<R_DIM> R;
 const int T = TIMESTEPS;
 const double INFTY = 1e10;
 
-//const double alpha_belief = 10, alpha_final_belief = 50, alpha_control = .01, alpha_goal_state = 1;
-
+const std::string landmarks_file = "slam/landmarks.txt";
 
 
 
@@ -90,10 +89,14 @@ std::vector<std::vector<Matrix<P_DIM>> > landmarks_list() {
 	std::vector<std::vector<Matrix<P_DIM>> > l_list;
 
 	std::string line;
-	std::string fileName = "slam/landmarks.txt";
-	std::ifstream l_file (fileName);
+	std::ifstream l_file (landmarks_file);
 	if (l_file.is_open()) {
+		int iter = 0;
 		while(std::getline(l_file, line)) {
+			if (iter < 1) { // ignore first line, which is time identifier
+				iter++;
+				continue;
+			}
 			std::vector<Matrix<P_DIM>> l(NUM_LANDMARKS);
 			int index = 0;
 
@@ -257,51 +260,6 @@ void linearizeObservation(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r, Matrix
 
 }
 
-int numberLandmarksInRange(const Matrix<X_DIM>& x) {
-	int num_obs = 0;
-	double xPos = x[0], yPos = x[1], angle = x[2];
-
-	for (int i=0; i < L_DIM; i+=2) {
-		double dx = x[C_DIM+i] - xPos;
-		double dy = x[C_DIM+i+1] - yPos;
-
-		if ((fabs(dx) < config::MAX_RANGE) &&
-				(fabs(dy) < config::MAX_RANGE) &&
-				(dx*cos(angle) + dy*sin(angle) > 0) &&
-				(dx*dx + dy*dy < config::MAX_RANGE*config::MAX_RANGE))
-		{
-			num_obs++;
-		}
-	}
-
-	return num_obs;
-}
-
-template <size_t _z_dim_observed>
-void filteredLinearizeObservation(const Matrix<X_DIM>& x, Matrix<_z_dim_observed,X_DIM>& H, Matrix<_z_dim_observed,_z_dim_observed>& N) {
-	Matrix<Z_DIM,X_DIM> Hfull;
-	Matrix<Z_DIM,R_DIM> Nfull;
-
-	linearizeObservation(x, zeros<R_DIM,1>(), Hfull, Nfull);
-
-	int num_obs = 0;
-	double xPos = x[0], yPos = x[1], angle = x[2];
-
-	for (int i=0; i < L_DIM; i+=2) {
-		double dx = x[C_DIM+i] - xPos;
-		double dy = x[C_DIM+i+1] - yPos;
-
-		if ((fabs(dx) < config::MAX_RANGE) &&
-				(fabs(dy) < config::MAX_RANGE) &&
-				(dx*cos(angle) + dy*sin(angle) > 0) &&
-				(dx*dx + dy*dy < config::MAX_RANGE*config::MAX_RANGE))
-		{
-			H.insert(2*num_obs, 0, Hfull.subMatrix<1,X_DIM>(i,0));
-		}
-	}
-
-	N = identity<_z_dim_observed>(); // s
-}
 
 // Jacobians: dh(x,r)/dx, dh(x,r)/dr
 void linearizeObservationFiniteDiff(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r, Matrix<Z_DIM,X_DIM>& H, Matrix<Z_DIM,R_DIM>& N)
@@ -388,6 +346,52 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	vec(x, sqrtm(Sigma), g);
 
 	return g;
+}
+
+int numberLandmarksInRange(const Matrix<X_DIM>& x) {
+	int num_obs = 0;
+	double xPos = x[0], yPos = x[1], angle = x[2];
+
+	for (int i=0; i < L_DIM; i+=2) {
+		double dx = x[C_DIM+i] - xPos;
+		double dy = x[C_DIM+i+1] - yPos;
+
+		if ((fabs(dx) < config::MAX_RANGE) &&
+				(fabs(dy) < config::MAX_RANGE) &&
+				(dx*cos(angle) + dy*sin(angle) > 0) &&
+				(dx*dx + dy*dy < config::MAX_RANGE*config::MAX_RANGE))
+		{
+			num_obs++;
+		}
+	}
+
+	return num_obs;
+}
+
+template <size_t _z_dim_observed>
+void filteredLinearizeObservation(const Matrix<X_DIM>& x, Matrix<_z_dim_observed,X_DIM>& H, Matrix<_z_dim_observed,_z_dim_observed>& N) {
+	Matrix<Z_DIM,X_DIM> Hfull;
+	Matrix<Z_DIM,R_DIM> Nfull;
+
+	linearizeObservation(x, zeros<R_DIM,1>(), Hfull, Nfull);
+
+	int num_obs = 0;
+	double xPos = x[0], yPos = x[1], angle = x[2];
+
+	for (int i=0; i < L_DIM; i+=2) {
+		double dx = x[C_DIM+i] - xPos;
+		double dy = x[C_DIM+i+1] - yPos;
+
+		if ((fabs(dx) < config::MAX_RANGE) &&
+				(fabs(dy) < config::MAX_RANGE) &&
+				(dx*cos(angle) + dy*sin(angle) > 0) &&
+				(dx*dx + dy*dy < config::MAX_RANGE*config::MAX_RANGE))
+		{
+			H.insert(2*num_obs, 0, Hfull.subMatrix<1,X_DIM>(i,0));
+		}
+	}
+
+	N = identity<_z_dim_observed>(); // s
 }
 
 // Belief dynamics
@@ -514,6 +518,70 @@ void linearizeBeliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u, Mat
 	}
 
 	h = beliefDynamics(b, u);
+}
+
+void logDataToFile(std::string file_name, const std::vector<Matrix<B_DIM> >& B, const std::vector<Matrix<P_DIM> >& l, double solve_time, double initialization_time) {
+	double sum_cov_trace = 0;
+	Matrix<X_DIM> x;
+	Matrix<X_DIM,X_DIM> SqrtSigma;
+	for(int i=0; i < B.size(); ++i) {
+		unVec(B[i], x, SqrtSigma);
+		sum_cov_trace += tr(SqrtSigma*SqrtSigma);
+	}
+
+	// assuming only one loop around
+	double waypoint_distance_error = 0;
+	for(int w_idx=0; w_idx < NUM_WAYPOINTS; ++w_idx) {
+		Matrix<P_DIM> w = waypoints[w_idx];
+		double min_dist = INFTY;
+		for(int i=0; i < B.size(); ++i) {
+			unVec(B[i], x, SqrtSigma);
+			Matrix<P_DIM> diff = w - x.subMatrix<P_DIM,1>(0,0);
+			min_dist = MIN(min_dist, sqrt(tr(~diff*diff)));
+		}
+		waypoint_distance_error += min_dist;
+	}
+
+	std::string landmarks_identifier;
+	std::ifstream l_file (landmarks_file);
+	if (l_file.is_open()) {
+		if (std::getline(l_file, landmarks_identifier)) {
+
+		} else {
+			LOG_ERROR("Couldn't read landmarks_file");
+			return;
+		}
+	} else {
+		LOG_ERROR("Couldn't open landmarks_file");
+	}
+
+	std::ifstream check_file(file_name.c_str());
+	bool file_already_existed = check_file.good();
+
+	std::ofstream f;
+	std::string file_name_with_identifier = file_name + "_" + landmarks_identifier;
+	f.open(file_name_with_identifier.c_str(), std::ios_base::app);
+	if (f.is_open()) {
+
+		if (!file_already_existed) {
+			f << landmarks_identifier << "\n";
+		}
+
+//		for(int i=0; i < l.size(); ++i) {
+//			for(int j=0; j < P_DIM; ++j) {
+//				f << l[i][j] << " ";
+//			}
+//		}
+//		f << "\n";
+
+		f << "sum_cov_trace " << sum_cov_trace << "\n";
+		f << "waypoint_distance_error " << waypoint_distance_error << "\n";
+		f << "solve_time " << solve_time << "\n";
+		f << "initialization_time " << initialization_time << "\n";
+	} else {
+		LOG_ERROR("Couldn't write in logDataToFile");
+		return;
+	}
 }
 
 void pythonDisplayTrajectory(std::vector< Matrix<X_DIM> >& X, int time_steps, bool pause=false) {

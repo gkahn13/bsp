@@ -666,7 +666,7 @@ double beliefPenaltyCollocation(std::vector< Matrix<B_DIM> >& B, std::vector< Ma
 	return computeCost(B, U);
 }
 
-void planPath(std::vector<Matrix<P_DIM> > l, beliefPenaltyMPC_params& problem, beliefPenaltyMPC_output& output, beliefPenaltyMPC_info& info) {
+void planPath(std::vector<Matrix<P_DIM> > l, beliefPenaltyMPC_params& problem, beliefPenaltyMPC_output& output, beliefPenaltyMPC_info& info, std::string log_data_file_name) {
 	initProblemParams(l);
 
 	util::Timer solveTimer;
@@ -792,8 +792,10 @@ int main(int argc, char* argv[])
 
 	std::vector<std::vector<Matrix<P_DIM> > > l_list = landmarks_list();
 
+	std::string log_data_file_name = "slam/data/slam-belief";
+
 	for(int i=0; i < l_list.size(); ++i) {
-		planPath(l_list[i], problem, output, info);
+		planPath(l_list[i], problem, output, info, log_data_file_name);
 	}
 
 	cleanupBeliefMPCVars();

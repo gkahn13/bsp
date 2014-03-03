@@ -924,7 +924,7 @@ double statePenaltyCollocation(std::vector< Matrix<C_DIM> >& X, std::vector< Mat
 	return casadiComputeCost(X, U);
 }
 
-void planPath(std::vector<Matrix<P_DIM> > l, stateMPC_params& problem, stateMPC_output& output, stateMPC_info& info) {
+void planPath(std::vector<Matrix<P_DIM> > l, stateMPC_params& problem, stateMPC_output& output, stateMPC_info& info, std::string log_data_file_name) {
 	LOG_INFO("Initializing problem parameters");
 	initProblemParams(l);
 
@@ -983,10 +983,10 @@ void planPath(std::vector<Matrix<P_DIM> > l, stateMPC_params& problem, stateMPC_
 		X[T-1] = B[T-1].subMatrix<C_DIM,1>(0,0);
 
 		double initTrajCost = computeCost(X, U);
-		LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
+		//LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
 
 		double initCasadiTrajCost = casadiComputeCost(X, U);
-		LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
+		//LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
 
 		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 
@@ -1047,6 +1047,8 @@ void planPath(std::vector<Matrix<P_DIM> > l, stateMPC_params& problem, stateMPC_
 	LOG_INFO("Total trajectory solve time: %5.3f ms", trajTime*1000);
 	LOG_INFO("Total solve time: %5.3f ms", totalSolveTime*1000);
 
+	logDataToFile(log_data_file_name, B_total, l, totalSolveTime*1000, trajTime*1000);
+
 
 	pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, true);
 }
@@ -1060,10 +1062,10 @@ int main(int argc, char* argv[])
 
 	std::vector<std::vector<Matrix<P_DIM> > > l_list = landmarks_list();
 
-	for(int i=0; i < l_list.size(); ++i) {
-		std::vector<Matrix<P_DIM> > l = l_list[i];
+	std::string log_data_file_name = "slam/data/slam-state";
 
-		planPath(l, problem, output, info);
+	for(int i=0; i < l_list.size(); ++i) {
+		planPath(l_list[i], problem, output, info, log_data_file_name);
 	}
 	cleanupStateMPCVars();
 

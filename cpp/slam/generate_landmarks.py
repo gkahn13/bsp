@@ -1,11 +1,12 @@
 import sys
 import numpy as np
 import random
+import time
 
 import IPython
 
 MAX_RANGE = 5.
-NUM_LANDMARKS = 3
+NUM_LANDMARKS = 3 # must be .5*len(main_landmarks)
 main_landmarks = []
 
 main_landmarks += [30, -10]
@@ -18,13 +19,15 @@ def generate_landmarks(num_landmarks, num_examples):
     
     
     f = open('landmarks.txt','w')
+    f.write(time.asctime()+'\n')
     for example in xrange(num_examples):
-        landmarks = []
-        i = 0
-        for i in xrange(2*num_landmarks):
-            curr_index = i % len(main_landmarks)
-            new_pos = main_landmarks[curr_index] + random.uniform(-MAX_RANGE/2, MAX_RANGE/2)
-            landmarks.append(new_pos)
+        landmarks = [l + random.uniform(-MAX_RANGE/2, MAX_RANGE/2) for l in main_landmarks]
+        for i in xrange(num_landmarks - NUM_LANDMARKS):
+            #curr_index = i % len(main_landmarks)
+            curr_main_landmark = random.randint(0, NUM_LANDMARKS-1)
+            new_pos_x = main_landmarks[2*curr_main_landmark] + random.uniform(-MAX_RANGE/2, MAX_RANGE/2)
+            new_pos_y = main_landmarks[2*curr_main_landmark+1] + random.uniform(-MAX_RANGE/2, MAX_RANGE/2)
+            landmarks += [new_pos_x, new_pos_y]
             
         f.write(' '.join([str(l) for l in landmarks]) + '\n')
         

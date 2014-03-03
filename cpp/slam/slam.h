@@ -21,7 +21,7 @@
 
 #define TIMESTEPS 15
 #define DT 1.0
-#define NUM_LANDMARKS 3
+#define NUM_LANDMARKS 4
 #define NUM_WAYPOINTS 4
 
 #define C_DIM 3 // car dimension [x, y, theta]
@@ -58,6 +58,7 @@ extern SymmetricMatrix<R_DIM> R;
 
 extern const int T;
 extern const double INFTY;
+extern const std::string landmarks_file;
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
@@ -124,6 +125,8 @@ void executeControlStep(const Matrix<X_DIM>& x_t_real, const Matrix<B_DIM>& b_t_
 
 // Jacobians: dg(b,u)/db, dg(b,u)/du
 void linearizeBeliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u, Matrix<B_DIM,B_DIM>& F, Matrix<B_DIM,U_DIM>& G, Matrix<B_DIM>& h);
+
+void logDataToFile(std::string file_name, const std::vector<Matrix<B_DIM> >& B, const std::vector<Matrix<P_DIM> >& l, double solve_time, double initialization_time);
 
 void pythonDisplayTrajectory(std::vector< Matrix<X_DIM> >& X, int time_steps, bool pause=false);
 

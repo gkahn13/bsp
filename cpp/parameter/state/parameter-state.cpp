@@ -107,6 +107,7 @@ void setupCasadiVars(const std::vector<Matrix<X_DIM> >& X, const std::vector<Mat
 	}
 
 	params_arr[0] = alpha_belief;
+	std::cout<<"ALPHA CONTROL: "<<alpha_control<<"\n";
 	params_arr[1] = alpha_control;
 	params_arr[2] = alpha_final_joint_belief;
 
@@ -158,6 +159,70 @@ double casadiComputeMerit(const std::vector< Matrix<X_DIM> >& X, const std::vect
 		b = b_tp1;
 	}
 	return merit;
+}
+
+double costfuncTest(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matrix<U_DIM> >& U,  Matrix<X_DIM, X_DIM> SqrtSigm0)
+{
+	double merit = 0;
+	Matrix<X_DIM> x_t;
+	Matrix<X_DIM, X_DIM> Sigma;
+	Matrix<B_DIM> B_t;
+
+	for(int t = 0; t < T-1; ++t) {
+		vec(X[t], SqrtSigm0, B_t);
+
+		Sigma=SqrtSigm0*SqrtSigm0;
+
+		merit += alpha_belief*tr(Sigma)+
+				 alpha_control*tr(~U[t]*U[t]);
+
+		B_t = beliefDynamics(B_t,U[t]);
+		unVec(B_t, x_t, SqrtSigm0);
+	}
+
+	merit += alpha_final_joint_belief*tr(Sigma);
+	return merit;
+}
+
+Matrix<XU_DIM> finiteGradTest(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matrix<U_DIM> >& U, const Matrix<X_DIM, X_DIM>& Sigma0){
+
+	Matrix<XU_DIM> grad; 
+	Matrix<X_DIM> x_t,xr,xl; 
+	Matrix<U_DIM> u_t,ur,ul; 
+
+	std::vector< Matrix<X_DIM> > XR = X;
+	std::vector< Matrix<X_DIM> > XL = X; 
+
+	std::vector< Matrix<U_DIM> > UR = U; 
+	std::vector< Matrix<U_DIM> > UL = U; 
+	int index=0; 
+
+	for(int t=0; t<T-1; t++){
+		x_t = X[t]; u_t = U[t]; 
+		for(int i=0; i<X_DIM; i++){
+			xr = x_t; xl = x_t;
+			XL = X; XR = X; 
+
+			xr[i] += diffEps; xl[i] -= diffEps;
+			XR[t]=xr; 
+			XL[t]=xl; 
+
+			grad[index++] = (costfuncTest(XR,U,Sigma0) - costfuncTest(XL,U,Sigma0)) / (2.0*diffEps);
+			
+		}
+		for(int i=0; i<U_DIM; i++){
+			ur = u_t; ul = u_t;
+			UL = U; UR=U; 
+			ur[i] += diffEps; ul[i] -= diffEps;
+			UR[t]=ur; 
+			UL[t]=ul; 
+			
+			grad[index++] = (costfuncTest(X,UR,Sigma0) - costfuncTest(X,UL,Sigma0)) / (2.0*diffEps);
+			
+		}
+	}
+	return grad; 
+
 }
 
 void casadiComputeCostGrad(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matrix<U_DIM> >& U, double& cost, Matrix<XU_DIM>& Grad)
@@ -254,20 +319,21 @@ void setupBeliefVars(statePenaltyMPC_params& problem, statePenaltyMPC_output& ou
 #define BOOST_PP_LOCAL_LIMITS (TIMESTEPS, TIMESTEPS)
 #include BOOST_PP_LOCAL_ITERATE()
 
-	for(int t=0; t < T-1; ++t) {
-		int index = 0;
-		for(int i=0; i < X_DIM; ++i) { H[t][index++] = 0; }
-		for(int i=0; i < S_DIM; ++i) { H[t][index++] = alpha_belief; }
-		for(int i=0; i < U_DIM; ++i) { H[t][index++] = alpha_control; }
-		for(int i=0; i < 2*B_DIM; ++i) { H[t][index++] = 0; }
-
-	}
-
-	int index = 0;
-	for(int i=0; i < X_DIM; ++i) { H[T-1][index++] = 0; }
-	for(int i=0; i < S_DIM; ++i) { H[T-1][index++] = alpha_final_belief; }
-
-
+for(int t = 0; t < T-1; ++t) {
+	for(int i=0; i < (3*X_DIM+U_DIM); ++i) { H[t][i] = INFTY; }
+	for(int i=0; i < (3*X_DIM+U_DIM); ++i) { f[t][i] = INFTY; }
+	for(int i=0; i < (3*X_DIM+U_DIM); ++i) { lb[t][i] = INFTY; }
+ 	for(int i=0; i < (X_DIM+U_DIM); ++i) { ub[t][i] = INFTY; }
+ 	for(int i=0; i < (X_DIM*(3*X_DIM+U_DIM)); ++i) { C[t][i] = INFTY; }
+ 	for(int i=0; i < X_DIM; ++i) { e[t][i] = INFTY; }
+ 	for(int i=0; i < (X_DIM+U_DIM); ++i) { z[t][i] = INFTY; }
+ }
+ 	for(int i=0; i < (X_DIM); ++i) { H[T-1][i] = INFTY; }
+ 	for(int i=0; i < (X_DIM); ++i) { f[T-1][i] = INFTY; }
+ 	for(int i=0; i < (X_DIM); ++i) { lb[T-1][i] = INFTY; }
+ 	for(int i=0; i < (X_DIM); ++i) { ub[T-1][i] = INFTY; }
+ 	for(int i=0; i < X_DIM; ++i) { e[T-1][i] = INFTY; }
+ 	for(int i=0; i < (X_DIM); ++i) { z[T-1][i] = INFTY; }
 		
 }
 
@@ -311,9 +377,9 @@ bool isValidInputs()
 
 	bool boundsCorrect = true;
 
-	/*for(int t = 0; t < T-1; ++t) {
+	for(int t = 0; t < T-1; ++t) {
 		std::cout << "t: " << t << "\n";
-		for(int i=0; i < (3*Xß_DIM+U_DIM); ++i) { if (H[t][i] > INFTY/2) { std::cout << "H error: " << i << "\n"; } }
+		for(int i=0; i < (3*X_DIM+U_DIM); ++i) { if (H[t][i] > INFTY/2) { std::cout << "H error: " << i << "\n"; } }
 		for(int i=0; i < (3*X_DIM+U_DIM); ++i) { if (f[t][i] > INFTY/2) { std::cout << "f error: " << i << "\n"; } }
 		for(int i=0; i < (3*X_DIM+U_DIM); ++i) { if (lb[t][i] > INFTY/2) { std::cout << "lb error: " << i << "\n"; } }
 		for(int i=0; i < (X_DIM+U_DIM); ++i) {if (lb[t][i] > INFTY/2) { std::cout << "ub error: " << i << "\n"; } }
@@ -325,7 +391,7 @@ bool isValidInputs()
 	for(int i=0; i < (X_DIM); ++i) { if (lb[T-1][i] > INFTY/2) { std::cout << "lb error: " << i << "\n"; } }
 	for(int i=0; i < (X_DIM); ++i) { if (ub[T-1][i] > INFTY/2) { std::cout << "ub error: " << i << "\n"; } }
 	for(int i=0; i < X_DIM; ++i) { if (e[T-1][i] > INFTY/2) { std::cout << "e error: " << i << "\n"; } }
-	*/
+	
 	
 
 	for(int t = 0; t < T-1; ++t) {
@@ -488,6 +554,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 	Matrix<XU_DIM,XU_DIM> B = identity<XU_DIM>();
 
 	Matrix<XU_DIM> Grad, Gradopt;
+
 	double cost;
 	int idx = 0;
 
@@ -500,13 +567,27 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 		merit = casadiComputeMerit(X, U, penalty_coeff);
 		
 
-		std::cout<<"MERIT "<<merit<<"\n";
-		exit(0);
+		
+		
 		LOG_DEBUG("  merit: %4.10f", merit);
 
 		// Compute gradients
 		casadiComputeCostGrad(X, U, cost, Grad);
 
+		//Grad = finiteGradTest(X, U,SqrtSigma0);
+
+		for (int t=0; t<T-1; t++){
+			std::cout<<"t "<<t<<"\n";
+			for (int j=0; j<X_DIM; j++){
+				std::cout<<Grad[index++]<<" ";
+			}
+			std::cout<<"\n";
+			for (int j=0; j<U_DIM; j++){
+				std::cout<<Grad[index++]<<" ";
+			}
+			std::cout<<"\n";
+		}
+		//std::cout<<"Gradcoo "<<Grad<<"\n";
 		// Problem linearization and definition
 		// fill in H, f
 
@@ -584,14 +665,14 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 		}
 
 		// since diagonal, fill directly
-		for(int i = 0; i < X_DIM; ++i) { H[T-1][i] = HMat(i,i); }
+		for(int i = 0; i < X_DIM; ++i) { H[T-1][i] = HfMat(i,i); }
 
 		for(int i = 0; i < X_DIM; ++i) {
 			hessian_constant += HfMat(i,i)*xT[i]*xT[i];
 			jac_constant -= Grad[idx+i]*xT[i];
 			f[T-1][i] = Grad[idx+i] - HfMat(i,i)*xT[i];
 		}
-
+	
 
 		constant_cost = 0.5*hessian_constant + jac_constant + cost;
 		LOG_DEBUG("  hessian cost: %4.10f", 0.5*hessian_constant);
@@ -651,10 +732,11 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			for(int i = 0; i < X_DIM; ++i) { ub[T-1][index++] = MIN(xMax[i], xT[i] + Xeps); }
 
 			// Verify problem inputs
-			if (!isValidInputs()) {
+			/*if (!isValidInputs()) {
 				std::cout << "Inputs are not valid!" << std::endl;
 				exit(-1);
 			}
+			*/
 
 
 
@@ -703,11 +785,11 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			//std::cout << "PAUSED INSIDE minimizeMeritFunction AFTER OPTIMIZATION" << std::endl;
 			//int num;
 			//std::cin >> num;
-
 			if (approx_merit_improve < -1e-5) {
-				//LOG_ERROR("Approximate merit function got worse: %1.6f", approx_merit_improve);
-				//LOG_ERROR("Either convexification is wrong to zeroth order, or you are in numerical trouble");
-				//LOG_ERROR("Failure!");
+				LOG_ERROR("Approximate merit function got worse: %1.6f", approx_merit_improve);
+				LOG_ERROR("Either convexification is wrong to zeroth order, or you are in numerical trouble");
+				LOG_ERROR("Failure!");
+				exit(0);
 
 				return false;
 			} else if (approx_merit_improve < cfg::min_approx_improve) {
@@ -889,10 +971,10 @@ int main(int argc, char* argv[])
 	xMin[1] = -10000000; // joint pos 2
 	xMin[2] = -10000000; // joint vel 1
 	xMin[3] = -10000000; // joint vel 2
-	xMin[4] = 0; // 1/length1
-	xMin[5] = 0; // 1/length2
-	xMin[6] = 0; // 1/mass1
-	xMin[7] = 0; // 1/mass2
+	xMin[4] = 0.001; // 1/length1
+	xMin[5] = 0.001; // 1/length2
+	xMin[6] = 0.001; // 1/mass1
+	xMin[7] = 0.001; // 1/mass2
 
 	xMax[0] = 10000000; // joint pos 1
 	xMax[1] = 10000000; // joint pos 2
@@ -938,7 +1020,20 @@ int main(int argc, char* argv[])
 		X[T-1] = B[T-1].subMatrix<X_DIM,1>(0,0);
 		//util::Timer solveTimer;
 		//util::Timer_tic(&solveTimer);
-	
+		/*Matrix<(T-1)*(X_DIM+U_DIM)+X_DIM> grad = finiteGradTest( X,  U, SqrtSigma0);
+		int index=0; 
+		for (int t=0; t<T-1; t++){
+			std::cout<<"t "<<t<<"\n";
+			for (int j=0; j<X_DIM; j++){
+				std::cout<<grad[index++]<<" ";
+			}
+			std::cout<<"\n";
+			for (int j=0; j<U_DIM; j++){
+				std::cout<<grad[index++]<<" ";
+			}
+			std::cout<<"\n";
+		}
+		*/
 		double cost = statePenaltyCollocation(X, U, problem, output, info);
 		
 	
@@ -962,7 +1057,7 @@ int main(int argc, char* argv[])
 
 
 
-		std::cout<<U[0]<<"\n";
+		//std::cout<<U<<"\n";
 
 	
 		B[0] = executeControlStep(x_real, B[0], U[0]);
@@ -973,6 +1068,7 @@ int main(int argc, char* argv[])
 		//std::cout << "x0 after control step" << std::endl << ~x0;
 
 		for(int t = 0; t < T-2; ++t) {
+		
 			U[t] = U[t+1];
 		}
 

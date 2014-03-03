@@ -28,7 +28,7 @@ typedef double statePenaltyMPC_FLOAT;
 /* SOLVER SETTINGS ------------------------------------------------------*/
 /* print level */
 #ifndef statePenaltyMPC_SET_PRINTLEVEL
-#define statePenaltyMPC_SET_PRINTLEVEL    (2)
+#define statePenaltyMPC_SET_PRINTLEVEL    (0)
 #endif
 
 /* timing */

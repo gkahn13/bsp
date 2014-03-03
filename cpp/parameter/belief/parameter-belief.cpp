@@ -523,6 +523,7 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			//std::cout << "PAUSED INSIDE minimizeMeritFunction" << std::endl;
 			//int num;
 			//std::cin >> num;
+			exit(0);
 
 			if (approx_merit_improve < -1e-5) {
 				LOG_ERROR("Approximate merit function got worse: %1.6f", approx_merit_improve);
@@ -655,8 +656,8 @@ int main(int argc, char* argv[])
 
 	//Matrix<U_DIM> uinit = (xGoal.subMatrix<U_DIM,1>(0,0) - x0.subMatrix<U_DIM,1>(0,0))/(double)(T-1);
 	Matrix<U_DIM> uinit;
-	uinit[0] = 0.0;
-	uinit[1] = 0.0;
+	uinit[0] = 0.1;
+	uinit[1] = -0.1;
 	
 	std::vector<Matrix<U_DIM> > U(T-1, uinit); 
 	std::vector<Matrix<X_DIM> > X(T);

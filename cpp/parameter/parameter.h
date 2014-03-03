@@ -72,7 +72,7 @@ const double INFTY = 1e10;
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
-const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 0, alpha_goal_state = 1;
+const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 0.0, alpha_goal_state = 1;
 const double alpha_joint_belief = 0, alpha_param_belief = 10,
 			  alpha_final_joint_belief = 0, alpha_final_param_belief = 10, alpha_goal_joint_state = 10, alpha_goal_param_state = 1;
 

@@ -732,7 +732,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			//pythonDisplayTrajectory(Uopt, T, true);
 
 			if (approx_merit_improve < -1e-5) {
-				//LOG_ERROR("Approximate merit function got worse: %1.6f", approx_merit_improve);
+				LOG_ERROR("Approximate merit function got worse: %1.6f", approx_merit_improve);
 				//LOG_ERROR("Either convexification is wrong to zeroth order, or you are in numerical trouble");
 				//LOG_ERROR("Failure!");
 
@@ -1039,16 +1039,6 @@ void planPath(std::vector<Matrix<P_DIM> > l, stateMPC_params& problem, stateMPC_
 
 		unVec(B[T-1], x0, SqrtSigma0);
 
-		std::cout << "x0: " << x0.subMatrix<C_DIM,1>(0,0);
-		std::cout << "U\n";
-		for(int t=0; t < T-1; ++t) {
-			std::cout << ~U[t];
-		}
-		std::cout << "\nX\n";
-		for(int t=0; t < T; ++t) {
-			std::cout << ~X[t];
-		}
-
 		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 
 	}
@@ -1063,15 +1053,15 @@ void planPath(std::vector<Matrix<P_DIM> > l, stateMPC_params& problem, stateMPC_
 
 int main(int argc, char* argv[])
 {
+	stateMPC_params problem;
+	stateMPC_output output;
+	stateMPC_info info;
+	setupStateVars(problem, output);
+
 	std::vector<std::vector<Matrix<P_DIM> > > l_list = landmarks_list();
 
 	for(int i=0; i < l_list.size(); ++i) {
 		std::vector<Matrix<P_DIM> > l = l_list[i];
-
-		stateMPC_params problem;
-		stateMPC_output output;
-		stateMPC_info info;
-		setupStateVars(problem, output);
 
 		planPath(l, problem, output, info);
 	}

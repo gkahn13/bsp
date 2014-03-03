@@ -16,8 +16,6 @@ controlMPC_FLOAT **H, **f, **lb, **ub, **z;
 
 #include "boost/preprocessor.hpp"
 
-int number = 0;
-
 const double alpha_belief = 10; // 10;
 const double alpha_final_belief = 10; // 10;
 const double alpha_control = .1; // .1
@@ -32,7 +30,7 @@ const double min_trust_box_size = 1e-3; // 1e-3
 const double trust_shrink_ratio = .75; // .5
 const double trust_expand_ratio = 1.25; // 1.25
 
-const double cnt_tolerance = 1; // 1e-2
+const double cnt_tolerance = .5; // 1e-2
 const double penalty_coeff_increase_ratio = 5; // 5
 const double initial_penalty_coeff = 10; // 10
 
@@ -527,10 +525,7 @@ bool controlCollocation(std::vector< Matrix<U_DIM> >& U, controlMPC_params& prob
 			//int num;
 			//std::cin >> num;
 
-			if (number > 2) {
-				//std::cout << "Displaying Uopt\n";
-				//pythonDisplayTrajectory(Uopt, T, false);
-			}
+
 
 			if (approx_merit_improve < -1e-5) {
 				LOG_ERROR("Approximate merit function got worse: %1.6f", approx_merit_improve);
@@ -606,7 +601,7 @@ bool controlCollocation(std::vector< Matrix<U_DIM> >& U, controlMPC_params& prob
 }
 
 
-
+/*
 void testCasadi() {
 	initProblemParams();
 
@@ -633,18 +628,10 @@ void testCasadi() {
 
 
 }
+*/
 
-
-int main(int argc, char* argv[])
-{
-
-	LOG_INFO("Initializing problem parameters");
-	initProblemParams();
-
-	controlMPC_params problem;
-	controlMPC_output output;
-	controlMPC_info info;
-	setupControlVars(problem, output);
+void planPath(std::vector<Matrix<P_DIM> > l, controlMPC_params& problem, controlMPC_output& output, controlMPC_info& info) {
+	initProblemParams(l);
 
 	util::Timer solveTimer, trajTimer;
 	double totalSolveTime = 0, trajTime = 0;
@@ -653,8 +640,8 @@ int main(int argc, char* argv[])
 
 	int num_loops = 1;
 
-	std::vector<Matrix<B_DIM> > B_total(T*NUM_WAYPOINTS*num_loops);
-	std::vector<Matrix<U_DIM> > U_total((T-1)*NUM_WAYPOINTS*num_loops);
+	std::vector<Matrix<B_DIM> > B_total(T*NUM_WAYPOINTS);
+	std::vector<Matrix<U_DIM> > U_total((T-1)*NUM_WAYPOINTS);
 	int B_total_idx = 0, U_total_idx = 0;
 
 	std::vector<Matrix<B_DIM> > B(T);
@@ -663,99 +650,90 @@ int main(int argc, char* argv[])
 
 	Matrix<X_DIM,1> x;
 	Matrix<X_DIM,X_DIM> s;
-	for(int loop=0; loop < num_loops; loop++) {
-		LOG_INFO("Loop %d",loop);
-		x0[2] = nearestAngleFromTo(0, x0[2]); // need to remod back to near 0
-		for(int i=0; i < NUM_WAYPOINTS; ++i) {
-			LOG_INFO("Going to waypoint %d",i);
-			// goal is waypoint position + direct angle + landmarks
-			xGoal.insert(0, 0, waypoints[i]);
 
-			// want to be facing the next waypoint
-			if (i < NUM_WAYPOINTS - 1) {
-				xGoal[2] = atan2(waypoints[i+1][1] - waypoints[i][1], waypoints[i+1][0] - waypoints[i][0]);
-			} else {
-				xGoal[2] = atan2(xGoal[1] - x0[1], xGoal[0] - x0[0]);
-			}
+	x0[2] = nearestAngleFromTo(0, x0[2]); // need to remod back to near 0
+	for(int i=0; i < NUM_WAYPOINTS; ++i) {
+		LOG_INFO("Going to waypoint %d",i);
+		// goal is waypoint position + direct angle + landmarks
+		xGoal.insert(0, 0, waypoints[i]);
 
-
-			xGoal.insert(C_DIM, 0, x0.subMatrix<L_DIM,1>(C_DIM,0));
-
-			util::Timer_tic(&trajTimer);
-
-			std::vector<Matrix<U_DIM> > U(T-1);
-			bool initTrajSuccess = initTraj(x0.subMatrix<C_DIM,1>(0,0), xGoal.subMatrix<C_DIM,1>(0,0), U, T);
-			if (!initTrajSuccess) {
-				LOG_ERROR("Failed to initialize trajectory, exiting slam-state");
-				exit(-1);
-			}
-
-			double initTrajTime = util::Timer_toc(&trajTimer);
-			trajTime += initTrajTime;
-
-			vec(x0, SqrtSigma0, B[0]);
-			for(int t=0; t < T-1; ++t) {
-				B[t+1] = beliefDynamics(B[t], U[t]);
-			}
-
-			//std::cout << ~X[0].subMatrix<C_DIM,1>(0,0);
-
-			double initTrajCost = computeCost(U);
-			//LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
-
-			double initCasadiTrajCost = casadiComputeCost(U);
-			//LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
-
-			//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
-
-			util::Timer_tic(&solveTimer);
-
-			double cost = 0;
-			int iter = 0;
-			while(true) {
-				try {
-					cost = controlCollocation(U, problem, output, info);
-					break;
-				}
-				catch (forces_exception &e) {
-					if (iter > 3) {
-						LOG_ERROR("Tried too many times, giving up");
-						pythonDisplayTrajectory(U, T, true);
-						exit(-1);
-					}
-					LOG_ERROR("Forces exception, trying again");
-					iter++;
-				}
-			}
-
-			double solvetime = util::Timer_toc(&solveTimer);
-			totalSolveTime += solvetime;
-
-			vec(x0, SqrtSigma0, B[0]);
-			for (int t = 0; t < T-1; ++t) {
-				B[t+1] = beliefDynamics(B[t], U[t]);
-			}
-
-			for (int t = 0; t < T-1; ++t) {
-				B_total[B_total_idx++] = B[t];
-				U_total[U_total_idx++] = U[t];
-			}
-			B_total[B_total_idx++] = B[T-1];
-
-			totalTrajCost += computeCost(U);
-
-
-			unVec(B[T-1], x0, SqrtSigma0);
-
-			std::cout << SqrtSigma0 << "\n";
-
-			pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
-
-			number++;
-
+		// want to be facing the next waypoint
+		if (i < NUM_WAYPOINTS - 1) {
+			xGoal[2] = atan2(waypoints[i+1][1] - waypoints[i][1], waypoints[i+1][0] - waypoints[i][0]);
+		} else {
+			xGoal[2] = atan2(xGoal[1] - x0[1], xGoal[0] - x0[0]);
 		}
 
 
+		xGoal.insert(C_DIM, 0, x0.subMatrix<L_DIM,1>(C_DIM,0));
+
+		util::Timer_tic(&trajTimer);
+
+		std::vector<Matrix<U_DIM> > U(T-1);
+		bool initTrajSuccess = initTraj(x0.subMatrix<C_DIM,1>(0,0), xGoal.subMatrix<C_DIM,1>(0,0), U, T);
+		if (!initTrajSuccess) {
+			LOG_ERROR("Failed to initialize trajectory for slam-control, continuing anyways");
+			//exit(-1);
+		}
+
+		double initTrajTime = util::Timer_toc(&trajTimer);
+		trajTime += initTrajTime;
+
+		vec(x0, SqrtSigma0, B[0]);
+		for(int t=0; t < T-1; ++t) {
+			B[t+1] = beliefDynamics(B[t], U[t]);
+		}
+
+		//std::cout << ~X[0].subMatrix<C_DIM,1>(0,0);
+
+		double initTrajCost = computeCost(U);
+		//LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
+
+		double initCasadiTrajCost = casadiComputeCost(U);
+		//LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
+
+		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
+
+		util::Timer_tic(&solveTimer);
+
+		double cost = 0;
+		int iter = 0;
+		while(true) {
+			try {
+				cost = controlCollocation(U, problem, output, info);
+				break;
+			}
+			catch (forces_exception &e) {
+				if (iter > 3) {
+					LOG_ERROR("Tried too many times, giving up");
+					pythonDisplayTrajectory(U, T, true);
+					exit(-1);
+				}
+				LOG_ERROR("Forces exception, trying again");
+				iter++;
+			}
+		}
+
+		double solvetime = util::Timer_toc(&solveTimer);
+		totalSolveTime += solvetime;
+
+		vec(x0, SqrtSigma0, B[0]);
+		for (int t = 0; t < T-1; ++t) {
+			B[t+1] = beliefDynamics(B[t], U[t]);
+		}
+
+		for (int t = 0; t < T-1; ++t) {
+			B_total[B_total_idx++] = B[t];
+			U_total[U_total_idx++] = U[t];
+		}
+		B_total[B_total_idx++] = B[T-1];
+
+		totalTrajCost += computeCost(U);
+
+
+		unVec(B[T-1], x0, SqrtSigma0);
+
+		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 	}
 
 
@@ -765,11 +743,25 @@ int main(int argc, char* argv[])
 	LOG_INFO("Total solve time: %5.3f ms", totalSolveTime*1000);
 
 
-	pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS*num_loops, true);
+	pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, true);
 
+}
+
+int main(int argc, char* argv[])
+{
+	controlMPC_params problem;
+	controlMPC_output output;
+	controlMPC_info info;
+	setupControlVars(problem, output);
+
+	std::vector<std::vector<Matrix<P_DIM> > > l_list = landmarks_list();
+
+	for(int i=0; i < l_list.size(); ++i) {
+		std::vector<Matrix<P_DIM> > l = l_list[i];
+
+		planPath(l, problem, output, info);
+	}
 	cleanupControlMPCVars();
-
-
 
 	return 0;
 }

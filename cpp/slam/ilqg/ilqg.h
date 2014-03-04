@@ -57,15 +57,41 @@ inline Matrix<1,_sDim> vecTh(const SymmetricMatrix<_xDim>& S) {
 	return v;
 }
 
+
 // Belief dynamics (extended Kalman filter)
 template <size_t _xDim, size_t _zDim>
-inline void beliefDynamicsiLQG(const Matrix<_xDim, _xDim>& A, const SymmetricMatrix<_xDim>& M, const Matrix<_zDim, _xDim>& H, const SymmetricMatrix<_zDim>& N,
+inline void beliefDynamicsiLQG(const Matrix<_xDim,1>& x, const Matrix<_xDim, _xDim>& A, const SymmetricMatrix<_xDim>& M, const Matrix<_zDim, _xDim>& H, const SymmetricMatrix<_zDim>& N,
 	const SymmetricMatrix<_xDim>& Sigma, SymmetricMatrix<_xDim>& SigmaNew, SymmetricMatrix<_xDim>& W) 
 {
 	SigmaNew = SymProd(A,Sigma*~A) + M;
 
+	Matrix<_zDim,_zDim> delta = deltaMatrix(x);
+
+	//std::cout << "delta\n" << delta;
+
 	Matrix<_zDim,_xDim> HSigma = H*SigmaNew;
-	W = SymProd(~HSigma,(SymProd(HSigma,~H) + N) % HSigma);
+	// Sigma*~H/(H*Sigma*~H + N)
+//	W = SymProd(~HSigma,(SymProd(HSigma,~H) + N) % HSigma);
+
+	Matrix<X_DIM,Z_DIM> K = ((SigmaNew*~H*delta)/(delta*H*SigmaNew*~H*delta + R))*delta;
+
+	Matrix<_xDim, _xDim> W_nonsym = K*H*Sigma;
+	for(int i=0; i < _xDim; ++i) {
+		for(int j=0; j < _xDim; ++j) {
+			W(i,j) = W_nonsym(i,j);
+		}
+	}
+
+	double max_in_w = -INFTY;
+	for(int i=0; i < _xDim; ++i) {
+		for(int j=0; j < _xDim; ++j) {
+			max_in_w = MAX(max_in_w, fabs(W(i,j)));
+		}
+	}
+
+	std::cout << "max_in_w: " << max_in_w << "\n";
+	//std::cout << "W\n" << W << "\n\n";
+
 	SigmaNew -= W;
 }
 
@@ -92,11 +118,11 @@ inline void computeCEFJ(void (*linearizeDynamics)(const Matrix<_xDim>&, const Ma
 
 		linearizeDynamics(xR, uBar, xNext, A, B, M, COMPUTE_c|COMPUTE_A|COMPUTE_M);
 		linearizeObservation(xNext, H, N);
-		beliefDynamicsiLQG(A, M, H, N, SigmaBar, GammaR, WR);
+		beliefDynamicsiLQG(xNext, A, M, H, N, SigmaBar, GammaR, WR);
 
 		linearizeDynamics(xL, uBar, xNext, A, B, M, COMPUTE_c|COMPUTE_A|COMPUTE_M);
 		linearizeObservation(xNext, H, N);
-		beliefDynamicsiLQG(A, M, H, N, SigmaBar, GammaL, WL);
+		beliefDynamicsiLQG(xNext, A, M, H, N, SigmaBar, GammaL, WL);
 
 		tTC[i] = scalar(tT * vec((GammaR - GammaL) / (2.0*step)) );
 		vecSF[i] = scalar(hvecS * vec((WR - WL) / (2.0*step)) );
@@ -111,11 +137,11 @@ inline void computeCEFJ(void (*linearizeDynamics)(const Matrix<_xDim>&, const Ma
 
 		linearizeDynamics(xBar, uR, xNext, A, B, M, COMPUTE_c|COMPUTE_A|COMPUTE_M);
 		linearizeObservation(xNext, H, N);
-		beliefDynamicsiLQG(A, M, H, N, SigmaBar, GammaR, WR);
+		beliefDynamicsiLQG(xNext, A, M, H, N, SigmaBar, GammaR, WR);
 
 		linearizeDynamics(xBar, uL, xNext, A, B, M, COMPUTE_c|COMPUTE_A|COMPUTE_M);
 		linearizeObservation(xNext, H, N);
-		beliefDynamicsiLQG(A, M, H, N, SigmaBar, GammaL, WL);
+		beliefDynamicsiLQG(xNext, A, M, H, N, SigmaBar, GammaL, WL);
 
 		tTE[i] = scalar(tT * vec((GammaR - GammaL) / (2.0*step)) );
 		vecSJ[i] = scalar(hvecS * vec((WR - WL) / (2.0*step)) );
@@ -327,7 +353,7 @@ inline void integrateControlPolicy(void (*linearizeDynamics)(const Matrix<_xDim>
 
 		linearizeDynamics(xNext[t], uNext[t], xNext[t+1], A, B, M, COMPUTE_c|COMPUTE_A|COMPUTE_M);
 		linearizeObservation(xNext[t+1], H, N);
-		beliefDynamicsiLQG(A, M, H, N, SigmaNext[t], SigmaNext[t+1], WNext[t]);
+		beliefDynamicsiLQG(xNext[t+1], A, M, H, N, SigmaNext[t], SigmaNext[t+1], WNext[t]);
 	}
 }
 
@@ -532,7 +558,7 @@ inline void solvePOMDP(void (*linearizeDynamics)(const Matrix<_xDim>&, const Mat
 	for (size_t t = 0; t < pathLen; ++t) {
 		linearizeDynamics(xBar[t], uBar[t], xBar[t+1], A, B, M, COMPUTE_c|COMPUTE_A|COMPUTE_M);
 		linearizeObservation(xBar[t+1], H, N);
-		beliefDynamicsiLQG(A, M, H, N, SigmaBar[t], SigmaBar[t+1], WBar[t]);
+		beliefDynamicsiLQG(xBar[t+1], A, M, H, N, SigmaBar[t], SigmaBar[t+1], WBar[t]);
 	}
 
 	//int num;

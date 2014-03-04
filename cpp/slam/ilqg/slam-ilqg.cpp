@@ -213,22 +213,33 @@ int main(int argc, char* argv[])
 	xGoal[2] = 0;
 
 	// TODO: should I initialize using slam-traj?
-	Matrix<U_DIM> uinit = (xGoal.subMatrix<P_DIM,1>(0,0) - x0.subMatrix<P_DIM,1>(0,0)) / (double)((T-1)*DT);
+	Matrix<U_DIM> uinit;
+	uinit[0] = (xGoal[0] - x0[0])/((double)(T-1)*DT);
+	uinit[1] = 0;
 	std::vector<Matrix<U_DIM> > uBar(T-1, uinit);
+
+	uBar[0][1] = 3.14/6;
+	uBar[6][1] = -2*3.14/6;
 
 	Sigma0 = SymProd(SqrtSigma0,SqrtSigma0); //identity<X_DIM>();
 	xBar.push_back(x0);
 
 	SigmaBar.push_back(Sigma0);
 
-	std::cout << "Rint\n" << Rint;
-	std::cout << "Qint\n" << Qint;
-	std::cout << "QGoal\n" << QGoal;
-	std::cout << "uinit: " << ~uinit;
-	std::cout << "x0: " << ~x0;
-	std::cout << "xGoal: " << ~xGoal;
-	std::cout << "varM\n" << varM(x0, uinit);
-	std::cout << "varN\n" << varN(x0);
+//	std::cout << "Rint\n" << Rint;
+//	std::cout << "Qint\n" << Qint;
+//	std::cout << "QGoal\n" << QGoal;
+//	std::cout << "uinit: " << ~uinit;
+//	std::cout << "x0: " << ~x0;
+//	std::cout << "xGoal: " << ~xGoal;
+//	std::cout << "varM\n" << varM(x0, uinit);
+//	std::cout << "varN\n" << varN(x0);
+
+	for(int t=0; t < T-1; ++t) {
+		std::cout << ~uBar[t];
+	}
+
+	pythonDisplayTrajectory(uBar, T, true);
 
 	util::Timer solveTimer;
 	Timer_tic(&solveTimer);
@@ -241,8 +252,8 @@ int main(int argc, char* argv[])
 	LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 	
 
-	for(int t=0; t < T; ++t) {
-		std::cout << ~xBar[t];
+	for(int t=0; t < T-1; ++t) {
+		std::cout << ~uBar[t];
 	}
 
 

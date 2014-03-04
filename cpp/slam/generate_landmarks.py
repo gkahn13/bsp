@@ -1,4 +1,5 @@
 import sys
+import os
 import numpy as np
 import random
 import time
@@ -19,7 +20,8 @@ def generate_landmarks(num_landmarks, num_examples):
     
     
     f = open('landmarks.txt','w')
-    f.write(time.asctime()+'\n')
+    time_str = time.asctime().replace(' ','_')
+    f.write(time_str+'\n')
     for example in xrange(num_examples):
         landmarks = [l + random.uniform(-MAX_RANGE/2, MAX_RANGE/2) for l in main_landmarks]
         for i in xrange(num_landmarks - NUM_LANDMARKS):
@@ -32,6 +34,8 @@ def generate_landmarks(num_landmarks, num_examples):
         f.write(' '.join([str(l) for l in landmarks]) + '\n')
         
     f.close()
+    data_file = 'data/landmarks_' + time_str + '.txt'
+    os.system('cp landmarks.txt ' + data_file)
         
         
 

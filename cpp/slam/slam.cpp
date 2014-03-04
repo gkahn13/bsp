@@ -520,7 +520,29 @@ void linearizeBeliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u, Mat
 	h = beliefDynamics(b, u);
 }
 
-void logDataToFile(std::string file_name, const std::vector<Matrix<B_DIM> >& B, const std::vector<Matrix<P_DIM> >& l, double solve_time, double initialization_time) {
+// returns opened file handle for logging data
+// writes first line, which is the number of landmarks
+void logDataHandle(std::string file_name, std::ofstream& f) {
+	std::string landmarks_identifier;
+	std::ifstream l_file (landmarks_file);
+	if (l_file.is_open()) {
+		if (std::getline(l_file, landmarks_identifier)) {
+
+		} else {
+			LOG_ERROR("Couldn't read landmarks_file");
+			return;
+		}
+	} else {
+		LOG_ERROR("Couldn't open landmarks_file");
+		return;
+	}
+
+	std::string file_name_with_identifier = file_name + "_" + landmarks_identifier + ".txt";
+	f.open(file_name_with_identifier.c_str());
+	f << NUM_LANDMARKS << "\n";
+}
+
+void logDataToFile(std::ofstream& f, const std::vector<Matrix<B_DIM> >& B, double solve_time, double initialization_time) {
 	double sum_cov_trace = 0;
 	Matrix<X_DIM> x;
 	Matrix<X_DIM,X_DIM> SqrtSigma;
@@ -542,38 +564,8 @@ void logDataToFile(std::string file_name, const std::vector<Matrix<B_DIM> >& B, 
 		waypoint_distance_error += min_dist;
 	}
 
-	std::string landmarks_identifier;
-	std::ifstream l_file (landmarks_file);
-	if (l_file.is_open()) {
-		if (std::getline(l_file, landmarks_identifier)) {
 
-		} else {
-			LOG_ERROR("Couldn't read landmarks_file");
-			return;
-		}
-	} else {
-		LOG_ERROR("Couldn't open landmarks_file");
-	}
-
-	std::ifstream check_file(file_name.c_str());
-	bool file_already_existed = check_file.good();
-
-	std::ofstream f;
-	std::string file_name_with_identifier = file_name + "_" + landmarks_identifier;
-	f.open(file_name_with_identifier.c_str(), std::ios_base::app);
 	if (f.is_open()) {
-
-		if (!file_already_existed) {
-			f << landmarks_identifier << "\n";
-		}
-
-//		for(int i=0; i < l.size(); ++i) {
-//			for(int j=0; j < P_DIM; ++j) {
-//				f << l[i][j] << " ";
-//			}
-//		}
-//		f << "\n";
-
 		f << "sum_cov_trace " << sum_cov_trace << "\n";
 		f << "waypoint_distance_error " << waypoint_distance_error << "\n";
 		f << "solve_time " << solve_time << "\n";

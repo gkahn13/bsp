@@ -630,7 +630,7 @@ void testCasadi() {
 }
 */
 
-void planPath(std::vector<Matrix<P_DIM> > l, controlMPC_params& problem, controlMPC_output& output, controlMPC_info& info) {
+void planPath(std::vector<Matrix<P_DIM> > l, controlMPC_params& problem, controlMPC_output& output, controlMPC_info& info, std::ofstream& f) {
 	initProblemParams(l);
 
 	util::Timer solveTimer, trajTimer;
@@ -683,8 +683,6 @@ void planPath(std::vector<Matrix<P_DIM> > l, controlMPC_params& problem, control
 		for(int t=0; t < T-1; ++t) {
 			B[t+1] = beliefDynamics(B[t], U[t]);
 		}
-
-		//std::cout << ~X[0].subMatrix<C_DIM,1>(0,0);
 
 		double initTrajCost = computeCost(U);
 		//LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
@@ -742,8 +740,9 @@ void planPath(std::vector<Matrix<P_DIM> > l, controlMPC_params& problem, control
 	LOG_INFO("Total trajectory solve time: %5.3f ms", trajTime*1000);
 	LOG_INFO("Total solve time: %5.3f ms", totalSolveTime*1000);
 
+	logDataToFile(f, B_total, totalSolveTime*1000, trajTime*1000);
 
-	pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, true);
+	//pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, true);
 
 }
 
@@ -756,10 +755,11 @@ int main(int argc, char* argv[])
 
 	std::vector<std::vector<Matrix<P_DIM> > > l_list = landmarks_list();
 
-	for(int i=0; i < l_list.size(); ++i) {
-		std::vector<Matrix<P_DIM> > l = l_list[i];
+	std::ofstream f;
+	logDataHandle("slam/data/slam-control", f);
 
-		planPath(l, problem, output, info);
+	for(int i=0; i < l_list.size(); ++i) {
+		planPath(l_list[i], problem, output, info, f);
 	}
 	cleanupControlMPCVars();
 

@@ -126,7 +126,9 @@ void executeControlStep(const Matrix<X_DIM>& x_t_real, const Matrix<B_DIM>& b_t_
 // Jacobians: dg(b,u)/db, dg(b,u)/du
 void linearizeBeliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u, Matrix<B_DIM,B_DIM>& F, Matrix<B_DIM,U_DIM>& G, Matrix<B_DIM>& h);
 
-void logDataToFile(std::string file_name, const std::vector<Matrix<B_DIM> >& B, const std::vector<Matrix<P_DIM> >& l, double solve_time, double initialization_time);
+void logDataHandle(std::string file_name, std::ofstream& f);
+
+void logDataToFile(std::ofstream& f, const std::vector<Matrix<B_DIM> >& B, double solve_time, double initialization_time);
 
 void pythonDisplayTrajectory(std::vector< Matrix<X_DIM> >& X, int time_steps, bool pause=false);
 

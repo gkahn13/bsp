@@ -666,11 +666,11 @@ double beliefPenaltyCollocation(std::vector< Matrix<B_DIM> >& B, std::vector< Ma
 	return computeCost(B, U);
 }
 
-void planPath(std::vector<Matrix<P_DIM> > l, beliefPenaltyMPC_params& problem, beliefPenaltyMPC_output& output, beliefPenaltyMPC_info& info, std::string log_data_file_name) {
+void planPath(std::vector<Matrix<P_DIM> > l, beliefPenaltyMPC_params& problem, beliefPenaltyMPC_output& output, beliefPenaltyMPC_info& info, std::ofstream& f) {
 	initProblemParams(l);
 
-	util::Timer solveTimer;
-	double totalSolveTime = 0;
+	util::Timer solveTimer, trajTimer;
+	double totalSolveTime = 0, trajTime = 0;
 
 	double totalTrajCost = 0;
 
@@ -698,12 +698,17 @@ void planPath(std::vector<Matrix<P_DIM> > l, beliefPenaltyMPC_params& problem, b
 
 		xGoal.insert(C_DIM, 0, x0.subMatrix<L_DIM,1>(C_DIM,0));
 
+		util::Timer_tic(&trajTimer);
+
 		std::vector<Matrix<U_DIM> > U(T-1);
 		bool initTrajSuccess = initTraj(x0.subMatrix<C_DIM,1>(0,0), xGoal.subMatrix<C_DIM,1>(0,0), U, T);
 		if (!initTrajSuccess) {
 			LOG_ERROR("Failed to initialize trajectory, exiting slam-belief");
 			exit(-1);
 		}
+
+		double initTrajTime = util::Timer_toc(&trajTimer);
+		trajTime += initTrajTime;
 
 		vec(x0, SqrtSigma0, B[0]);
 		for(int t=0; t < T-1; ++t) {
@@ -714,7 +719,7 @@ void planPath(std::vector<Matrix<P_DIM> > l, beliefPenaltyMPC_params& problem, b
 
 
 		double initTrajCost = computeCost(B, U);
-		LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
+		//LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
 
 		Timer_tic(&solveTimer);
 
@@ -749,9 +754,12 @@ void planPath(std::vector<Matrix<P_DIM> > l, beliefPenaltyMPC_params& problem, b
 	}
 
 	LOG_INFO("Total trajectory cost: %4.10f", totalTrajCost);
+	LOG_INFO("Total trajectory solve time: %5.3f ms", trajTime*1000);
 	LOG_INFO("Total solve time: %5.3f ms", totalSolveTime*1000);
 
-	pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, true);
+	logDataToFile(f, B_total, totalSolveTime*1000, trajTime*1000);
+
+	//pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, true);
 }
 
 int main(int argc, char* argv[])
@@ -792,10 +800,11 @@ int main(int argc, char* argv[])
 
 	std::vector<std::vector<Matrix<P_DIM> > > l_list = landmarks_list();
 
-	std::string log_data_file_name = "slam/data/slam-belief";
+	std::ofstream f;
+	logDataHandle("slam/data/slam-belief", f);
 
 	for(int i=0; i < l_list.size(); ++i) {
-		planPath(l_list[i], problem, output, info, log_data_file_name);
+		planPath(l_list[i], problem, output, info, f);
 	}
 
 	cleanupBeliefMPCVars();

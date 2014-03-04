@@ -20,7 +20,7 @@ EIGEN_FLAGS = -I/usr/include/eigen3
 BUILD := debug
 
 BFLAGS.debug = -g -Wall 
-BFLAGS.release = -O3 -g -Wall
+BFLAGS.release = -O3 -Wall
 BFLAGS := $(BFLAGS.$(BUILD))
 
 OBJ_DIR = build/$(BUILD)

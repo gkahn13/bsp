@@ -132,7 +132,7 @@ mpcname = 'statePenaltyMPC';
 codeoptions = getOptions(mpcname);
 codeoptions.printlevel = 0;
 codeoptions.timing=0;
-codeoptions.maxit=50;
+codeoptions.maxit=60;
 
 % generate code
 generateCode(stages,params,codeoptions,outputs);

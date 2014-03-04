@@ -22,10 +22,7 @@ namespace py = boost::python;
 // timesteps is how far into future accounting for during MPC
 #define HORIZON 500
 #define TIMESTEPS 15
-#define RSCALE 10
-#define QSCALE 1
-#define DT 0.01
-
+#define DT 0.1
 
 // for ILQG
 //#define TIMESTEPS 500
@@ -47,18 +44,18 @@ namespace py = boost::python;
 
 namespace dynamics {
 
-const double mass1 = 0.1;
-const double mass2 = 0.1; 
+const double mass1 = 0.5;
+const double mass2 = 0.5;
 
 
 //coefficient of friction 
-const double b1 = 0.0; 
-const double b2 = 0.0; 
+const double b1 = 0.0;
+const double b2 = 0.0;
 
-const double length1 = 0.15; 
-const double length2 = 0.15; 
+const double length1 = 0.5;
+const double length2 = 0.5;
 
-const double gravity = 9.86; 
+const double gravity = 9.82;
 
 }
 
@@ -72,7 +69,7 @@ const double INFTY = 1e10;
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
-const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 0.0, alpha_goal_state = 1;
+const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 0.01, alpha_goal_state = 1;
 const double alpha_joint_belief = 0, alpha_param_belief = 10,
 			  alpha_final_joint_belief = 0, alpha_final_param_belief = 10, alpha_goal_joint_state = 10, alpha_goal_param_state = 1;
 
@@ -191,30 +188,27 @@ Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM> & r)
 	return z;
 }
 
-
 SymmetricMatrix<Q_DIM> varQ() {
 
 	SymmetricMatrix<Q_DIM> S = identity<Q_DIM>();
-	S(0,0) = 0.25*0.001;
-	S(1,1) = 0.25*0.001;
-	S(2,2) = 1.0*0.001;
-	S(3,3) = 1.0*0.001;
-	S(4,4) = 0.0005;
-	S(5,5) = 0.0005;
-	S(6,6) = 0.0005;
-	S(7,7) = 0.0005;
-	S *= QSCALE;
+	S(0,0) = 0.01;
+	S(1,1) = 0.01;
+	S(2,2) = 0.01;
+	S(3,3) = 0.01;
+	S(4,4) = 1e-6;
+	S(5,5) = 1e-6;
+	S(6,6) = 1e-6;
+	S(7,7) = 1e-6;
 	return S;
 }
 
-SymmetricMatrix<R_DIM> varR(){ 
-	SymmetricMatrix<R_DIM> S = identity<R_DIM>();	
-	S(0,0) = 0.0001;	
-	S(1,1) = 0.0001;	
-	S(2,2) = 0.00001;	
-	S(3,3) = 0.00001;
-	S *= RSCALE; 
-	return S;	
+SymmetricMatrix<R_DIM> varR(){
+	SymmetricMatrix<R_DIM> S = identity<R_DIM>();
+	S(0,0) = 1e-2;
+	S(1,1) = 1e-2;
+	S(2,2) = 1e-3;
+	S(3,3) = 1e-3;
+	return S;
 }
 
 
@@ -286,57 +280,32 @@ void vec(const Matrix<X_DIM>& x, const Matrix<X_DIM,X_DIM>& S, Matrix<B_DIM>& b)
 	}
 }
 
-
-SymmetricMatrix<X_DIM> getMMT() {
-
-	SymmetricMatrix<X_DIM> S = identity<X_DIM>();
-    S(0,0) = 0.25*0.001 + 0.0000000000001;
-    S(1,1) = 0.25*0.001 + 0.0000000000001;
-    S(2,2) = 1.0*0.001 + 0.0000000000001;
-    S(3,3) = 1.0*0.001 + 0.0000000000001;
-    S(4,4) = 0.0005;
-    S(5,5) = 0.0005;
-    S(6,6) = 0.0001;
-    S(7,7) = 0.0001;
-    S *= QSCALE;
-    return S;
-}
-
-SymmetricMatrix<R_DIM> getNNT(){ 
-	SymmetricMatrix<R_DIM> S = identity<R_DIM>();	
-    S(0,0) = 0.0001;
-    S(1,1) = 0.0001;
-    S(2,2) = 0.00001;
-    S(3,3) = 0.00001;
-    S *= RSCALE; 
-    return S;
-}
-
 // Belief dynamics
 Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	Matrix<X_DIM> x;
 	Matrix<X_DIM,X_DIM> Sigma;
 	unVec(b, x, Sigma);
 
-	SymmetricMatrix<Q_DIM> Q = varQ(); 
+	SymmetricMatrix<Q_DIM> Q = varQ();
 	SymmetricMatrix<R_DIM> R = varR(); 
 	Matrix<Q_DIM> q;
 	Matrix<R_DIM> r; 
-
 
 	Sigma = Sigma*Sigma;
 
 	Matrix<X_DIM,X_DIM> A;
 	Matrix<X_DIM,Q_DIM> M;
 	 
+	//LOG_INFO("Linearize dynamics");
 	linearizeDynamics(x,u,q,A,M);
-	
 
+	//LOG_INFO("x_tp1 computation");
+	//std::cout << ~q << std::endl;
 	x = dynfunc(x, u,q);
 	
-	Matrix<X_DIM,X_DIM> MMT = getMMT(); 
+	//std::cout << ~x << std::endl;
 
-	Sigma = A*Sigma*~A + MMT;
+	Sigma = A*Sigma*~A + Q;
 
 	Matrix<Z_DIM,X_DIM> H = zeros<Z_DIM,X_DIM>();
 	Matrix<Z_DIM,R_DIM> N; 
@@ -349,9 +318,10 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	std::cout<<"X_BELIEF "<<(H*Sigma*~H + N*R*~N)<<"\n";
 
 	*/
-	Matrix<Z_DIM,Z_DIM> NNT = getNNT();
-	
-	Matrix<X_DIM,Z_DIM> K = Sigma*~H/(H*Sigma*~H + NNT);
+
+	//LOG_INFO("Compute K");
+	Matrix<X_DIM,Z_DIM> K = Sigma*~H/(H*Sigma*~H + R);
+	//LOG_INFO("Finished computing K");
 
 	Sigma = (identity<X_DIM>() - K*H)*Sigma;
 	
@@ -359,6 +329,7 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	vec(x, sqrtm(Sigma), g);
 
 	return g;
+
 }
 
 
@@ -381,7 +352,6 @@ Matrix<B_DIM> executeControlStep(Matrix<X_DIM>& x_t_real, const Matrix<B_DIM>& b
 
 	// now do EKF on belief and incorporate discrepancy
 	// using the kalman gain
-
 
 	q = zeros<Q_DIM,1>();
 	r = zeros<R_DIM,1>();
@@ -414,9 +384,13 @@ Matrix<B_DIM> executeControlStep(Matrix<X_DIM>& x_t_real, const Matrix<B_DIM>& b
 	//std::cout<<"x_tp1"<<x_tp1<<"\n";
 	// correct the new state using Kalman gain and the observation
 
+	//std::cout << "Before update: " << std::endl;
+	//std::cout << ~x_tp1 << std::endl;
+
 	Matrix<X_DIM> x_tp1_adj = x_tp1 + K*(z_tp1_real - obsfunc(x_tp1,r));
 
-	std::cout<<"x_tp1"<<x_tp1_adj<<"\n";
+	//std::cout << "After update: " << std::endl;
+	//std::cout<<"x_tp1: "<<~x_tp1_adj<<"\n";
 	//Matrix<X_DIM,X_DIM> W = ~(H*Sigma_tp1)*(((H*Sigma_tp1*~H) + N*R*~N) % (H*Sigma_tp1));
 	//Matrix<X_DIM,X_DIM> Sigma_tp1_adj = Sigma_tp1 - W;
 	Matrix<X_DIM,X_DIM> Sigma_tp1_adj = Sigma_tp1 - K*H*Sigma_tp1;

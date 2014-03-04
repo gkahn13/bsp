@@ -25,7 +25,7 @@ Matrix<X_DIM> xMin, xMax;
 Matrix<U_DIM> uMin, uMax;
 
 boost::mt19937 rng; 
-boost::uniform_real<> dist(-0.4, 0.4);
+boost::uniform_real<> dist(-0.1, 0.1);
 
 // utility to fill Matrix in column major format in FORCES array
 template <size_t _numRows>
@@ -64,35 +64,32 @@ int main(int argc, char* argv[])
 {
 
 	// actual: 0.15, 0.15, 0.1, 0.1
-	double length1_est = .05, // inverse = 20
-			length2_est = .05, // inverse = 20
-			mass1_est = .12, // inverse = 9.52
-			mass2_est = .13; // inverse = 11.24
-
+	double length1_est = .3,
+			length2_est = .7,
+			mass1_est = .3,
+			mass2_est = .35;
 
 	// position, then velocity
-	x0[0] = 0.0; x0[1] = 0.0; x0[2] = 0; x0[3] = 0;
+	x0[0] = M_PI*0.5; x0[1] = M_PI*0.5; x0[2] = 0; x0[3] = 0;
 	// parameter start estimates (alphabetical, then numerical order)
 	x0[4] = 1/length1_est; x0[5] = 1/length2_est; x0[6] = 1/mass1_est; x0[7] = 1/mass2_est;
 
 
 	Matrix<X_DIM> x_real;
-	x_real[0] = -M_PI/2.0; x_real[1] = -M_PI/2.0; x_real[2] = 0; x_real[3] = 0;
+	x_real[0] = M_PI*0.45; x_real[1] = M_PI*0.55; x_real[2] = -0.01; x_real[3] = 0.01;
 	x_real[4] = 1/dynamics::length1; x_real[5] = 1/dynamics::length2; x_real[6] = 1/dynamics::mass1; x_real[7] = 1/dynamics::mass2;
 
 
 
 	// from original file, possibly change
-	/*SqrtSigma0(0,0) = 1.0; 
-	SqrtSigma0(1,1) = 1.0; 
-	SqrtSigma0(2,2) = 1.0; 
-	SqrtSigma0(3,3) = 1.0; 
-	*/
-	SqrtSigma0(4,4) = sqrt(0.5);
-	SqrtSigma0(5,5) = sqrt(0.5);
-	SqrtSigma0(6,6) = 1;
-	SqrtSigma0(7,7) = 1;
-
+	SqrtSigma0(0,0) = 0.1;
+	SqrtSigma0(1,1) = 0.1;
+	SqrtSigma0(2,2) = 0.05;
+	SqrtSigma0(3,3) = 0.05;
+	SqrtSigma0(4,4) = 0.5;
+	SqrtSigma0(5,5) = 0.5;
+	SqrtSigma0(6,6) = 0.5;
+	SqrtSigma0(7,7) = 0.5;
 	//Matrix<U_DIM> uinit = (xGoal.subMatrix<U_DIM,1>(0,0) - x0.subMatrix<U_DIM,1>(0,0))/(double)(T-1);
 	Matrix<U_DIM> uinit;
 	uinit[0] = 0;

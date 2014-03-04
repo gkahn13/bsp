@@ -12,9 +12,8 @@
 // timesteps is how far into future accounting for during MPC
 #define HORIZON 500
 #define TIMESTEPS 15
-#define RSCALE 10
-#define QSCALE 1
-#define DT 0.01
+
+#define DT 0.1
 
 
 // for ILQG
@@ -36,18 +35,17 @@
 #define XU_DIM (X_DIM*T+U_DIM*(T-1))
 
 namespace dynamics {
-const double mass1 = 0.1;
-const double mass2 = 0.1; 
-
+const double mass1 = 0.5;
+const double mass2 = 0.5;
 
 //coefficient of friction 
 const double b1 = 0.0; 
 const double b2 = 0.0; 
 
-const double length1 = 0.15; 
-const double length2 = 0.15; 
+const double length1 = 0.5;
+const double length2 = 0.5;
 
-const double gravity = 9.86; 
+const double gravity = 9.82;
 }
 
 
@@ -60,9 +58,6 @@ const double INFTY = 1e10;
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
-const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 0, alpha_goal_state = 1;
-const double alpha_joint_belief = 0, alpha_param_belief = 10,
-              alpha_final_joint_belief = 0, alpha_final_param_belief = 10, alpha_goal_joint_state = 10, alpha_goal_param_state = 1;
 
 double *inputVars, *vars;
 std::vector<int> maskIndices;
@@ -185,37 +180,35 @@ SXMatrix obsfunc(const SXMatrix & x)
 }
 
 
-inline SXMatrix  getMMT()
+inline SXMatrix  varQ()
 {
     SXMatrix  S = SXMatrix(DMatrix::eye(X_DIM));
-    S(0,0) = 0.25*0.001 + 0.0000000000001;
-    S(1,1) = 0.25*0.001 + 0.0000000000001;
-    S(2,2) = 1.0*0.001 + 0.0000000000001;
-    S(3,3) = 1.0*0.001 + 0.0000000000001;
-    S(4,4) = 0.0005;
-    S(5,5) = 0.0005;
-    S(6,6) = 0.0001;
-    S(7,7) = 0.0001;
-    S *= QSCALE;
+    S(0,0) = 0.01;
+    S(1,1) = 0.01;
+    S(2,2) = 0.01;
+    S(3,3) = 0.01;
+    S(4,4) = 1e-6;
+    S(5,5) = 1e-6;
+    S(6,6) = 1e-6;
+    S(7,7) = 1e-6;
     return S;
 }
 
 // for N = dh(x,r)/dr
-// this returns N*~N 
-inline SXMatrix getNNT()
+// this returns N*~N
+inline SXMatrix varR()
 {
     SXMatrix S = SXMatrix(DMatrix::eye(Z_DIM));
-    S(0,0) = 0.0001;
-    S(1,1) = 0.0001;
-    S(2,2) = 0.00001;
-    S(3,3) = 0.00001;
-    S *= RSCALE; 
+    S(0,0) = 1e-2;
+        S(1,1) = 1e-2;
+        S(2,2) = 1e-3;
+        S(3,3) = 1e-3;
     return S;
 }
 
 
 void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMatrix& x_tp1, SXMatrix& Sigma_tp1)
-{
+{  
     SXMatrix A(X_DIM,X_DIM), MMT(X_DIM,X_DIM);
 
     
@@ -224,8 +217,7 @@ void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMa
     A = jacobian(dyn,x_t);
     
 
-    MMT = getMMT(); 
-    Sigma_tp1 = mul(mul(A,Sigma_t),trans(A)) + MMT;
+    Sigma_tp1 = mul(mul(A,Sigma_t),trans(A)) + varQ();
     x_tp1 = dynfunc(x_t, u_t);
   
 
@@ -236,14 +228,10 @@ void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMa
 
     H = jacobian(obs,x_t);
 
-
-    NNT = getNNT(); 
-
-    SXMatrix K = mul(mul(Sigma_tp1, trans(H)), solve(mul(H, mul(Sigma_tp1, trans(H))) + NNT,SXMatrix(DMatrix::eye(Z_DIM))));
+    SXMatrix K = mul(mul(Sigma_tp1, trans(H)), solve(mul(H, mul(Sigma_tp1, trans(H))) + varR(),SXMatrix(DMatrix::eye(Z_DIM))));
   
     Sigma_tp1 = Sigma_tp1 - mul(K,mul(H,Sigma_tp1));
 }
-
 
 
 // params(0) = alpha_belief
@@ -332,7 +320,7 @@ int main(int argc, char* argv[])
     generateCode(f_fcn,"parameter-state-cost");
     generateCode(grad_f_fcn,"parameter-state-grad");
     //generateCode(hess_f_fcn,"slam-state-diag-hess");
-    #define TEST
+    //#define TEST
     #ifdef TEST
     double length1_est = .05, // inverse = 20
             length2_est = .05, // inverse = 20

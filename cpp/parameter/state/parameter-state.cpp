@@ -48,14 +48,14 @@ const int max_sqp_iterations = 50;
 }
 */
 namespace cfg {
-const double improve_ratio_threshold = .1;
+const double improve_ratio_threshold = .25;
 const double min_approx_improve = 1e-2;
 const double min_trust_box_size = 1e-3;
-const double trust_shrink_ratio = .5;
-const double trust_expand_ratio = 1.5;
+const double trust_shrink_ratio = .9;
+const double trust_expand_ratio = 1.1;
 const double cnt_tolerance = 1e-4;
-const double penalty_coeff_increase_ratio = 2;
-const double initial_penalty_coeff = 100;
+const double penalty_coeff_increase_ratio = 5;
+const double initial_penalty_coeff = 5;
 const double initial_trust_box_size = 1;
 const int max_penalty_coeff_increases = 2;
 const int max_sqp_iterations = 50;
@@ -107,7 +107,7 @@ void setupCasadiVars(const std::vector<Matrix<X_DIM> >& X, const std::vector<Mat
 	}
 
 	params_arr[0] = alpha_belief;
-	std::cout<<"ALPHA CONTROL: "<<alpha_control<<"\n";
+
 	params_arr[1] = alpha_control;
 	params_arr[2] = alpha_final_joint_belief;
 
@@ -577,7 +577,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 
 		//Grad = finiteGradTest(X, U,SqrtSigma0);
 
-		for (int t=0; t<T-1; t++){
+		/*for (int t=0; t<T-1; t++){
 			std::cout<<"t "<<t<<"\n";
 			for (int j=0; j<X_DIM; j++){
 				std::cout<<Grad[index++]<<" ";
@@ -588,6 +588,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			}
 			std::cout<<"\n";
 		}
+		*/
 		//std::cout<<"Gradcoo "<<Grad<<"\n";
 		// Problem linearization and definition
 		// fill in H, f
@@ -784,7 +785,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			LOG_DEBUG("       merit_improve_ratio: %1.6f", merit_improve_ratio);
 
 			std::cout << "PAUSED INSIDE minimizeMeritFunction AFTER OPTIMIZATION" << std::endl;
-			std::cin.ignore();
+			//std::cin.ignore();
 			//int num;
 			//std::cin >> num;
 			//exit(0);
@@ -854,11 +855,24 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 				// L-BFGS update
 				B = B - (Bs*~Bs)/((~s*Bs)[0]) + (r*~r)/((~s*r)[0]);
 
+
 				// take in diagonal of B
 				// find minimum value among diagonal elements
 				// negate and add to other vals
+				double minValue = INFTY;
+				double maxValue = -INFTY;
+				for(int i=0; i < XU_DIM; ++i) {
+					minValue = MIN(minValue, B(i,i));
+					maxValue = MAX(maxValue, B(i,i));
+				}
 
-				//Not NEEDED
+				//std::cout << "minValue: " << minValue << "\n";
+				//std::cout << "maxValue: " << maxValue << "\n\n";
+				if (minValue < 0) {
+					//std::cout << "negative minValue, press enter\n";
+					//std::cin.ignore();
+					B = B + fabs(minValue)*identity<XU_DIM>();
+				}
 				
 
 				
@@ -939,58 +953,57 @@ int main(int argc, char* argv[])
 {
 
 	// actual: 6.66, 6.66, 10.86, 13
-	double length1_est = .05, // inverse = 20
-			length2_est = .05, // inverse = 20
-			mass1_est = .12, // inverse = 9.52
-			mass2_est = .13; // inverse = 11.24
-
+	double length1_est = .3,
+				length2_est = .7,
+				mass1_est = .35,
+				mass2_est = .35;
 
 	// position, then velocity
-	x0[0] = -M_PI/2.0; x0[1] = -M_PI/2.0; x0[2] = 0; x0[3] = 0;
+	x0[0] = M_PI*0.5; x0[1] = M_PI*0.5; x0[2] = 0; x0[3] = 0;
 	// parameter start estimates (alphabetical, then numerical order)
 	x0[4] = 1/length1_est; x0[5] = 1/length2_est; x0[6] = 1/mass1_est; x0[7] = 1/mass2_est;
 
 
 	Matrix<X_DIM> x_real;
-	x_real[0] = -M_PI/2.0; x_real[1] = -M_PI/2.0; x_real[2] = 0; x_real[3] = 0;
+	x_real[0] = M_PI*0.45; x_real[1] = M_PI*0.55; x_real[2] = -0.01; x_real[3] = 0.01;
 	x_real[4] = 1/dynamics::length1; x_real[5] = 1/dynamics::length2; x_real[6] = 1/dynamics::mass1; x_real[7] = 1/dynamics::mass2;
 
 
-	xGoal[0] = -M_PI/2.0; xGoal[1] = -M_PI/2.0; xGoal[2] = 0.0; xGoal[3] = 0.0;
+	xGoal[0] = M_PI*0.5; xGoal[1] = M_PI*0.5; xGoal[2] = 0.0; xGoal[3] = 0.0;
 	xGoal[4] = 1/length1_est; xGoal[5] = 1/length2_est; xGoal[6] = 1/mass1_est; xGoal[7] = 1/mass2_est;
 
 	// from original file, possibly change
-	/*SqrtSigma0(0,0) = 1.0; 
-	SqrtSigma0(1,1) = 1.0; 
-	SqrtSigma0(2,2) = 1.0; 
-	SqrtSigma0(3,3) = 1.0; 
-	*/
-	SqrtSigma0(4,4) = sqrt(0.5);
-	SqrtSigma0(5,5) = sqrt(0.5);
-	SqrtSigma0(6,6) = 1.0;
-	SqrtSigma0(7,7) = 1.0;
+	SqrtSigma0(0,0) = 0.1;
+	SqrtSigma0(1,1) = 0.1;
+	SqrtSigma0(2,2) = 0.05;
+	SqrtSigma0(3,3) = 0.05;
+	SqrtSigma0(4,4) = 0.5;
+	SqrtSigma0(5,5) = 0.5;
+	SqrtSigma0(6,6) = 0.5;
+	SqrtSigma0(7,7) = 0.5;
 
-	xMin[0] = -10000000; // joint pos 1
-	xMin[1] = -10000000; // joint pos 2
-	xMin[2] = -10000000; // joint vel 1
-	xMin[3] = -10000000; // joint vel 2
-	xMin[4] = 0.001; // 1/length1
-	xMin[5] = 0.001; // 1/length2
-	xMin[6] = 0.001; // 1/mass1
-	xMin[7] = 0.001; // 1/mass2
 
-	xMax[0] = 10000000; // joint pos 1
-	xMax[1] = 10000000; // joint pos 2
-	xMax[2] = 10000000; // joint vel 1
-	xMax[3] = 10000000; // joint vel 2
-	xMax[4] = 1/.01; // 1/length1
-	xMax[5] = 1/.01; // 1/length2
-	xMax[6] = 1/.01; // 1/mass1
-	xMax[7] = 1/.01; // 1/mass2
+	xMin[0] = -1000; // joint pos 1
+	xMin[1] = -1000; // joint pos 2
+	xMin[2] = -1000; // joint vel 1
+	xMin[3] = -1000; // joint vel 2
+	xMin[4] = 0.01; // 1/length1
+	xMin[5] = 0.01; // 1/length2
+	xMin[6] = 0.01; // 1/mass1
+	xMin[7] = 0.01; // 1/mass2
+
+	xMax[0] = 1000; // joint pos 1
+	xMax[1] = 1000; // joint pos 2
+	xMax[2] = 1000; // joint vel 1
+	xMax[3] = 1000; // joint vel 2
+	xMax[4] = 100; // 1/length1
+	xMax[5] = 100; // 1/length2
+	xMax[6] = 100; // 1/mass1
+	xMax[7] = 100; // 1/mass2
 
 	for(int i = 0; i < U_DIM; ++i) {
-		uMin[i] = -0.4;
-		uMax[i] = 0.4;
+		uMin[i] = -0.1;
+		uMax[i] = 0.1;
 	}
 
 	//Matrix<U_DIM> uinit = (xGoal.subMatrix<U_DIM,1>(0,0) - x0.subMatrix<U_DIM,1>(0,0))/(double)(T-1);
@@ -1059,8 +1072,8 @@ int main(int argc, char* argv[])
 		HistoryB[h] = B[0];
 
 
-
-		//std::cout<<U<<"\n";
+		std::cout<<h<<"\n";
+		std::cout<<U[0]<<"\n";
 
 	
 		B[0] = executeControlStep(x_real, B[0], U[0]);

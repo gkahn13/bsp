@@ -40,7 +40,7 @@ typedef double statePenaltyMPC_FLOAT;
 /* #define PRINTNUMERICALWARNINGS */
 
 /* maximum number of iterations  */
-#define statePenaltyMPC_SET_MAXIT         (50)	
+#define statePenaltyMPC_SET_MAXIT         (60)	
 
 /* scaling factor of line search (affine direction) */
 #define statePenaltyMPC_SET_LS_SCALE_AFF  (0.9)      

@@ -55,7 +55,7 @@ const double trust_shrink_ratio = .5;
 const double trust_expand_ratio = 1.5;
 const double cnt_tolerance = 1e-4;
 const double penalty_coeff_increase_ratio = 2;
-const double initial_penalty_coeff = 10;
+const double initial_penalty_coeff = 100;
 const double initial_trust_box_size = 1;
 const int max_penalty_coeff_increases = 2;
 const int max_sqp_iterations = 50;
@@ -286,7 +286,7 @@ inline void fillCol(double *X, const Matrix<_numRows>& XCol) {
 void setupBeliefVars(statePenaltyMPC_params& problem, statePenaltyMPC_output& output)
 {
 	H = new statePenaltyMPC_FLOAT*[T];
-	f = new statePenaltyMPC_FLOAT*[T-1];
+	f = new statePenaltyMPC_FLOAT*[T];
 	lb = new statePenaltyMPC_FLOAT*[T];
 	ub = new statePenaltyMPC_FLOAT*[T];
 	C = new statePenaltyMPC_FLOAT*[T-1];
@@ -313,6 +313,7 @@ void setupBeliefVars(statePenaltyMPC_params& problem, statePenaltyMPC_output& ou
 		ub[ BOOST_PP_SUB(n,1) ] = problem.ub##n ;	\
 		z[ BOOST_PP_SUB(n,1) ] = output.z##n ; \
 		e[ BOOST_PP_SUB(n,1) ] = problem.e##n ; \
+		f[ BOOST_PP_SUB(n,1) ] = problem.f##n ; \
 		H[ BOOST_PP_SUB(n,1) ] = problem.H##n ;
 
 #define BOOST_PP_LOCAL_MACRO(n) SET_LAST_VARS(n)
@@ -652,7 +653,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			fillCol(e[t+1], eVec);
 		}
 
-		// For last stage, fill in H, f, A, b
+		// For last stage, fill in H, f
 		Matrix<X_DIM>& xT = X[T-1];
 
 		idx = (T-1)*(X_DIM+U_DIM);
@@ -782,14 +783,16 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			LOG_DEBUG("       exact_merit_improve: %1.6f", exact_merit_improve);
 			LOG_DEBUG("       merit_improve_ratio: %1.6f", merit_improve_ratio);
 
-			//std::cout << "PAUSED INSIDE minimizeMeritFunction AFTER OPTIMIZATION" << std::endl;
+			std::cout << "PAUSED INSIDE minimizeMeritFunction AFTER OPTIMIZATION" << std::endl;
+			std::cin.ignore();
 			//int num;
 			//std::cin >> num;
+			//exit(0);
 			if (approx_merit_improve < -1e-5) {
 				LOG_ERROR("Approximate merit function got worse: %1.6f", approx_merit_improve);
 				LOG_ERROR("Either convexification is wrong to zeroth order, or you are in numerical trouble");
 				LOG_ERROR("Failure!");
-				exit(0);
+				
 
 				return false;
 			} else if (approx_merit_improve < cfg::min_approx_improve) {

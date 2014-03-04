@@ -340,6 +340,9 @@ typedef struct statePenaltyMPC_params
     statePenaltyMPC_FLOAT H15[8];
 
     /* vector of size 8 */
+    statePenaltyMPC_FLOAT f15[8];
+
+    /* vector of size 8 */
     statePenaltyMPC_FLOAT lb15[8];
 
     /* vector of size 8 */

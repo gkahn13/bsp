@@ -2182,7 +2182,6 @@ statePenaltyMPC_FLOAT statePenaltyMPC_Phi13[26];
 statePenaltyMPC_FLOAT statePenaltyMPC_W13[26];
 statePenaltyMPC_FLOAT statePenaltyMPC_Ysd13[64];
 statePenaltyMPC_FLOAT statePenaltyMPC_Lsd13[64];
-statePenaltyMPC_FLOAT statePenaltyMPC_f14[8] = {0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000};
 statePenaltyMPC_FLOAT* statePenaltyMPC_z14 = statePenaltyMPC_z + 364;
 statePenaltyMPC_FLOAT* statePenaltyMPC_dzaff14 = statePenaltyMPC_dz_aff + 364;
 statePenaltyMPC_FLOAT* statePenaltyMPC_dzcc14 = statePenaltyMPC_dz_cc + 364;
@@ -2278,7 +2277,7 @@ statePenaltyMPC_LA_DIAG_QUADFCN_26(params->H11, params->f11, statePenaltyMPC_z10
 statePenaltyMPC_LA_DIAG_QUADFCN_26(params->H12, params->f12, statePenaltyMPC_z11, statePenaltyMPC_grad_cost11, &info->pobj);
 statePenaltyMPC_LA_DIAG_QUADFCN_26(params->H13, params->f13, statePenaltyMPC_z12, statePenaltyMPC_grad_cost12, &info->pobj);
 statePenaltyMPC_LA_DIAG_QUADFCN_26(params->H14, params->f14, statePenaltyMPC_z13, statePenaltyMPC_grad_cost13, &info->pobj);
-statePenaltyMPC_LA_DIAG_QUADFCN_8(params->H15, statePenaltyMPC_f14, statePenaltyMPC_z14, statePenaltyMPC_grad_cost14, &info->pobj);
+statePenaltyMPC_LA_DIAG_QUADFCN_8(params->H15, params->f15, statePenaltyMPC_z14, statePenaltyMPC_grad_cost14, &info->pobj);
 info->res_eq = 0;
 info->dgap = 0;
 statePenaltyMPC_LA_DIAGZERO_MVMSUB6_8(statePenaltyMPC_D00, statePenaltyMPC_z00, params->e1, statePenaltyMPC_v00, statePenaltyMPC_re00, &info->dgap, &info->res_eq);

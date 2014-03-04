@@ -218,17 +218,16 @@ void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMa
 {
     SXMatrix A(X_DIM,X_DIM), MMT(X_DIM,X_DIM);
 
-
-
     
     SXMatrix dyn = dynfunc(x_t,u_t);
-
+    
     A = jacobian(dyn,x_t);
+    
 
     MMT = getMMT(); 
     Sigma_tp1 = mul(mul(A,Sigma_t),trans(A)) + MMT;
     x_tp1 = dynfunc(x_t, u_t);
-
+  
 
     SXMatrix H(Z_DIM,X_DIM), NNT(Z_DIM), R(R_DIM,R_DIM);
 
@@ -241,7 +240,7 @@ void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMa
     NNT = getNNT(); 
 
     SXMatrix K = mul(mul(Sigma_tp1, trans(H)), solve(mul(H, mul(Sigma_tp1, trans(H))) + NNT,SXMatrix(DMatrix::eye(Z_DIM))));
-
+  
     Sigma_tp1 = Sigma_tp1 - mul(K,mul(H,Sigma_tp1));
 }
 
@@ -306,7 +305,7 @@ int main(int argc, char* argv[])
     SXMatrix f = costfunc(XU, Sigma_0, params);
 
     SXMatrix grad_f = gradient(f,XU);
-     cout <<"before generate"<<"\n";
+    cout <<"before generate"<<"\n";
   
 
     // Create functions
@@ -349,6 +348,16 @@ int main(int argc, char* argv[])
 
     u0(0,0) = 0.1; 
     u0(1,0) = 0.1; 
+
+    SXMatrix Sigma_t(X_DIM,X_DIM);
+
+    Sigma_t(4,4) = sqrt(0.5);
+    Sigma_t(5,5) = sqrt(0.5);
+    Sigma_t(6,6) = 1.0;
+    Sigma_t(7,7) = 1.0;
+
+    SXMatrix Sigma_tp1(X_DIM,X_DIM);
+    SXMatrix xtp1(X_DIM,1); 
     //Fill in X0
     
     double t_x0[nXU];
@@ -358,24 +367,27 @@ int main(int argc, char* argv[])
     //Fill in X and U
     for (int t = 0; t < T-1; ++t) {
 
-        for(int i=0; i<X_DIM; i++){
+        /*for(int i=0; i<X_DIM; i++){
             t_x0(i,0) = x0(i,0);
         }
         for(int i=0; i<U_DIM; i++){
             t_x0(i,0) = u0(i,0);
         }
-        x0 = dynfunc(x0, u0);
-        
+        */
+        cout<<364<<"\n";
+        EKF(x0, u0, Sigma_t, xtp1, Sigma_tp1);
+        x0=xtp1;
+        Sigma_t =Sigma_tp1;
     }
 
-    for(int i=0; i<X_DIM; i++){
+  /*  for(int i=0; i<X_DIM; i++){
             t_x0(i,0) = x0(i,0);
     }
 
     //Fill in Alpha
 
-    t_x2[0] = 10; t_x2[1]=0; t_x2[2] = 10; 
-
+   t_x2[0] = 10; t_x2[1]=0; t_x2[2] = 10; 
+    */
 
 
 

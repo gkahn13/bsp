@@ -100,8 +100,8 @@ stages(i).dims.q = 0;     % number of quadratic constraints
 
 % cost
 params(end+1) = newParam(['H',istr], i, 'cost.H', 'diag');
-% params(end+1) = newParam(['f',istr], i, 'cost.f');
-stages(i).cost.f = zeros(stages(i).dims.n,1);
+params(end+1) = newParam(['f',istr], i, 'cost.f');
+%stages(i).cost.f = zeros(stages(i).dims.n,1);
 
 % lower bounds
 stages(i).ineq.b.lbidx = 1:stages(i).dims.l; % lower bound acts on these indices

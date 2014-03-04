@@ -442,6 +442,16 @@ $(OBJ_DIR)/slamControlMPC.o : $(SLAM_CONTROL_DIR)/controlMPC.c
 $(OBJ_DIR)/slam-control.o : $(SLAM_CONTROL_DIR)/slam-control.cpp $(SLAM_HEADERS)
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
 
+# make slam-ilqg
+SLAM_ILQG_DIR = slam/ilqg
+SLAM_ILQG_FILES = slam-ilqg logging slam
+SLAM_ILQG_OBJS = $(SLAM_ILQG_FILES:%=$(OBJ_DIR)/%.o)
+
+slam-ilqg: | $(SLAM_ILQG_OBJS)
+	$(CXX) $(BFLAGS) $(SLAM_ILQG_OBJS) -o $(BIN_DIR)/slam-ilqg $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
+
+$(OBJ_DIR)/slam-ilqg.o : $(SLAM_ILQG_DIR)/slam-ilqg.cpp $(SLAM_ILQG_DIR)/ilqg.h
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
 
 
 

@@ -1,7 +1,8 @@
 CXX = g++
 
 CPP_FLAGS = -DNDEBUG 
-CASADI_FLAGS = -I/Users/laskeymd/Documents/Research/BSP/casadi -L/Users/laskeymd/Documents/Research/BSP/casadi/build/lib
+#CASADI_FLAGS = -I/Users/laskeymd/Documents/Research/BSP/casadi -L/Users/laskeymd/Documents/Research/BSP/casadi/build/lib
+CASADI_FLAGS = -I$(CASADIPATH) -L$(CASADIPATH)/build/lib
 CASADI_LIBS = -lcasadi -ldl
 
 OS := mac

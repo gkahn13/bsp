@@ -117,9 +117,9 @@ SXMatrix dynfunc(const SXMatrix& x, const SXMatrix& u)
 {
     // RK4 integration
     SXMatrix k1(J_DIM), k2(J_DIM), k3(J_DIM), k4(J_DIM), jinit(J_DIM);
-    cout<<120<<"\n";
+
     jinit = x(Slice(0,J_DIM));
-    cout<<122<<"\n";
+
     SXMatrix x4(1),x5(1),x6(1),x7(1);
 
     x4 = x(4);
@@ -211,12 +211,12 @@ void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMa
 {  
     SXMatrix A(X_DIM,X_DIM), MMT(X_DIM,X_DIM);
 
-   
+
     SXMatrix dyn = dynfunc(x_t,u_t);
-    cout<<219<<"\n";
 
     A = jacobian(dyn,x_t);
-    cout<<219<<"\n";
+
+
     Sigma_tp1 = mul(mul(A,Sigma_t),trans(A)) + varQ();
     x_tp1 = dynfunc(x_t, u_t);
   
@@ -237,7 +237,7 @@ void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMa
 // params(0) = alpha_belief
 // params(1) = alpha_control
 // params[2] = alpha_final_belief
-SXMatrix costfunc(const SXMatrix& X0U, const SXMatrix& Sigma_0, const SXMatrix& params)
+SXMatrix costfunc(const SXMatrix& X, const SXMatrix& U, const SXMatrix& Sigma_0, const SXMatrix& params)
 {
     SXMatrix cost = 0;
 
@@ -247,22 +247,19 @@ SXMatrix costfunc(const SXMatrix& X0U, const SXMatrix& Sigma_0, const SXMatrix& 
 
     int offset = 0;
 
-    x_t = X0U(Slice(offset,offset+X_DIM));
-    offset += X_DIM;
-
     for (int t = 0; t < (T-1); ++t)
     {
-        cout<<t<<"\n";
-        u_t = X0U(Slice(offset,offset+U_DIM));
+
+        x_t = X(Slice(t*X_DIM,(t+1)*X_DIM));
+
+        u_t = U(Slice(t*U_DIM,(t+1)*U_DIM));
         offset += U_DIM;
-        
-        
+
         cost += params(0)*trace(Sigma_t);
         cost += params(1)*inner_prod(u_t, u_t);
-        cout<<u_t<<"\n";
+
         EKF(x_t, u_t, Sigma_t, x_tp1, Sigma_tp1);
         Sigma_t = Sigma_tp1;
-        x_t = x_tp1; 
     }
 
     cost += params[2]*trace(Sigma_t);
@@ -285,16 +282,17 @@ int main(int argc, char* argv[])
     
     cout << "Creating casadi file for T = " << T << endl;
 
-    vector<SXMatrix> X, U;
-    int nX0U = X_DIM+(T-1)*U_DIM;
-    SXMatrix X0U = ssym("X0U",nX0U,1);
+    //vector<SXMatrix> X, U;
+    int nXU = T*X_DIM+(T-1)*U_DIM;
+    SXMatrix X = ssym("X",T*X_DIM,1);
+    SXMatrix U = ssym("U",(T-1)*U_DIM,1);
     SXMatrix Sigma_0 = ssym("S0",X_DIM,X_DIM);
     SXMatrix params = ssym("params",3); // alpha_control, alpha_belief, alpha_final_belief
     cout <<"before generate"<<"\n";
     // Objective
-    SXMatrix f = costfunc(X0U, Sigma_0, params);
+    SXMatrix f = costfunc(X, U, Sigma_0, params);
 
-    SXMatrix grad_f = gradient(f,X0U);
+    SXMatrix grad_f = gradient(f,U);
     cout <<"before generate"<<"\n";
   
 
@@ -302,7 +300,8 @@ int main(int argc, char* argv[])
 
     
     vector<SXMatrix> inp;
-    inp.push_back(X0U);
+    inp.push_back(X);
+    inp.push_back(U);
     inp.push_back(Sigma_0);
     inp.push_back(params);
 

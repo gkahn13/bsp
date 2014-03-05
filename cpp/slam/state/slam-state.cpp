@@ -1,3 +1,5 @@
+//#define USE_GENERATED_CASADI
+
 #include "../slam.h"
 #include "../traj/slam-traj.h"
 //#include "../smooth/slam-smooth.h"
@@ -14,7 +16,9 @@
 extern "C" {
 #include "stateMPC.h"
 stateMPC_FLOAT **H, **f, **lb, **ub, **C, **e, **z;
+#ifdef USE_GENERATED_CASADI
 #include "slam-state-casadi.h"
+#endif
 }
 
 #include "boost/preprocessor.hpp"
@@ -23,8 +27,11 @@ const double alpha_belief = 10; // 10;
 const double alpha_final_belief = 10; // 10;
 const double alpha_control = .1; // .1
 
-CasADi::SXFunction casadi_cost_func, casadi_gradcost_func;
 
+
+#ifndef USE_GENERATED_CASADI
+CasADi::SXFunction casadi_cost_func, casadi_gradcost_func;
+#endif
 
 namespace cfg {
 const double improve_ratio_threshold = .1; // .1
@@ -159,10 +166,9 @@ double casadiComputeCost(const std::vector< Matrix<C_DIM> >& X, const std::vecto
 	double **cost_arr = new double*[1];
 	cost_arr[0] = &cost;
 
-	//evaluateCostWrap(casadi_input, cost_arr);
-
-	//CasADi::SXFunction f = casadiCostFunc(T);
-
+#ifdef USE_GENERATED_CASADI
+	evaluateCostWrap(casadi_input, cost_arr);
+#else
 	casadi_cost_func.setInput(XU_arr,0);
 	casadi_cost_func.setInput(Sigma0_arr,1);
 	casadi_cost_func.setInput(l_arr,2);
@@ -170,6 +176,7 @@ double casadiComputeCost(const std::vector< Matrix<C_DIM> >& X, const std::vecto
 	casadi_cost_func.evaluate();
 
 	casadi_cost_func.getOutput(&cost,0);
+#endif
 
 	return cost;
 }
@@ -221,8 +228,9 @@ void casadiComputeCostGrad(const std::vector< Matrix<C_DIM> >& X, const std::vec
 	costgrad_arr[0] = &cost;
 	costgrad_arr[1] = Grad.getPtr();
 
-	//evaluateCostGradWrap(casadi_input, costgrad_arr);
-
+#ifdef USE_GENERATED_CASADI
+	evaluateCostGradWrap(casadi_input, costgrad_arr);
+#else
 	casadi_gradcost_func.setInput(XU_arr,0);
 	casadi_gradcost_func.setInput(Sigma0_arr,1);
 	casadi_gradcost_func.setInput(l_arr,2);
@@ -231,6 +239,7 @@ void casadiComputeCostGrad(const std::vector< Matrix<C_DIM> >& X, const std::vec
 
 	casadi_gradcost_func.getOutput(&cost,0);
 	casadi_gradcost_func.getOutput(Grad.getPtr(),1);
+#endif
 
 }
 
@@ -1011,7 +1020,7 @@ void planPath(std::vector<Matrix<P_DIM> > l, stateMPC_params& problem, stateMPC_
 		double initCasadiTrajCost = casadiComputeCost(X, U);
 		//LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
 
-		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
+		pythonDisplayTrajectory(B, U, waypoints, landmarks, T, false);
 
 		util::Timer_tic(&solveTimer);
 
@@ -1062,7 +1071,7 @@ void planPath(std::vector<Matrix<P_DIM> > l, stateMPC_params& problem, stateMPC_
 
 		unVec(B[T-1], x0, SqrtSigma0);
 
-		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
+		pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 
 	}
 
@@ -1088,8 +1097,10 @@ int main(int argc, char* argv[])
 	std::ofstream f;
 	logDataHandle("slam/data/slam-state", f);
 
+#ifndef USE_GENERATED_CASADI
 	casadi_cost_func = casadiCostFunc(T);
 	casadi_gradcost_func = casadiCostGradFunc(T);
+#endif
 
 	for(int i=0; i < l_list.size(); ++i) {
 		planPath(l_list[i], problem, output, info, f);

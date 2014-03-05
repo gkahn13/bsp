@@ -44,7 +44,7 @@ def plot_point_trajectory(B, U, waypoints, landmarks, max_range, alpha_obs, xDim
     
     #smooth_trajectory(B, U, cDim, uDim, T, DT)
     
-    #plot_domain(landmarks, max_range, alpha_obs, extent)
+    plot_domain(landmarks, max_range, alpha_obs, extent)
     plot_landmarks(B, landmarks, max_range, bDim, xDim, T)
     
     # plot mean of trajectory

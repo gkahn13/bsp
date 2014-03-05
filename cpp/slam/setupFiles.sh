@@ -62,25 +62,25 @@ sed -i "s/^${CPP_LANDMARK_DEF}.*/${CPP_LANDMARK_DEF} ${NUM_LANDMARKS}/" $H_WRITE
 
 # make casadi files
 # move casadi files over if different
-if [ $SLAM_TYPE = "state" ] || [ $SLAM_TYPE = "control" ]; then
-    CASADI_SLAM_DIR="${BSP_DIR}/casadi/slam"
-    echo "Making casadi files"
-    make -C ${CASADI_SLAM_DIR} "slam-${SLAM_TYPE}" T=${TIMESTEPS} NUM_LANDMARKS=${NUM_LANDMARKS}
-
-    CASADI_FILES=${CASADI_SLAM_DIR}/*.c
-    for CASADI_FILE in $CASADI_FILES
-    do
-	CASADI_FILE_NAME=$(basename $CASADI_FILE)
-	SLAM_CASADI_FILE=${SLAM_DIR}/${SLAM_TYPE}/${CASADI_FILE_NAME}
-
-	if [ ! -f $SLAM_CASADI_FILE ]; then
-	    echo "casadi file ${CASADI_FILE_NAME} does not exit, copying over"
-	    cp $CASADI_FILE $SLAM_CASADI_FILE
-	fi
-
-	if [ $(diff $CASADI_FILE $SLAM_CASADI_FILE | wc -w) -gt 0 ]; then
-	    echo "casadi file ${CASADI_FILE_NAME} differs, copying new one over"
-	    cp $CASADI_FILE $SLAM_CASADI_FILE
-	fi
-   done
-fi
+#if [ $SLAM_TYPE = "state" ] || [ $SLAM_TYPE = "control" ]; then
+#    CASADI_SLAM_DIR="${BSP_DIR}/casadi/slam"
+#    echo "Making casadi files"
+#    make -C ${CASADI_SLAM_DIR} "slam-${SLAM_TYPE}" T=${TIMESTEPS} NUM_LANDMARKS=${NUM_LANDMARKS}
+#
+#    CASADI_FILES=${CASADI_SLAM_DIR}/*.c
+#    for CASADI_FILE in $CASADI_FILES
+#    do
+#	CASADI_FILE_NAME=$(basename $CASADI_FILE)
+#	SLAM_CASADI_FILE=${SLAM_DIR}/${SLAM_TYPE}/${CASADI_FILE_NAME}
+#
+#	if [ ! -f $SLAM_CASADI_FILE ]; then
+#	    echo "casadi file ${CASADI_FILE_NAME} does not exit, copying over"
+#	    cp $CASADI_FILE $SLAM_CASADI_FILE
+#	fi
+#
+#	if [ $(diff $CASADI_FILE $SLAM_CASADI_FILE | wc -w) -gt 0 ]; then
+#	    echo "casadi file ${CASADI_FILE_NAME} differs, copying new one over"
+#	    cp $CASADI_FILE $SLAM_CASADI_FILE
+#	fi
+#  done
+#fi

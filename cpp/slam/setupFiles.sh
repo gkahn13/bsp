@@ -4,9 +4,11 @@
 # 1: slam folder
 #        belief, state, lp, control
 # 2: timesteps
+# 3: landmarks
 
 SLAM_TYPE=$1
 TIMESTEPS=$2
+NUM_LANDMARKS=$3
 
 
 BSP_DIR=$(sed s:/"bsp"/.*:/"bsp": <<< $(pwd))
@@ -21,6 +23,7 @@ MPC_FILE_NAME="${SLAM_TYPE}MPC"
 fi
 
 CPP_TIMESTEP_DEF="#define TIMESTEPS"
+CPP_LANDMARK_DEF="#define NUM_LANDMARKS"
 
 cd $SLAM_DIR
 
@@ -28,13 +31,15 @@ cd $SLAM_DIR
 MPC_C_FILE="${MPC_DIR}/${MPC_FILE_NAME}${TIMESTEPS}.c"
 MPC_H_FILE="${MPC_DIR}/${MPC_FILE_NAME}${TIMESTEPS}.h"
 
-if [ ! -f $MPC_C_FILE ] || [ ! -f $MPC_H_FILE ]; then
+# must always make for belief because landmarks is part of state
+if [ ! -f $MPC_C_FILE ] || [ ! -f $MPC_H_FILE ] || [ $SLAM_TYPE = "belief" ]; then
     echo "mpc files do not exist. generating with matlab..."
     cd $DIR
     if [ $SLAM_TYPE = "belief" ]; then MATLAB_FILE_NAME="${SLAM_TYPE}_penalty"
     else MATLAB_FILE_NAME="${SLAM_TYPE}"; fi
     
-    matlab -nodisplay -nosplash -nodesktop -r "slam_${MATLAB_FILE_NAME}_mpc_gen(${TIMESTEPS}); exit"
+    if [ $SLAM_TYPE = "belief" ]; then matlab -nodisplay -nosplash -nodesktop -r "slam_${MATLAB_FILE_NAME}_mpc_gen(${TIMESTEPS},${NUM_LANDMARKS}); exit"
+    else matlab -nodisplay -nosplash -nodesktop -r "slam_${MATLAB_FILE_NAME}_mpc_gen(${TIMESTEPS}); exit"; fi
     cd $SLAM_DIR
 fi
 
@@ -52,13 +57,15 @@ fi
 echo "replacing TIMESTEPS definition with new TIMESTEPS for slam.h in ${SLAM_DIR}"
 H_WRITE="${SLAM_DIR}/slam.h"
 sed -i "s/^${CPP_TIMESTEP_DEF}.*/${CPP_TIMESTEP_DEF} ${TIMESTEPS}/" $H_WRITE
+echo "replacing NUM_LANDMARKS definition with new NUM_LANDMARKS for slam.h in ${SLAM_DIR}"
+sed -i "s/^${CPP_LANDMARK_DEF}.*/${CPP_LANDMARK_DEF} ${NUM_LANDMARKS}/" $H_WRITE
 
 # make casadi files
 # move casadi files over if different
 if [ $SLAM_TYPE = "state" ] || [ $SLAM_TYPE = "control" ]; then
     CASADI_SLAM_DIR="${BSP_DIR}/casadi/slam"
     echo "Making casadi files"
-    make -C ${CASADI_SLAM_DIR} "slam-${SLAM_TYPE}" T=${TIMESTEPS}
+    make -C ${CASADI_SLAM_DIR} "slam-${SLAM_TYPE}" T=${TIMESTEPS} NUM_LANDMARKS=${NUM_LANDMARKS}
 
     CASADI_FILES=${CASADI_SLAM_DIR}/*.c
     for CASADI_FILE in $CASADI_FILES

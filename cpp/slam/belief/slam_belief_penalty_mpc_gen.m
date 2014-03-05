@@ -1,4 +1,4 @@
-function slam_belief_penalty_mpc_gen(timesteps)
+function slam_belief_penalty_mpc_gen(timesteps, landmarks)
 
 % FORCES - Fast interior point code generation for multistage problems.
 % Copyright (C) 2011-12 Alexander Domahidi [domahidi@control.ee.ethz.ch],
@@ -16,7 +16,7 @@ disp(strcat(rootDir,'bsp/forces'));
 % problem setup
 N = timesteps - 1;
 
-landmarks = 4;
+%landmarks = 4;
 
 nx = 3 + 2*landmarks;
 ns = ((nx+1)*nx)/2;
@@ -91,8 +91,8 @@ for i = 2:N
     params(end+1) = newParam(['C',istr], i, 'eq.C');
     params(end+1) = newParam(['e',istr], i, 'eq.c');
     
-    %params(end+1) = newParam(['D',istr], i, 'eq.D');
-    stages(i).eq.D = [-eye(nb), zeros(nb,2*nb+nu)];
+    params(end+1) = newParam(['D',istr], i, 'eq.D');
+    %stages(i).eq.D = [-eye(nb), zeros(nb,2*nb+nu)];
     
 end
 
@@ -125,23 +125,9 @@ params(end+1) = newParam(['ub',istr], i, 'ineq.b.ub');
 %stages(i).eq.C = blkdiag(eye(nx), zeros(ns,ns));
 params(end+1) = newParam(['e',istr], i, 'eq.c');
 
-stages(i).eq.D = -eye(nb);
-%params(end+1) = newParam(['D',istr], i, 'eq.D');
+%stages(i).eq.D = -eye(nb);
+params(end+1) = newParam(['D',istr], i, 'eq.D');
 
-% A = zeros(4, nb);
-% A(1,1) = 1;
-% A(2,2) = 1;
-% A(3,1) = -1;
-% A(4,2) = -1;
-% stages(i).ineq.p.A = A;
-% 
-% delta = .1;
-% b = zeros(4, 1);
-% b(1,1) = 60 + delta;
-% b(2,1) = 0 + delta;
-% b(3,1) = -60 + delta;
-% b(4,1) = -0 + delta;
-% stages(i).ineq.p.b = b;
 
 %--------------------------------------------------------------------------
 % define outputs of the solver

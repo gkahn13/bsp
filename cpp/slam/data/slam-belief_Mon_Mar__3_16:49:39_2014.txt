@@ -1,9 +1,0 @@
-4
-sum_cov_trace 482.009
-waypoint_distance_error 0.410238
-solve_time 304451
-initialization_time 478.562
-sum_cov_trace 633.167
-waypoint_distance_error 0.424288
-solve_time 304834
-initialization_time 478.472

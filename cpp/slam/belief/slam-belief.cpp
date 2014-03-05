@@ -116,7 +116,7 @@ void setupBeliefVars(beliefPenaltyMPC_params &problem, beliefPenaltyMPC_output &
 	lb = new beliefPenaltyMPC_FLOAT*[T];
 	ub = new beliefPenaltyMPC_FLOAT*[T];
 	C = new beliefPenaltyMPC_FLOAT*[T-1];
-	//D = new beliefPenaltyMPC_FLOAT*[T];
+	D = new beliefPenaltyMPC_FLOAT*[T];
 	e = new beliefPenaltyMPC_FLOAT*[T];
 
 	// problem outputs
@@ -146,13 +146,12 @@ void setupBeliefVars(beliefPenaltyMPC_params &problem, beliefPenaltyMPC_output &
 #include BOOST_PP_LOCAL_ITERATE()
 
 
-/*
+
 #define SET_D(n)    \
 		D[ BOOST_PP_SUB(n,1) ] = problem.D##n ;
 #define BOOST_PP_LOCAL_MACRO(n) SET_D(n)
 #define BOOST_PP_LOCAL_LIMITS (2, TIMESTEPS)
 #include BOOST_PP_LOCAL_ITERATE()
-*/
 
 
 	// initialize H in x'*H*x to penalize covariance and controls
@@ -172,21 +171,16 @@ void setupBeliefVars(beliefPenaltyMPC_params &problem, beliefPenaltyMPC_output &
 	for(int i=0; i < S_DIM; ++i) { H[T-1][index++] = 2*alpha_final_belief; }
 
 
-	/*
 	// set up D
 
-	Matrix<2*B_DIM, 3*B_DIM+U_DIM> D1mat = zeros<2*B_DIM, 3*B_DIM+U_DIM>();
-	D1mat.insert(B_DIM, 0, (Matrix<B_DIM,B_DIM>)identity<B_DIM>());
-	fillColMajor(D[1], D1mat);
-
 	Matrix<B_DIM, 3*B_DIM+U_DIM> Dmat = zeros<B_DIM, 3*B_DIM+U_DIM>();
-	Dmat.insert(0, 0, (Matrix<B_DIM,B_DIM>)identity<B_DIM>());
-	for(int t=2; t < T-1; ++t) {
+	Dmat.insert(0, 0, -(Matrix<B_DIM,B_DIM>)identity<B_DIM>());
+	for(int t=1; t < T-1; ++t) {
 		fillColMajor(D[t], Dmat);
 	}
 
-	fillColMajor(D[T-1], (Matrix<B_DIM,B_DIM>)identity<B_DIM>());
-	*/
+	fillColMajor(D[T-1], -(Matrix<B_DIM,B_DIM>)identity<B_DIM>());
+
 
 }
 
@@ -197,7 +191,7 @@ void cleanupBeliefMPCVars()
 	delete[] lb;
 	delete[] ub;
 	delete[] C;
-	//delete[] D;
+	delete[] D;
 	delete[] e;
 	delete[] z;
 }
@@ -764,27 +758,27 @@ void planPath(std::vector<Matrix<P_DIM> > l, beliefPenaltyMPC_params& problem, b
 
 int main(int argc, char* argv[])
 {
-	const rlim_t stackSize = 32 * 1024 * 1024;   // min stack size = 32 MB
-	struct rlimit rl;
-	int result;
-
-	result = getrlimit(RLIMIT_STACK, &rl);
-	if (result == 0)
-	{
-		if (rl.rlim_cur < stackSize)
-		{
-			rl.rlim_cur = stackSize;
-			result = setrlimit(RLIMIT_STACK, &rl);
-			if (result != 0)
-			{
-				LOG_ERROR("setrlimit returned result = %d\n", result);
-				exit(-1);
-			}
-		}
-	} else {
-		LOG_ERROR("Could not get stack limit");
-		exit(-1);
-	}
+//	const rlim_t stackSize = 32 * 1024 * 1024;   // min stack size = 32 MB
+//	struct rlimit rl;
+//	int result;
+//
+//	result = getrlimit(RLIMIT_STACK, &rl);
+//	if (result == 0)
+//	{
+//		if (rl.rlim_cur < stackSize)
+//		{
+//			rl.rlim_cur = stackSize;
+//			result = setrlimit(RLIMIT_STACK, &rl);
+//			if (result != 0)
+//			{
+//				LOG_ERROR("setrlimit returned result = %d\n", result);
+//				exit(-1);
+//			}
+//		}
+//	} else {
+//		LOG_ERROR("Could not get stack limit");
+//		exit(-1);
+//	}
 
 
 

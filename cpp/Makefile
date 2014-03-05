@@ -309,6 +309,8 @@ $(OBJ_DIR)/point-slam-test.o : $(PT_SLAM_TEST_DIR)/point-slam-test.cpp
 
 ###### SLAM ##########
 
+NUM_LANDMARKS = 3
+
 # setupFiles bash
 SLAM_SETUP_FILE = slam/setupFiles.sh
 
@@ -340,7 +342,7 @@ SLAM_TRAJ_FILES = trajMPC slam-traj logging slam
 SLAM_TRAJ_OBJS = $(SLAM_TRAJ_FILES:%=$(OBJ_DIR)/%.o)
 
 slam-traj-setup:
-	bash $(SLAM_SETUP_FILE) traj $(T)
+	bash $(SLAM_SETUP_FILE) traj $(T) $(NUM_LANDMARKS)
 
 slam-traj: | slam-traj-setup $(SLAM_TRAJ_OBJS)
 	$(CXX) $(SLAM_TRAJ_OBJS) $(BFLAGS) -o $(BIN_DIR)/slam-traj $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
@@ -357,7 +359,7 @@ SLAM_SMOOTH_FILES = smoothMPC slam-smooth logging slam
 SLAM_SMOOTH_OBJS = $(SLAM_SMOOTH_FILES:%=$(OBJ_DIR)/%.o)
 
 slam-smooth-setup:
-	bash $(SLAM_SETUP_FILE) smooth $(T)
+	bash $(SLAM_SETUP_FILE) smooth $(T) $(NUM_LANDMARKS)
 
 slam-smooth: | $(SLAM_SMOOTH_OBJS)
 	$(CXX) $(SLAM_SMOOTH_OBJS) $(BFLAGS) -o $(BIN_DIR)/slam-smooth $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
@@ -374,7 +376,7 @@ SLAM_BELIEF_FILES = slamBeliefPenaltyMPC slam-belief logging slam slam-traj traj
 SLAM_BELIEF_OBJS = $(SLAM_BELIEF_FILES:%=$(OBJ_DIR)/%.o)
 
 slam-belief-setup:
-	bash $(SLAM_SETUP_FILE) belief $(T)
+	bash $(SLAM_SETUP_FILE) belief $(T) $(NUM_LANDMARKS)
 
 slam-belief: | slam-belief-setup slam-traj-setup $(SLAM_BELIEF_OBJS)
 	$(CXX) $(BFLAGS) $(SLAM_BELIEF_OBJS) -o $(BIN_DIR)/slam-belief $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
@@ -391,7 +393,7 @@ SLAM_STATE_FILES = slam-state-cost slam-state-grad slamStateMPC slam-state loggi
 SLAM_STATE_OBJS = $(SLAM_STATE_FILES:%=$(OBJ_DIR)/%.o)
 
 slam-state-setup:
-	bash $(SLAM_SETUP_FILE) state $(T)
+	bash $(SLAM_SETUP_FILE) state $(T) $(NUM_LANDMARKS)
 
 slam-state: | slam-state-setup slam-traj-setup $(SLAM_STATE_OBJS)
 	$(CXX) $(BFLAGS) $(SLAM_STATE_OBJS) -o $(BIN_DIR)/slam-state $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
@@ -425,7 +427,7 @@ SLAM_CONTROL_FILES = slam-control-cost slam-control-grad slamControlMPC slam-con
 SLAM_CONTROL_OBJS = $(SLAM_CONTROL_FILES:%=$(OBJ_DIR)/%.o)
 
 slam-control-setup:
-	bash $(SLAM_SETUP_FILE) control $(T)
+	bash $(SLAM_SETUP_FILE) control $(T) $(NUM_LANDMARKS)
 
 slam-control: | slam-control-setup slam-traj-setup $(SLAM_CONTROL_OBJS)
 	$(CXX) $(BFLAGS) $(SLAM_CONTROL_OBJS) -o $(BIN_DIR)/slam-control $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)

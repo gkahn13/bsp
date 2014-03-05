@@ -631,7 +631,8 @@ void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matri
 		}
 	}
 
-	std::string workingDir = boost::filesystem::current_path().normalize().string();
+	//std::string workingDir = boost::filesystem::current_path().normalize().string();
+	std::string workingDir = "/home/gkahn/bsp/cpp";
 
 	try
 	{

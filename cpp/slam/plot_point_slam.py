@@ -44,7 +44,7 @@ def plot_point_trajectory(B, U, waypoints, landmarks, max_range, alpha_obs, xDim
     
     #smooth_trajectory(B, U, cDim, uDim, T, DT)
     
-    plot_domain(landmarks, max_range, alpha_obs, extent)
+    #plot_domain(landmarks, max_range, alpha_obs, extent)
     plot_landmarks(B, landmarks, max_range, bDim, xDim, T)
     
     # plot mean of trajectory
@@ -79,7 +79,7 @@ def plot_landmarks(B, landmarks, max_range, bDim, xDim, T):
             x, SqrtSigma = decompose_belief(B[:,t], bDim, xDim)
             Sigma = SqrtSigma*SqrtSigma
             
-            plot_cov(pos, Sigma[3+2*i:3+2*i+2,3+2*i:3+2*i+2], 'r-', alpha=(t+1)/float(T))
+            plot_cov(pos, Sigma[3+2*i:3+2*i+2,3+2*i:3+2*i+2], 'r-', alpha=1)#alpha=(t+1)/float(T))
         
     
 def plot_domain(landmarks, max_range, alpha_obs, extent):

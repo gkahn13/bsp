@@ -1,4 +1,4 @@
-//#define USE_GENERATED_CASADI
+#define USE_GENERATED_CASADI
 
 #include "../slam.h"
 #include "../traj/slam-traj.h"

@@ -405,8 +405,8 @@ $(OBJ_DIR)/slam-belief.o : $(SLAM_BELIEF_DIR)/slam-belief.cpp $(SLAM_HEADERS)
 	
 # make slam-state
 SLAM_STATE_DIR = slam/state
-#  slam-state-cost slam-state-grad
-SLAM_STATE_FILES = casadi-slam-state slamStateMPC slam-state logging slam trajMPC slam-traj
+# casadi-slam-state 
+SLAM_STATE_FILES = slam-state-cost slam-state-grad slamStateMPC slam-state logging slam trajMPC slam-traj
 SLAM_STATE_OBJS = $(SLAM_STATE_FILES:%=$(OBJ_DIR)/%.o)
 
 slam-state-setup:
@@ -430,8 +430,8 @@ $(OBJ_DIR)/casadi-slam-state.o : $(SLAM_CASADI_DIR)/slam-state.cpp
 $(OBJ_DIR)/slam-state.o : $(SLAM_STATE_DIR)/slam-state.cpp $(SLAM_HEADERS)
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) $(CASADI_FLAGS) -c -o $@ $< $(CASADI_LIBS)
 	
-casadi-slam-state:
-	$(CXX) -O3 -DNDEBUG -fopenmp -I$(CASADIPATH) -L$(CASADIPATH)/build/lib slam/casadi/slam-state.cpp -o casadi-slam-state -lcasadi -ldl
+#casadi-slam-state:
+#	$(CXX) -O3 -DNDEBUG -fopenmp -I$(CASADIPATH) -L$(CASADIPATH)/build/lib slam/casadi/slam-state.cpp -o casadi-slam-state -lcasadi -ldl
 	
 # make slam-state-mpc
 SLAM_STATE_MPC_DIR = slam/state

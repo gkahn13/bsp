@@ -7,7 +7,7 @@
 #include <cstdlib>
 
 //#define TIMESTEPS 15
-#define NUM_LANDMARKS 6
+#define NUM_LANDMARKS 3
 #define NUM_WAYPOINTS 4
 
 #define C_DIM 3 // car dimension [x, y, theta]

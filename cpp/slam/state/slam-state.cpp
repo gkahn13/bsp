@@ -2,6 +2,8 @@
 #include "../traj/slam-traj.h"
 //#include "../smooth/slam-smooth.h"
 
+#include "../casadi/slam-state.h"
+
 
 #include <vector>
 #include <iomanip>
@@ -20,6 +22,8 @@ stateMPC_FLOAT **H, **f, **lb, **ub, **C, **e, **z;
 const double alpha_belief = 10; // 10;
 const double alpha_final_belief = 10; // 10;
 const double alpha_control = .1; // .1
+
+CasADi::SXFunction casadi_cost_func, casadi_gradcost_func;
 
 
 namespace cfg {
@@ -155,7 +159,17 @@ double casadiComputeCost(const std::vector< Matrix<C_DIM> >& X, const std::vecto
 	double **cost_arr = new double*[1];
 	cost_arr[0] = &cost;
 
-	evaluateCostWrap(casadi_input, cost_arr);
+	//evaluateCostWrap(casadi_input, cost_arr);
+
+	//CasADi::SXFunction f = casadiCostFunc(T);
+
+	casadi_cost_func.setInput(XU_arr,0);
+	casadi_cost_func.setInput(Sigma0_arr,1);
+	casadi_cost_func.setInput(l_arr,2);
+	casadi_cost_func.setInput(params_arr,3);
+	casadi_cost_func.evaluate();
+
+	casadi_cost_func.getOutput(&cost,0);
 
 	return cost;
 }
@@ -207,7 +221,16 @@ void casadiComputeCostGrad(const std::vector< Matrix<C_DIM> >& X, const std::vec
 	costgrad_arr[0] = &cost;
 	costgrad_arr[1] = Grad.getPtr();
 
-	evaluateCostGradWrap(casadi_input, costgrad_arr);
+	//evaluateCostGradWrap(casadi_input, costgrad_arr);
+
+	casadi_gradcost_func.setInput(XU_arr,0);
+	casadi_gradcost_func.setInput(Sigma0_arr,1);
+	casadi_gradcost_func.setInput(l_arr,2);
+	casadi_gradcost_func.setInput(params_arr,3);
+	casadi_gradcost_func.evaluate();
+
+	casadi_gradcost_func.getOutput(&cost,0);
+	casadi_gradcost_func.getOutput(Grad.getPtr(),1);
 
 }
 
@@ -1064,6 +1087,9 @@ int main(int argc, char* argv[])
 
 	std::ofstream f;
 	logDataHandle("slam/data/slam-state", f);
+
+	casadi_cost_func = casadiCostFunc(T);
+	casadi_gradcost_func = casadiCostGradFunc(T);
 
 	for(int i=0; i < l_list.size(); ++i) {
 		planPath(l_list[i], problem, output, info, f);

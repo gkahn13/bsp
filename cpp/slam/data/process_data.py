@@ -9,7 +9,7 @@ attrs = ['sum_cov_trace','waypoint_distance_error','solve_time','initialization_
 
 class File:
     attrs = ['sum_cov_trace','waypoint_distance_error','solve_time','initialization_time']
-    slam_types = ['slam-belief', 'slam-state', 'slam-control']
+    slam_types = ['slam-belief', 'slam-state', 'slam-control', 'slam-traj']
     
     def __init__(self, file_name, slam_type, file_time):
         self.file_name = file_name
@@ -67,7 +67,36 @@ class File:
                     sd = np.sqrt(np.sum(np.power((np.array(attr_vals)-avg),2)) / combined_num_examples)
                     print(attr + ' sd: ' + str(sd))
                 print('')
-                
+        
+    @staticmethod
+    def compare(files0, files1):
+        landmark_numbers = sorted(list(set([f.num_landmarks for f in files0])))
+        
+        for num_landmarks in landmark_numbers:
+            print('Number of landmarks: ' + str(num_landmarks))
+            files0_l = [f for f in files0 if f.num_landmarks == num_landmarks]
+            files1_l = [f for f in files1 if f.num_landmarks == num_landmarks]
+            
+            files0_l_sorted, files1_l_sorted = [], []
+            for f0 in files0_l:
+                for f1 in files1_l:
+                    if f0.file_time == f1.file_time:
+                        files0_l_sorted.append(f0)
+                        files1_l_sorted.append(f1)
+            
+            num_examples = 0.
+            sum_cov_trace_pct = 0.
+            solve_time_pct = 0.
+            for f0, f1 in zip(files0_l_sorted, files1_l_sorted):
+                num_examples += f0.num_examples
+                for i in xrange(f0.num_examples):
+                    sum_cov_trace_pct += f0.example[i]['sum_cov_trace'] / f1.example[i]['sum_cov_trace']
+                    solve_time_pct += f0.example[i]['solve_time'] / f1.example[i]['solve_time']
+            
+            if num_examples >= 1:
+                print('sum_cov_trace %: ' + str(sum_cov_trace_pct/num_examples*100))
+                print('solve_time %: ' + str(solve_time_pct/num_examples*100))
+            
         
     
 def process_data():
@@ -84,13 +113,19 @@ def process_data():
     belief_files = [file for file in files if file.slam_type == 'slam-belief']
     state_files = [file for file in files if file.slam_type == 'slam-state']
     control_files = [file for file in files if file.slam_type == 'slam-control']
+    traj_files = [file for file in files if file.slam_type == 'slam-traj']
     
+    print('traj_files statistics')
+    File.printStatistics(traj_files)
     print('belief_files statistics')
     File.printStatistics(belief_files)
     print('state_files average')
     File.printStatistics(state_files)
     print('control_files average')
     File.printStatistics(control_files)
+    
+    print('compare state to traj')
+    File.compare(state_files, traj_files)
     
     #IPython.embed()
     

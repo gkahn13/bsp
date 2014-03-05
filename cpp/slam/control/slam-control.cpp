@@ -386,7 +386,7 @@ bool controlCollocation(std::vector< Matrix<U_DIM> >& U, controlMPC_params& prob
 	int index = 0;
 	bool success;
 
-	Matrix<C_DIM+U_DIM, C_DIM+U_DIM> HMat;
+	Matrix<C_DIM+U_DIM, C_DIM+U_DIM> HMat; // TODO: reduce
 	Matrix<C_DIM,C_DIM> HfMat;
 
 

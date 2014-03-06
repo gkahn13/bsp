@@ -29,7 +29,7 @@ class Data:
 		return np.std(np.array(self.data))
 
 class File:
-    attrs = ['sum_cov_trace','waypoint_distance_error','solve_time','initialization_time']
+    attrs = ['sum_cov_trace','waypoint_distance_error','solve_time','initialization_time','total_time']
     slam_types = ['slam-belief', 'slam-state', 'slam-control', 'slam-traj']
     
     def __init__(self, file_name, slam_type, file_time):
@@ -56,9 +56,12 @@ class File:
                     continue
                 
                 attr, val = line.split(' ')
-                if attr == attrs[0]:
+                if attr == File.attrs[0]:
                     self.num_examples += 1
                 self.example[self.num_examples-1][attr] += float(val)
+                
+            for i in xrange(self.num_examples):
+                self.example[i]['total_time'] = self.example[i]['solve_time'] + self.example[i]['initialization_time']
                 
     def get(self, attr):
         return [self.example[i][attr] for i in xrange(self.num_examples)]
@@ -110,7 +113,7 @@ class File:
             for f0, f1 in zip(files0_l_sorted, files1_l_sorted):
                 for i in xrange(f0.num_examples):
                 	sum_cov_trace_pct_data.add(f0.example[i]['sum_cov_trace'] / f1.example[i]['sum_cov_trace'])
-                	speed_pct_data.add(f1.example[i]['solve_time'] / f0.example[i]['solve_time'])
+                	speed_pct_data.add(f1.example[i]['total_time'] / f0.example[i]['total_time'])
             
             print(f0.slam_type+'/'+f1.slam_type+' sum_cov_trace: ' + str(sum_cov_trace_pct_data.mean*100) + ' +- ' + str(sum_cov_trace_pct_data.sd*100) + '%')
             print(f1.slam_type+'/'+f0.slam_type+' speed: ' + str(speed_pct_data.mean*100) + ' +- ' + str(speed_pct_data.sd*100) + '%')

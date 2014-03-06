@@ -69,7 +69,7 @@ void initProblemParams(std::vector<Matrix<P_DIM> >& l)
 
 	xMin[0] = -20;
 	xMin[1] = -20;
-	xMin[2] = -2*M_PI;
+	xMin[2] = -3*M_PI; // 2*M_PI
 	for(int i=0; i < NUM_LANDMARKS; i++) {
 		xMin[2*i+C_DIM] = landmarks[i][0] - 5;
 		xMin[2*i+1+C_DIM] = landmarks[i][1] - 5;
@@ -77,7 +77,7 @@ void initProblemParams(std::vector<Matrix<P_DIM> >& l)
 
 	xMax[0] = 80;
 	xMax[1] = 80;
-	xMax[2] = 2*M_PI;
+	xMax[2] = 3*M_PI; // 2*M_PI
 	for(int i=0; i < NUM_LANDMARKS; i++) {
 		xMax[2*i+C_DIM] = landmarks[i][0] + 5;
 		xMax[2*i+1+C_DIM] = landmarks[i][1] + 5;

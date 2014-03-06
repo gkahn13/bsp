@@ -81,7 +81,7 @@ const double DT_OBSERVE = 8*DT_CONTROLS;
 const double OBS_DIST_NOISE = 1 * 0.1;
 const double OBS_ANGLE_NOISE = 1 * 1.0*M_PI/180.;
 
-const double ALPHA_OBS = .75;
+const double ALPHA_OBS = 2;//.75;
 }
 
 

@@ -25,7 +25,7 @@ stateMPC_FLOAT **H, **f, **lb, **ub, **C, **e, **z;
 
 const double alpha_belief = 10; // 10;
 const double alpha_final_belief = 10; // 10;
-const double alpha_control = .1; // .1
+const double alpha_control = 1; // .1
 
 
 
@@ -34,18 +34,18 @@ CasADi::SXFunction casadi_cost_func, casadi_gradcost_func;
 #endif
 
 namespace cfg {
-const double improve_ratio_threshold = .1; // .1
+const double improve_ratio_threshold = .25; // .1
 const double min_approx_improve = 1e-2; // 1e-2
-const double min_trust_box_size = 1e-3; // 1e-3
+const double min_trust_box_size = 1e-4; // 1e-3
 
 const double trust_shrink_ratio = .75; // .75
 const double trust_expand_ratio = 1.25; // 1.25
 
-const double cnt_tolerance = .5; // 1
+const double cnt_tolerance = 1e-4; // .5
 const double penalty_coeff_increase_ratio = 5; // 5
 const double initial_penalty_coeff = 10; // 10
 
-const double initial_trust_box_size = .1; // 5 // split up trust box size for X and U
+const double initial_trust_box_size = 5; // 5 // split up trust box size for X and U
 const double initial_Xpos_trust_box_size = 5; // 1;
 const double initial_Xangle_trust_box_size = M_PI/6; // M_PI/6;
 const double initial_Uvel_trust_box_size = 5; // 1;
@@ -770,7 +770,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 
 				return false;
 			} else if (approx_merit_improve < cfg::min_approx_improve) {
-				LOG_DEBUG("Converged: improvement small enough");
+				LOG_INFO("Converged: improvement small enough");
 				X = Xopt; U = Uopt;
 				return true;
 			} else if ((exact_merit_improve < 0) || (merit_improve_ratio < cfg::improve_ratio_threshold)) {
@@ -865,7 +865,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			//if (Xeps < cfg::min_trust_box_size && Ueps < cfg::min_trust_box_size) {
 			if (Xpos_eps < cfg::min_trust_box_size && Xangle_eps < cfg::min_trust_box_size &&
 					Uvel_eps < cfg::min_trust_box_size && Uangle_eps < cfg::min_trust_box_size) {
-			    LOG_DEBUG("Converged: x tolerance");
+			    LOG_INFO("Converged: x tolerance");
 			    return true;
 			}
 
@@ -1083,7 +1083,7 @@ void planPath(std::vector<Matrix<P_DIM> > l, stateMPC_params& problem, stateMPC_
 	logDataToFile(f, B_total, totalSolveTime*1000, trajTime*1000);
 
 
-	//pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, true);
+	pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, true);
 }
 
 int main(int argc, char* argv[])

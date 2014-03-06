@@ -112,7 +112,7 @@ void evaluateCost(const d* x0,const d* x1,const d* x2,const d* x3,d* r0){
   a27=sqrt(a27);
   a29=5.0;
   a27=(a29-a27);
-  d a30=-7.5000000000000000e-01;
+  d a30=-2.0;
   a27=(a30*a27);
   a27=exp(a27);
   d a31=1.0;

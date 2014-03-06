@@ -1,6 +1,7 @@
 #include <vector>
 #include <iomanip>
 
+
 #include "../parameter.h"
 
 #include "util/matrix.h"
@@ -147,22 +148,6 @@ void setupBeliefVars(beliefPenaltyMPC_params& problem, beliefPenaltyMPC_output& 
 #define BOOST_PP_LOCAL_MACRO(n) SET_LAST_VARS(n)
 #define BOOST_PP_LOCAL_LIMITS (TIMESTEPS, TIMESTEPS)
 #include BOOST_PP_LOCAL_ITERATE()
-
-	for(int t = 0; t < T-1; ++t) {
-		for(int i=0; i < (3*B_DIM+U_DIM); ++i) { H[t][i] = INFTY; }
-		for(int i=0; i < (3*B_DIM+U_DIM); ++i) { f[t][i] = INFTY; }
-		for(int i=0; i < (3*B_DIM+U_DIM); ++i) { lb[t][i] = INFTY; }
-		for(int i=0; i < (B_DIM+U_DIM); ++i) { ub[t][i] = INFTY; }
-		for(int i=0; i < (B_DIM*(3*B_DIM+U_DIM)); ++i) { C[t][i] = INFTY; }
-		for(int i=0; i < B_DIM; ++i) { e[t][i] = INFTY; }
-		for(int i=0; i < (B_DIM+U_DIM); ++i) { z[t][i] = INFTY; }
-	}
-	for(int i=0; i < (B_DIM); ++i) { H[T-1][i] = INFTY; }
-	//for(int i=0; i < (B_DIM); ++i) { f[T-1][i] = INFTY; }
-	for(int i=0; i < (B_DIM); ++i) { lb[T-1][i] = INFTY; }
-	for(int i=0; i < (B_DIM); ++i) { ub[T-1][i] = INFTY; }
-	for(int i=0; i < B_DIM; ++i) { e[T-1][i] = INFTY; }
-	for(int i=0; i < (B_DIM); ++i) { z[T-1][i] = INFTY; }
 
 	for(int t=0; t < T-1; ++t) {
 		int index = 0;
@@ -364,7 +349,7 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 	for(int i = 0; i < B_DIM; ++i) {
 		minusIB(i,i) = -1;
 	}
-	//std::cout<<330<<"\n";
+
 	Matrix<B_DIM,3*B_DIM+U_DIM> CMat;
 	Matrix<B_DIM> eVec;
 
@@ -375,6 +360,8 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 		LOG_DEBUG("  sqp iter: %d", sqp_iter);
 
 		merit = computeMerit(B, U, penalty_coeff);
+		std::cout<<"MERIT "<<merit<<"\n";
+		
 		LOG_DEBUG("  merit: %4.10f", merit);
 		//pythonPlotRobot(U, SqrtSigma0, x0, xGoal);
 		//pythonDisplayTrajectory(U, SqrtSigma0, x0, xGoal);
@@ -536,6 +523,7 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			//std::cout << "PAUSED INSIDE minimizeMeritFunction" << std::endl;
 			//int num;
 			//std::cin >> num;
+			exit(0);
 
 			if (approx_merit_improve < -1e-5) {
 				LOG_ERROR("Approximate merit function got worse: %1.6f", approx_merit_improve);
@@ -614,8 +602,8 @@ int main(int argc, char* argv[])
 	// actual: 6.66, 6.66, 10.86, 13
 	double length1_est = .05, // inverse = 20
 			length2_est = .05, // inverse = 20
-			mass1_est = .105, // inverse = 9.52
-			mass2_est = .089; // inverse = 11.24
+			mass1_est = .12, // inverse = 9.52
+			mass2_est = .13; // inverse = 11.24
 
 
 	// position, then velocity
@@ -633,6 +621,11 @@ int main(int argc, char* argv[])
 	xGoal[4] = 1/length1_est; xGoal[5] = 1/length2_est; xGoal[6] = 1/mass1_est; xGoal[7] = 1/mass2_est;
 
 	// from original file, possibly change
+	/*SqrtSigma0(0,0) = 1.0; 
+	SqrtSigma0(1,1) = 1.0; 
+	SqrtSigma0(2,2) = 1.0; 
+	SqrtSigma0(3,3) = 1.0; 
+	*/
 	SqrtSigma0(4,4) = sqrt(0.5);
 	SqrtSigma0(5,5) = sqrt(0.5);
 	SqrtSigma0(6,6) = 1.0;
@@ -657,17 +650,22 @@ int main(int argc, char* argv[])
 	xMax[7] = 1/.01; // 1/mass2
 
 	for(int i = 0; i < U_DIM; ++i) {
-		uMin[i] = -0.1;
-		uMax[i] = 0.1;
+		uMin[i] = -0.4;
+		uMax[i] = 0.4;
 	}
 
 	//Matrix<U_DIM> uinit = (xGoal.subMatrix<U_DIM,1>(0,0) - x0.subMatrix<U_DIM,1>(0,0))/(double)(T-1);
 	Matrix<U_DIM> uinit;
-	uinit[0] = 0;
-	uinit[1] = 0;
+	uinit[0] = 0.1;
+	uinit[1] = -0.1;
 	
 	std::vector<Matrix<U_DIM> > U(T-1, uinit); 
+	std::vector<Matrix<X_DIM> > X(T);
 	std::vector<Matrix<B_DIM> > B(T);
+
+	std::vector<Matrix<U_DIM> > HistoryU(HORIZON);
+
+	std::vector<Matrix<B_DIM> > HistoryB(HORIZON); 
 
 	// pythonPlotRobot(U, SqrtSigma0, x0, xGoal);
 
@@ -678,15 +676,15 @@ int main(int argc, char* argv[])
 	setupBeliefVars(problem, output);
 
 	vec(x0, SqrtSigma0, B[0]);
-
+	std::cout<<"HORIZON is "<<HORIZON<<'\n';
 	for(int h = 0; h < HORIZON; ++h) {
 		for (int t = 0; t < T-1; ++t) {
-			//std::cout<<"Belief at"<<t<<'\n';
-			for(int i=0; i<B_DIM; i++){
-				//std::cout<<B[t][i]<<" ";
-			}
-			//std::cout<<'\n';
+
 			B[t+1] = beliefDynamics(B[t], U[t]);
+			/*X[t] = B[t+1].subMatrix<X_DIM,1>(0,0);
+			std::cout<<"X "<<t+1<<"\n"; 
+			std::cout<<X[t]<<"\n";
+			*/ 
 		}
 
 		//util::Timer solveTimer;
@@ -694,25 +692,33 @@ int main(int argc, char* argv[])
 	
 		double cost = beliefPenaltyCollocation(B, U, problem, output, info);
 		
-		exit(0);
+	
 
 		//pythonDisplayTrajectory(U, SqrtSigma0, x0, xGoal);
-		pythonPlotRobot(U, SqrtSigma0, x0, xGoal);
+		//pythonPlotRobot(U, SqrtSigma0, x0, xGoal);
 
 		//double solvetime = util::Timer_toc(&solveTimer);
 		//LOG_INFO("Optimized cost: %4.10f", cost);
 		//LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
-
+		
 		unVec(B[0], x0, SqrtSigma0);
 
 		//std::cout << "x0 before control step" << std::endl << ~x0;
 		//std::cout << "control u: " << std::endl << ~U[0];
 
-		//pythonDisplayTrajectory(U, SqrtSigma0, x0, xGoal);
-
+		
 		LOG_INFO("Executing control step");
+		HistoryU[h] = U[0];
+		HistoryB[h] = B[0];
+
+
+
+		std::cout<<U[0]<<"\n";
+
+	
 		B[0] = executeControlStep(x_real, B[0], U[0]);
-		x_real = dynfunc(x_real, U[0]);
+		
+
 
 		unVec(B[0], x0, SqrtSigma0);
 		//std::cout << "x0 after control step" << std::endl << ~x0;
@@ -720,17 +726,18 @@ int main(int argc, char* argv[])
 		for(int t = 0; t < T-2; ++t) {
 			U[t] = U[t+1];
 		}
+
+
 	}
+	pythonDisplayHistory(HistoryU,HistoryB, SqrtSigma0, x0, HORIZON);
 	cleanupBeliefMPCVars();
 
-	for (int t = 0; t < T; ++t) {
-		//std::cout << ~B[t].subMatrix<X_DIM,1>(0,0) << std::endl;
-	}
+
 
 
 #define PLOT
 #ifdef PLOT
-	pythonDisplayTrajectory(U, SqrtSigma0, x0, xGoal);
+	pythonDisplayHistory(HistoryU,HistoryB, SqrtSigma0, x0, HORIZON);
 
 	//int k;
 	//std::cin >> k;

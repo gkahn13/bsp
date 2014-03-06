@@ -38,7 +38,7 @@ def plot_point_trajectory(B, U, waypoints, landmarks, max_range, alpha_obs, xDim
     landmarks = np.array(landmarks)
     landmarks = landmarks.reshape(2, numLandmarks)
     
-    extent = [-10,70,-25,40]
+    extent = [-10,80,-25,30]
     plt.axis(extent)
     #plt.axis('equal')
     
@@ -79,7 +79,7 @@ def plot_landmarks(B, landmarks, max_range, bDim, xDim, T):
             x, SqrtSigma = decompose_belief(B[:,t], bDim, xDim)
             Sigma = SqrtSigma*SqrtSigma
             
-            plot_cov(pos, Sigma[3+2*i:3+2*i+2,3+2*i:3+2*i+2], 'r-', alpha=1)#alpha=(t+1)/float(T))
+            plot_cov(pos, Sigma[3+2*i:3+2*i+2,3+2*i:3+2*i+2], 'm-', alpha=1)#alpha=(t+1)/float(T))
         
     
 def plot_domain(landmarks, max_range, alpha_obs, extent):

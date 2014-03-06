@@ -1001,6 +1001,7 @@ void planPath(std::vector<Matrix<P_DIM> > l, stateMPC_params& problem, stateMPC_
 		bool initTrajSuccess = initTraj(x0.subMatrix<C_DIM,1>(0,0), xGoal.subMatrix<C_DIM,1>(0,0), U, T);
 		if (!initTrajSuccess) {
 			LOG_ERROR("Failed to initialize trajectory, exiting slam-state");
+			pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 			exit(-1);
 		}
 
@@ -1020,7 +1021,7 @@ void planPath(std::vector<Matrix<P_DIM> > l, stateMPC_params& problem, stateMPC_
 		double initCasadiTrajCost = casadiComputeCost(X, U);
 		//LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
 
-		pythonDisplayTrajectory(B, U, waypoints, landmarks, T, false);
+		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, false);
 
 		util::Timer_tic(&solveTimer);
 
@@ -1071,7 +1072,7 @@ void planPath(std::vector<Matrix<P_DIM> > l, stateMPC_params& problem, stateMPC_
 
 		unVec(B[T-1], x0, SqrtSigma0);
 
-		pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
+		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 
 	}
 

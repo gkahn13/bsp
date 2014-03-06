@@ -60,7 +60,7 @@ void initProblemParams(std::vector<Matrix<P_DIM> >& l)
 	//This starts out at 0 for car, landmarks are set based on the car's sigma when first seen
 	SqrtSigma0 = zeros<X_DIM, X_DIM>();
 	for(int i = 0; i < C_DIM; ++i) { SqrtSigma0(i,i) = .1; } // .1
-	for(int i = 0; i < L_DIM; ++i) { SqrtSigma0(C_DIM+i,C_DIM+i) = 1; } // 1
+	for(int i = 0; i < L_DIM; ++i) { SqrtSigma0(C_DIM+i,C_DIM+i) = 3.5; } // 1
 
 	uMin[0] = 1.5; // 1
 	uMin[1] = -M_PI/3;
@@ -632,8 +632,8 @@ void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matri
 	}
 
 	//std::string workingDir = boost::filesystem::current_path().normalize().string();
-	//std::string workingDir = "/home/gkahn/bsp/cpp";
-	std::string workingDir = "/home/gkahn/Berkeley/Research/bsp/cpp";
+	std::string workingDir = "/home/gkahn/bsp/cpp";
+	//std::string workingDir = "/home/gkahn/Berkeley/Research/bsp/cpp";
 
 	try
 	{

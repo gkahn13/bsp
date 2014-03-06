@@ -29,11 +29,11 @@ const double min_trust_box_size = 1e-3; // 1e-2
 const double trust_shrink_ratio = .75; // .5
 const double trust_expand_ratio = 1.25; // 1.2
 
-const double cnt_tolerance = 1;
+const double cnt_tolerance = .5;
 const double penalty_coeff_increase_ratio = 5; // 2
 const double initial_penalty_coeff = 10; // 15
 
-const double initial_trust_box_size = 10; // 5 // split up trust box size for X and U
+const double initial_trust_box_size = 5; // 10
 const double initial_Xpos_trust_box_size = 5; // 10;
 const double initial_Xangle_trust_box_size = M_PI/6; // 10*M_PI/6;
 const double initial_Uvel_trust_box_size = 5; // 10;
@@ -42,6 +42,10 @@ const double initial_Uangle_trust_box_size = M_PI/8; // 10*M_PI/8;
 const int max_penalty_coeff_increases = 3; // 4
 const int max_sqp_iterations = 50; // 50
 }
+
+struct forces_exception {
+	forces_exception() { }
+};
 
 // utility to fill Matrix in column major format in FORCES array
 template <size_t _numRows>
@@ -163,7 +167,8 @@ void setupBeliefVars(beliefPenaltyMPC_params &problem, beliefPenaltyMPC_output &
 		for(int i=0; i < X_DIM; ++i) { H[t][index++] = 0; }
 		for(int i=0; i < S_DIM; ++i) { H[t][index++] = 2*alpha_belief; }
 		for(int i=0; i < U_DIM; ++i) { H[t][index++] = 2*alpha_control; }
-		for(int i=0; i < 2*B_DIM; ++i) { H[t][index++] = 1e4; } // TODO: maybe penalize like in slam-state
+		// TODO: why does this work?
+		for(int i=0; i < 2*B_DIM; ++i) { H[t][index++] = 5e2; } // 1e4
 	}
 
 	index = 0;
@@ -557,7 +562,7 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			}
 			else {
 				LOG_ERROR("Some problem in solver");
-				exit(-1);
+				throw forces_exception();
 			}
 
 			LOG_DEBUG("Optimized cost: %4.10f", optcost);
@@ -697,8 +702,8 @@ void planPath(std::vector<Matrix<P_DIM> > l, beliefPenaltyMPC_params& problem, b
 		std::vector<Matrix<U_DIM> > U(T-1);
 		bool initTrajSuccess = initTraj(x0.subMatrix<C_DIM,1>(0,0), xGoal.subMatrix<C_DIM,1>(0,0), U, T);
 		if (!initTrajSuccess) {
-			LOG_ERROR("Failed to initialize trajectory, exiting slam-belief");
-			exit(-1);
+			LOG_ERROR("Failed to initialize trajectory, continuing anyways");
+			//exit(-1);
 		}
 
 		double initTrajTime = util::Timer_toc(&trajTimer);
@@ -717,7 +722,24 @@ void planPath(std::vector<Matrix<P_DIM> > l, beliefPenaltyMPC_params& problem, b
 
 		Timer_tic(&solveTimer);
 
-		double cost = beliefPenaltyCollocation(B, U, problem, output, info);
+		double cost = 0;
+		int iter = 0;
+		while(true) {
+			try {
+				cost = beliefPenaltyCollocation(B, U, problem, output, info);
+				break;
+			}
+			catch (forces_exception &e) {
+				if (iter > 3) {
+					LOG_ERROR("Tried too many times, giving up");
+					pythonDisplayTrajectory(U, T, true);
+					//exit(-1);
+					return;
+				}
+				LOG_ERROR("Forces exception, trying again");
+				iter++;
+			}
+		}
 
 		double solvetime = util::Timer_toc(&solveTimer);
 		totalSolveTime += solvetime;

@@ -71,10 +71,10 @@ def plot_parameter_trajectory(B, U, bDim, xDim, uDim, T):
     joint2pos = X[1,:].tolist()[0]
     joint1vel = X[2,:].tolist()[0]
     joint2vel = X[3,:].tolist()[0]
-    length1 = X[4,:].tolist()[0]
-    length2 = X[5,:].tolist()[0]
-    mass1 = X[6,:].tolist()[0]
-    mass2 = X[7,:].tolist()[0]
+    length1 = (1/X[4,:]).tolist()[0]
+    length2 = (1/X[5,:]).tolist()[0]
+    mass1 = (1/X[6,:]).tolist()[0]
+    mass2 = (1/X[7,:]).tolist()[0]
     
     joint1poscov = [S[0,0] for S in SigmaList]
     joint2poscov = [S[1,1] for S in SigmaList]
@@ -90,37 +90,24 @@ def plot_parameter_trajectory(B, U, bDim, xDim, uDim, T):
     plt.figure(1)
     plt.clf()
     plt.cla()
-    plt.autoscale(True,'both',True)
+   
+    plt.autoscale(True,'x',True)
     
-    plt.subplot(8,1,1)
-    plt.ylabel('joint1pos')
-    plt.plot(joint1pos,'b-')
+ 
     
-    plt.subplot(8,1,2)
-    plt.ylabel('joint2pos')
-    plt.plot(joint2pos,'b-')
-    
-    plt.subplot(8,1,3)
-    plt.ylabel('joint1vel')
-    plt.plot(joint1vel,'b-')
-    
-    plt.subplot(8,1,4)
-    plt.ylabel('joint2vel')
-    plt.plot(joint2vel,'b-')
-    
-    plt.subplot(8,1,5)
+    plt.subplot(4,1,1)
     plt.ylabel('length1')
     plt.plot(length1,'b-')
     
-    plt.subplot(8,1,6)
+    plt.subplot(4,1,2)
     plt.ylabel('length2')
     plt.plot(length2,'b-')
     
-    plt.subplot(8,1,7)
+    plt.subplot(4,1,3)
     plt.ylabel('mass1')
     plt.plot(mass1,'b-')
     
-    plt.subplot(8,1,8)
+    plt.subplot(4,1,4)
     plt.ylabel('mass2')
     plt.plot(mass2,'b-')
     
@@ -128,38 +115,27 @@ def plot_parameter_trajectory(B, U, bDim, xDim, uDim, T):
     plt.figure(2)
     plt.clf()
     plt.cla()
-    plt.autoscale(True,'both',True)
+    plt.autoscale(True,'x',True)
     
-    plt.subplot(8,1,1)
-    plt.ylabel('joint1poscov')
-    plt.plot(joint1poscov,'r-')
     
-    plt.subplot(8,1,2)
-    plt.ylabel('joint2poscov')
-    plt.plot(joint2poscov,'r-')
-    
-    plt.subplot(8,1,3)
-    plt.ylabel('joint1velcov')
-    plt.plot(joint1velcov,'r-')
-    
-    plt.subplot(8,1,4)
-    plt.ylabel('joint2velcov')
-    plt.plot(joint2velcov,'r-')
-    
-    plt.subplot(8,1,5)
+    plt.subplot(4,1,1)
     plt.ylabel('length1cov')
+    plt.ylim((0.0,1.0))
     plt.plot(length1cov,'r-')
     
-    plt.subplot(8,1,6)
+    plt.subplot(4,1,2)
     plt.ylabel('length2cov')
+    plt.ylim((0.0,1.0))
     plt.plot(length2cov,'r-')
     
-    plt.subplot(8,1,7)
+    plt.subplot(4,1,3)
     plt.ylabel('mass1cov')
+    plt.ylim((0.0,1.0))
     plt.plot(mass1cov,'r-')
     
-    plt.subplot(8,1,8)
+    plt.subplot(4,1,4)
     plt.ylabel('mass2cov')
+    plt.ylim((0.0,1.0))
     plt.plot(mass2cov,'r-')
     
     plt.show(block=False)

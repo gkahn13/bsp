@@ -62,7 +62,7 @@ void initProblemParams(std::vector<Matrix<P_DIM> >& l)
 	for(int i = 0; i < C_DIM; ++i) { SqrtSigma0(i,i) = .1; } // .1
 	for(int i = 0; i < L_DIM; ++i) { SqrtSigma0(C_DIM+i,C_DIM+i) = 3.5; } // 1
 
-	uMin[0] = 1.5; // 1
+	uMin[0] = 1.5; // 1.5
 	uMin[1] = -M_PI/3;
 	uMax[0] = 10; // 10
 	uMax[1] = M_PI/3;
@@ -632,8 +632,8 @@ void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matri
 	}
 
 	//std::string workingDir = boost::filesystem::current_path().normalize().string();
-	std::string workingDir = "/home/gkahn/bsp/cpp";
-	//std::string workingDir = "/home/gkahn/Berkeley/Research/bsp/cpp";
+	//std::string workingDir = "/home/gkahn/bsp/cpp";
+	std::string workingDir = "/home/gkahn/Berkeley/Research/bsp/cpp";
 
 	try
 	{

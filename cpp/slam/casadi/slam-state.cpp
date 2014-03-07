@@ -9,7 +9,7 @@
 #include <cstdlib>
 
 //#define TIMESTEPS 15
-#define NUM_LANDMARKS 6
+#define NUM_LANDMARKS 20
 #define NUM_WAYPOINTS 4
 
 #define C_DIM 3 // car dimension [x, y, theta]
@@ -211,6 +211,46 @@ SXMatrix costfunc(const SXMatrix& XU, const SXMatrix& Sigma_0, const SXMatrix& l
 
 	return cost;
 }
+
+//SXMatrix meritfunc(const SXMatrix& XU, const SXMatrix& Sigma_0, const SXMatrix& landmarks, const SXMatrix& params)
+//{
+//	SXMatrix cost = 0;
+//
+//	SXMatrix x_tp1(X_DIM,1);
+//	SXMatrix Sigma_t = Sigma_0, Sigma_tp1(X_DIM,X_DIM);
+//	SXMatrix c_t(C_DIM,1), x_t(X_DIM,1), u_t(U_DIM,1);
+//
+//	int offset = 0;
+//
+//	c_t = XU(Slice(offset,offset+C_DIM));
+//	offset += C_DIM;
+//
+//	for(int i=0; i < X_DIM; ++i) {
+//		x_t(i) = (i < C_DIM) ? c_t(i) : landmarks(i-C_DIM);
+//	}
+//
+//	for (int t = 0; t < (T_CASADI-1); ++t)
+//	{
+//		u_t = XU(Slice(offset,offset+U_DIM));
+//		offset += U_DIM;
+//		c_t = XU(Slice(offset,offset+C_DIM));
+//		offset += C_DIM;
+//
+//		for(int i=0; i < X_DIM; ++i) {
+//			x_t(i) = (i < C_DIM) ? c_t(i) : landmarks(i-C_DIM);
+//		}
+//
+//		cost += params[0]*trace(Sigma_t);
+//		cost += params[1]*inner_prod(u_t, u_t);
+//
+//		EKF(x_t, u_t, Sigma_t, x_tp1, Sigma_tp1);
+//		Sigma_t = Sigma_tp1;
+//	}
+//
+//	cost += params[2]*trace(Sigma_t);
+//
+//	return cost;
+//}
 
 void test() {
 	T_CASADI = 15;

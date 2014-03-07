@@ -442,8 +442,8 @@ $(OBJ_DIR)/slam-belief.o : $(SLAM_BELIEF_DIR)/slam-belief.cpp $(SLAM_HEADERS)
 	
 # make slam-state
 SLAM_STATE_DIR = slam/state
-# casadi-slam-state 
-SLAM_STATE_FILES = slam-state-cost slam-state-grad slamStateMPC slam-state logging slam trajMPC slam-traj
+# slam-state-cost slam-state-grad
+SLAM_STATE_FILES = casadi-slam-state slamStateMPC slam-state logging slam trajMPC slam-traj
 SLAM_STATE_OBJS = $(SLAM_STATE_FILES:%=$(OBJ_DIR)/%.o)
 
 slam-state-setup:

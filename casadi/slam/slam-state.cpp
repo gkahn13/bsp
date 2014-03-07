@@ -11,8 +11,7 @@
 // params[0] = alpha_belief
 // params[1] = alpha_control
 // params[2] = alpha_final_belief
-// params[3] = alpha_goal
-SXMatrix costfunc(const SXMatrix& XU, const SXMatrix& Sigma_0, const SXMatrix& cGoal, const SXMatrix& landmarks, const SXMatrix& params)
+SXMatrix costfunc(const SXMatrix& XU, const SXMatrix& Sigma_0, const SXMatrix& landmarks, const SXMatrix& params)
 {
 	SXMatrix cost = 0;
 
@@ -41,11 +40,6 @@ SXMatrix costfunc(const SXMatrix& XU, const SXMatrix& Sigma_0, const SXMatrix& c
 	}
 
 	cost += params[2]*trace(Sigma_t);
-
-	c_t = XU(Slice(offset,offset+C_DIM));
-	for(int i=0; i < C_DIM; ++i) {
-		cost += params[3]*(c_t(i) - cGoal(i))*(c_t(i) - cGoal(i));
-	}
 
 	return cost;
 }
@@ -96,12 +90,11 @@ int main(int argc, char* argv[])
 	int nXU = T*C_DIM+(T-1)*U_DIM;
 	SXMatrix XU = ssym("XU",nXU,1);
 	SXMatrix Sigma_0 = ssym("S0",X_DIM,X_DIM);
-	SXMatrix cGoal = ssym("cGoal",C_DIM);
 	SXMatrix landmarks = ssym("landmarks",L_DIM);
-	SXMatrix params = ssym("params",4); // alpha_control, alpha_belief, alpha_final_belief
+	SXMatrix params = ssym("params",3); // alpha_control, alpha_belief, alpha_final_belief
 
 	// Objective
-	SXMatrix f = costfunc(XU, Sigma_0, cGoal, landmarks, params);
+	SXMatrix f = costfunc(XU, Sigma_0, landmarks, params);
 
 	SXMatrix grad_f = gradient(f,XU);
 
@@ -109,7 +102,6 @@ int main(int argc, char* argv[])
 	vector<SXMatrix> inp;
 	inp.push_back(XU);
 	inp.push_back(Sigma_0);
-	inp.push_back(cGoal);
 	inp.push_back(landmarks);
 	inp.push_back(params);
 

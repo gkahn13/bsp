@@ -1,4 +1,4 @@
-#define USE_GENERATED_CASADI
+//#define USE_GENERATED_CASADI
 
 #include "../slam.h"
 #include "../traj/slam-traj.h"
@@ -28,6 +28,13 @@ const double alpha_final_belief = 10; // 10;
 const double alpha_control = .1; // .1
 const double alpha_goal = 1;
 
+double casadi_time = 0;
+double forces_time = 0;
+double linearize_time = 0;
+double lbfgs_time = 0;
+double bounds_time = 0;
+double minimize_merit_time = 0;
+double casadi_compute_merit_time = 0;
 
 
 #ifndef USE_GENERATED_CASADI
@@ -113,7 +120,7 @@ double nearestAngleFromTo(double from, double to) {
 }
 
 
-void setupCasadiVars(const std::vector<Matrix<C_DIM> >& X, const std::vector<Matrix<U_DIM> >& U, double* XU_arr, double* Sigma0_arr, double* cGoal_arr, double* l_arr, double* params_arr)
+void setupCasadiVars(const std::vector<Matrix<C_DIM> >& X, const std::vector<Matrix<U_DIM> >& U, double* XU_arr, double* Sigma0_arr, double* l_arr, double* params_arr)
 {
 	int index = 0;
 	for(int t = 0; t < T-1; ++t) {
@@ -137,10 +144,6 @@ void setupCasadiVars(const std::vector<Matrix<C_DIM> >& X, const std::vector<Mat
 		}
 	}
 
-	for(int i=0; i < C_DIM; ++i) {
-		cGoal_arr[i] = xGoal[i];
-	}
-
 	index = 0;
 	for(int i=C_DIM; i < X_DIM; ++i) {
 		l_arr[index++] = x0[i];
@@ -149,25 +152,25 @@ void setupCasadiVars(const std::vector<Matrix<C_DIM> >& X, const std::vector<Mat
 	params_arr[0] = alpha_belief;
 	params_arr[1] = alpha_control;
 	params_arr[2] = alpha_final_belief;
-	params_arr[3] = alpha_goal;
 }
 
 double casadiComputeCost(const std::vector< Matrix<C_DIM> >& X, const std::vector< Matrix<U_DIM> >& U)
 {
+	util::Timer casadi_timer;
+	util::Timer_tic(&casadi_timer);
+
 	double XU_arr[CU_DIM];
 	double Sigma0_arr[X_DIM*X_DIM];
-	double cGoal_arr[C_DIM];
 	double l_arr[L_DIM];
-	double params_arr[4];
+	double params_arr[3];
 
-	setupCasadiVars(X, U, XU_arr, Sigma0_arr, cGoal_arr, l_arr, params_arr);
+	setupCasadiVars(X, U, XU_arr, Sigma0_arr, l_arr, params_arr);
 
 	const double **casadi_input = new const double*[4];
 	casadi_input[0] = XU_arr;
 	casadi_input[1] = Sigma0_arr;
-	casadi_input[2] = cGoal_arr;
-	casadi_input[3] = l_arr;
-	casadi_input[4] = params_arr;
+	casadi_input[2] = l_arr;
+	casadi_input[3] = params_arr;
 
 	double cost = 0;
 	double **cost_arr = new double*[1];
@@ -185,53 +188,76 @@ double casadiComputeCost(const std::vector< Matrix<C_DIM> >& X, const std::vecto
 	casadi_cost_func.getOutput(&cost,0);
 #endif
 
+	casadi_time += util::Timer_toc(&casadi_timer);
+
 	return cost;
 }
 
 double casadiComputeMerit(const std::vector< Matrix<C_DIM> >& X, const std::vector< Matrix<U_DIM> >& U, double penalty_coeff)
 {
+
 	double merit = 0;
 
 	merit = casadiComputeCost(X, U);
 
-	Matrix<X_DIM> x;
-	Matrix<C_DIM> dynviol;
-	Matrix<X_DIM, X_DIM> SqrtSigma;
-	Matrix<B_DIM> b, b_tp1;
-	vec(x0, SqrtSigma0, b);
+	util::Timer ccm_timer;
+	util::Timer_tic(&ccm_timer);
 
-	for(int t = 0; t < T-1; ++t) {
-		unVec(b, x, SqrtSigma);
-		b_tp1 = beliefDynamics(b, U[t]);
-		dynviol = (X[t+1] - b_tp1.subMatrix<C_DIM,1>(0,0) );
-		for(int i = 0; i < C_DIM; ++i) {
+	Matrix<C_DIM> c = X[0];
+	Matrix<C_DIM> dynviol;
+	for(int t=0; t < T-1; ++t) {
+		c = dynfunccar(c, U[t]);
+		dynviol = X[t+1] - c;
+		for(int i=0; i < C_DIM; ++i) {
 			if (i != P_DIM) {
 				merit += penalty_coeff*fabs(dynviol[i]);
 			} else {
-				merit += penalty_coeff*wrapAngle(fabs(dynviol[i])); // since angles wrap
+				merit += penalty_coeff*wrapAngle(fabs(dynviol[i]));
 			}
 		}
-		b = b_tp1;
 	}
+
+//	Matrix<X_DIM> x;
+//	Matrix<C_DIM> dynviol;
+//	Matrix<X_DIM, X_DIM> SqrtSigma;
+//	Matrix<B_DIM> b, b_tp1;
+//	vec(x0, SqrtSigma0, b);
+//
+//	for(int t = 0; t < T-1; ++t) {
+//		unVec(b, x, SqrtSigma);
+//		b_tp1 = beliefDynamics(b, U[t]);
+//		dynviol = (X[t+1] - b_tp1.subMatrix<C_DIM,1>(0,0) );
+//		for(int i = 0; i < C_DIM; ++i) {
+//			if (i != P_DIM) {
+//				merit += penalty_coeff*fabs(dynviol[i]);
+//			} else {
+//				merit += penalty_coeff*wrapAngle(fabs(dynviol[i])); // since angles wrap
+//			}
+//		}
+//		b = b_tp1;
+//	}
+	casadi_compute_merit_time += util::Timer_toc(&ccm_timer);
+
 	return merit;
 }
 
 void casadiComputeCostGrad(const std::vector< Matrix<C_DIM> >& X, const std::vector< Matrix<U_DIM> >& U, double& cost, Matrix<CU_DIM>& Grad)
 {
+	util::Timer casadi_timer;
+	util::Timer_tic(&casadi_timer);
+
 	double XU_arr[CU_DIM];
 	double Sigma0_arr[X_DIM*X_DIM];
-	double cGoal_arr[C_DIM];
 	double l_arr[L_DIM];
-	double params_arr[4];
+	double params_arr[3];
 
-	setupCasadiVars(X, U, XU_arr, Sigma0_arr, cGoal_arr, l_arr, params_arr);
+	setupCasadiVars(X, U, XU_arr, Sigma0_arr, l_arr, params_arr);
 
 	const double **casadi_input = new const double*[4];
 	casadi_input[0] = XU_arr;
 	casadi_input[1] = Sigma0_arr;
-	casadi_input[2] = cGoal_arr;
-	casadi_input[3] = l_arr;
-	casadi_input[4] = params_arr;
+	casadi_input[2] = l_arr;
+	casadi_input[3] = params_arr;
 
 	double **costgrad_arr = new double*[2];
 	costgrad_arr[0] = &cost;
@@ -249,6 +275,8 @@ void casadiComputeCostGrad(const std::vector< Matrix<C_DIM> >& X, const std::vec
 	casadi_gradcost_func.getOutput(&cost,0);
 	casadi_gradcost_func.getOutput(Grad.getPtr(),1);
 #endif
+
+	casadi_time += util::Timer_toc(&casadi_timer);
 
 }
 
@@ -268,9 +296,6 @@ double computeCost(const std::vector< Matrix<C_DIM> >& X, const std::vector< Mat
 	}
 	unVec(b, x, SqrtSigma);
 	cost += alpha_final_belief*tr(SqrtSigma*SqrtSigma);
-	Matrix<C_DIM> c = x.subMatrix<C_DIM,1>(0,0);
-	Matrix<C_DIM> cGoal = xGoal.subMatrix<C_DIM,1>(0,0);
-	cost += alpha_goal*tr(~(c - cGoal)*(c - cGoal));
 	return cost;
 }
 
@@ -299,9 +324,6 @@ double computeMerit(const std::vector< Matrix<C_DIM> >& X, const std::vector< Ma
 	}
 	unVec(b, x, SqrtSigma);
 	merit += alpha_final_belief*tr(SqrtSigma*SqrtSigma);
-	Matrix<C_DIM> c = x.subMatrix<C_DIM,1>(0,0);
-	Matrix<C_DIM> cGoal = xGoal.subMatrix<C_DIM,1>(0,0);
-	merit += alpha_goal*tr(~(c - cGoal)*(c - cGoal));
 	return merit;
 }
 
@@ -570,6 +592,9 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 		jac_constant = 0;
 		idx = 0;
 
+		util::Timer linearize_timer;
+		util::Timer_tic(&linearize_timer);
+
 		for (int t = 0; t < T-1; ++t)
 		{
 			Matrix<C_DIM>& xt = X[t];
@@ -644,20 +669,14 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			hessian_constant += HfMat(i,i)*xT[i]*xT[i];
 			jac_constant -= Grad[idx+i]*xT[i];
 			f[T-1][i] = Grad[idx+i] - HfMat(i,i)*xT[i];
-
-			// for goal cost
-			f[T-1][i] += -2*alpha_goal*xGoal[i];
-			//hessian_constant += 4*alpha_goal*xGoal[i]*xGoal[i];
 		}
 
-		Matrix<C_DIM> cGoal = xGoal.subMatrix<C_DIM,1>(0,0);
-		double goal_cost = 2*alpha_goal*tr(~cGoal*cGoal);
-
-		constant_cost = 0.5*hessian_constant + jac_constant + goal_cost + cost;
+		constant_cost = 0.5*hessian_constant + jac_constant + cost;
 		LOG_DEBUG("  hessian cost: %4.10f", 0.5*hessian_constant);
 		LOG_DEBUG("  jacobian cost: %4.10f", jac_constant);
-		LOG_DEBUG("  goal cost: %4.10f", goal_cost)
 		LOG_DEBUG("  constant cost: %4.10f", constant_cost);
+
+		linearize_time += util::Timer_toc(&linearize_timer);
 
 		//std::cout << "PAUSED INSIDE MINIMIZEMERITFUNCTION" << std::endl;
 		//int k;
@@ -668,6 +687,9 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 		while(true)
 		{
 			LOG_DEBUG("       trust region size: %2.6f %2.6f", Xeps, Ueps);
+
+			util::Timer bounds_timer;
+			util::Timer_tic(&bounds_timer);
 
 			// solve the innermost QP here
 			for(int t = 0; t < T-1; ++t)
@@ -722,12 +744,17 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			//ub[T-1][index++] = xGoal[2] + finalAngleDelta;
 			ub[T-1][index++] = nearestAngleFromTo(xT[2], xGoal[2] + finalAngleDelta);
 
+			bounds_time += util::Timer_toc(&bounds_timer);
+
 			// Verify problem inputs
 			if (!isValidInputs()) {
 				std::cout << "Inputs are not valid!" << std::endl;
 				exit(-1);
 			}
 
+
+			util::Timer forces_timer;
+			util::Timer_tic(&forces_timer);
 
 			int exitflag = stateMPC_solve(&problem, &output, &info);
 			if (exitflag == 1) {
@@ -753,6 +780,9 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 				throw forces_exception();
 			}
 
+			forces_time += util::Timer_toc(&forces_timer);
+
+
 			LOG_DEBUG("       Optimized cost: %4.10f", optcost);
 
 			model_merit = optcost + constant_cost;
@@ -775,6 +805,8 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 //			pythonDisplayTrajectory(Uopt, T, true);
 //			std::cout << "U\n";
 //			pythonDisplayTrajectory(U, T, true);
+
+
 
 
 			if (approx_merit_improve < -1e-5) {
@@ -805,6 +837,9 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 
 
 				casadiComputeCostGrad(Xopt, Uopt, cost, Gradopt);
+
+				util::Timer lbfgs_timer;
+				util::Timer_tic(&lbfgs_timer);
 
 				Matrix<CU_DIM> s, y;
 
@@ -866,6 +901,8 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 					B = B + fabs(minValue)*identity<CU_DIM>();
 				}
 
+				lbfgs_time += util::Timer_toc(&lbfgs_timer);
+
 
 				// Do not update B
 				//B = identity<CU_DIM>();
@@ -912,7 +949,12 @@ double statePenaltyCollocation(std::vector< Matrix<C_DIM> >& X, std::vector< Mat
 	while(penalty_increases < cfg::max_penalty_coeff_increases)
 	{
 		//std::cout << "penalty coeff: " << penalty_coeff << "\n";
+		util::Timer mm_timer;
+		util::Timer_tic(&mm_timer);
+
 		bool success = minimizeMeritFunction(X, U, problem, output, info, penalty_coeff);
+
+		minimize_merit_time += util::Timer_toc(&mm_timer);
 
 		double cntviol = 0;
 		Matrix<X_DIM> x_t, x_tp1;
@@ -1037,6 +1079,13 @@ void planPath(std::vector<Matrix<P_DIM> > l, stateMPC_params& problem, stateMPC_
 
 		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, false);
 
+		casadi_time = 0;
+		forces_time = 0;
+		linearize_time = 0;
+		lbfgs_time = 0;
+		bounds_time = 0;
+		minimize_merit_time = 0;
+		casadi_compute_merit_time = 0;
 		util::Timer_tic(&solveTimer);
 
 		double cost = 0;
@@ -1066,6 +1115,16 @@ void planPath(std::vector<Matrix<P_DIM> > l, stateMPC_params& problem, stateMPC_
 
 		double solvetime = util::Timer_toc(&solveTimer);
 		totalSolveTime += solvetime;
+
+		LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
+		LOG_INFO("Casadi time: %5.3f ms", casadi_time*1000);
+		LOG_INFO("Forces time: %5.3f ms", forces_time*1000);
+		LOG_INFO("Linearize time: %5.3f ms", linearize_time*1000);
+		LOG_INFO("lbfgs time: %5.3f ms", lbfgs_time*1000);
+		LOG_INFO("bounds time: %5.3f ms", bounds_time*1000);
+		LOG_INFO("minimize merit time: %5.3f ms", minimize_merit_time*1000);
+		LOG_INFO("casadi compute merit time: %5.3f ms", casadi_compute_merit_time*1000);
+
 
 		vec(x0, SqrtSigma0, B[0]);
 		X[0] = x0.subMatrix<C_DIM,1>(0,0);

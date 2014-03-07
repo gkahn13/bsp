@@ -16,7 +16,7 @@
 #include <boost/python.hpp>
 #include <boost/preprocessor/iteration/local.hpp>
 #include <boost/preprocessor/arithmetic/sub.hpp>
-#include <boost/filesystem.hpp>
+//#include <boost/filesystem.hpp>
 
 namespace py = boost::python;
 
@@ -496,8 +496,8 @@ int main(int argc, char* argv[])
 	LOG_INFO("Cost: %4.10f", cost);
 	LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 
-	Matrix<B_DIM> binit = zeros<B_DIM>();
-	std::vector<Matrix<B_DIM> > B(T, binit);
+	Matrix<B_DIM,1> binit = zeros<B_DIM,1>();
+	std::vector<Matrix<B_DIM,1> > B(T, binit);
 
 	vec(X[0], SqrtSigma0, B[0]);
 	for (size_t t = 0; t < T-1; ++t) {

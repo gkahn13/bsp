@@ -7,7 +7,7 @@
 #include <cstdlib>
 
 //#define TIMESTEPS 15
-#define NUM_LANDMARKS 3
+#define NUM_LANDMARKS 4
 #define NUM_WAYPOINTS 4
 
 #define C_DIM 3 // car dimension [x, y, theta]
@@ -39,7 +39,7 @@ const double DT_OBSERVE = 8*DT_CONTROLS;
 const double OBS_DIST_NOISE = 1 * 0.1;
 const double OBS_ANGLE_NOISE = 1 * 1.0*M_PI/180.;
 
-const double ALPHA_OBS = 2;//.75;
+const double ALPHA_OBS = .75;
 }
 
 using namespace CasADi;

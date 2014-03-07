@@ -138,6 +138,30 @@ $(OBJ_DIR)/parameter-belief.o : $(PARAM_BELIEF_DIR)/parameter-belief.cpp $(ARM_H
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
 	
 
+# make parameter-controls
+PARAM_controls_DIR = parameter/controls
+PARAM_controls_FILES = parameter-controls logging parameter-controls-cost parameter-controls-grad controlsPenaltyMPC
+PARAM_controls_OBJS = $(PARAM_controls_FILES:%=$(OBJ_DIR)/%.o)
+
+parameter-controls-setup:
+	bash $(PARAM_SETUP_FILE) controls $(T)
+
+parameter-controls: | parameter-controls-setup $(PARAM_controls_OBJS)
+	$(CXX) $(BFLAGS) $(PARAM_controls_OBJS) -o $(BIN_DIR)/parameter-controls $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
+	
+$(OBJ_DIR)/parameter-controls-cost.o : $(PARAM_controls_DIR)/parameter-controls-cost.c
+	$(CC) $(C_FLAGS) -c -o $@ $^
+
+$(OBJ_DIR)/parameter-controls-grad.o : $(PARAM_controls_DIR)/parameter-controls-grad.c
+	$(CC) $(C_FLAGS) -c -o $@ $^
+
+$(OBJ_DIR)/controlsPenaltyMPC.o : $(PARAM_controls_DIR)/controlsPenaltyMPC.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+	
+$(OBJ_DIR)/parameter-controls.o : $(PARAM_controls_DIR)/parameter-controls.cpp $(ARM_HEADERS)
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
+
+
 # make parameter-state
 PARAM_STATE_DIR = parameter/state
 PARAM_STATE_FILES = parameter-state logging parameter-state-cost parameter-state-grad statePenaltyMPC

@@ -37,6 +37,7 @@ namespace py = boost::python;
 #define Z_DIM 4
 #define Q_DIM 8
 #define R_DIM 4
+#define UT_DIM U_DIM*(T-1)
 
 #define S_DIM (((X_DIM+1)*X_DIM)/2)
 #define B_DIM (X_DIM+S_DIM)
@@ -440,7 +441,6 @@ void pythonDisplayTrajectory(std::vector< Matrix<U_DIM> >& U, Matrix<X_DIM,X_DIM
 }
 
 
-
 void pythonDisplayHistory(std::vector< Matrix<U_DIM> >& U,std::vector< Matrix<B_DIM> >& B, Matrix<X_DIM,X_DIM> SqrtSigma0, Matrix<X_DIM> x0, int H)
 {
 	
@@ -459,6 +459,58 @@ void pythonDisplayHistory(std::vector< Matrix<U_DIM> >& U,std::vector< Matrix<B_
 			Uvec.append(U[i][j]);
 		}
 	}
+	std::cout<<"462\n";
+
+	std::string workingDir = boost::filesystem::current_path().normalize().string();
+
+	py::object main_module = py::import("__main__");
+	py::object main_namespace = main_module.attr("__dict__");
+	py::exec("import sys, os", main_namespace);
+	py::exec(py::str("sys.path.append('"+workingDir+"/parameter')"), main_namespace);
+	std::cout<<"472\n";
+	py::object plot_mod = py::import("plot_parameter");
+	std::cout<<"472\n";
+	py::object plot_traj = plot_mod.attr("plot_parameter_trajectory");
+	std::cout<<"472\n";
+	plot_traj(Bvec, Uvec, B_DIM, X_DIM, U_DIM, H);
+
+}
+
+
+void pythonPaperPlot(std::vector< Matrix<U_DIM> >& U0,std::vector< Matrix<B_DIM> >& B0, std::vector< Matrix<U_DIM> >& U1,std::vector< Matrix<B_DIM> >& B1, Matrix<X_DIM,X_DIM> SqrtSigma0, Matrix<X_DIM> x0, int H)
+{
+	
+	Py_Initialize();
+
+	py::list Bvec0;
+	for(int j=0; j < B_DIM; j++) {
+		for(int i=0; i < H; i++) {
+			Bvec0.append(B0[i][j]);
+		}
+	}
+
+	py::list Uvec0;
+	for(int j=0; j < U_DIM; j++) {
+		for(int i=0; i < H-1; i++) {
+			Uvec0.append(U0[i][j]);
+		}
+	}
+
+
+	py::list Bvec1;
+	for(int j=0; j < B_DIM; j++) {
+		for(int i=0; i < H; i++) {
+			Bvec1.append(B1[i][j]);
+		}
+	}
+
+	py::list Uvec1;
+	for(int j=0; j < U_DIM; j++) {
+		for(int i=0; i < H-1; i++) {
+			Uvec1.append(U1[i][j]);
+		}
+	}
+
 
 	std::string workingDir = boost::filesystem::current_path().normalize().string();
 
@@ -467,9 +519,9 @@ void pythonDisplayHistory(std::vector< Matrix<U_DIM> >& U,std::vector< Matrix<B_
 	py::exec("import sys, os", main_namespace);
 	py::exec(py::str("sys.path.append('"+workingDir+"/parameter')"), main_namespace);
 	py::object plot_mod = py::import("plot_parameter");
-	py::object plot_traj = plot_mod.attr("plot_parameter_trajectory");
+	py::object plot_paper = plot_mod.attr("plot_for_paper");
 
-	plot_traj(Bvec, Uvec, B_DIM, X_DIM, U_DIM, H);
+	plot_paper(Bvec0, Uvec0,Bvec1, Uvec1, B_DIM, X_DIM, U_DIM, H);
 
 }
 

@@ -12,6 +12,7 @@
 #include <Python.h>
 #include <boost/python.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/timer.hpp>
 
 
 namespace py = boost::python;
@@ -784,7 +785,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			LOG_DEBUG("       exact_merit_improve: %1.6f", exact_merit_improve);
 			LOG_DEBUG("       merit_improve_ratio: %1.6f", merit_improve_ratio);
 
-			std::cout << "PAUSED INSIDE minimizeMeritFunction AFTER OPTIMIZATION" << std::endl;
+			//std::cout << "PAUSED INSIDE minimizeMeritFunction AFTER OPTIMIZATION" << std::endl;
 			//std::cin.ignore();
 			//int num;
 			//std::cin >> num;
@@ -1028,6 +1029,7 @@ int main(int argc, char* argv[])
 
 	vec(x0, SqrtSigma0, B[0]);
 	std::cout<<"HORIZON is "<<HORIZON<<'\n';
+	boost::timer t; 
 	for(int h = 0; h < HORIZON; ++h) {
 		for (int t = 0; t < T-1; ++t) {
 			X[t] = B[t].subMatrix<X_DIM,1>(0,0);
@@ -1050,6 +1052,7 @@ int main(int argc, char* argv[])
 			std::cout<<"\n";
 		}
 		*/
+		
 		double cost = statePenaltyCollocation(X, U, problem, output, info);
 		
 	
@@ -1067,14 +1070,12 @@ int main(int argc, char* argv[])
 		//std::cout << "control u: " << std::endl << ~U[0];
 
 		
-		LOG_INFO("Executing control step");
+	
 		HistoryU[h] = U[0];
 		HistoryB[h] = B[0];
 
 
-		std::cout<<h<<"\n";
-		std::cout<<U[0]<<"\n";
-
+	
 	
 		B[0] = executeControlStep(x_real, B[0], U[0]);
 		
@@ -1090,6 +1091,9 @@ int main(int argc, char* argv[])
 
 
 	}
+	double elapsed_time = t.elapsed(); 
+
+	std::cout<<"TIME TAKEN "<<elapsed_time<<"\n";
 	pythonDisplayHistory(HistoryU,HistoryB, SqrtSigma0, x0, HORIZON);
 	cleanupBeliefMPCVars();
 

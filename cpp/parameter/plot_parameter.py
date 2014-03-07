@@ -2,6 +2,7 @@ import numpy as np
 from numpy import matlib as ml
 import math
 import time
+import pickle 
 
 import matplotlib.pyplot as plt
 
@@ -62,11 +63,16 @@ def plot_parameter_trajectory(B, U, bDim, xDim, uDim, T):
     U = U.reshape(uDim, T-1)
     
     X = ml.zeros([xDim, T])
+    Base = X; 
+
     SigmaList = list()
     for i in xrange(T):
+        Base[0,:] = 0.5; 
         X[:,i], Sigma = decompose_belief(B[:,i], bDim, xDim)
         SigmaList.append(Sigma)
-        
+    IPython.embed()
+    output =open('random.pkl','wb')
+    pickle.dump(X,output)
     joint1pos = X[0,:].tolist()[0]
     joint2pos = X[1,:].tolist()[0]
     joint1vel = X[2,:].tolist()[0]
@@ -75,7 +81,8 @@ def plot_parameter_trajectory(B, U, bDim, xDim, uDim, T):
     length2 = (1/X[5,:]).tolist()[0]
     mass1 = (1/X[6,:]).tolist()[0]
     mass2 = (1/X[7,:]).tolist()[0]
-    
+    base = (Base[0,:]).tolist()[0]
+
     joint1poscov = [S[0,0] for S in SigmaList]
     joint2poscov = [S[1,1] for S in SigmaList]
     joint1velcov = [S[2,2] for S in SigmaList]
@@ -96,21 +103,28 @@ def plot_parameter_trajectory(B, U, bDim, xDim, uDim, T):
  
     
     plt.subplot(4,1,1)
+    plt.ylim((0.2,0.7))
     plt.ylabel('length1')
     plt.plot(length1,'b-')
+    plt.plot(base,'r-')
     
     plt.subplot(4,1,2)
     plt.ylabel('length2')
     plt.plot(length2,'b-')
-    
+    plt.plot(base,'r-')
+
     plt.subplot(4,1,3)
+    plt.ylim((0.2,0.7))
     plt.ylabel('mass1')
+
     plt.plot(mass1,'b-')
-    
+    plt.plot(base,'r-')
+
     plt.subplot(4,1,4)
+    plt.ylim((0.2,0.7))
     plt.ylabel('mass2')
     plt.plot(mass2,'b-')
-    
+    plt.plot(base,'r-')
     
     plt.figure(2)
     plt.clf()
@@ -142,4 +156,83 @@ def plot_parameter_trajectory(B, U, bDim, xDim, uDim, T):
     plt.pause(.05)
     print 'Press enter:'
     raw_input()
+
+def plot_for_paper():
+    
+   
+    bDim = 44
+    uDim = 2
+    T = 500
+    xDim = 8
+
+    pkl_file = open('data.pkl', 'rb')
+    pkl_file2 = open('random.pkl', 'rb')
+
+    X = pickle.load(pkl_file)
+    Xrand = pickle.load(pkl_file2)
+    Base = X; 
+    IPython.embed()
+    Base[0,T-1] = 0.5; 
+    
+         
+        
+  
+    length1_rand = (1/Xrand[4,:]).tolist()[0]
+    length2_rand = (1/Xrand[5,:]).tolist()[0]
+    mass1_rand = (1/Xrand[6,:]).tolist()[0]
+    mass2_rand = (1/Xrand[7,:]).tolist()[0]
+
+    length1 = (1/X[4,:]).tolist()[0]
+    length2 = (1/X[5,:]).tolist()[0]
+    mass1 = (1/X[6,:]).tolist()[0]
+    mass2 = (1/X[7,:]).tolist()[0]
+    base = (Base[0,:]).tolist()[0]
+
+
+        
+    #IPython.embed()
+        
+    plt.figure(1)
+    plt.clf()
+    plt.cla()
+   
+    plt.autoscale(True,'x',True)
+    
+    
+    
+    plt.subplot(4,1,1)
+    plt.ylim((0.2,0.7))
+    plt.ylabel('length1')
+    plt.plot(length1,'b-', linewidth = 4)
+    plt.plot(length1_rand,'g-', linewidth = 4)
+    plt.plot(base,'r-', linewidth = 2)
+    
+    plt.subplot(4,1,2)
+    plt.ylabel('length2')
+    plt.plot(length2,'b-', linewidth = 4)
+    plt.plot(length2_rand,'g-', linewidth = 4)
+    plt.plot(base,'r-', linewidth = 2)
+
+    plt.subplot(4,1,3)
+    plt.ylim((0.2,0.7))
+    plt.ylabel('mass1')
+    plt.plot(mass1_rand,'g-', linewidth = 4)
+    plt.plot(mass1,'b-', linewidth = 4)
+    plt.plot(base,'r-', linewidth = 2)
+
+    plt.subplot(4,1,4)
+    plt.ylim((0.2,0.7))
+    plt.ylabel('mass2')
+    plt.plot(mass2_rand,'g-', linewidth = 4)
+    plt.plot(mass2,'b-', linewidth = 4)
+    plt.plot(base,'r-', linewidth = 2)
+    
+    
+    
+   
+    plt.show(block=False)
+    plt.pause(.05)
+    print 'Press enter:'
+    raw_input()
+
 

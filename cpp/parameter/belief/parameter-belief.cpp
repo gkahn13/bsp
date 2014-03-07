@@ -12,6 +12,7 @@
 #include <Python.h>
 #include <boost/python.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/timer.hpp>
 
 namespace py = boost::python;
 
@@ -360,7 +361,7 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 		LOG_DEBUG("  sqp iter: %d", sqp_iter);
 
 		merit = computeMerit(B, U, penalty_coeff);
-		std::cout<<"MERIT "<<merit<<"\n";
+		
 		
 		LOG_DEBUG("  merit: %4.10f", merit);
 		//pythonPlotRobot(U, SqrtSigma0, x0, xGoal);
@@ -523,8 +524,7 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			//std::cout << "PAUSED INSIDE minimizeMeritFunction" << std::endl;
 			//int num;
 			//std::cin >> num;
-			exit(0);
-
+		
 			if (approx_merit_improve < -1e-5) {
 				LOG_ERROR("Approximate merit function got worse: %1.6f", approx_merit_improve);
 				LOG_ERROR("Either convexification is wrong to zeroth order, or you are in numerical trouble");
@@ -600,64 +600,63 @@ int main(int argc, char* argv[])
 {
 
 	// actual: 6.66, 6.66, 10.86, 13
-	double length1_est = .05, // inverse = 20
-			length2_est = .05, // inverse = 20
-			mass1_est = .12, // inverse = 9.52
-			mass2_est = .13; // inverse = 11.24
-
+	double length1_est = .3,
+				length2_est = .7,
+				mass1_est = .35,
+				mass2_est = .35;
 
 	// position, then velocity
-	x0[0] = -M_PI/2.0; x0[1] = -M_PI/2.0; x0[2] = 0; x0[3] = 0;
+	x0[0] = M_PI*0.5; x0[1] = M_PI*0.5; x0[2] = 0; x0[3] = 0;
 	// parameter start estimates (alphabetical, then numerical order)
 	x0[4] = 1/length1_est; x0[5] = 1/length2_est; x0[6] = 1/mass1_est; x0[7] = 1/mass2_est;
 
 
 	Matrix<X_DIM> x_real;
-	x_real[0] = -M_PI/2.0; x_real[1] = -M_PI/2.0; x_real[2] = 0; x_real[3] = 0;
+	x_real[0] = M_PI*0.45; x_real[1] = M_PI*0.55; x_real[2] = -0.01; x_real[3] = 0.01;
 	x_real[4] = 1/dynamics::length1; x_real[5] = 1/dynamics::length2; x_real[6] = 1/dynamics::mass1; x_real[7] = 1/dynamics::mass2;
 
 
-	xGoal[0] = -M_PI/2.0; xGoal[1] = -M_PI/2.0; xGoal[2] = 0.0; xGoal[3] = 0.0;
+	xGoal[0] = M_PI*0.5; xGoal[1] = M_PI*0.5; xGoal[2] = 0.0; xGoal[3] = 0.0;
 	xGoal[4] = 1/length1_est; xGoal[5] = 1/length2_est; xGoal[6] = 1/mass1_est; xGoal[7] = 1/mass2_est;
 
 	// from original file, possibly change
-	/*SqrtSigma0(0,0) = 1.0; 
-	SqrtSigma0(1,1) = 1.0; 
-	SqrtSigma0(2,2) = 1.0; 
-	SqrtSigma0(3,3) = 1.0; 
-	*/
-	SqrtSigma0(4,4) = sqrt(0.5);
-	SqrtSigma0(5,5) = sqrt(0.5);
-	SqrtSigma0(6,6) = 1.0;
-	SqrtSigma0(7,7) = 1.0;
+	SqrtSigma0(0,0) = 0.1;
+	SqrtSigma0(1,1) = 0.1;
+	SqrtSigma0(2,2) = 0.05;
+	SqrtSigma0(3,3) = 0.05;
+	SqrtSigma0(4,4) = 0.5;
+	SqrtSigma0(5,5) = 0.5;
+	SqrtSigma0(6,6) = 0.5;
+	SqrtSigma0(7,7) = 0.5;
 
-	xMin[0] = -10000000; // joint pos 1
-	xMin[1] = -10000000; // joint pos 2
-	xMin[2] = -10000000; // joint vel 1
-	xMin[3] = -10000000; // joint vel 2
-	xMin[4] = 0; // 1/length1
-	xMin[5] = 0; // 1/length2
-	xMin[6] = 0; // 1/mass1
-	xMin[7] = 0; // 1/mass2
 
-	xMax[0] = 10000000; // joint pos 1
-	xMax[1] = 10000000; // joint pos 2
-	xMax[2] = 10000000; // joint vel 1
-	xMax[3] = 10000000; // joint vel 2
-	xMax[4] = 1/.01; // 1/length1
-	xMax[5] = 1/.01; // 1/length2
-	xMax[6] = 1/.01; // 1/mass1
-	xMax[7] = 1/.01; // 1/mass2
+	xMin[0] = -1000; // joint pos 1
+	xMin[1] = -1000; // joint pos 2
+	xMin[2] = -1000; // joint vel 1
+	xMin[3] = -1000; // joint vel 2
+	xMin[4] = 0.01; // 1/length1
+	xMin[5] = 0.01; // 1/length2
+	xMin[6] = 0.01; // 1/mass1
+	xMin[7] = 0.01; // 1/mass2
+
+	xMax[0] = 1000; // joint pos 1
+	xMax[1] = 1000; // joint pos 2
+	xMax[2] = 1000; // joint vel 1
+	xMax[3] = 1000; // joint vel 2
+	xMax[4] = 100; // 1/length1
+	xMax[5] = 100; // 1/length2
+	xMax[6] = 100; // 1/mass1
+	xMax[7] = 100; // 1/mass2
 
 	for(int i = 0; i < U_DIM; ++i) {
-		uMin[i] = -0.4;
-		uMax[i] = 0.4;
+		uMin[i] = -0.1;
+		uMax[i] = 0.1;
 	}
 
 	//Matrix<U_DIM> uinit = (xGoal.subMatrix<U_DIM,1>(0,0) - x0.subMatrix<U_DIM,1>(0,0))/(double)(T-1);
 	Matrix<U_DIM> uinit;
-	uinit[0] = 0.1;
-	uinit[1] = -0.1;
+	uinit[0] = 0.0;
+	uinit[1] = 0.0;
 	
 	std::vector<Matrix<U_DIM> > U(T-1, uinit); 
 	std::vector<Matrix<X_DIM> > X(T);
@@ -677,6 +676,7 @@ int main(int argc, char* argv[])
 
 	vec(x0, SqrtSigma0, B[0]);
 	std::cout<<"HORIZON is "<<HORIZON<<'\n';
+	boost::timer t; 
 	for(int h = 0; h < HORIZON; ++h) {
 		for (int t = 0; t < T-1; ++t) {
 
@@ -689,9 +689,10 @@ int main(int argc, char* argv[])
 
 		//util::Timer solveTimer;
 		//util::Timer_tic(&solveTimer);
-	
+		
 		double cost = beliefPenaltyCollocation(B, U, problem, output, info);
 		
+
 	
 
 		//pythonDisplayTrajectory(U, SqrtSigma0, x0, xGoal);
@@ -707,13 +708,13 @@ int main(int argc, char* argv[])
 		//std::cout << "control u: " << std::endl << ~U[0];
 
 		
-		LOG_INFO("Executing control step");
+		
 		HistoryU[h] = U[0];
 		HistoryB[h] = B[0];
 
 
 
-		std::cout<<U[0]<<"\n";
+
 
 	
 		B[0] = executeControlStep(x_real, B[0], U[0]);
@@ -729,6 +730,9 @@ int main(int argc, char* argv[])
 
 
 	}
+	double elapsed_time = t.elapsed(); 
+
+	std::cout<<"TIME TAKEN "<<elapsed_time<<"\n";
 	pythonDisplayHistory(HistoryU,HistoryB, SqrtSigma0, x0, HORIZON);
 	cleanupBeliefMPCVars();
 

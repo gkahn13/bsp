@@ -73,3 +73,28 @@ if [ $PARAM_TYPE = "state" ]; then
     fi
    done
 fi
+
+# make casadi files
+# move casadi files over if different
+if [ $PARAM_TYPE = "controls" ]; then
+    CASADI_PARAM_DIR="${BSP_DIR}/casadi/parameter/controls"
+    echo "Making casadi files"
+    make -C ${CASADI_PARAM_DIR} all T=${TIMESTEPS}
+
+    CASADI_FILES=${CASADI_PARAM_DIR}/*.c
+    for CASADI_FILE in $CASADI_FILES
+    do
+    CASADI_FILE_NAME=$(basename $CASADI_FILE)
+    PARAM_CASADI_FILE=${PARAM_DIR}/controls/${CASADI_FILE_NAME}
+
+    if [ ! -f $PARAM_CASADI_FILE ]; then
+        echo "casadi file ${CASADI_FILE_NAME} does not exit, copying over"
+        cp $CASADI_FILE $PARAM_CASADI_FILE
+    fi
+
+    if [ $(diff $CASADI_FILE $PARAM_CASADI_FILE | wc -w) -gt 0 ]; then
+        echo "casadi file ${CASADI_FILE_NAME} differs, copying new one over"
+        cp $CASADI_FILE $PARAM_CASADI_FILE
+    fi
+   done
+fi

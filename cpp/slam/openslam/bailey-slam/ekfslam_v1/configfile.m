@@ -15,7 +15,7 @@ sigmaG= (3.0*pi/180); % radians
 Q= [sigmaV^2 0; 0 sigmaG^2];
 
 % observation parameters
-MAX_RANGE= 10.0; % metres
+MAX_RANGE= 20.0; % metres
 %DT_OBSERVE= 8*DT_CONTROLS; % seconds, time interval between observations
 DT_OBSERVE= 8*DT_CONTROLS;
 
@@ -40,7 +40,7 @@ SWITCH_CONTROL_NOISE= 1; % if 0, velocity and gamma are perfect
 SWITCH_SENSOR_NOISE = 1; % if 0, measurements are perfect
 SWITCH_INFLATE_NOISE= 0; % if 1, the estimated Q and R are inflated (ie, add stabilising noise)
 SWITCH_HEADING_KNOWN= 0; % if 1, the vehicle heading is observed directly at each iteration
-SWITCH_ASSOCIATION_KNOWN= 0; % if 1, associations are given, if 0, they are estimated using gates
+SWITCH_ASSOCIATION_KNOWN= 1; % if 1, associations are given, if 0, they are estimated using gates
 SWITCH_BATCH_UPDATE= 1; % if 1, process scan in batch, if 0, process sequentially
 SWITCH_SEED_RANDOM= 0; % if not 0, seed the randn() with its value at beginning of simulation (for repeatability)
 SWITCH_USE_IEKF= 0; % if 1, use iterated EKF for updates, if 0, use normal EKF

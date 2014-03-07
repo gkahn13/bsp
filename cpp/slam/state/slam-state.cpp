@@ -1,5 +1,10 @@
+#define USE_GENERATED_CASADI
+
 #include "../slam.h"
 #include "../traj/slam-traj.h"
+//#include "../smooth/slam-smooth.h"
+
+#include "../casadi/slam-state.h"
 
 
 #include <vector>
@@ -11,35 +16,42 @@
 extern "C" {
 #include "stateMPC.h"
 stateMPC_FLOAT **H, **f, **lb, **ub, **C, **e, **z;
+#ifdef USE_GENERATED_CASADI
 #include "slam-state-casadi.h"
+#endif
 }
 
 #include "boost/preprocessor.hpp"
 
 const double alpha_belief = 10; // 10;
-const double alpha_final_belief = 10; // 50;
-const double alpha_control = 1; // .01
+const double alpha_final_belief = 10; // 10;
+const double alpha_control = 1; // .1
 
+
+
+#ifndef USE_GENERATED_CASADI
+CasADi::SXFunction casadi_cost_func, casadi_gradcost_func;
+#endif
 
 namespace cfg {
-const double improve_ratio_threshold = .1; // .1
-const double min_approx_improve = 1e-3; // 1e-3
-const double min_trust_box_size = 1e-2; // 1e-2
+const double improve_ratio_threshold = .25; // .1
+const double min_approx_improve = 1e-2; // 1e-2
+const double min_trust_box_size = 1e-4; // 1e-3
 
-const double trust_shrink_ratio = .25; // .5
-const double trust_expand_ratio = 1.5; // 1.2
+const double trust_shrink_ratio = .75; // .75
+const double trust_expand_ratio = 1.25; // 1.25
 
-const double cnt_tolerance = 1e-2; // 1e-2
+const double cnt_tolerance = 1e-4; // .5
 const double penalty_coeff_increase_ratio = 5; // 5
-const double initial_penalty_coeff = 4; // 5
+const double initial_penalty_coeff = 10; // 10
 
-const double initial_trust_box_size = 1; // 5 // split up trust box size for X and U
-const double initial_Xpos_trust_box_size = 5; // 5;
+const double initial_trust_box_size = 5; // 5 // split up trust box size for X and U
+const double initial_Xpos_trust_box_size = 5; // 1;
 const double initial_Xangle_trust_box_size = M_PI/6; // M_PI/6;
-const double initial_Uvel_trust_box_size = 5; // 5;
+const double initial_Uvel_trust_box_size = 5; // 1;
 const double initial_Uangle_trust_box_size = M_PI/8; // M_PI/8;
 
-const int max_penalty_coeff_increases = 3; // 8
+const int max_penalty_coeff_increases = 3; // 3
 const int max_sqp_iterations = 50; // 50
 }
 
@@ -100,11 +112,11 @@ double nearestAngleFromTo(double from, double to) {
 }
 
 
-void setupCasadiVars(const std::vector<Matrix<X_DIM> >& X, const std::vector<Matrix<U_DIM> >& U, double* XU_arr, double* Sigma0_arr, double* params_arr)
+void setupCasadiVars(const std::vector<Matrix<C_DIM> >& X, const std::vector<Matrix<U_DIM> >& U, double* XU_arr, double* Sigma0_arr, double* l_arr, double* params_arr)
 {
 	int index = 0;
 	for(int t = 0; t < T-1; ++t) {
-		for(int i=0; i < X_DIM; ++i) {
+		for(int i=0; i < C_DIM; ++i) {
 			XU_arr[index++] = X[t][i];
 		}
 
@@ -112,7 +124,7 @@ void setupCasadiVars(const std::vector<Matrix<X_DIM> >& X, const std::vector<Mat
 			XU_arr[index++] = U[t][i];
 		}
 	}
-	for(int i=0; i < X_DIM; ++i) {
+	for(int i=0; i < C_DIM; ++i) {
 		XU_arr[index++] = X[T-1][i];
 	}
 
@@ -124,41 +136,59 @@ void setupCasadiVars(const std::vector<Matrix<X_DIM> >& X, const std::vector<Mat
 		}
 	}
 
+	index = 0;
+	for(int i=C_DIM; i < X_DIM; ++i) {
+		l_arr[index++] = x0[i];
+	}
+
 	params_arr[0] = alpha_belief;
 	params_arr[1] = alpha_control;
 	params_arr[2] = alpha_final_belief;
 
 }
 
-double casadiComputeCost(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matrix<U_DIM> >& U)
+double casadiComputeCost(const std::vector< Matrix<C_DIM> >& X, const std::vector< Matrix<U_DIM> >& U)
 {
-	double XU_arr[XU_DIM];
+	double XU_arr[CU_DIM];
 	double Sigma0_arr[X_DIM*X_DIM];
+	double l_arr[L_DIM];
 	double params_arr[3];
 
-	setupCasadiVars(X, U, XU_arr, Sigma0_arr, params_arr);
+	setupCasadiVars(X, U, XU_arr, Sigma0_arr, l_arr, params_arr);
 
-	const double **casadi_input = new const double*[3];
+	const double **casadi_input = new const double*[4];
 	casadi_input[0] = XU_arr;
 	casadi_input[1] = Sigma0_arr;
-	casadi_input[2] = params_arr;
+	casadi_input[2] = l_arr;
+	casadi_input[3] = params_arr;
 
 	double cost = 0;
 	double **cost_arr = new double*[1];
 	cost_arr[0] = &cost;
 
+#ifdef USE_GENERATED_CASADI
 	evaluateCostWrap(casadi_input, cost_arr);
+#else
+	casadi_cost_func.setInput(XU_arr,0);
+	casadi_cost_func.setInput(Sigma0_arr,1);
+	casadi_cost_func.setInput(l_arr,2);
+	casadi_cost_func.setInput(params_arr,3);
+	casadi_cost_func.evaluate();
+
+	casadi_cost_func.getOutput(&cost,0);
+#endif
 
 	return cost;
 }
 
-double casadiComputeMerit(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matrix<U_DIM> >& U, double penalty_coeff)
+double casadiComputeMerit(const std::vector< Matrix<C_DIM> >& X, const std::vector< Matrix<U_DIM> >& U, double penalty_coeff)
 {
 	double merit = 0;
 
 	merit = casadiComputeCost(X, U);
 
-	Matrix<X_DIM> x, dynviol;
+	Matrix<X_DIM> x;
+	Matrix<C_DIM> dynviol;
 	Matrix<X_DIM, X_DIM> SqrtSigma;
 	Matrix<B_DIM> b, b_tp1;
 	vec(x0, SqrtSigma0, b);
@@ -166,8 +196,8 @@ double casadiComputeMerit(const std::vector< Matrix<X_DIM> >& X, const std::vect
 	for(int t = 0; t < T-1; ++t) {
 		unVec(b, x, SqrtSigma);
 		b_tp1 = beliefDynamics(b, U[t]);
-		dynviol = (X[t+1] - b_tp1.subMatrix<X_DIM,1>(0,0) );
-		for(int i = 0; i < X_DIM; ++i) {
+		dynviol = (X[t+1] - b_tp1.subMatrix<C_DIM,1>(0,0) );
+		for(int i = 0; i < C_DIM; ++i) {
 			if (i != P_DIM) {
 				merit += penalty_coeff*fabs(dynviol[i]);
 			} else {
@@ -179,28 +209,41 @@ double casadiComputeMerit(const std::vector< Matrix<X_DIM> >& X, const std::vect
 	return merit;
 }
 
-void casadiComputeCostGrad(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matrix<U_DIM> >& U, double& cost, Matrix<XU_DIM>& Grad)
+void casadiComputeCostGrad(const std::vector< Matrix<C_DIM> >& X, const std::vector< Matrix<U_DIM> >& U, double& cost, Matrix<CU_DIM>& Grad)
 {
-	double XU_arr[XU_DIM];
+	double XU_arr[CU_DIM];
 	double Sigma0_arr[X_DIM*X_DIM];
+	double l_arr[L_DIM];
 	double params_arr[3];
 
-	setupCasadiVars(X, U, XU_arr, Sigma0_arr, params_arr);
+	setupCasadiVars(X, U, XU_arr, Sigma0_arr, l_arr, params_arr);
 
-	const double **casadi_input = new const double*[3];
+	const double **casadi_input = new const double*[4];
 	casadi_input[0] = XU_arr;
 	casadi_input[1] = Sigma0_arr;
-	casadi_input[2] = params_arr;
+	casadi_input[2] = l_arr;
+	casadi_input[3] = params_arr;
 
 	double **costgrad_arr = new double*[2];
 	costgrad_arr[0] = &cost;
 	costgrad_arr[1] = Grad.getPtr();
 
+#ifdef USE_GENERATED_CASADI
 	evaluateCostGradWrap(casadi_input, costgrad_arr);
+#else
+	casadi_gradcost_func.setInput(XU_arr,0);
+	casadi_gradcost_func.setInput(Sigma0_arr,1);
+	casadi_gradcost_func.setInput(l_arr,2);
+	casadi_gradcost_func.setInput(params_arr,3);
+	casadi_gradcost_func.evaluate();
+
+	casadi_gradcost_func.getOutput(&cost,0);
+	casadi_gradcost_func.getOutput(Grad.getPtr(),1);
+#endif
 
 }
 
-double computeCost(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matrix<U_DIM> >& U)
+double computeCost(const std::vector< Matrix<C_DIM> >& X, const std::vector< Matrix<U_DIM> >& U)
 {
 	double cost = 0;
 	Matrix<B_DIM> b;
@@ -219,10 +262,11 @@ double computeCost(const std::vector< Matrix<X_DIM> >& X, const std::vector< Mat
 	return cost;
 }
 
-double computeMerit(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matrix<U_DIM> >& U, double penalty_coeff)
+double computeMerit(const std::vector< Matrix<C_DIM> >& X, const std::vector< Matrix<U_DIM> >& U, double penalty_coeff)
 {
 	double merit = 0;
-	Matrix<X_DIM> x, dynviol;
+	Matrix<X_DIM> x;
+	Matrix<C_DIM> dynviol;
 	Matrix<X_DIM, X_DIM> SqrtSigma;
 	Matrix<B_DIM> b, b_tp1;
 	vec(x0, SqrtSigma0, b);
@@ -231,8 +275,8 @@ double computeMerit(const std::vector< Matrix<X_DIM> >& X, const std::vector< Ma
 		unVec(b, x, SqrtSigma);
 		merit += alpha_belief*tr(SqrtSigma*SqrtSigma) + alpha_control*tr(~U[t]*U[t]);
 		b_tp1 = beliefDynamics(b, U[t]);
-		dynviol = (X[t+1] - b_tp1.subMatrix<X_DIM,1>(0,0) );
-		for(int i = 0; i < X_DIM; ++i) {
+		dynviol = (X[t+1] - b_tp1.subMatrix<C_DIM,1>(0,0) );
+		for(int i = 0; i < C_DIM; ++i) {
 			if (i != P_DIM) {
 				merit += penalty_coeff*fabs(dynviol[i]);
 			} else {
@@ -247,25 +291,32 @@ double computeMerit(const std::vector< Matrix<X_DIM> >& X, const std::vector< Ma
 }
 
 // Jacobians: dg(b,u)/db, dg(b,u)/du
-void linearizeCarDynamics(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, Matrix<X_DIM,X_DIM>& F, Matrix<X_DIM,U_DIM>& G, Matrix<X_DIM>& h)
+void linearizeCarDynamics(const Matrix<C_DIM>& c, const Matrix<U_DIM>& u, Matrix<C_DIM,C_DIM>& F, Matrix<C_DIM,U_DIM>& G, Matrix<C_DIM>& h)
 {
+	Matrix<X_DIM,1> x;
+	x.insert(0, 0, c);
+	x.insert(C_DIM, 0, x0.subMatrix<L_DIM,1>(C_DIM,0));
+
 	F.reset();
-	Matrix<X_DIM> xr(x), xl(x);
-	for (size_t i = 0; i < X_DIM; ++i) {
+	Matrix<X_DIM> xr(x), xl(x), ddx;
+	for (size_t i = 0; i < C_DIM; ++i) {
 		xr[i] += step; xl[i] -= step;
-		F.insert(0,i, (dynfunc(xr, u, zeros<Q_DIM,1>()) - dynfunc(xl, u, zeros<Q_DIM,1>())) / (xr[i] - xl[i]));
+		ddx = (dynfunc(xr, u, zeros<Q_DIM,1>()) - dynfunc(xl, u, zeros<Q_DIM,1>())) / (xr[i] - xl[i]);
+		F.insert(0,i, ddx.subMatrix<C_DIM,1>(0, 0));
 		xr[i] = x[i]; xl[i] = x[i];
 	}
 
 	G.reset();
 	Matrix<U_DIM> ur(u), ul(u);
+	Matrix<X_DIM> ddg;
 	for (size_t i = 0; i < U_DIM; ++i) {
 		ur[i] += step; ul[i] -= step;
-		G.insert(0,i, (dynfunc(x, ur, zeros<Q_DIM,1>()) - dynfunc(x, ul, zeros<Q_DIM,1>())) / (ur[i] - ul[i]));
+		ddg = (dynfunc(x, ur, zeros<Q_DIM,1>()) - dynfunc(x, ul, zeros<Q_DIM,1>())) / (ur[i] - ul[i]);
+		G.insert(0,i, ddg.subMatrix<C_DIM,1>(0, 0));
 		ur[i] = u[i]; ul[i] = u[i];
 	}
 
-	h = dynfunc(x, u, zeros<Q_DIM,1>());
+	h = dynfunc(x, u, zeros<Q_DIM,1>()).subMatrix<C_DIM,1>(0,0);
 }
 
 
@@ -308,20 +359,20 @@ void setupStateVars(stateMPC_params& problem, stateMPC_output& output)
 #include BOOST_PP_LOCAL_ITERATE()
 
 	for(int t = 0; t < T-1; ++t) {
-		for(int i=0; i < (3*X_DIM+U_DIM); ++i) { H[t][i] = INFTY; }
-		for(int i=0; i < (3*X_DIM+U_DIM); ++i) { f[t][i] = INFTY; }
-		for(int i=0; i < (3*X_DIM+U_DIM); ++i) { lb[t][i] = INFTY; }
-		for(int i=0; i < (X_DIM+U_DIM); ++i) { ub[t][i] = INFTY; }
-		for(int i=0; i < (X_DIM*(3*X_DIM+U_DIM)); ++i) { C[t][i] = INFTY; }
-		for(int i=0; i < X_DIM; ++i) { e[t][i] = INFTY; }
-		for(int i=0; i < (X_DIM+U_DIM); ++i) { z[t][i] = INFTY; }
+		for(int i=0; i < (3*C_DIM+U_DIM); ++i) { H[t][i] = INFTY; }
+		for(int i=0; i < (3*C_DIM+U_DIM); ++i) { f[t][i] = INFTY; }
+		for(int i=0; i < (3*C_DIM+U_DIM); ++i) { lb[t][i] = INFTY; }
+		for(int i=0; i < (C_DIM+U_DIM); ++i) { ub[t][i] = INFTY; }
+		for(int i=0; i < (C_DIM*(3*C_DIM+U_DIM)); ++i) { C[t][i] = INFTY; }
+		for(int i=0; i < C_DIM; ++i) { e[t][i] = INFTY; }
+		for(int i=0; i < (C_DIM+U_DIM); ++i) { z[t][i] = INFTY; }
 	}
-	for(int i=0; i < (X_DIM); ++i) { H[T-1][i] = INFTY; }
-	for(int i=0; i < (X_DIM); ++i) { f[T-1][i] = INFTY; }
-	for(int i=0; i < (X_DIM); ++i) { lb[T-1][i] = INFTY; }
-	for(int i=0; i < (X_DIM); ++i) { ub[T-1][i] = INFTY; }
-	for(int i=0; i < X_DIM; ++i) { e[T-1][i] = INFTY; }
-	for(int i=0; i < (X_DIM); ++i) { z[T-1][i] = INFTY; }
+	for(int i=0; i < (C_DIM); ++i) { H[T-1][i] = INFTY; }
+	for(int i=0; i < (C_DIM); ++i) { f[T-1][i] = INFTY; }
+	for(int i=0; i < (C_DIM); ++i) { lb[T-1][i] = INFTY; }
+	for(int i=0; i < (C_DIM); ++i) { ub[T-1][i] = INFTY; }
+	for(int i=0; i < C_DIM; ++i) { e[T-1][i] = INFTY; }
+	for(int i=0; i < (C_DIM); ++i) { z[T-1][i] = INFTY; }
 
 }
 
@@ -341,21 +392,20 @@ bool isValidInputs()
 
 	for(int t = 0; t < T-1; ++t) {
 		std::cout << "t: " << t << "\n";
-		for(int i=0; i < (3*X_DIM+U_DIM); ++i) { if (H[t][i] > INFTY/2) { std::cout << "H error: " << i << "\n"; } }
-		for(int i=0; i < (3*X_DIM+U_DIM); ++i) { if (f[t][i] > INFTY/2) { std::cout << "f error: " << i << "\n"; } }
-		for(int i=0; i < (3*X_DIM+U_DIM); ++i) { if (lb[t][i] > INFTY/2) { std::cout << "lb error: " << i << "\n"; } }
-		for(int i=0; i < (X_DIM+U_DIM); ++i) {if (lb[t][i] > INFTY/2) { std::cout << "ub error: " << i << "\n"; } }
-		for(int i=0; i < (X_DIM*(3*X_DIM+U_DIM)); ++i) { if (C[t][i] > INFTY/2) { std::cout << "C error: " << i << "\n"; } }
-		for(int i=0; i < X_DIM; ++i) { if (e[t][i] > INFTY/2) { std::cout << "e error: " << i; } }
+		for(int i=0; i < (3*C_DIM+U_DIM); ++i) { if (H[t][i] > INFTY/2) { std::cout << "H error: " << i << "\n"; } }
+		for(int i=0; i < (3*C_DIM+U_DIM); ++i) { if (f[t][i] > INFTY/2) { std::cout << "f error: " << i << "\n"; } }
+		for(int i=0; i < (3*C_DIM+U_DIM); ++i) { if (lb[t][i] > INFTY/2) { std::cout << "lb error: " << i << "\n"; } }
+		for(int i=0; i < (C_DIM+U_DIM); ++i) {if (lb[t][i] > INFTY/2) { std::cout << "ub error: " << i << "\n"; } }
+		for(int i=0; i < (C_DIM*(3*C_DIM+U_DIM)); ++i) { if (C[t][i] > INFTY/2) { std::cout << "C error: " << i << "\n"; } }
+		for(int i=0; i < C_DIM; ++i) { if (e[t][i] > INFTY/2) { std::cout << "e error: " << i; } }
 	}
 	std::cout << "t: " << T-1 << "\n";
-	for(int i=0; i < (X_DIM); ++i) { if (H[T-1][i] > INFTY/2) { std::cout << "H error: " << i << "\n"; } }
-	for(int i=0; i < (X_DIM); ++i) { if (f[T-1][i] > INFTY/2) { std::cout << "f error: " << i << "\n"; } }
-	for(int i=0; i < (X_DIM); ++i) { if (lb[T-1][i] > INFTY/2) { std::cout << "lb error: " << i << "\n"; } }
-	for(int i=0; i < (X_DIM); ++i) { if (ub[T-1][i] > INFTY/2) { std::cout << "ub error: " << i << "\n"; } }
-	for(int i=0; i < X_DIM; ++i) { if (e[T-1][i] > INFTY/2) { std::cout << "e error: " << i << "\n"; } }
+	for(int i=0; i < (C_DIM); ++i) { if (H[T-1][i] > INFTY/2) { std::cout << "H error: " << i << "\n"; } }
+	for(int i=0; i < (C_DIM); ++i) { if (f[T-1][i] > INFTY/2) { std::cout << "f error: " << i << "\n"; } }
+	for(int i=0; i < (C_DIM); ++i) { if (lb[T-1][i] > INFTY/2) { std::cout << "lb error: " << i << "\n"; } }
+	for(int i=0; i < (C_DIM); ++i) { if (ub[T-1][i] > INFTY/2) { std::cout << "ub error: " << i << "\n"; } }
+	for(int i=0; i < C_DIM; ++i) { if (e[T-1][i] > INFTY/2) { std::cout << "e error: " << i << "\n"; } }
 
-	return true;
 
 	for(int t = 0; t < T; ++t) {
 
@@ -380,28 +430,17 @@ bool isValidInputs()
 		}
 		std::cout << std::endl;
 
-		std::cout << "lb l: ";
-		for(int i = 0; i < L_DIM; ++i) {
-			std::cout << lb[t][C_DIM+i] << " ";
-		}
-		std::cout << std::endl;
-
-		std::cout << "ub l: ";
-		for(int i = 0; i < L_DIM; ++i) {
-			std::cout << ub[t][C_DIM+i] << " ";
-		}
-		std::cout << std::endl;
 
 		if (t < T-1) {
 			std::cout << "lb u: ";
 			for(int i = 0; i < U_DIM; ++i) {
-				std::cout << lb[t][X_DIM+i] << " ";
+				std::cout << lb[t][C_DIM+i] << " ";
 			}
 			std::cout << std::endl;
 
 			std::cout << "ub u: ";
 			for(int i = 0; i < U_DIM; ++i) {
-				std::cout << ub[t][X_DIM+i] << " ";
+				std::cout << ub[t][C_DIM+i] << " ";
 			}
 			std::cout << std::endl;
 		}
@@ -455,13 +494,13 @@ bool isValidInputs()
 	return true;
 }
 
-bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >& U, stateMPC_params& problem, stateMPC_output& output, stateMPC_info& info, double penalty_coeff)
+bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<U_DIM> >& U, stateMPC_params& problem, stateMPC_output& output, stateMPC_info& info, double penalty_coeff)
 {
 	LOG_DEBUG("Solving sqp problem with penalty parameter: %2.4f", penalty_coeff);
 
-	std::vector< Matrix<X_DIM,X_DIM> > F(T-1);
-	std::vector< Matrix<X_DIM,U_DIM> > G(T-1);
-	std::vector< Matrix<X_DIM> > h(T-1);
+	std::vector< Matrix<C_DIM,C_DIM> > F(T-1);
+	std::vector< Matrix<C_DIM,U_DIM> > G(T-1);
+	std::vector< Matrix<C_DIM> > h(T-1);
 
 	double Xeps = cfg::initial_trust_box_size;
 	double Ueps = cfg::initial_trust_box_size;
@@ -473,7 +512,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 
 	double optcost;
 
-	std::vector<Matrix<X_DIM> > Xopt(T);
+	std::vector<Matrix<C_DIM> > Xopt(T);
 	std::vector<Matrix<U_DIM> > Uopt(T-1);
 
 	double merit, model_merit, new_merit;
@@ -483,23 +522,23 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 	int sqp_iter = 1, index = 0;
 	bool success;
 
-	Matrix<X_DIM+U_DIM, X_DIM+U_DIM> HMat;
-	Matrix<X_DIM,X_DIM> HfMat;
-	Matrix<X_DIM> eVec;
-	Matrix<X_DIM,3*X_DIM+U_DIM> CMat;
+	Matrix<C_DIM+U_DIM, C_DIM+U_DIM> HMat;
+	Matrix<C_DIM,C_DIM> HfMat;
+	Matrix<C_DIM> eVec;
+	Matrix<C_DIM,3*C_DIM+U_DIM> CMat;
 
-	Matrix<X_DIM,X_DIM> IX = identity<X_DIM>();
-	Matrix<X_DIM,X_DIM> minusIX = IX;
-	for(int i = 0; i < X_DIM; ++i) {
+	Matrix<C_DIM,C_DIM> IX = identity<C_DIM>();
+	Matrix<C_DIM,C_DIM> minusIX = IX;
+	for(int i = 0; i < C_DIM; ++i) {
 		minusIX(i,i) = -1;
 	}
 
-	Matrix<X_DIM+U_DIM> zbar;
+	Matrix<C_DIM+U_DIM> zbar;
 
 	// full Hessian from current timstep
-	Matrix<XU_DIM,XU_DIM> B = identity<XU_DIM>();
+	Matrix<CU_DIM,CU_DIM> B = identity<CU_DIM>();
 
-	Matrix<XU_DIM> Grad, Gradopt;
+	Matrix<CU_DIM> Grad, Gradopt;
 	double cost;
 	int idx = 0;
 
@@ -525,36 +564,35 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 
 		for (int t = 0; t < T-1; ++t)
 		{
-			Matrix<X_DIM>& xt = X[t];
+			Matrix<C_DIM>& xt = X[t];
 			Matrix<U_DIM>& ut = U[t];
 
-			idx = t*(X_DIM+U_DIM);
+			idx = t*(C_DIM+U_DIM);
 			//LOG_DEBUG("idx: %d",idx);
 
 			// fill in gradients and Hessians
 
 			HMat.reset();
-			for(int i = 0; i < (X_DIM+U_DIM); ++i) {
+			for(int i = 0; i < (C_DIM+U_DIM); ++i) {
 				HMat(i,i) = B(idx+i,idx+i);
 			}
 
 			// since diagonal, fill directly
-			// TODO: check if H is 0 for the landmarks. if so, pull out of the state
-			for(int i = 0; i < (X_DIM+U_DIM); ++i) { H[t][i] = HMat(i,i); }
+			for(int i = 0; i < (C_DIM+U_DIM); ++i) { H[t][i] = HMat(i,i); }
 			// TODO: why does this work???
-			for(int i = 0; i < (2*X_DIM); ++i) { H[t][i + (X_DIM+U_DIM)] = 0; } //1e4
+			for(int i = 0; i < (2*C_DIM); ++i) { H[t][i + (C_DIM+U_DIM)] = 5e2; } //5e2
 
 			zbar.insert(0,0,xt);
-			zbar.insert(X_DIM,0,ut);
+			zbar.insert(C_DIM,0,ut);
 
-			for(int i = 0; i < (X_DIM+U_DIM); ++i) {
+			for(int i = 0; i < (C_DIM+U_DIM); ++i) {
 				hessian_constant += HMat(i,i)*zbar[i]*zbar[i];
 				jac_constant -= Grad[idx+i]*zbar[i];
 				f[t][i] = Grad[idx+i] - HMat(i,i)*zbar[i];
 			}
 
 			// penalize dynamics slack variables
-			for(int i = X_DIM+U_DIM; i < 3*X_DIM+U_DIM; ++i) { f[t][i] = penalty_coeff; }
+			for(int i = C_DIM+U_DIM; i < 3*C_DIM+U_DIM; ++i) { f[t][i] = penalty_coeff; }
 
 			// fill in linearizations
 			linearizeCarDynamics(xt, ut, F[t], G[t], h[t]);
@@ -563,15 +601,15 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			CMat.reset();
 			eVec.reset();
 
-			CMat.insert<X_DIM,X_DIM>(0,0,F[t]);
-			CMat.insert<X_DIM,U_DIM>(0,X_DIM,G[t]);
-			CMat.insert<X_DIM,X_DIM>(0,X_DIM+U_DIM,IX);
-			CMat.insert<X_DIM,X_DIM>(0,2*X_DIM+U_DIM,minusIX);
+			CMat.insert<C_DIM,C_DIM>(0,0,F[t]);
+			CMat.insert<C_DIM,U_DIM>(0,C_DIM,G[t]);
+			CMat.insert<C_DIM,C_DIM>(0,C_DIM+U_DIM,IX);
+			CMat.insert<C_DIM,C_DIM>(0,2*C_DIM+U_DIM,minusIX);
 
 			fillColMajor(C[t], CMat);
 
 			if (t == 0) {
-				eVec.insert<X_DIM,1>(0,0,X[0]);
+				eVec.insert<C_DIM,1>(0,0,X[0]);
 				fillCol(e[0], eVec);
 			}
 
@@ -580,21 +618,21 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 		}
 
 		// For last stage, fill in H, f, A, b
-		Matrix<X_DIM>& xT = X[T-1];
+		Matrix<C_DIM>& xT = X[T-1];
 
-		idx = (T-1)*(X_DIM+U_DIM);
+		idx = (T-1)*(C_DIM+U_DIM);
 		//LOG_DEBUG("idx: %d",idx);
 
 		HfMat.reset();
-		for(int i = 0; i < X_DIM; ++i) {
+		for(int i = 0; i < C_DIM; ++i) {
 			double val = B(idx+i,idx+i);
 			HfMat(i,i) = (val < 0) ? 0 : val;
 		}
 
 		// since diagonal, fill directly
-		for(int i = 0; i < X_DIM; ++i) { H[T-1][i] = HMat(i,i); }
+		for(int i = 0; i < C_DIM; ++i) { H[T-1][i] = HfMat(i,i); } // TODO: changing to HfMat makes it not work
 
-		for(int i = 0; i < X_DIM; ++i) {
+		for(int i = 0; i < C_DIM; ++i) {
 			hessian_constant += HfMat(i,i)*xT[i]*xT[i];
 			jac_constant -= Grad[idx+i]*xT[i];
 			f[T-1][i] = Grad[idx+i] - HfMat(i,i)*xT[i];
@@ -619,24 +657,16 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			// solve the innermost QP here
 			for(int t = 0; t < T-1; ++t)
 			{
-				Matrix<X_DIM>& xt = X[t];
+				Matrix<C_DIM>& xt = X[t];
 				Matrix<U_DIM>& ut = U[t];
 
 				// Fill in lb, ub
 
 				index = 0;
-				// x lower bound
-				//for(int i = 0; i < X_DIM; ++i) { lb[t][index++] = MAX(xMin[i], xt[i] - Xeps); }
-
 				// car pos lower bound
 				for(int i = 0; i < P_DIM; ++i) { lb[t][index++] = MAX(xMin[i], xt[i] - Xpos_eps); }
 				// car angle lower bound
 				lb[t][index++] = MAX(xMin[P_DIM], xt[P_DIM] - Xangle_eps);
-				// landmark pos lower bound
-				for(int i = C_DIM; i < X_DIM; ++i) { lb[t][index++] = MAX(xMin[i], xt[i] - Xpos_eps); }
-
-				// u lower bound
-				//for(int i = 0; i < U_DIM; ++i) { lb[t][index++] = MAX(uMin[i], ut[i] - Ueps); }
 
 				// u velocity lower bound
 				lb[t][index++] = MAX(uMin[0], ut[0] - Uvel_eps);
@@ -644,22 +674,12 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 				lb[t][index++] = MAX(uMin[1], ut[1] - Uangle_eps);
 
 				// for lower bound on L1 slacks
-				for(int i = 0; i < 2*X_DIM; ++i) { lb[t][index++] = 0; }
+				for(int i = 0; i < 2*C_DIM; ++i) { lb[t][index++] = 0; }
 
 				index = 0;
-				// x upper bound
-				//for(int i = 0; i < X_DIM; ++i) { ub[t][index++] = MIN(xMax[i], xt[i] + Xeps); }
-
-				// car pos upper bound
 				for(int i = 0; i < P_DIM; ++i) { ub[t][index++] = MIN(xMax[i], xt[i] + Xpos_eps); }
 				// car angle upper bound
 				ub[t][index++] = MIN(xMax[P_DIM], xt[P_DIM] + Xangle_eps);
-				// landmark pos upper bound
-				for(int i = C_DIM; i < X_DIM; ++i) { ub[t][index++] = MIN(xMax[i], xt[i] + Xpos_eps); }
-
-
-				// u upper bound
-				//for(int i = 0; i < U_DIM; ++i) { ub[t][index++] = MIN(uMax[i], ut[i] + Ueps); }
 
 				// u velocity upper bound
 				ub[t][index++] = MIN(uMax[0], ut[0] + Uvel_eps);
@@ -667,19 +687,18 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 				ub[t][index++] = MIN(uMax[1], ut[1] + Uangle_eps);
 			}
 
-			Matrix<X_DIM>& xT = X[T-1];
+			Matrix<C_DIM>& xT = X[T-1];
 
 			// Fill in lb, ub
-			index = 0;
 			double finalPosDelta = .1;
 			double finalAngleDelta = M_PI/4;
 
+			index = 0;
 			// xGoal lower bound
 			for(int i = 0; i < P_DIM; ++i) { lb[T-1][index++] = xGoal[i] - finalPosDelta; }
 			// loose on car angle and landmarks
 			//lb[T-1][index++] = xGoal[2] - finalAngleDelta;
 			lb[T-1][index++] = nearestAngleFromTo(xT[2], xGoal[2] - finalAngleDelta);
-			for(int i = C_DIM; i < X_DIM; ++i) { lb[T-1][index++] = MAX(xMin[i], xT[i] - Xpos_eps); }
 
 			index = 0;
 			// xGoal upper bound
@@ -687,7 +706,6 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			// loose on car angle and landmarks
 			//ub[T-1][index++] = xGoal[2] + finalAngleDelta;
 			ub[T-1][index++] = nearestAngleFromTo(xT[2], xGoal[2] + finalAngleDelta);
-			for(int i = C_DIM; i < X_DIM; ++i) { ub[T-1][index++] = MIN(xMax[i], xT[i] + Xpos_eps); }
 
 			// Verify problem inputs
 			//if (!isValidInputs()) {
@@ -700,18 +718,18 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			int exitflag = stateMPC_solve(&problem, &output, &info);
 			if (exitflag == 1) {
 				for(int t = 0; t < T-1; ++t) {
-					Matrix<X_DIM>& xt = Xopt[t];
+					Matrix<C_DIM>& xt = Xopt[t];
 					Matrix<U_DIM>& ut = Uopt[t];
 
-					for(int i = 0; i < X_DIM; ++i) {
+					for(int i = 0; i < C_DIM; ++i) {
 						xt[i] = z[t][i];
 					}
 					for(int i = 0; i < U_DIM; ++i) {
-						ut[i] = z[t][X_DIM+i];
+						ut[i] = z[t][C_DIM+i];
 					}
 					optcost = info.pobj;
 				}
-				for(int i = 0; i < X_DIM; ++i) {
+				for(int i = 0; i < C_DIM; ++i) {
 					Xopt[T-1][i] = z[T-1][i];
 				}
 			}
@@ -743,14 +761,16 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			//int num;
 			//std::cin >> num;
 
+			//pythonDisplayTrajectory(Uopt, T, true);
+
 			if (approx_merit_improve < -1e-5) {
-				//LOG_ERROR("Approximate merit function got worse: %1.6f", approx_merit_improve);
+				LOG_ERROR("Approximate merit function got worse: %1.6f", approx_merit_improve);
 				//LOG_ERROR("Either convexification is wrong to zeroth order, or you are in numerical trouble");
 				//LOG_ERROR("Failure!");
 
 				return false;
 			} else if (approx_merit_improve < cfg::min_approx_improve) {
-				LOG_DEBUG("Converged: improvement small enough");
+				LOG_INFO("Converged: improvement small enough");
 				X = Xopt; U = Uopt;
 				return true;
 			} else if ((exact_merit_improve < 0) || (merit_improve_ratio < cfg::improve_ratio_threshold)) {
@@ -772,15 +792,15 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 
 				casadiComputeCostGrad(Xopt, Uopt, cost, Gradopt);
 
-				Matrix<XU_DIM> s, y;
+				Matrix<CU_DIM> s, y;
 
 				idx = 0;
 				for(int t = 0; t < T-1; ++t) {
-					for(int i=0; i < X_DIM; ++i) {
+					for(int i=0; i < C_DIM; ++i) {
 						s[idx+i] = Xopt[t][i] - X[t][i];
 						y[idx+i] = Gradopt[idx+i] - Grad[idx+i];
 					}
-					idx += X_DIM;
+					idx += C_DIM;
 
 					for(int i=0; i < U_DIM; ++i) {
 						s[idx+i] = Uopt[t][i] - U[t][i];
@@ -788,13 +808,13 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 					}
 					idx += U_DIM;
 				}
-				for(int i=0; i < X_DIM; ++i) {
+				for(int i=0; i < C_DIM; ++i) {
 					s[idx+i] = Xopt[T-1][i] - X[T-1][i];
 					y[idx+i] = Gradopt[idx+i] - Grad[idx+i];
 				}
 
 				double theta;
-				Matrix<XU_DIM> Bs = B*s;
+				Matrix<CU_DIM> Bs = B*s;
 
 				bool decision = ((~s*y)[0] >= .2*(~s*Bs)[0]);
 				if (decision) {
@@ -805,7 +825,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 
 				//std::cout << "theta: " << theta << std::endl;
 
-				Matrix<XU_DIM> r = theta*y + (1-theta)*Bs;
+				Matrix<CU_DIM> r = theta*y + (1-theta)*Bs;
 				//Matrix<XU_DIM> rBs = theta*(y -Bs);
 
 				// SR1 update
@@ -819,7 +839,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 				// negate and add to other vals
 				double minValue = INFTY;
 				double maxValue = -INFTY;
-				for(int i=0; i < XU_DIM; ++i) {
+				for(int i=0; i < CU_DIM; ++i) {
 					minValue = MIN(minValue, B(i,i));
 					maxValue = MAX(maxValue, B(i,i));
 				}
@@ -829,12 +849,12 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 				if (minValue < 0) {
 					//std::cout << "negative minValue, press enter\n";
 					//std::cin.ignore();
-					B = B + fabs(minValue)*identity<XU_DIM>();
+					B = B + fabs(minValue)*identity<CU_DIM>();
 				}
 
 
 				// Do not update B
-				//B = identity<XU_DIM>();
+				//B = identity<CU_DIM>();
 
 				X = Xopt; U = Uopt;
 
@@ -845,7 +865,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			//if (Xeps < cfg::min_trust_box_size && Ueps < cfg::min_trust_box_size) {
 			if (Xpos_eps < cfg::min_trust_box_size && Xangle_eps < cfg::min_trust_box_size &&
 					Uvel_eps < cfg::min_trust_box_size && Uangle_eps < cfg::min_trust_box_size) {
-			    LOG_DEBUG("Converged: x tolerance");
+			    LOG_INFO("Converged: x tolerance");
 			    return true;
 			}
 
@@ -854,7 +874,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			//	std::cout << ~U[t];
 			//}
 			//std::cout << std::endl << std::endl;
-			//pythonDisplayTrajectory(U, T, false);
+			//pythonDisplayTrajectory(U, T, true);
 			//pythonDisplayTrajectory(X, T, true);
 
 		} // trust region loop
@@ -865,7 +885,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 }
 
 
-double statePenaltyCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >& U, stateMPC_params& problem, stateMPC_output& output, stateMPC_info& info)
+double statePenaltyCollocation(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<U_DIM> >& U, stateMPC_params& problem, stateMPC_output& output, stateMPC_info& info)
 {
 	double penalty_coeff = cfg::initial_penalty_coeff;
 	//double trust_box_size = cfg::initial_trust_box_size;
@@ -877,23 +897,54 @@ double statePenaltyCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Mat
 	// penalty loop
 	while(penalty_increases < cfg::max_penalty_coeff_increases)
 	{
+		//std::cout << "penalty coeff: " << penalty_coeff << "\n";
 		bool success = minimizeMeritFunction(X, U, problem, output, info, penalty_coeff);
 
 		double cntviol = 0;
+		Matrix<X_DIM> x_t, x_tp1;
+		x_t.insert(0, 0, X[0]);
+		x_t.insert(0, 0, x0.subMatrix<L_DIM,1>(C_DIM,0));
 		for(int t = 0; t < T-1; ++t) {
-			dynviol = (X[t+1] - dynfunc(X[t], U[t], zeros<Q_DIM,1>()));
-			for(int i = 0; i < X_DIM; ++i) {
-				cntviol += fabs(dynviol[i]);
+			x_t.insert(0, 0, X[t]);
+			x_t.insert(C_DIM, 0, x0.subMatrix<L_DIM,1>(C_DIM,0));
+
+			x_tp1.insert(0, 0, X[t+1]);
+			x_tp1.insert(C_DIM, 0, x0.subMatrix<L_DIM,1>(C_DIM,0));
+
+			dynviol = x_tp1 - dynfunc(x_t, U[t], zeros<Q_DIM,1>());
+			for(int i = 0; i < C_DIM; ++i) {
+				if (i != P_DIM) {
+					cntviol += fabs(dynviol[i]);
+				} else {
+					cntviol += wrapAngle(fabs(dynviol[i]));
+				}
+			}
+
+		}
+
+		double cntgoalviol = 0.0;
+		Matrix<C_DIM> goalviol = xGoal.subMatrix<C_DIM,1>(0,0) - X[T-1];
+		for(int i = 0; i < C_DIM; ++i) {
+			if (i != P_DIM) {
+				cntgoalviol += fabs(goalviol[i]);
+			} else {
+				cntgoalviol += wrapAngle(fabs(goalviol[i]));
 			}
 		}
 
+
+		bool goal_success = cntgoalviol < 200;
 	    success = success && (cntviol < cfg::cnt_tolerance);
 
 		LOG_DEBUG("Constraint violations: %2.10f",cntviol);
+		//std::cout << "Constraint violations: " << cntviol << "\n";
+		//std::cout << "Goal violations: " << cntgoalviol << "\n";
+		//std::cin.ignore();
 
 	    if (!success) {
 	        penalty_increases++;
 	        penalty_coeff = penalty_coeff*cfg::penalty_coeff_increase_ratio;
+	        //penalty_coeff = MIN(50, penalty_coeff);
 	        //trust_box_size = cfg::initial_trust_box_size;
 	    }
 	    else {
@@ -905,65 +956,10 @@ double statePenaltyCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Mat
 	return casadiComputeCost(X, U);
 }
 
-void testCasadi() {
-	initProblemParams();
-
-	Matrix<U_DIM> uinit;
-
-	xGoal = x0;
-	xGoal.insert(0, 0, waypoints[0]);
-
-	std::cout << "x0: " << ~x0;
-	std::cout << "xGoal: " << ~xGoal << "\n";
-
-	// initialize velocity to dist / timesteps
-	uinit[0] = sqrt((x0[0] - xGoal[0])*(x0[0] - xGoal[0]) + (x0[1] - xGoal[1])*(x0[1] - xGoal[1])) / (double)((T-1)*DT);
-	// angle already pointed at goal, so is 0
-	uinit[1] = 0;
-
-	std::vector<Matrix<U_DIM> > U(T-1, uinit);
-	std::vector<Matrix<X_DIM> > X(T);
-
-	X[0] = x0;
-	for(int t=0; t < T-1; ++t) {
-		X[t+1] = dynfunc(X[t], U[t], zeros<Q_DIM,1>());
-	}
-
-	std::cout << "U\n";
-	for(int t=0; t < T-1; ++t) { std::cout << ~U[t]; }
-	std::cout << "\n";
-
-	std::cout << "X\n";
-	for(int t=0; t < T; ++t) { std::cout << ~X[t]; }
-	std::cout << "\n";
-
-	Matrix<B_DIM> b;
-	vec(x0, SqrtSigma0, b);
-
-	for(int t=0; t < T-1; ++t) {
-		b = beliefDynamics(b, U[0]);
-	}
-
-
-	double initTrajCost = computeCost(X, U);
-	LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
-
-	double initCasadiTrajCost = casadiComputeCost(X, U);
-	LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
-
-
-}
-
-int main(int argc, char* argv[])
-{
-
+void planPath(std::vector<Matrix<P_DIM> > l, stateMPC_params& problem, stateMPC_output& output, stateMPC_info& info, std::ofstream& f) {
 	LOG_INFO("Initializing problem parameters");
-	initProblemParams();
+	initProblemParams(l);
 
-	stateMPC_params problem;
-	stateMPC_output output;
-	stateMPC_info info;
-	setupStateVars(problem, output);
 
 	util::Timer solveTimer, trajTimer;
 	double totalSolveTime = 0, trajTime = 0;
@@ -972,21 +968,22 @@ int main(int argc, char* argv[])
 
 	std::vector<Matrix<B_DIM> > B_total(T*NUM_WAYPOINTS);
 	std::vector<Matrix<U_DIM> > U_total((T-1)*NUM_WAYPOINTS);
+	int B_total_idx = 0, U_total_idx = 0;
+
 
 	std::vector<Matrix<B_DIM> > B(T);
-	std::vector<Matrix<X_DIM> > X(T);
+	std::vector<Matrix<C_DIM> > X(T);
+
 
 	Matrix<U_DIM> uinit;
 
 	Matrix<X_DIM,1> x;
 	Matrix<X_DIM,X_DIM> s;
+	x0[2] = nearestAngleFromTo(0, x0[2]); // need to remod back to near 0
 	for(int i=0; i < NUM_WAYPOINTS; ++i) {
 		LOG_INFO("Going to waypoint %d",i);
 		// goal is waypoint position + direct angle + landmarks
 		xGoal.insert(0, 0, waypoints[i]);
-
-		//xGoal[2] = x0[2];
-		//x0[2] = atan2(xGoal[1] - x0[1], xGoal[0] - x0[0]);
 
 		// want to be facing the next waypoint
 		if (i < NUM_WAYPOINTS - 1) {
@@ -998,22 +995,13 @@ int main(int argc, char* argv[])
 
 		xGoal.insert(C_DIM, 0, x0.subMatrix<L_DIM,1>(C_DIM,0));
 
-
-		/*
-		// initialize velocity to dist / timesteps
-		uinit[0] = sqrt((x0[0] - xGoal[0])*(x0[0] - xGoal[0]) + (x0[1] - xGoal[1])*(x0[1] - xGoal[1])) / (double)((T-1)*DT);
-		// angle already pointed at goal, so is 0
-		uinit[1] = 0;
-
-		std::vector<Matrix<U_DIM> > U(T-1, uinit);
-		*/
-
 		util::Timer_tic(&trajTimer);
 
 		std::vector<Matrix<U_DIM> > U(T-1);
 		bool initTrajSuccess = initTraj(x0.subMatrix<C_DIM,1>(0,0), xGoal.subMatrix<C_DIM,1>(0,0), U, T);
 		if (!initTrajSuccess) {
 			LOG_ERROR("Failed to initialize trajectory, exiting slam-state");
+			pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 			exit(-1);
 		}
 
@@ -1022,12 +1010,10 @@ int main(int argc, char* argv[])
 
 		vec(x0, SqrtSigma0, B[0]);
 		for(int t=0; t < T-1; ++t) {
-			X[t] = B[t].subMatrix<X_DIM,1>(0,0);
+			X[t] = B[t].subMatrix<C_DIM,1>(0,0);
 			B[t+1] = beliefDynamics(B[t], U[t]);
 		}
-		X[T-1] = B[T-1].subMatrix<X_DIM,1>(0,0);
-
-		//std::cout << ~X[0].subMatrix<C_DIM,1>(0,0);
+		X[T-1] = B[T-1].subMatrix<C_DIM,1>(0,0);
 
 		double initTrajCost = computeCost(X, U);
 		//LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
@@ -1035,7 +1021,7 @@ int main(int argc, char* argv[])
 		double initCasadiTrajCost = casadiComputeCost(X, U);
 		//LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
 
-		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
+		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, false);
 
 		util::Timer_tic(&solveTimer);
 
@@ -1053,6 +1039,13 @@ int main(int argc, char* argv[])
 					exit(-1);
 				}
 				LOG_ERROR("Forces exception, trying again");
+				X[0] = x0.subMatrix<C_DIM,1>(0,0);
+				x = x0;
+				for(int j=0; j < T-1; ++j) {
+					x.insert<C_DIM,1>(0, 0, X[j]);
+					X[j+1] = dynfunc(x, U[j], zeros<Q_DIM,1>()).subMatrix<C_DIM,1>(0,0);
+				}
+				X[T-1] = xGoal.subMatrix<C_DIM,1>(0,0);
 				iter++;
 			}
 		}
@@ -1061,42 +1054,21 @@ int main(int argc, char* argv[])
 		totalSolveTime += solvetime;
 
 		vec(x0, SqrtSigma0, B[0]);
-		X[0] = x0;
+		X[0] = x0.subMatrix<C_DIM,1>(0,0);
 		for (int t = 0; t < T-1; ++t) {
 			B[t+1] = beliefDynamics(B[t], U[t]);
 			unVec(B[t+1], x, s);
-			X[t+1] = x;
+			X[t+1] = x.subMatrix<C_DIM,1>(0,0);
 		}
+
 
 		for (int t = 0; t < T-1; ++t) {
-			B_total[t+T*i] = B[t];
-			U_total[t+(T-1)*i] = U[t];
+			B_total[B_total_idx++] = B[t];
+			U_total[U_total_idx++] = U[t];
 		}
-		B_total[T-1+T*i] = B[T-1];
+		B_total[B_total_idx++] = B[T-1];
 
 		totalTrajCost += computeCost(X,U);
-
-		/*
-		std::cout << "X car" << std::endl;
-		for(int t=0; t < T; ++t) {
-			std::cout << ~X[t].subMatrix<C_DIM,1>(0,0);
-		}
-		std::cout << std::endl << std::endl;
-
-		std::cout << "U" << std::endl;
-		for(int t=0; t < T-1; ++t) {
-			std::cout << ~U[t];
-		}
-		std::cout << std::endl;
-		 */
-
-		/*
-		LOG_INFO("Initial cost: %4.10f", initTrajCost);
-		LOG_INFO("Optimized cost: %4.10f", cost);
-		LOG_INFO("Actual cost: %4.10f", computeCost(X,U));
-		LOG_INFO("Trajectory solve time: %5.3f ms", initTrajTime*1000);
-		LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
-		 */
 
 		unVec(B[T-1], x0, SqrtSigma0);
 
@@ -1104,17 +1076,37 @@ int main(int argc, char* argv[])
 
 	}
 
-
-
 	LOG_INFO("Total trajectory cost: %4.10f", totalTrajCost);
 	LOG_INFO("Total trajectory solve time: %5.3f ms", trajTime*1000);
 	LOG_INFO("Total solve time: %5.3f ms", totalSolveTime*1000);
 
+	logDataToFile(f, B_total, totalSolveTime*1000, trajTime*1000);
+
 
 	pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, true);
+}
 
+int main(int argc, char* argv[])
+{
+	stateMPC_params problem;
+	stateMPC_output output;
+	stateMPC_info info;
+	setupStateVars(problem, output);
+
+	std::vector<std::vector<Matrix<P_DIM> > > l_list = landmarks_list();
+
+	std::ofstream f;
+	logDataHandle("slam/data/slam-state", f);
+
+#ifndef USE_GENERATED_CASADI
+	casadi_cost_func = casadiCostFunc(T);
+	casadi_gradcost_func = casadiCostGradFunc(T);
+#endif
+
+	for(int i=0; i < l_list.size(); ++i) {
+		planPath(l_list[i], problem, output, info, f);
+	}
 	cleanupStateMPCVars();
-
 
 	return 0;
 }

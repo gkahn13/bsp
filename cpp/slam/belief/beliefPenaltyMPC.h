@@ -120,6 +120,9 @@ typedef struct beliefPenaltyMPC_params
     /* vector of size 54 */
     beliefPenaltyMPC_FLOAT e2[54];
 
+    /* matrix of size [54 x 164] (column major format) */
+    beliefPenaltyMPC_FLOAT D2[8856];
+
     /* diagonal matrix of size [164 x 164] (only the diagonal is stored) */
     beliefPenaltyMPC_FLOAT H3[164];
 
@@ -137,6 +140,9 @@ typedef struct beliefPenaltyMPC_params
 
     /* vector of size 54 */
     beliefPenaltyMPC_FLOAT e3[54];
+
+    /* matrix of size [54 x 164] (column major format) */
+    beliefPenaltyMPC_FLOAT D3[8856];
 
     /* diagonal matrix of size [164 x 164] (only the diagonal is stored) */
     beliefPenaltyMPC_FLOAT H4[164];
@@ -156,6 +162,9 @@ typedef struct beliefPenaltyMPC_params
     /* vector of size 54 */
     beliefPenaltyMPC_FLOAT e4[54];
 
+    /* matrix of size [54 x 164] (column major format) */
+    beliefPenaltyMPC_FLOAT D4[8856];
+
     /* diagonal matrix of size [164 x 164] (only the diagonal is stored) */
     beliefPenaltyMPC_FLOAT H5[164];
 
@@ -173,6 +182,9 @@ typedef struct beliefPenaltyMPC_params
 
     /* vector of size 54 */
     beliefPenaltyMPC_FLOAT e5[54];
+
+    /* matrix of size [54 x 164] (column major format) */
+    beliefPenaltyMPC_FLOAT D5[8856];
 
     /* diagonal matrix of size [164 x 164] (only the diagonal is stored) */
     beliefPenaltyMPC_FLOAT H6[164];
@@ -192,6 +204,9 @@ typedef struct beliefPenaltyMPC_params
     /* vector of size 54 */
     beliefPenaltyMPC_FLOAT e6[54];
 
+    /* matrix of size [54 x 164] (column major format) */
+    beliefPenaltyMPC_FLOAT D6[8856];
+
     /* diagonal matrix of size [164 x 164] (only the diagonal is stored) */
     beliefPenaltyMPC_FLOAT H7[164];
 
@@ -209,6 +224,9 @@ typedef struct beliefPenaltyMPC_params
 
     /* vector of size 54 */
     beliefPenaltyMPC_FLOAT e7[54];
+
+    /* matrix of size [54 x 164] (column major format) */
+    beliefPenaltyMPC_FLOAT D7[8856];
 
     /* diagonal matrix of size [164 x 164] (only the diagonal is stored) */
     beliefPenaltyMPC_FLOAT H8[164];
@@ -228,6 +246,9 @@ typedef struct beliefPenaltyMPC_params
     /* vector of size 54 */
     beliefPenaltyMPC_FLOAT e8[54];
 
+    /* matrix of size [54 x 164] (column major format) */
+    beliefPenaltyMPC_FLOAT D8[8856];
+
     /* diagonal matrix of size [164 x 164] (only the diagonal is stored) */
     beliefPenaltyMPC_FLOAT H9[164];
 
@@ -245,6 +266,9 @@ typedef struct beliefPenaltyMPC_params
 
     /* vector of size 54 */
     beliefPenaltyMPC_FLOAT e9[54];
+
+    /* matrix of size [54 x 164] (column major format) */
+    beliefPenaltyMPC_FLOAT D9[8856];
 
     /* diagonal matrix of size [164 x 164] (only the diagonal is stored) */
     beliefPenaltyMPC_FLOAT H10[164];
@@ -264,6 +288,9 @@ typedef struct beliefPenaltyMPC_params
     /* vector of size 54 */
     beliefPenaltyMPC_FLOAT e10[54];
 
+    /* matrix of size [54 x 164] (column major format) */
+    beliefPenaltyMPC_FLOAT D10[8856];
+
     /* diagonal matrix of size [164 x 164] (only the diagonal is stored) */
     beliefPenaltyMPC_FLOAT H11[164];
 
@@ -281,6 +308,9 @@ typedef struct beliefPenaltyMPC_params
 
     /* vector of size 54 */
     beliefPenaltyMPC_FLOAT e11[54];
+
+    /* matrix of size [54 x 164] (column major format) */
+    beliefPenaltyMPC_FLOAT D11[8856];
 
     /* diagonal matrix of size [164 x 164] (only the diagonal is stored) */
     beliefPenaltyMPC_FLOAT H12[164];
@@ -300,6 +330,9 @@ typedef struct beliefPenaltyMPC_params
     /* vector of size 54 */
     beliefPenaltyMPC_FLOAT e12[54];
 
+    /* matrix of size [54 x 164] (column major format) */
+    beliefPenaltyMPC_FLOAT D12[8856];
+
     /* diagonal matrix of size [164 x 164] (only the diagonal is stored) */
     beliefPenaltyMPC_FLOAT H13[164];
 
@@ -317,6 +350,9 @@ typedef struct beliefPenaltyMPC_params
 
     /* vector of size 54 */
     beliefPenaltyMPC_FLOAT e13[54];
+
+    /* matrix of size [54 x 164] (column major format) */
+    beliefPenaltyMPC_FLOAT D13[8856];
 
     /* diagonal matrix of size [164 x 164] (only the diagonal is stored) */
     beliefPenaltyMPC_FLOAT H14[164];
@@ -336,6 +372,9 @@ typedef struct beliefPenaltyMPC_params
     /* vector of size 54 */
     beliefPenaltyMPC_FLOAT e14[54];
 
+    /* matrix of size [54 x 164] (column major format) */
+    beliefPenaltyMPC_FLOAT D14[8856];
+
     /* diagonal matrix of size [54 x 54] (only the diagonal is stored) */
     beliefPenaltyMPC_FLOAT H15[54];
 
@@ -347,6 +386,9 @@ typedef struct beliefPenaltyMPC_params
 
     /* vector of size 54 */
     beliefPenaltyMPC_FLOAT e15[54];
+
+    /* matrix of size [54 x 54] (column major format) */
+    beliefPenaltyMPC_FLOAT D15[2916];
 
 } beliefPenaltyMPC_params;
 

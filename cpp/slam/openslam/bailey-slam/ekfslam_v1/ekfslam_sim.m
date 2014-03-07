@@ -57,8 +57,10 @@ data= initialise_store(x,P,x); % stored data for off-line
 QE= Q; RE= R; if SWITCH_INFLATE_NOISE, QE= 2*Q; RE= 8*R; end % inflate estimated noises (ie, add stabilising noise)
 if SWITCH_SEED_RANDOM, randn('state',SWITCH_SEED_RANDOM), end
 
+timestep = 0;
 % main loop 
 while iwp ~= 0
+    timestep = timestep + 1;
     
     % compute true data
     [G,iwp]= compute_steering(xtrue, wp, iwp, AT_WAYPOINT, G, RATEG, MAXG, dt);
@@ -75,10 +77,11 @@ while iwp ~= 0
     % EKF update step
     dtsum= dtsum + dt;
     if dtsum >= DT_OBSERVE
+        disp(timestep);
         dtsum= 0;
         [z,ftag_visible]= get_observations(xtrue, lm, ftag, MAX_RANGE);
         z= add_observation_noise(z,R, SWITCH_SENSOR_NOISE);
-    
+        
         if SWITCH_ASSOCIATION_KNOWN == 1
             [zf,idf,zn, da_table]= data_associate_known(x,z,ftag_visible, da_table);
         else

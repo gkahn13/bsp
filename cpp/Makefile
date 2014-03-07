@@ -15,12 +15,14 @@ BOOST_FLAGS = -lboost_python -lboost_filesystem -lboost_system
 ADOLC_FLAGS = -I/home/gkahn/adolc_base/include -L/home/gkahn/adolc_base/lib64 -ladolc -lColPack
 #ADOLC_FLAGS = -I/usr/include/adolc -ladolc -lColPack
 EIGEN_FLAGS = -I/usr/include/eigen3
+CASADI_FLAGS = -I$(CASADIPATH) -L$(CASADIPATH)/build/lib
+CASADI_LIBS = -lcasadi -ldl
 
 # default to debug build
 BUILD := debug
 
-BFLAGS.debug = -g -Wall 
-BFLAGS.release = -O3 -Wall
+BFLAGS.debug = -g -Wall
+BFLAGS.release = -O3
 BFLAGS := $(BFLAGS.$(BUILD))
 
 OBJ_DIR = build/$(BUILD)
@@ -370,12 +372,16 @@ $(OBJ_DIR)/point-slam-test.o : $(PT_SLAM_TEST_DIR)/point-slam-test.cpp
 
 ###### SLAM ##########
 
+NUM_LANDMARKS = 3
+
 # setupFiles bash
 SLAM_SETUP_FILE = slam/setupFiles.sh
 
 # share point functions
 SLAM_HEADERS = slam/slam.h
 SLAM_SRC = slam/slam.cpp
+
+SLAM_CASADI_DIR = slam/casadi
 
 
 $(OBJ_DIR)/slam.o : $(SLAM_SRC) $(SLAM_HEADERS)
@@ -401,7 +407,7 @@ SLAM_TRAJ_FILES = trajMPC slam-traj logging slam
 SLAM_TRAJ_OBJS = $(SLAM_TRAJ_FILES:%=$(OBJ_DIR)/%.o)
 
 slam-traj-setup:
-	bash $(SLAM_SETUP_FILE) traj $(T)
+	bash $(SLAM_SETUP_FILE) traj $(T) $(NUM_LANDMARKS)
 
 slam-traj: | slam-traj-setup $(SLAM_TRAJ_OBJS)
 	$(CXX) $(SLAM_TRAJ_OBJS) $(BFLAGS) -o $(BIN_DIR)/slam-traj $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
@@ -411,6 +417,35 @@ $(OBJ_DIR)/trajMPC.o : $(SLAM_TRAJ_DIR)/trajMPC.c
 	
 $(OBJ_DIR)/slam-traj.o : $(SLAM_TRAJ_DIR)/slam-traj.cpp $(SLAM_TRAJ_DIR)/trajMPC.c
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
+	
+# make slam-traj-plan
+SLAM_TRAJ_PLAN_DIR = slam/traj
+SLAM_TRAJ_PLAN_FILES = trajMPC slam-traj slam-traj-plan logging slam
+SLAM_TRAJ_PLAN_OBJS = $(SLAM_TRAJ_PLAN_FILES:%=$(OBJ_DIR)/%.o)
+
+slam-traj-plan: | slam-traj-setup $(SLAM_TRAJ_PLAN_OBJS)
+	$(CXX) $(SLAM_TRAJ_PLAN_OBJS) $(BFLAGS) -o $(BIN_DIR)/slam-traj-plan $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
+	
+$(OBJ_DIR)/slam-traj-plan.o : $(SLAM_TRAJ_PLAN_DIR)/slam-traj-plan.cpp
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
+	
+	
+# make slam-smooth
+SLAM_SMOOTH_DIR = slam/smooth
+SLAM_SMOOTH_FILES = smoothMPC slam-smooth logging slam
+SLAM_SMOOTH_OBJS = $(SLAM_SMOOTH_FILES:%=$(OBJ_DIR)/%.o)
+
+slam-smooth-setup:
+	bash $(SLAM_SETUP_FILE) smooth $(T) $(NUM_LANDMARKS)
+
+slam-smooth: | $(SLAM_SMOOTH_OBJS)
+	$(CXX) $(SLAM_SMOOTH_OBJS) $(BFLAGS) -o $(BIN_DIR)/slam-smooth $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
+	
+$(OBJ_DIR)/smoothMPC.o : $(SLAM_SMOOTH_DIR)/smoothMPC.c
+	$(CC) $(C_FLAGS) -c -o $@ $^
+	
+$(OBJ_DIR)/slam-smooth.o : $(SLAM_SMOOTH_DIR)/slam-smooth.cpp $(SLAM_SMOOTH_DIR)/smoothMPC.c
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
 
 # make slam-belief
 SLAM_BELIEF_DIR = slam/belief
@@ -418,7 +453,7 @@ SLAM_BELIEF_FILES = slamBeliefPenaltyMPC slam-belief logging slam slam-traj traj
 SLAM_BELIEF_OBJS = $(SLAM_BELIEF_FILES:%=$(OBJ_DIR)/%.o)
 
 slam-belief-setup:
-	bash $(SLAM_SETUP_FILE) belief $(T)
+	bash $(SLAM_SETUP_FILE) belief $(T) $(NUM_LANDMARKS)
 
 slam-belief: | slam-belief-setup slam-traj-setup $(SLAM_BELIEF_OBJS)
 	$(CXX) $(BFLAGS) $(SLAM_BELIEF_OBJS) -o $(BIN_DIR)/slam-belief $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
@@ -431,14 +466,15 @@ $(OBJ_DIR)/slam-belief.o : $(SLAM_BELIEF_DIR)/slam-belief.cpp $(SLAM_HEADERS)
 	
 # make slam-state
 SLAM_STATE_DIR = slam/state
+# casadi-slam-state 
 SLAM_STATE_FILES = slam-state-cost slam-state-grad slamStateMPC slam-state logging slam trajMPC slam-traj
 SLAM_STATE_OBJS = $(SLAM_STATE_FILES:%=$(OBJ_DIR)/%.o)
 
 slam-state-setup:
-	bash $(SLAM_SETUP_FILE) state $(T)
+	bash $(SLAM_SETUP_FILE) state $(T) $(NUM_LANDMARKS)
 
 slam-state: | slam-state-setup slam-traj-setup $(SLAM_STATE_OBJS)
-	$(CXX) $(BFLAGS) $(SLAM_STATE_OBJS) -o $(BIN_DIR)/slam-state $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
+	$(CXX) $(BFLAGS) $(SLAM_STATE_OBJS) -o $(BIN_DIR)/slam-state $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS) $(CASADI_FLAGS) $(CASADI_LIBS)
 	
 $(OBJ_DIR)/slam-state-cost.o : $(SLAM_STATE_DIR)/slam-state-cost.c
 	$(CC) $(C_FLAGS) -c -o $@ $^
@@ -449,8 +485,14 @@ $(OBJ_DIR)/slam-state-grad.o : $(SLAM_STATE_DIR)/slam-state-grad.c
 $(OBJ_DIR)/slamStateMPC.o : $(SLAM_STATE_DIR)/stateMPC.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
 	
+$(OBJ_DIR)/casadi-slam-state.o : $(SLAM_CASADI_DIR)/slam-state.cpp
+	$(CXX) $(CPP_FLAGS) -DNDEBUG -fopenmp $(BFLAGS) $(CASADI_FLAGS) -c -o $@ $< $(CASADI_LIBS) 
+	
 $(OBJ_DIR)/slam-state.o : $(SLAM_STATE_DIR)/slam-state.cpp $(SLAM_HEADERS)
-	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) $(CASADI_FLAGS) -c -o $@ $< $(CASADI_LIBS)
+	
+#casadi-slam-state:
+#	$(CXX) -O3 -DNDEBUG -fopenmp -I$(CASADIPATH) -L$(CASADIPATH)/build/lib slam/casadi/slam-state.cpp -o casadi-slam-state -lcasadi -ldl
 	
 # make slam-state-mpc
 SLAM_STATE_MPC_DIR = slam/state
@@ -462,7 +504,43 @@ slam-state-mpc: | slam-state-setup slam-traj-setup $(SLAM_STATE_MPC_OBJS)
 	
 $(OBJ_DIR)/slam-state-mpc.o : $(SLAM_STATE_DIR)/slam-state-mpc.cpp $(SLAM_HEADERS)
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
+	
+# make slam-control
+SLAM_CONTROL_DIR = slam/control
+SLAM_CONTROL_FILES = slam-control-cost slam-control-grad slamControlMPC slam-control logging slam trajMPC slam-traj
+SLAM_CONTROL_OBJS = $(SLAM_CONTROL_FILES:%=$(OBJ_DIR)/%.o)
 
+slam-control-setup:
+	bash $(SLAM_SETUP_FILE) control $(T) $(NUM_LANDMARKS)
+
+slam-control: | slam-control-setup slam-traj-setup $(SLAM_CONTROL_OBJS)
+	$(CXX) $(BFLAGS) $(SLAM_CONTROL_OBJS) -o $(BIN_DIR)/slam-control $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
+	
+$(OBJ_DIR)/slam-control-cost.o : $(SLAM_CONTROL_DIR)/slam-control-cost.c
+	$(CC) $(C_FLAGS) -c -o $@ $^
+
+$(OBJ_DIR)/slam-control-grad.o : $(SLAM_CONTROL_DIR)/slam-control-grad.c
+	$(CC) $(C_FLAGS) -c -o $@ $^
+	
+$(OBJ_DIR)/slamControlMPC.o : $(SLAM_CONTROL_DIR)/controlMPC.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+	
+$(OBJ_DIR)/slam-control.o : $(SLAM_CONTROL_DIR)/slam-control.cpp $(SLAM_HEADERS)
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
+
+# make slam-ilqg
+SLAM_ILQG_DIR = slam/ilqg
+SLAM_ILQG_FILES = slam-ilqg logging slam
+SLAM_ILQG_OBJS = $(SLAM_ILQG_FILES:%=$(OBJ_DIR)/%.o)
+
+slam-ilqg: | $(SLAM_ILQG_OBJS)
+	$(CXX) $(BFLAGS) $(SLAM_ILQG_OBJS) -o $(BIN_DIR)/slam-ilqg $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
+
+$(OBJ_DIR)/slam-ilqg.o : $(SLAM_ILQG_DIR)/slam-ilqg.cpp $(SLAM_ILQG_DIR)/ilqg.h
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
+	
+
+	
 
 
 

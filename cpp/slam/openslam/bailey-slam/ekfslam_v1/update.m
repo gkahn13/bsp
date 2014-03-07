@@ -35,6 +35,9 @@ for i=1:lenz
         pi_to_pi(z(2,i)-zp(2))];
     RR(ii,ii)= R;
 end
+
+disp(H);
+pause
         
 [x,P]= KF_cholesky_update(x,P,v,RR,H);
 

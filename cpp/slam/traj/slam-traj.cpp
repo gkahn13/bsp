@@ -52,20 +52,9 @@ struct exit_exception {
 	exit_exception(int c):c(c) { }
 };
 
-Matrix<C_DIM> dynfunccar(const Matrix<C_DIM>& x, const Matrix<U_DIM>& u)
-{
-	Matrix<C_DIM> xAdd = zeros<C_DIM,1>();
-
-	xAdd[0] = u[0] * DT * cos(x[2]+u[1]);
-	xAdd[1] = u[0] * DT * sin(x[2]+u[1]);
-	xAdd[2] = u[0] * DT * sin(u[1])/config::WHEELBASE;
-
-	Matrix<C_DIM> xNew = x + xAdd;
-    return xNew;
-}
 
 // Jacobians: df(x,u)/dx, df(x,u)/du
-void linearizeCarDynamics(const Matrix<C_DIM>& x, const Matrix<U_DIM>& u, Matrix<C_DIM,C_DIM>& F, Matrix<C_DIM,U_DIM>& G, Matrix<C_DIM>& h)
+void linearizeCarDynamicsTraj(const Matrix<C_DIM>& x, const Matrix<U_DIM>& u, Matrix<C_DIM,C_DIM>& F, Matrix<C_DIM,U_DIM>& G, Matrix<C_DIM>& h)
 {
 	F.reset();
 	Matrix<C_DIM> xr(x), xl(x);
@@ -111,7 +100,7 @@ inline double wrapAngle(double angle) {
 
 
 
-double computeCost(const std::vector< Matrix<C_DIM> >& X, const std::vector< Matrix<U_DIM> >& U)
+double computeTrajCost(const std::vector< Matrix<C_DIM> >& X, const std::vector< Matrix<U_DIM> >& U)
 {
 	double cost = 0;
 	for(int t = 0; t < T_TRAJ_MPC-1; ++t) {
@@ -219,7 +208,7 @@ void cleanupTrajMPCVars()
 	delete[] z_traj;
 }
 
-double computeMerit(const std::vector< Matrix<C_DIM> >& X, const std::vector< Matrix<U_DIM> >& U, double penalty_coeff)
+double computeTrajMerit(const std::vector< Matrix<C_DIM> >& X, const std::vector< Matrix<U_DIM> >& U, double penalty_coeff)
 {
 	double merit = 0;
 	Matrix<C_DIM> dynviol;
@@ -389,7 +378,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 		// In this loop, we repeatedly construct a linear approximation to the nonlinear belief dynamics constraint
 		LOG_DEBUG("  sqp iter: %d", sqp_iter);
 
-		merit = computeMerit(X, U, penalty_coeff);
+		merit = computeTrajMerit(X, U, penalty_coeff);
 		
 		LOG_DEBUG("  merit: %4.10f", merit);
 
@@ -401,7 +390,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			Matrix<C_DIM>& xt = X[t];
 			Matrix<U_DIM>& ut = U[t];
 
-			linearizeCarDynamics(xt, ut, F[t], G[t], h[t]);
+			linearizeCarDynamicsTraj(xt, ut, F[t], G[t], h[t]);
 
 			// initialize f_traj in cost function to penalize
 			// belief dynamics slack variables
@@ -565,7 +554,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			LOG_DEBUG("Optimized cost: %4.10f", optcost);
 
 			model_merit = optcost + constant_cost;
-			new_merit = computeMerit(Xopt, Uopt, penalty_coeff);
+			new_merit = computeTrajMerit(Xopt, Uopt, penalty_coeff);
 
 			//std::cout << "Xopt" << std::endl;
 			//for(int t=0; t < T; ++t) { std::cout << ~Xopt[t]; }
@@ -662,10 +651,10 @@ double trajCollocation(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<U_DI
 	        //trust_box_size = cfg::initial_trust_box_size;
 	    }
 	    else {
-	    	return computeCost(X, U);
+	    	return computeTrajCost(X, U);
 	    }
 	}
-	return computeCost(X, U);
+	return computeTrajCost(X, U);
 }
 
 
@@ -716,7 +705,7 @@ bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 		}
 		//std::cout << ~X[T-1];
 
-		initTrajCost = computeCost(X, U);
+		initTrajCost = computeTrajCost(X, U);
 		LOG_DEBUG("Initial trajectory cost: %4.10f", initTrajCost);
 
 		try {
@@ -757,11 +746,11 @@ bool initTraj(const Matrix<C_DIM>& cStart, const Matrix<C_DIM>& cEnd, std::vecto
 	std::cout << ~X[T-1];
 	*/
 
-	cost = computeCost(X, U);
+	cost = computeTrajCost(X, U);
 
 	LOG_DEBUG("Initial cost: %4.10f", initTrajCost);
 	LOG_DEBUG("Optimized cost: %4.10f", cost);
-	//LOG_DEBUG("Actual cost: %4.10f", computeCost(X,U));
+	//LOG_DEBUG("Actual cost: %4.10f", computeTrajCost(X,U));
 	LOG_DEBUG("Solve time: %5.3f ms", solvetime*1000);
 
 	//pythonDisplayTrajectory(U, T_TRAJ_MPC, true);

@@ -20,16 +20,15 @@ SymmetricMatrix<R_DIM> R;
 const int T = TIMESTEPS;
 const double INFTY = 1e10;
 
-//const double alpha_belief = 10, alpha_final_belief = 50, alpha_control = .01, alpha_goal_state = 1;
+const std::string landmarks_file = "slam/landmarks.txt";
 
 
 
-
-void initProblemParams()
+void initProblemParams(std::vector<Matrix<P_DIM> >& l)
 {
 	Q.reset();
-	Q(0,0) = 1*config::VELOCITY_NOISE*config::VELOCITY_NOISE; // 20
-	Q(1,1) = 1*config::TURNING_NOISE*config::TURNING_NOISE; // 1e-2
+	Q(0,0) = 1*config::VELOCITY_NOISE*config::VELOCITY_NOISE;
+	Q(1,1) = 1*config::TURNING_NOISE*config::TURNING_NOISE;
 
 	R.reset();
 	for(int i = 0; i < R_DIM-1; i+=2) {
@@ -42,53 +41,35 @@ void initProblemParams()
 	waypoints[2][0] = 0; waypoints[2][1] = 20;
 	waypoints[3][0] = 0; waypoints[3][1] = 0;
 
-	landmarks[0][0] = 30; landmarks[0][1] = -10;
-	landmarks[1][0] = 70; landmarks[1][1] = 12.5;
-	landmarks[2][0] = 20; landmarks[2][1] = 10;
+	for(int i=0; i < NUM_LANDMARKS; ++i) {
+		landmarks[i] = l[i];
+	}
+//	landmarks[0][0] = 30; landmarks[0][1] = -10;
+//	landmarks[1][0] = 70; landmarks[1][1] = 12.5;
+//	landmarks[2][0] = 20; landmarks[2][1] = 10;
 
 
 	// start at (0, 0)
 	// landmarks will be the same for all waypoint-waypoint optimizations
 	x0.insert(0, 0, zeros<C_DIM,1>());
 
-	//x0[0] = 8;
-	//x0[1] = 3;
-	//x0[2] = -.65;
 	for(int i = 0; i < NUM_LANDMARKS; ++i) {
 		x0.insert(C_DIM+2*i, 0, landmarks[i]);
 	}
 
 	//This starts out at 0 for car, landmarks are set based on the car's sigma when first seen
 	SqrtSigma0 = zeros<X_DIM, X_DIM>();
-	for(int i = 0; i < C_DIM; ++i) { SqrtSigma0(i,i) = .1; }
-	for(int i = 0; i < L_DIM; ++i) { SqrtSigma0(C_DIM+i,C_DIM+i) = 1; }
+	for(int i = 0; i < C_DIM; ++i) { SqrtSigma0(i,i) = .1; } // .1
+	for(int i = 0; i < L_DIM; ++i) { SqrtSigma0(C_DIM+i,C_DIM+i) = 3.5; } // 1
 
-	/*
-	double SqrtSigma0arr[X_DIM*X_DIM] = {0.86099, -0.13141, -0.0174449,  0.142165, 0.0154876,   0.209152, 0.03075,
-		-0.13141,    2.36482,    0.128894,   -0.144078,  0.0425713,  0.353772,   0.304487,
-		-0.0174449, 0.128894,   0.108498,   0.00684147, -0.0122736, 0.0030617,  -0.0221395,
-		0.142165,   -0.144078,  0.00684147, 0.544522,   -0.0109736, 0.090779,   -0.0904568,
-		0.0154876,  0.0425713,  -0.0122736, -0.0109736, 0.622794,   -0.0959134, 0.279871,
-		0.209152,   0.353772,   0.0030617,  0.090779,   -0.0959134, 0.751839,   0.0735089,
-		0.03075,    0.304487,   -0.0221395, -0.0904568, 0.279871,   0.0735089,  0.6638};
-
-	int index = 0;
-	for(int i=0; i < X_DIM; ++i) {
-		for(int j=0; j < X_DIM; ++j) {
-			SqrtSigma0(i,j) = SqrtSigma0arr[index++];
-		}
-	}
-	*/
-
-	// TODO: think of better values for these
 	uMin[0] = 1.5; // 1
 	uMin[1] = -M_PI/3;
-	uMax[0] = 8; // 10
+	uMax[0] = 10; // 10
 	uMax[1] = M_PI/3;
 
 	xMin[0] = -20;
 	xMin[1] = -20;
-	xMin[2] = -2*M_PI;
+	xMin[2] = -3*M_PI; // 2*M_PI
 	for(int i=0; i < NUM_LANDMARKS; i++) {
 		xMin[2*i+C_DIM] = landmarks[i][0] - 5;
 		xMin[2*i+1+C_DIM] = landmarks[i][1] - 5;
@@ -96,7 +77,7 @@ void initProblemParams()
 
 	xMax[0] = 80;
 	xMax[1] = 80;
-	xMax[2] = 2*M_PI;
+	xMax[2] = 3*M_PI; // 2*M_PI
 	for(int i=0; i < NUM_LANDMARKS; i++) {
 		xMax[2*i+C_DIM] = landmarks[i][0] + 5;
 		xMax[2*i+1+C_DIM] = landmarks[i][1] + 5;
@@ -104,9 +85,39 @@ void initProblemParams()
 
 }
 
+std::vector<std::vector<Matrix<P_DIM>> > landmarks_list() {
+	std::vector<std::vector<Matrix<P_DIM>> > l_list;
+
+	std::string line;
+	std::ifstream l_file (landmarks_file);
+	if (l_file.is_open()) {
+		int iter = 0;
+		while(std::getline(l_file, line)) {
+			if (iter < 1) { // ignore first line, which is time identifier
+				iter++;
+				continue;
+			}
+			std::vector<Matrix<P_DIM>> l(NUM_LANDMARKS);
+			int index = 0;
+
+			std::istringstream iss(line);
+			double pos;
+			while (iss >> pos) {
+				l[index / P_DIM][index % P_DIM] = pos;
+				index++;
+			}
+			l_list.push_back(l);
+		}
+	} else {
+		LOG_ERROR("Couldn't open landmarks.txt!");
+		exit(-1);
+	}
+
+	return l_list;
+}
+
 Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<Q_DIM>& q)
 {
-	// TODO: add noise to control inputs or to state????
 	Matrix<X_DIM> xAdd = zeros<X_DIM,1>();
 
 	xAdd[0] = (u[0]+q[0]) * DT * cos(x[2]+u[1]+q[1]);
@@ -117,10 +128,22 @@ Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matr
     return xNew;
 }
 
+Matrix<C_DIM> dynfunccar(const Matrix<C_DIM>& x, const Matrix<U_DIM>& u)
+{
+	Matrix<C_DIM> xAdd = zeros<C_DIM,1>();
+
+	xAdd[0] = u[0] * DT * cos(x[2]+u[1]);
+	xAdd[1] = u[0] * DT * sin(x[2]+u[1]);
+	xAdd[2] = u[0] * DT * sin(u[1])/config::WHEELBASE;
+
+	Matrix<C_DIM> xNew = x + xAdd;
+    return xNew;
+}
+
 
 Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r)
 {
-  //Matrix<L_DIM,1> landmarks = x.subMatrix<L_DIM,1>(P_DIM, 0);
+	//Matrix<L_DIM,1> landmarks = x.subMatrix<L_DIM,1>(P_DIM, 0);
 	double xPos = x[0], yPos = x[1], angle = x[2];
 	double dx, dy;
 
@@ -135,8 +158,8 @@ Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r)
 		//	(dx*cos(angle) + dy*sin(angle) > 0) &&
 		//	(dx*dx + dy*dy < config::MAX_RANGE*config::MAX_RANGE))
 		//{
-			obs[i] = sqrt(dx*dx + dy*dy) + r[i];
-			obs[i+1] = atan2(dy, dx) - angle + r[i+1];
+		obs[i] = sqrt(dx*dx + dy*dy) + r[i];
+		obs[i+1] = atan2(dy, dx) - angle + r[i+1];
 		//}
 	}
 
@@ -237,6 +260,7 @@ void linearizeObservation(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r, Matrix
 
 }
 
+
 // Jacobians: dh(x,r)/dx, dh(x,r)/dr
 void linearizeObservationFiniteDiff(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r, Matrix<Z_DIM,X_DIM>& H, Matrix<Z_DIM,R_DIM>& N)
 {
@@ -281,8 +305,7 @@ void vec(const Matrix<X_DIM>& x, const Matrix<X_DIM,X_DIM>& SqrtSigma, Matrix<B_
 	for (size_t j = 0; j < X_DIM; ++j) {
 		for (size_t i = j; i < X_DIM; ++i) {
 			b[idx] = 0.5 * (SqrtSigma(i,j) + SqrtSigma(j,i));
-			//waypoints[4][0] = 0; waypoints[4][1] = 20;
-				++idx;
+			++idx;
 		}
 	}
 }
@@ -304,12 +327,7 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	Matrix<X_DIM,Q_DIM> M = zeros<X_DIM,Q_DIM>();
 	M.insert<C_DIM, 2>(0, 0, Mcar);
 
-	//Matrix<X_DIM,X_DIM> A = zeros<X_DIM,X_DIM>();
-	//Matrix<X_DIM,Q_DIM> M = zeros<X_DIM,Q_DIM>();
-	//linearizeDynamicsFiniteDiff(x, u, zeros<Q_DIM,1>(), A, M);
-
 	Sigma = A*Sigma*~A + M*Q*~M;
-	//Sigma.insert(0,C_DIM, Acar*(Sigma.subMatrix<C_DIM,X_DIM-C_DIM>(0,3)));
 
 	x = dynfunc(x, u, zeros<Q_DIM,1>());
 
@@ -320,9 +338,108 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 
 	Matrix<Z_DIM,Z_DIM> delta = deltaMatrix(x);
 
-	Matrix<X_DIM,Z_DIM> K = ((Sigma*~H*delta)/(delta*H*Sigma*~H*delta + R))*delta;//N*R*~N);
+	Matrix<X_DIM,Z_DIM> K = ((Sigma*~H*delta)/(delta*H*Sigma*~H*delta + R))*delta;
 
 	Sigma = (identity<X_DIM>() - K*H)*Sigma;
+
+	Matrix<B_DIM> g;
+	vec(x, sqrtm(Sigma), g);
+
+	return g;
+}
+
+int numberLandmarksInRange(const Matrix<X_DIM>& x) {
+	int num_obs = 0;
+	double xPos = x[0], yPos = x[1], angle = x[2];
+
+	for (int i=0; i < L_DIM; i+=2) {
+		double dx = x[C_DIM+i] - xPos;
+		double dy = x[C_DIM+i+1] - yPos;
+
+		if ((fabs(dx) < config::MAX_RANGE) &&
+				(fabs(dy) < config::MAX_RANGE) &&
+				(dx*cos(angle) + dy*sin(angle) > 0) &&
+				(dx*dx + dy*dy < config::MAX_RANGE*config::MAX_RANGE))
+		{
+			num_obs++;
+		}
+	}
+
+	return num_obs;
+}
+
+template <size_t _z_dim_observed>
+void filteredLinearizeObservation(const Matrix<X_DIM>& x, Matrix<_z_dim_observed,X_DIM>& H, Matrix<_z_dim_observed,_z_dim_observed>& N) {
+	Matrix<Z_DIM,X_DIM> Hfull;
+	Matrix<Z_DIM,R_DIM> Nfull;
+
+	linearizeObservation(x, zeros<R_DIM,1>(), Hfull, Nfull);
+
+	int num_obs = 0;
+	double xPos = x[0], yPos = x[1], angle = x[2];
+
+	for (int i=0; i < L_DIM; i+=2) {
+		double dx = x[C_DIM+i] - xPos;
+		double dy = x[C_DIM+i+1] - yPos;
+
+		if ((fabs(dx) < config::MAX_RANGE) &&
+				(fabs(dy) < config::MAX_RANGE) &&
+				(dx*cos(angle) + dy*sin(angle) > 0) &&
+				(dx*dx + dy*dy < config::MAX_RANGE*config::MAX_RANGE))
+		{
+			H.insert(2*num_obs, 0, Hfull.subMatrix<1,X_DIM>(i,0));
+		}
+	}
+
+	N = identity<_z_dim_observed>(); // s
+}
+
+// Belief dynamics
+Matrix<B_DIM> beliefDynamicsNoDelta(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
+	Matrix<X_DIM> x;
+	Matrix<X_DIM,X_DIM> SqrtSigma;
+	unVec(b, x, SqrtSigma);
+
+	Matrix<X_DIM,X_DIM> Sigma = SqrtSigma*SqrtSigma;
+
+	Matrix<C_DIM,C_DIM> Acar;
+	Matrix<C_DIM,Q_DIM> Mcar;
+	linearizeDynamics(x, u, zeros<Q_DIM,1>(), Acar, Mcar);
+
+	Matrix<X_DIM,X_DIM> A = identity<X_DIM>();
+	A.insert<C_DIM,C_DIM>(0, 0, Acar);
+	Matrix<X_DIM,Q_DIM> M = zeros<X_DIM,Q_DIM>();
+	M.insert<C_DIM, 2>(0, 0, Mcar);
+
+	Sigma = A*Sigma*~A + M*Q*~M;
+
+	x = dynfunc(x, u, zeros<Q_DIM,1>());
+
+	int z_dim_observed = numberLandmarksInRange(x);
+	if (z_dim_observed > 0) {
+		if (z_dim_observed == 1) {
+			Matrix<P_DIM, X_DIM> H;
+			Matrix<P_DIM, P_DIM> N;
+			filteredLinearizeObservation(x, H, N);
+
+			Matrix<X_DIM,P_DIM> K = (Sigma*~H)/(H*Sigma*~H + R.subSymmetricMatrix<P_DIM>(0));
+			Sigma = (identity<X_DIM>() - K*H)*Sigma;
+		} else if (z_dim_observed == 2) {
+			Matrix<2*P_DIM, X_DIM> H;
+			Matrix<2*P_DIM, 2*P_DIM> N;
+			filteredLinearizeObservation(x, H, N);
+
+			Matrix<X_DIM,2*P_DIM> K = (Sigma*~H)/(H*Sigma*~H + R.subSymmetricMatrix<2*P_DIM>(0));
+			Sigma = (identity<X_DIM>() - K*H)*Sigma;
+		} else if (z_dim_observed == 3) {
+			Matrix<3*P_DIM, X_DIM> H;
+			Matrix<3*P_DIM, 3*P_DIM> N;
+			filteredLinearizeObservation(x, H, N);
+
+			Matrix<X_DIM,3*P_DIM> K = (Sigma*~H)/(H*Sigma*~H + R.subSymmetricMatrix<3*P_DIM>(0));
+			Sigma = (identity<X_DIM>() - K*H)*Sigma;
+		}
+	}
 
 	Matrix<B_DIM> g;
 	vec(x, sqrtm(Sigma), g);
@@ -333,11 +450,12 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 // returns updated belief based on real current state, estimated current belief, and input
 void executeControlStep(const Matrix<X_DIM>& x_t_real, const Matrix<B_DIM>& b_t_t, const Matrix<U_DIM>& u_t, Matrix<X_DIM>& x_tp1_real, Matrix<B_DIM>& b_tp1_tp1) {
 	// find next real state from input + noise
-	Matrix<Q_DIM> control_noise = sampleGaussian(zeros<Q_DIM,1>(), Q);
+	// TODO: sample from smaller Q and R and try with zero noise
+	Matrix<Q_DIM> control_noise = sampleGaussian(zeros<Q_DIM,1>(), .2*Q);
 	std::cout << "control_noise: " << ~control_noise;
 	x_tp1_real = dynfunc(x_t_real, u_t, control_noise);
 	// sense real state + noise
-	Matrix<R_DIM> obs_noise = sampleGaussian(zeros<R_DIM,1>(), R);
+	Matrix<R_DIM> obs_noise = sampleGaussian(zeros<R_DIM,1>(), .2*R);
 	std::cout << "obs_noise: " << ~obs_noise;
 	Matrix<Z_DIM> z_tp1_real = obsfunc(x_tp1_real, obs_noise);
 
@@ -402,6 +520,62 @@ void linearizeBeliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u, Mat
 	h = beliefDynamics(b, u);
 }
 
+// returns opened file handle for logging data
+// writes first line, which is the number of landmarks
+void logDataHandle(std::string file_name, std::ofstream& f) {
+	std::string landmarks_identifier;
+	std::ifstream l_file (landmarks_file);
+	if (l_file.is_open()) {
+		if (std::getline(l_file, landmarks_identifier)) {
+
+		} else {
+			LOG_ERROR("Couldn't read landmarks_file");
+			return;
+		}
+	} else {
+		LOG_ERROR("Couldn't open landmarks_file");
+		return;
+	}
+
+	std::string file_name_with_identifier = file_name + "_" + landmarks_identifier + ".txt";
+	f.open(file_name_with_identifier.c_str());
+	f << NUM_LANDMARKS << "\n";
+}
+
+void logDataToFile(std::ofstream& f, const std::vector<Matrix<B_DIM> >& B, double solve_time, double initialization_time) {
+	double sum_cov_trace = 0;
+	Matrix<X_DIM> x;
+	Matrix<X_DIM,X_DIM> SqrtSigma;
+	for(int i=0; i < B.size(); ++i) {
+		unVec(B[i], x, SqrtSigma);
+		sum_cov_trace += tr(SqrtSigma*SqrtSigma);
+	}
+
+	// assuming only one loop around
+	double waypoint_distance_error = 0;
+	for(int w_idx=0; w_idx < NUM_WAYPOINTS; ++w_idx) {
+		Matrix<P_DIM> w = waypoints[w_idx];
+		double min_dist = INFTY;
+		for(int i=0; i < B.size(); ++i) {
+			unVec(B[i], x, SqrtSigma);
+			Matrix<P_DIM> diff = w - x.subMatrix<P_DIM,1>(0,0);
+			min_dist = MIN(min_dist, sqrt(tr(~diff*diff)));
+		}
+		waypoint_distance_error += min_dist;
+	}
+
+
+	if (f.is_open()) {
+		f << "sum_cov_trace " << sum_cov_trace << "\n";
+		f << "waypoint_distance_error " << waypoint_distance_error << "\n";
+		f << "solve_time " << solve_time << "\n";
+		f << "initialization_time " << initialization_time << "\n";
+	} else {
+		LOG_ERROR("Couldn't write in logDataToFile");
+		return;
+	}
+}
+
 void pythonDisplayTrajectory(std::vector< Matrix<X_DIM> >& X, int time_steps, bool pause=false) {
 	std::vector<Matrix<B_DIM> > B(time_steps);
 	std::vector<Matrix<U_DIM> > U(time_steps-1,zeros<U_DIM,1>());
@@ -457,7 +631,9 @@ void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matri
 		}
 	}
 
-	std::string workingDir = boost::filesystem::current_path().normalize().string();
+	//std::string workingDir = boost::filesystem::current_path().normalize().string();
+	std::string workingDir = "/home/gkahn/bsp/cpp";
+	//std::string workingDir = "/home/gkahn/Berkeley/Research/bsp/cpp";
 
 	try
 	{

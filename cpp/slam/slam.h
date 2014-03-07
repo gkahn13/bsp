@@ -3,7 +3,9 @@
 
 #include <Python.h>
 
+#include <iostream>
 #include <fstream>
+#include <string>
 #include <math.h>
 
 #define _USE_MATH_DEFINES
@@ -14,7 +16,7 @@
 
 //#include <pythonrun.h>
 #include <boost/python.hpp>
-#include <boost/filesystem.hpp>
+//#include <boost/filesystem.hpp>
 
 
 #define TIMESTEPS 15
@@ -36,6 +38,8 @@
 #define B_DIM (X_DIM+S_DIM)
 
 #define XU_DIM (TIMESTEPS*X_DIM + (TIMESTEPS-1)*U_DIM)
+#define CU_DIM (TIMESTEPS*C_DIM + (TIMESTEPS-1)*U_DIM)
+#define TU_DIM ((TIMESTEPS-1)*U_DIM)
 
 
 extern const double step;
@@ -54,6 +58,7 @@ extern SymmetricMatrix<R_DIM> R;
 
 extern const int T;
 extern const double INFTY;
+extern const std::string landmarks_file;
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
@@ -76,13 +81,17 @@ const double DT_OBSERVE = 8*DT_CONTROLS;
 const double OBS_DIST_NOISE = 1 * 0.1;
 const double OBS_ANGLE_NOISE = 1 * 1.0*M_PI/180.;
 
-const double ALPHA_OBS = .75;
+const double ALPHA_OBS = 2;//.75;
 }
 
 
-void initProblemParams();
+void initProblemParams(std::vector<Matrix<P_DIM> >& l);
+
+std::vector<std::vector<Matrix<P_DIM>> > landmarks_list();
 
 Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<Q_DIM>& q);
+
+Matrix<C_DIM> dynfunccar(const Matrix<C_DIM>& x, const Matrix<U_DIM>& u);
 
 Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r);
 
@@ -110,10 +119,16 @@ void vec(const Matrix<X_DIM>& x, const Matrix<X_DIM,X_DIM>& SqrtSigma, Matrix<B_
 // Belief dynamics
 Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u);
 
+Matrix<B_DIM> beliefDynamicsNoDelta(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u);
+
 void executeControlStep(const Matrix<X_DIM>& x_t_real, const Matrix<B_DIM>& b_t_t, const Matrix<U_DIM>& u_t, Matrix<X_DIM>& x_tp1_real, Matrix<B_DIM>& b_tp1_tp1);
 
 // Jacobians: dg(b,u)/db, dg(b,u)/du
 void linearizeBeliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u, Matrix<B_DIM,B_DIM>& F, Matrix<B_DIM,U_DIM>& G, Matrix<B_DIM>& h);
+
+void logDataHandle(std::string file_name, std::ofstream& f);
+
+void logDataToFile(std::ofstream& f, const std::vector<Matrix<B_DIM> >& B, double solve_time, double initialization_time);
 
 void pythonDisplayTrajectory(std::vector< Matrix<X_DIM> >& X, int time_steps, bool pause=false);
 

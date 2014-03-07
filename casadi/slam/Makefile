@@ -13,14 +13,25 @@ BFLAGS := $(BFLAGS.$(BUILD))
 
 # default to 15 T
 T = 15
+NUM_LANDMARKS = 3
 
-slam-state: slam-state.cpp
+CPP_LANDMARK_DEF = \#define NUM_LANDMARKS
+
+slam-state: .FORCE
+	rm -f *.c
+	sed -i "s/^$(CPP_LANDMARK_DEF).*/$(CPP_LANDMARK_DEF) $(NUM_LANDMARKS)/" slam.h
 	$(CXX) $(BFLAGS) $(CPP_FLAGS) $(CASADI_FLAGS) slam-state.cpp -o slam-state $(CASADI_LIBS)
-
-all: .FORCE
 	./slam-state $(T)
-	bash modifyCasadi.sh slam-state-cost.c Cost slam
-	bash modifyCasadi.sh slam-state-grad.c CostGrad slam
+	bash modifyCasadi.sh slam-state-cost.c Cost state
+	bash modifyCasadi.sh slam-state-grad.c CostGrad state
+
+slam-control: .FORCE
+	rm -f *.c
+	sed -i "s/^$(CPP_LANDMARK_DEF).*/$(CPP_LANDMARK_DEF) $(NUM_LANDMARKS)/" slam.h
+	$(CXX) $(BFLAGS) $(CPP_FLAGS) $(CASADI_FLAGS) slam-control.cpp -o slam-control $(CASADI_LIBS)
+	./slam-control $(T)
+	bash modifyCasadi.sh slam-control-cost.c Cost control
+	bash modifyCasadi.sh slam-control-grad.c CostGrad control
 	
 clean:
 	rm -f *.c

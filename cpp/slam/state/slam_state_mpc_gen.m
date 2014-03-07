@@ -16,21 +16,10 @@ disp(strcat(rootDir,'bsp/forces'));
 % problem setup
 N = timesteps - 1;
 
-landmarks = 3;
 
-nx = 3 + 2*landmarks;
-% ns = ((nx+1)*nx)/2;
-% nb = nx+ns;
+nx = 3;
 nu = 2;
 stages = MultistageProblem(N+1);
-
-% alpha_belief = 10;
-% alpha_control = .01;
-% alpha_final_belief = 50;
-% 
-% Q = alpha_belief*eye(ns);
-% Qfinal = alpha_final_belief*eye(ns);
-% R = alpha_control*eye(nu);
 
 % first stage
 i=1;

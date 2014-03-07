@@ -6,6 +6,7 @@ import time
 import matplotlib
 import matplotlib.pyplot as plt
 from scipy.interpolate import spline
+import scipy.interpolate as interp
 
 
 import IPython
@@ -21,6 +22,7 @@ def plot_point_trajectory(B, U, waypoints, landmarks, max_range, alpha_obs, xDim
     sDim = (xDim*(xDim+1))/2.
     bDim = xDim + sDim
     uDim = 2
+    cDim = 3
     
     B = np.matrix(B)
     B = B.reshape(bDim, T)
@@ -36,14 +38,17 @@ def plot_point_trajectory(B, U, waypoints, landmarks, max_range, alpha_obs, xDim
     landmarks = np.array(landmarks)
     landmarks = landmarks.reshape(2, numLandmarks)
     
-    extent = [-10,70,-25,40]
+    extent = [-10,80,-25,30]
     plt.axis(extent)
     #plt.axis('equal')
     
-    plot_domain(landmarks, max_range, alpha_obs, extent)
+    #smooth_trajectory(B, U, cDim, uDim, T, DT)
+    
+    #plot_domain(landmarks, max_range, alpha_obs, extent)
+    plot_landmarks(B, landmarks, max_range, bDim, xDim, T)
     
     # plot mean of trajectory
-    plot_mean(B[0:3,:], U, DT)
+    plot_mean(B[0:3,:], U, DT, interp=True)
     
     plt.plot(landmarks[0,:], landmarks[1,:], ls='None', color='red', marker='x', markersize = 5.0)
     plt.plot(waypoints[0,:], waypoints[1,:], ls='None', color='purple', marker='s', markersize=8.0)
@@ -65,6 +70,17 @@ def plot_point_trajectory(B, U, waypoints, landmarks, max_range, alpha_obs, xDim
     plt.pause(.05)
     
     #raw_input()
+    
+def plot_landmarks(B, landmarks, max_range, bDim, xDim, T):
+    for i in xrange(landmarks.shape[1]):
+        pos = landmarks[:,i]
+        plot_cov(pos, max_range*max_range*ml.identity(2), 'b-')
+        for t in xrange(T):
+            x, SqrtSigma = decompose_belief(B[:,t], bDim, xDim)
+            Sigma = SqrtSigma*SqrtSigma
+            
+            plot_cov(pos, Sigma[3+2*i:3+2*i+2,3+2*i:3+2*i+2], 'm-', alpha=1)#alpha=(t+1)/float(T))
+        
     
 def plot_domain(landmarks, max_range, alpha_obs, extent):
     # note x and y are flipped for plotting!
@@ -98,9 +114,9 @@ def plot_domain(landmarks, max_range, alpha_obs, extent):
 def dynfunc(x, u, dt, wheelbase=4.):
     xAdd = np.matrix(x)
     
-    xAdd[0,0] = u[0,0] * dt * math.cos(x[2,0] + u[1,0])
-    xAdd[1,0] = u[0,0] * dt * math.sin(x[2,0] + u[1,0])
-    xAdd[2,0] = u[0,0] * dt * math.sin(u[1,0]) / wheelbase
+    xAdd[0,0] = u[0,0] * dt * math.cos(x[2,0] + u[1,0]*dt)
+    xAdd[1,0] = u[0,0] * dt * math.sin(x[2,0] + u[1,0]*dt)
+    xAdd[2,0] = u[0,0] * dt * math.sin(u[1,0]*dt) / wheelbase
     
     return x + xAdd 
         
@@ -130,20 +146,26 @@ def decompose_belief(b, bDim, xDim):
 
     return x, SqrtSigma
 
+# polyline is num_points by 2 array
+def interpolate_polyline(polyline, num_points):
+    duplicates = []
+    for i in range(1, len(polyline)):
+        if np.allclose(polyline[i], polyline[i-1]):
+            duplicates.append(i)
+    if duplicates:
+        polyline = np.delete(polyline, duplicates, axis=0)
+    tck, u = interp.splprep(polyline.T, s=0)
+    u = np.linspace(0.0, 1.0, num_points)
+    return np.column_stack(interp.splev(u, tck))
     
 def plot_mean(X, U, DT, interp=False):
     
     X = np.asarray(X)
     
     if interp:
-        xdata = X[0,:]
-        ydata = X[1,:]
+        Xsmooth = interpolate_polyline(X[0:2,:].T, 500).T
         
-        xnew = np.linspace(xdata.min(), xdata.max(), 300)
-        
-        ysmooth = spline(xdata, ydata, xnew)
-        
-        plt.plot(xnew, ysmooth, color='red')
+        plt.plot(Xsmooth[0,:], Xsmooth[1,:], color='red')
         plt.plot(X[0,:],X[1,:],ls='None',marker='s',markerfacecolor='yellow')
     else:
         plt.plot(X[0,:],X[1,:],color='red',marker='s',markerfacecolor='yellow')
@@ -151,30 +173,10 @@ def plot_mean(X, U, DT, interp=False):
     
     plt.plot(X[0,0],X[1,0],ls='None',marker='s',markersize=10.0)
     plt.plot(X[0,-1],X[1,-1],ls='None',marker='s',markersize=10.0)
-    
-    """
-    X = np.asmatrix(X)
-    
-    T = X.shape[1]
-    sampling = 2
-    X_upsampled = ml.zeros([X.shape[0], T*sampling])
-    X_upsampled[:,0] = X[:,0]
-    index = 0
-    for i in xrange(0, T-1):
-        for j in xrange(0, sampling):
-            X_upsampled[:,index+1] = dynfunc(X_upsampled[:,index], U[:,i], DT/float(sampling))
-            index += 1
-    
-    X = np.asarray(X)
-    X_upsampled = np.asarray(X_upsampled)
-    plt.plot(X_upsampled[0,:],X_upsampled[1,:],color='red')
-    plt.plot(X[0,:],X[1,:],ls='None',color='red',marker='s',markerfacecolor='yellow')
-    plt.plot(X[0,0],X[1,0],ls='None',marker='s',markersize=10.0)
-    plt.plot(X[0,-1],X[1,-1],ls='None',marker='s',markersize=10.0)
-    """
+
     
 
-def plot_cov(mu, sigma):
+def plot_cov(mu, sigma, plotType = 'y-', alpha=1):
     mu = np.asarray(mu)
     sigma = np.asarray(sigma)
 
@@ -188,4 +190,4 @@ def plot_cov(mu, sigma):
 
     z = np.dot(np.vstack((x.T,y.T)).T,A)
 
-    plt.plot(z[:,0]+mu[0], z[:,1]+mu[1], 'y-')
+    plt.plot(z[:,0]+mu[0], z[:,1]+mu[1], plotType, alpha=alpha)

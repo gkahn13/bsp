@@ -13,6 +13,7 @@
 #include "../util/matrix.h"
 #include "../util/logging.h"
 #include "../util/utils.h"
+#include "../util/Timer.h"
 
 //#include <pythonrun.h>
 #include <boost/python.hpp>
@@ -21,7 +22,7 @@
 
 #define TIMESTEPS 15
 #define DT 1.0
-#define NUM_LANDMARKS 20
+#define NUM_LANDMARKS 40
 #define NUM_WAYPOINTS 4
 
 #define C_DIM 3 // car dimension [x, y, theta]
@@ -40,6 +41,9 @@
 #define XU_DIM (TIMESTEPS*X_DIM + (TIMESTEPS-1)*U_DIM)
 #define CU_DIM (TIMESTEPS*C_DIM + (TIMESTEPS-1)*U_DIM)
 #define TU_DIM ((TIMESTEPS-1)*U_DIM)
+
+extern double sqrt_time;
+extern double not_sqrt_time;
 
 
 extern const double step;
@@ -75,7 +79,7 @@ const double DT_CONTROLS = 0.025;
 const double VELOCITY_NOISE = 0.3;
 const double TURNING_NOISE = 3.0*M_PI/180.;
 
-const double MAX_RANGE = 2.0; // 5.0
+const double MAX_RANGE = 3.0; // 5.0
 const double DT_OBSERVE = 8*DT_CONTROLS;
 
 const double OBS_DIST_NOISE = 1 * 0.1;
@@ -118,6 +122,8 @@ void vec(const Matrix<X_DIM>& x, const Matrix<X_DIM,X_DIM>& SqrtSigma, Matrix<B_
 
 // Belief dynamics
 Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u);
+
+Matrix<B_DIM> casadiBeliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u);
 
 Matrix<B_DIM> beliefDynamicsNoDelta(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u);
 

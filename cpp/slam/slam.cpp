@@ -1,9 +1,13 @@
 #include "slam.h"
+#include "casadi/casadi-slam.h"
 
 namespace py = boost::python;
 
 
 const double step = 0.0078125*0.0078125;
+
+double sqrt_time = 0;
+double not_sqrt_time = 0;
 
 
 std::vector< Matrix<P_DIM> > waypoints(NUM_WAYPOINTS);
@@ -17,13 +21,15 @@ Matrix<U_DIM> uMin, uMax;
 SymmetricMatrix<Q_DIM> Q;
 SymmetricMatrix<R_DIM> R;
 
+CasADi::SXFunction casadi_belief_func;
+
 const int T = TIMESTEPS;
 const double INFTY = 1e10;
 
 const std::string landmarks_file = "slam/landmarks.txt";
 
 
-
+// ALWAYS call first. always.
 void initProblemParams(std::vector<Matrix<P_DIM> >& l)
 {
 	Q.reset();
@@ -60,7 +66,7 @@ void initProblemParams(std::vector<Matrix<P_DIM> >& l)
 	//This starts out at 0 for car, landmarks are set based on the car's sigma when first seen
 	SqrtSigma0 = zeros<X_DIM, X_DIM>();
 	for(int i = 0; i < C_DIM; ++i) { SqrtSigma0(i,i) = .1; } // .1
-	for(int i = 0; i < L_DIM; ++i) { SqrtSigma0(C_DIM+i,C_DIM+i) = 2.5; } // 1
+	for(int i = 0; i < L_DIM; ++i) { SqrtSigma0(C_DIM+i,C_DIM+i) = 3.5; } // 1
 
 	uMin[0] = 1.5; // 1.5
 	uMin[1] = -M_PI/3;
@@ -82,6 +88,8 @@ void initProblemParams(std::vector<Matrix<P_DIM> >& l)
 		xMax[2*i+C_DIM] = landmarks[i][0] + 5;
 		xMax[2*i+1+C_DIM] = landmarks[i][1] + 5;
 	}
+
+	casadi_belief_func = casadiBeliefDynamicsFunc();
 
 }
 
@@ -143,7 +151,6 @@ Matrix<C_DIM> dynfunccar(const Matrix<C_DIM>& x, const Matrix<U_DIM>& u)
 
 Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r)
 {
-	//Matrix<L_DIM,1> landmarks = x.subMatrix<L_DIM,1>(P_DIM, 0);
 	double xPos = x[0], yPos = x[1], angle = x[2];
 	double dx, dy;
 
@@ -312,6 +319,9 @@ void vec(const Matrix<X_DIM>& x, const Matrix<X_DIM,X_DIM>& SqrtSigma, Matrix<B_
 
 // Belief dynamics
 Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
+	util::Timer not_sqrt_timer;
+	util::Timer_tic(&not_sqrt_timer);
+
 	Matrix<X_DIM> x;
 	Matrix<X_DIM,X_DIM> SqrtSigma;
 	unVec(b, x, SqrtSigma);
@@ -342,10 +352,76 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 
 	Sigma = (identity<X_DIM>() - K*H)*Sigma;
 
+	not_sqrt_time += util::Timer_toc(&not_sqrt_timer);
+
+	util::Timer sqrt_timer;
+	util::Timer_tic(&sqrt_timer);
+
+	SymmetricMatrix<X_DIM> SymmetricSigma, SqrtSymmetricSigma;
+	for(int i=0; i < X_DIM; ++i) {
+		for(int j=0; j < X_DIM; ++j) {
+		SymmetricSigma(i,j) = Sigma(i,j);
+		}
+	}
+	SqrtSymmetricSigma = sqrt(SymmetricSigma);
+	Matrix<X_DIM,X_DIM> SqrtSigma_tp1;
+	for(int i=0; i < X_DIM; ++i) {
+		for(int j=0; j < X_DIM; ++j) {
+			SqrtSigma_tp1(i,j) = SqrtSymmetricSigma(i,j);
+		}
+	}
+
 	Matrix<B_DIM> g;
-	vec(x, sqrtm(Sigma), g);
+	vec(x, SqrtSigma_tp1, g);
+
+//	Matrix<B_DIM> g;
+//	vec(x, sqrtm(Sigma), g);
+
+	sqrt_time += util::Timer_toc(&sqrt_timer);
 
 	return g;
+}
+
+Matrix<B_DIM> casadiBeliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
+	util::Timer not_sqrt_timer;
+	util::Timer_tic(&not_sqrt_timer);
+
+	casadi_belief_func.setInput(b.getPtr(),0);
+	casadi_belief_func.setInput(u.getPtr(),1);
+	casadi_belief_func.evaluate();
+
+	Matrix<X_DIM+(X_DIM*X_DIM)> b_fullsigma_tp1;
+	casadi_belief_func.getOutput(b_fullsigma_tp1.getPtr(),0);
+
+	Matrix<X_DIM> x_tp1;
+	SymmetricMatrix<X_DIM> Sigma_tp1;
+
+	for(int i=0; i < X_DIM; ++i) { x_tp1[i] = b_fullsigma_tp1[i]; }
+	int index = X_DIM;
+	for (int j = 0; j < X_DIM; ++j) {
+		for (int i = 0; i < X_DIM; ++i) {
+			Sigma_tp1(i,j) = b_fullsigma_tp1(index++,0);
+		}
+	}
+
+	not_sqrt_time += util::Timer_toc(&not_sqrt_timer);
+
+	util::Timer sqrt_timer;
+	util::Timer_tic(&sqrt_timer);
+
+	SymmetricMatrix<X_DIM> SymmetricSqrtSigma_tp1 = sqrt(Sigma_tp1);
+	Matrix<X_DIM,X_DIM> SqrtSigma_tp1;
+	for(int i=0; i < X_DIM; ++i) {
+		for(int j=0; j < X_DIM; ++j) {
+			SqrtSigma_tp1(i,j) = SymmetricSqrtSigma_tp1(i,j);
+		}
+	}
+	Matrix<B_DIM> b_tp1;
+	vec(x_tp1, SqrtSigma_tp1, b_tp1);
+
+	sqrt_time += util::Timer_toc(&sqrt_timer);
+
+	return b_tp1;
 }
 
 int numberLandmarksInRange(const Matrix<X_DIM>& x) {
@@ -546,7 +622,7 @@ void logDataToFile(std::ofstream& f, const std::vector<Matrix<B_DIM> >& B, doubl
 	double sum_cov_trace = 0;
 	Matrix<X_DIM> x;
 	Matrix<X_DIM,X_DIM> SqrtSigma;
-	for(int i=0; i < B.size(); ++i) {
+	for(size_t i=0; i < B.size(); ++i) {
 		unVec(B[i], x, SqrtSigma);
 		sum_cov_trace += tr(SqrtSigma*SqrtSigma);
 	}
@@ -556,7 +632,7 @@ void logDataToFile(std::ofstream& f, const std::vector<Matrix<B_DIM> >& B, doubl
 	for(int w_idx=0; w_idx < NUM_WAYPOINTS; ++w_idx) {
 		Matrix<P_DIM> w = waypoints[w_idx];
 		double min_dist = INFTY;
-		for(int i=0; i < B.size(); ++i) {
+		for(size_t i=0; i < B.size(); ++i) {
 			unVec(B[i], x, SqrtSigma);
 			Matrix<P_DIM> diff = w - x.subMatrix<P_DIM,1>(0,0);
 			min_dist = MIN(min_dist, sqrt(tr(~diff*diff)));
@@ -576,7 +652,7 @@ void logDataToFile(std::ofstream& f, const std::vector<Matrix<B_DIM> >& B, doubl
 	}
 }
 
-void pythonDisplayTrajectory(std::vector< Matrix<X_DIM> >& X, int time_steps, bool pause=false) {
+void pythonDisplayTrajectory(std::vector< Matrix<X_DIM> >& X, int time_steps, bool pause) {
 	std::vector<Matrix<B_DIM> > B(time_steps);
 	std::vector<Matrix<U_DIM> > U(time_steps-1,zeros<U_DIM,1>());
 
@@ -588,7 +664,7 @@ void pythonDisplayTrajectory(std::vector< Matrix<X_DIM> >& X, int time_steps, bo
 }
 
 
-void pythonDisplayTrajectory(std::vector< Matrix<U_DIM> >& U, int time_steps, bool pause=false) {
+void pythonDisplayTrajectory(std::vector< Matrix<U_DIM> >& U, int time_steps, bool pause) {
 	std::vector<Matrix<B_DIM> > B(time_steps);
 
 	vec(x0, SqrtSigma0, B[0]);
@@ -599,7 +675,7 @@ void pythonDisplayTrajectory(std::vector< Matrix<U_DIM> >& U, int time_steps, bo
 	pythonDisplayTrajectory(B, U, waypoints, landmarks, time_steps, pause);
 }
 
-void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U, std::vector< Matrix<P_DIM> >& waypoints, std::vector< Matrix<P_DIM> >& landmarks, int time_steps, bool pause=false)
+void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<U_DIM> >& U, std::vector< Matrix<P_DIM> >& waypoints, std::vector< Matrix<P_DIM> >& landmarks, int time_steps, bool pause)
 {
 
 	py::list B_vec;
@@ -632,8 +708,8 @@ void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matri
 	}
 
 	//std::string workingDir = boost::filesystem::current_path().normalize().string();
-	//std::string workingDir = "/home/gkahn/bsp/cpp";
-	std::string workingDir = "/home/gkahn/Berkeley/Research/bsp/cpp";
+	std::string workingDir = "/home/gkahn/bsp/cpp";
+	//std::string workingDir = "/home/gkahn/Berkeley/Research/bsp/cpp";
 
 	try
 	{

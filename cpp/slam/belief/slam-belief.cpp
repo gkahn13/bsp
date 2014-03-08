@@ -18,7 +18,7 @@ beliefPenaltyMPC_FLOAT **H, **f, **lb, **ub, **C, **D, **e, **z;
 
 const double alpha_belief = 10; // 10;
 const double alpha_final_belief = 10; // 10;
-const double alpha_control = .1; // .1
+const double alpha_control = 1; // .1
 
 
 namespace cfg {
@@ -26,8 +26,8 @@ const double improve_ratio_threshold = .1; // .1
 const double min_approx_improve = 1e-2; // 1e-3
 const double min_trust_box_size = 1e-3; // 1e-2
 
-const double trust_shrink_ratio = .75; // .5
-const double trust_expand_ratio = 1.25; // 1.2
+const double trust_shrink_ratio = .5; // .75
+const double trust_expand_ratio = 1.25; // 1.25
 
 const double cnt_tolerance = .5;
 const double penalty_coeff_increase_ratio = 5; // 2
@@ -763,7 +763,7 @@ void planPath(std::vector<Matrix<P_DIM> > l, beliefPenaltyMPC_params& problem, b
 //		LOG_INFO("Actual cost: %4.10f", computeCost(B,U));
 //		LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 
-		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, false);
+		pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 
 		unVec(B[T-1], x0, SqrtSigma0);
 
@@ -780,30 +780,6 @@ void planPath(std::vector<Matrix<P_DIM> > l, beliefPenaltyMPC_params& problem, b
 
 int main(int argc, char* argv[])
 {
-//	const rlim_t stackSize = 32 * 1024 * 1024;   // min stack size = 32 MB
-//	struct rlimit rl;
-//	int result;
-//
-//	result = getrlimit(RLIMIT_STACK, &rl);
-//	if (result == 0)
-//	{
-//		if (rl.rlim_cur < stackSize)
-//		{
-//			rl.rlim_cur = stackSize;
-//			result = setrlimit(RLIMIT_STACK, &rl);
-//			if (result != 0)
-//			{
-//				LOG_ERROR("setrlimit returned result = %d\n", result);
-//				exit(-1);
-//			}
-//		}
-//	} else {
-//		LOG_ERROR("Could not get stack limit");
-//		exit(-1);
-//	}
-
-
-
 	LOG_INFO("Setting up belief variables");
 	std::cout << "size of params: " << sizeof(struct beliefPenaltyMPC_params)*9.53674e-7 << "mb" << std::endl;
 	std::cout << "size of output: " << sizeof(struct beliefPenaltyMPC_output)*9.53674e-7 << "mb" << std::endl;

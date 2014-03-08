@@ -361,7 +361,7 @@ SLAM_CASADI_DIR = slam/casadi
 
 
 $(OBJ_DIR)/slam.o : $(SLAM_SRC) $(SLAM_HEADERS)
-	 $(CXX) $(CPP_FLAGS) $(BFLAGS)  $(PYTHON_FLAGS) $(BOOST_FLAGS) -c -o $@ $<
+	 $(CXX) $(CPP_FLAGS) $(BFLAGS)  $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $<
 
 # make slam-test
 SLAM_TEST_DIR = slam/test
@@ -461,8 +461,8 @@ $(OBJ_DIR)/slam-state-grad.o : $(SLAM_STATE_DIR)/slam-state-grad.c
 $(OBJ_DIR)/slamStateMPC.o : $(SLAM_STATE_DIR)/stateMPC.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
 	
-$(OBJ_DIR)/casadi-slam-state.o : $(SLAM_CASADI_DIR)/slam-state.cpp
-	$(CXX) $(CPP_FLAGS) -DNDEBUG -fopenmp $(BFLAGS) $(CASADI_FLAGS) -c -o $@ $< $(CASADI_LIBS) 
+$(OBJ_DIR)/casadi-slam-state.o : $(SLAM_CASADI_DIR)/casadi-slam-state.cpp
+	$(CXX) $(CPP_FLAGS) -DNDEBUG -fopenmp $(PYTHON_FLAGS) $(BFLAGS) $(CASADI_FLAGS)  -c -o $@ $< $(CASADI_LIBS) 
 	
 $(OBJ_DIR)/slam-state.o : $(SLAM_STATE_DIR)/slam-state.cpp $(SLAM_HEADERS)
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) $(CASADI_FLAGS) -c -o $@ $< $(CASADI_LIBS)
@@ -483,14 +483,14 @@ $(OBJ_DIR)/slam-state-mpc.o : $(SLAM_STATE_DIR)/slam-state-mpc.cpp $(SLAM_HEADER
 	
 # make slam-control
 SLAM_CONTROL_DIR = slam/control
-SLAM_CONTROL_FILES = slam-control-cost slam-control-grad slamControlMPC slam-control logging slam trajMPC slam-traj
+SLAM_CONTROL_FILES = casadi-slam-control slamControlMPC slam-control logging slam trajMPC slam-traj
 SLAM_CONTROL_OBJS = $(SLAM_CONTROL_FILES:%=$(OBJ_DIR)/%.o)
 
 slam-control-setup:
 	bash $(SLAM_SETUP_FILE) control $(T) $(NUM_LANDMARKS)
 
 slam-control: | slam-control-setup slam-traj-setup $(SLAM_CONTROL_OBJS)
-	$(CXX) $(BFLAGS) $(SLAM_CONTROL_OBJS) -o $(BIN_DIR)/slam-control $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
+	$(CXX) $(BFLAGS) $(SLAM_CONTROL_OBJS) -o $(BIN_DIR)/slam-control $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS) $(CASADI_FLAGS) $(CASADI_LIBS)
 	
 $(OBJ_DIR)/slam-control-cost.o : $(SLAM_CONTROL_DIR)/slam-control-cost.c
 	$(CC) $(C_FLAGS) -c -o $@ $^
@@ -501,8 +501,11 @@ $(OBJ_DIR)/slam-control-grad.o : $(SLAM_CONTROL_DIR)/slam-control-grad.c
 $(OBJ_DIR)/slamControlMPC.o : $(SLAM_CONTROL_DIR)/controlMPC.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
 	
+$(OBJ_DIR)/casadi-slam-control.o : $(SLAM_CASADI_DIR)/casadi-slam-control.cpp
+	$(CXX) $(CPP_FLAGS) -DNDEBUG -fopenmp $(PYTHON_FLAGS) $(BFLAGS) $(CASADI_FLAGS)  -c -o $@ $< $(CASADI_LIBS) 
+	
 $(OBJ_DIR)/slam-control.o : $(SLAM_CONTROL_DIR)/slam-control.cpp $(SLAM_HEADERS)
-	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) $(CASADI_FLAGS) -c -o $@ $<
 
 # make slam-ilqg
 SLAM_ILQG_DIR = slam/ilqg
@@ -525,8 +528,8 @@ $(OBJ_DIR)/slam-ilqg.o : $(SLAM_ILQG_DIR)/slam-ilqg.cpp $(SLAM_ILQG_DIR)/ilqg.h
 clean:
 	rm -f -r bin/debug/*
 	rm -f -r bin/release/*
-	rm -f bin/debug/*.o
-	rm -f bin/release/*.o
+	rm -f build/debug/*.o
+	rm -f build/release/*.o
 	
 #### NOT FILES ######
 .PHONY: point-belief-setup point-state-setup point-lp-setup point-control-setup arm-belief-setup

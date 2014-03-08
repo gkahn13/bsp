@@ -1,10 +1,7 @@
-//#define USE_GENERATED_CASADI
-
 #include "../slam.h"
 #include "../traj/slam-traj.h"
-//#include "../smooth/slam-smooth.h"
 
-#include "../casadi/slam-state.h"
+#include "../casadi/casadi-slam-state.h"
 
 
 #include <vector>
@@ -16,17 +13,13 @@
 extern "C" {
 #include "stateMPC.h"
 stateMPC_FLOAT **H, **f, **lb, **ub, **C, **e, **z;
-#ifdef USE_GENERATED_CASADI
-#include "slam-state-casadi.h"
-#endif
 }
 
 #include "boost/preprocessor.hpp"
 
 const double alpha_belief = 10; // 10;
 const double alpha_final_belief = 10; // 10;
-const double alpha_control = .1; // .1
-const double alpha_goal = 1;
+const double alpha_control = 1; // 1
 
 double casadi_time = 0;
 double forces_time = 0;
@@ -37,16 +30,14 @@ double minimize_merit_time = 0;
 double casadi_compute_merit_time = 0;
 
 
-#ifndef USE_GENERATED_CASADI
 CasADi::SXFunction casadi_cost_func, casadi_gradcost_func;
-#endif
 
 namespace cfg {
 const double improve_ratio_threshold = .1; // .1
-const double min_approx_improve = 1e-2; // 1e-2
+const double min_approx_improve = 1; // 1e-2
 const double min_trust_box_size = 1e-3; // 1e-3
 
-const double trust_shrink_ratio = .75; // .75
+const double trust_shrink_ratio = .5; // .5
 const double trust_expand_ratio = 1.25; // 1.25
 
 const double cnt_tolerance = .5; // .5
@@ -166,19 +157,8 @@ double casadiComputeCost(const std::vector< Matrix<C_DIM> >& X, const std::vecto
 
 	setupCasadiVars(X, U, XU_arr, Sigma0_arr, l_arr, params_arr);
 
-	const double **casadi_input = new const double*[4];
-	casadi_input[0] = XU_arr;
-	casadi_input[1] = Sigma0_arr;
-	casadi_input[2] = l_arr;
-	casadi_input[3] = params_arr;
-
 	double cost = 0;
-	double **cost_arr = new double*[1];
-	cost_arr[0] = &cost;
 
-#ifdef USE_GENERATED_CASADI
-	evaluateCostWrap(casadi_input, cost_arr);
-#else
 	casadi_cost_func.setInput(XU_arr,0);
 	casadi_cost_func.setInput(Sigma0_arr,1);
 	casadi_cost_func.setInput(l_arr,2);
@@ -186,7 +166,6 @@ double casadiComputeCost(const std::vector< Matrix<C_DIM> >& X, const std::vecto
 	casadi_cost_func.evaluate();
 
 	casadi_cost_func.getOutput(&cost,0);
-#endif
 
 	casadi_time += util::Timer_toc(&casadi_timer);
 
@@ -217,25 +196,6 @@ double casadiComputeMerit(const std::vector< Matrix<C_DIM> >& X, const std::vect
 		}
 	}
 
-//	Matrix<X_DIM> x;
-//	Matrix<C_DIM> dynviol;
-//	Matrix<X_DIM, X_DIM> SqrtSigma;
-//	Matrix<B_DIM> b, b_tp1;
-//	vec(x0, SqrtSigma0, b);
-//
-//	for(int t = 0; t < T-1; ++t) {
-//		unVec(b, x, SqrtSigma);
-//		b_tp1 = beliefDynamics(b, U[t]);
-//		dynviol = (X[t+1] - b_tp1.subMatrix<C_DIM,1>(0,0) );
-//		for(int i = 0; i < C_DIM; ++i) {
-//			if (i != P_DIM) {
-//				merit += penalty_coeff*fabs(dynviol[i]);
-//			} else {
-//				merit += penalty_coeff*wrapAngle(fabs(dynviol[i])); // since angles wrap
-//			}
-//		}
-//		b = b_tp1;
-//	}
 	casadi_compute_merit_time += util::Timer_toc(&ccm_timer);
 
 	return merit;
@@ -253,19 +213,6 @@ void casadiComputeCostGrad(const std::vector< Matrix<C_DIM> >& X, const std::vec
 
 	setupCasadiVars(X, U, XU_arr, Sigma0_arr, l_arr, params_arr);
 
-	const double **casadi_input = new const double*[4];
-	casadi_input[0] = XU_arr;
-	casadi_input[1] = Sigma0_arr;
-	casadi_input[2] = l_arr;
-	casadi_input[3] = params_arr;
-
-	double **costgrad_arr = new double*[2];
-	costgrad_arr[0] = &cost;
-	costgrad_arr[1] = Grad.getPtr();
-
-#ifdef USE_GENERATED_CASADI
-	evaluateCostGradWrap(casadi_input, costgrad_arr);
-#else
 	casadi_gradcost_func.setInput(XU_arr,0);
 	casadi_gradcost_func.setInput(Sigma0_arr,1);
 	casadi_gradcost_func.setInput(l_arr,2);
@@ -274,7 +221,6 @@ void casadiComputeCostGrad(const std::vector< Matrix<C_DIM> >& X, const std::vec
 
 	casadi_gradcost_func.getOutput(&cost,0);
 	casadi_gradcost_func.getOutput(Grad.getPtr(),1);
-#endif
 
 	casadi_time += util::Timer_toc(&casadi_timer);
 
@@ -514,13 +460,6 @@ bool isValidInputs()
 
 		//std::cout << std::endl << std::endl;
 	}
-	/*
-			std::cout << "e:" << std::endl;
-			for(int i = 0; i < B_DIM; ++i) {
-				std::cout << e[T-1][i] << " ";
-			}
-	 */
-
 
 //	std::cout << std::endl;
 //	std::cout << std::endl;
@@ -553,7 +492,6 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 	double constant_cost, hessian_constant, jac_constant;
 
 	int sqp_iter = 1, index = 0;
-	bool success;
 
 	Matrix<C_DIM+U_DIM, C_DIM+U_DIM> HMat;
 	Matrix<C_DIM,C_DIM> HfMat;
@@ -932,7 +870,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 		sqp_iter++;
 	} // sqp loop
 
-	return success;
+	return false;
 }
 
 
@@ -948,7 +886,6 @@ double statePenaltyCollocation(std::vector< Matrix<C_DIM> >& X, std::vector< Mat
 	// penalty loop
 	while(penalty_increases < cfg::max_penalty_coeff_increases)
 	{
-		//std::cout << "penalty coeff: " << penalty_coeff << "\n";
 		util::Timer mm_timer;
 		util::Timer_tic(&mm_timer);
 
@@ -978,37 +915,18 @@ double statePenaltyCollocation(std::vector< Matrix<C_DIM> >& X, std::vector< Mat
 
 		}
 
-		double cntgoalviol = 0.0;
-		Matrix<C_DIM> goalviol = xGoal.subMatrix<C_DIM,1>(0,0) - X[T-1];
-		for(int i = 0; i < C_DIM; ++i) {
-			if (i != P_DIM) {
-				cntgoalviol += fabs(goalviol[i]);
-			} else {
-				cntgoalviol += wrapAngle(fabs(goalviol[i]));
-			}
-		}
-
-
-		bool goal_success = cntgoalviol < 200;
-	    success = success && (cntviol < cfg::cnt_tolerance);
+		success = success && (cntviol < cfg::cnt_tolerance);
 
 		LOG_DEBUG("Constraint violations: %2.10f",cntviol);
-		//std::cout << "Constraint violations: " << cntviol << "\n";
-		//std::cout << "Goal violations: " << cntgoalviol << "\n";
-		//std::cin.ignore();
 
 	    if (!success) {
 	        penalty_increases++;
 	        penalty_coeff = penalty_coeff*cfg::penalty_coeff_increase_ratio;
-	        //penalty_coeff = MIN(50, penalty_coeff);
-	        //trust_box_size = cfg::initial_trust_box_size;
 	    }
 	    else {
-	    	//return computeCost(X, U);
 	    	return casadiComputeCost(X, U);
 	    }
 	}
-	//return computeCost(X, U);
 	return casadiComputeCost(X, U);
 }
 
@@ -1064,6 +982,8 @@ void planPath(std::vector<Matrix<P_DIM> > l, stateMPC_params& problem, stateMPC_
 		double initTrajTime = util::Timer_toc(&trajTimer);
 		trajTime += initTrajTime;
 
+		std::cout << "propagating...\n";
+
 		vec(x0, SqrtSigma0, B[0]);
 		for(int t=0; t < T-1; ++t) {
 			X[t] = B[t].subMatrix<C_DIM,1>(0,0);
@@ -1071,13 +991,16 @@ void planPath(std::vector<Matrix<P_DIM> > l, stateMPC_params& problem, stateMPC_
 		}
 		X[T-1] = B[T-1].subMatrix<C_DIM,1>(0,0);
 
-		double initTrajCost = computeCost(X, U);
-		LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
+		std::cout << "not sqrt time: " << not_sqrt_time*1000 << "\n";
+		std::cout << "sqrt time: " << sqrt_time*1000 << "\n";
 
-		double initCasadiTrajCost = casadiComputeCost(X, U);
-		LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
+		//double initTrajCost = computeCost(X, U);
+		//LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
 
-		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, false);
+		//double initCasadiTrajCost = casadiComputeCost(X, U);
+		//LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
+
+		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 
 		casadi_time = 0;
 		forces_time = 0;
@@ -1088,11 +1011,10 @@ void planPath(std::vector<Matrix<P_DIM> > l, stateMPC_params& problem, stateMPC_
 		casadi_compute_merit_time = 0;
 		util::Timer_tic(&solveTimer);
 
-		double cost = 0;
 		int iter = 0;
 		while(true) {
 			try {
-				cost = statePenaltyCollocation(X, U, problem, output, info);
+				statePenaltyCollocation(X, U, problem, output, info);
 				break;
 			}
 			catch (forces_exception &e) {
@@ -1145,7 +1067,7 @@ void planPath(std::vector<Matrix<P_DIM> > l, stateMPC_params& problem, stateMPC_
 
 		unVec(B[T-1], x0, SqrtSigma0);
 
-		pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
+		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 
 	}
 
@@ -1171,12 +1093,14 @@ int main(int argc, char* argv[])
 	std::ofstream f;
 	logDataHandle("slam/data/slam-state", f);
 
-#ifndef USE_GENERATED_CASADI
-	casadi_cost_func = casadiCostFunc(T);
-	casadi_gradcost_func = casadiCostGradFunc(T);
-#endif
+	std::cout << "initializing casadi functions...\n";
 
-	for(int i=0; i < l_list.size(); ++i) {
+	casadi_cost_func = casadiCostFunc();
+	casadi_gradcost_func = casadiCostGradFunc();
+
+	std::cout << "casadi functions initialized\n";
+
+	for(size_t i=0; i < l_list.size(); ++i) {
 		planPath(l_list[i], problem, output, info, f);
 	}
 	cleanupStateMPCVars();

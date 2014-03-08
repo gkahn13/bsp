@@ -20,7 +20,7 @@ namespace py = boost::python;
 
 // horizon is total lifetime of planning
 // timesteps is how far into future accounting for during MPC
-#define HORIZON 500
+#define HORIZON 100
 #define TIMESTEPS 15
 #define DT 0.1
 
@@ -385,13 +385,13 @@ Matrix<B_DIM> executeControlStep(Matrix<X_DIM>& x_t_real, const Matrix<B_DIM>& b
 	//std::cout<<"x_tp1"<<x_tp1<<"\n";
 	// correct the new state using Kalman gain and the observation
 
-	//std::cout << "Before update: " << std::endl;
-	//std::cout << ~x_tp1 << std::endl;
+	std::cout << "Before update: " << std::endl;
+	std::cout << ~x_tp1 << std::endl;
 
 	Matrix<X_DIM> x_tp1_adj = x_tp1 + K*(z_tp1_real - obsfunc(x_tp1,r));
 
-	//std::cout << "After update: " << std::endl;
-	//std::cout<<"x_tp1: "<<~x_tp1_adj<<"\n";
+	std::cout << "After update: " << std::endl;
+	std::cout<<"x_tp1: "<<~x_tp1_adj<<"\n";
 	//Matrix<X_DIM,X_DIM> W = ~(H*Sigma_tp1)*(((H*Sigma_tp1*~H) + N*R*~N) % (H*Sigma_tp1));
 	//Matrix<X_DIM,X_DIM> Sigma_tp1_adj = Sigma_tp1 - W;
 	Matrix<X_DIM,X_DIM> Sigma_tp1_adj = Sigma_tp1 - K*H*Sigma_tp1;

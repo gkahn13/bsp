@@ -211,7 +211,7 @@ inline void controlPolicy(void (*linearizeDynamics)(const Matrix<_xDim>&, const 
 	Matrix<1,_sDim> pT;
 	double q;
 
-	quadratizeCost(xBar, SigmaBar, uBar, q, Q, R, P, qT, rT, pT, COMPUTE_Q|COMPUTE_R|COMPUTE_P|COMPUTE_qT|COMPUTE_rT|COMPUTE_pT);
+	quadratizeCost(xBar, SigmaBar, uBar, q, Q, R, P, qT, rT, pT, COMPUTE_Q|COMPUTE_R|COMPUTE_P|COMPUTE_rT|COMPUTE_pT);
 
 	Matrix<_xDim, _xDim> SA = S*A;
 
@@ -249,7 +249,7 @@ inline void backwardIteration(void (*linearizeDynamics)(const Matrix<_xDim>&, co
 	Matrix<1,_sDim> tT;
 	double s;
 
-	quadratizeFinalCost(xBar.back(), SigmaBar.back(), s, S, sT, tT, COMPUTE_S|COMPUTE_sT|COMPUTE_tT);
+	quadratizeFinalCost(xBar.back(), SigmaBar.back(), s, S, sT, tT, COMPUTE_S|COMPUTE_tT);
 	gradient = 0.0;
 
 	for (int t = uBar.size() - 1; t != -1; --t) {
@@ -560,7 +560,7 @@ inline void solvePOMDP(void (*linearizeDynamics)(const Matrix<_xDim>&, const Mat
 	size_t iter = 1;
 
 	// TODO: can't plan forever, needs MPC, so have max iterations
-	while(!terminate)
+	while(!terminate && iter<1000)
 	{
 		backwardIteration(linearizeDynamics, linearizeObservation, quadratizeFinalCost, quadratizeCost, xBar, SigmaBar, uBar, L, l, gradient);
 		//double prevCost = bestCost;

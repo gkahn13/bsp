@@ -63,14 +63,14 @@ def plot_parameter_trajectory(B, U, bDim, xDim, uDim, T):
     U = U.reshape(uDim, T-1)
     
     X = ml.zeros([xDim, T])
-    Base = X; 
+    Base = X.copy(); 
 
     SigmaList = list()
     for i in xrange(T):
         Base[0,:] = 0.5; 
         X[:,i], Sigma = decompose_belief(B[:,i], bDim, xDim)
         SigmaList.append(Sigma)
-    IPython.embed()
+   
     output =open('random.pkl','wb')
     pickle.dump(X,output)
     joint1pos = X[0,:].tolist()[0]
@@ -102,29 +102,38 @@ def plot_parameter_trajectory(B, U, bDim, xDim, uDim, T):
     
  
     
-    plt.subplot(4,1,1)
+    plt.subplot(6,1,1)
     plt.ylim((0.2,0.7))
     plt.ylabel('length1')
     plt.plot(length1,'b-')
     plt.plot(base,'r-')
     
-    plt.subplot(4,1,2)
+    plt.subplot(6,1,2)
     plt.ylabel('length2')
     plt.plot(length2,'b-')
     plt.plot(base,'r-')
 
-    plt.subplot(4,1,3)
+    plt.subplot(6,1,3)
     plt.ylim((0.2,0.7))
     plt.ylabel('mass1')
 
     plt.plot(mass1,'b-')
     plt.plot(base,'r-')
 
-    plt.subplot(4,1,4)
+    plt.subplot(6,1,4)
     plt.ylim((0.2,0.7))
     plt.ylabel('mass2')
     plt.plot(mass2,'b-')
     plt.plot(base,'r-')
+
+    plt.subplot(6,1,5)
+    plt.ylabel('j1')
+    plt.plot(joint1pos,'b-')
+
+    plt.subplot(6,1,6)
+    plt.ylabel('j2')
+    plt.plot(joint2pos,'b-')
+
     
     plt.figure(2)
     plt.clf()

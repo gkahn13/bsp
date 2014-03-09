@@ -953,7 +953,8 @@ void planPath(std::vector<Matrix<P_DIM> > l, stateMPC_params& problem, stateMPC_
 				if (iter > 3) {
 					LOG_ERROR("Tried too many times, giving up");
 					pythonDisplayTrajectory(U, T, false);
-					exit(-1);
+					return;
+					//exit(-1);
 				}
 				LOG_ERROR("Forces exception, trying again");
 				X[0] = x0.subMatrix<C_DIM,1>(0,0);

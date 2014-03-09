@@ -108,12 +108,10 @@ class File:
                     print(attr + ': ' + str(d.mean) + ' +- ' + str(d.sd))
                 print('')
                 
-    # assume have same number of examples since over same landmarks
+    @staticmethod
     def compareAttr(file0, file1, attr):
-    	d = Data()
-    	for i in xrange(file0.num_examples):
-    		d.add(file0.example[i][attr] / file1.example[i][attr])
-    	return d.mean, d.sd
+    	return file0.getAverage(attr) / file1.getAverage(attr)
+    	
         
     # cost / slam-traj cost
     # slam-traj-speed / speed
@@ -179,10 +177,12 @@ def process_data():
     print('compare control to traj')
     File.compare(control_files, traj_files)
     
-    traj_avg_total_times = [f.getAverage('total_time') for f in traj_files]
-    belief_avg_total_times = [f.getAverage('total_time') for f in belief_files]
-    state_avg_total_times = [f.getAverage('total_time') for f in state_files]
-    control_avg_total_times = [f.getAverage('total_time') for f in control_files]
+    landmarks = [f.num_landmarks for f in traj_files]
+    
+    traj_avg_total_times = np.array([f.getAverage('total_time') for f in traj_files])
+    belief_avg_total_times = np.array([f.getAverage('total_time') for f in belief_files])
+    state_avg_total_times = np.array([f.getAverage('total_time') for f in state_files])
+    control_avg_total_times = np.array([f.getAverage('total_time') for f in control_files])
     
     print('Average total times for 3, 4, 5 landmarks')
     print('Trajectory: ' + str(["%0.2f"%t for t in traj_avg_total_times]))
@@ -190,6 +190,50 @@ def process_data():
     print('State: ' + str(["%0.2f"%t for t in state_avg_total_times]))
     print('Control: ' + str(["%0.2f"%t for t in control_avg_total_times]))
     
+    
+    landmarks = [3,4,5,6,10,15,20,25,30,35,40,45,50]
+    
+    # speed = (slam_type) / trajectory_speed 
+    b_speeds = []
+    s_speeds = []
+    c_speeds = []
+    # line graph
+    # x axis: number landmarks
+    # y axis: factor speed compared to traj
+    for num_landmarks in landmarks:
+    	t = [file for file in traj_files if file.num_landmarks == num_landmarks][0]
+    	s = [file for file in state_files if file.num_landmarks == num_landmarks][0]
+    	c = [file for file in control_files if file.num_landmarks == num_landmarks][0]
+    	
+    	s_speeds.append(File.compareAttr(s,t,'total_time'))
+    	c_speeds.append(File.compareAttr(c,t,'total_time'))
+    	
+    	if num_landmarks <= 5:
+    		b = [file for file in belief_files if file.num_landmarks == num_landmarks][0]
+    		b_speeds.append(File.compareAttr(b,t,'total_time'))
+    		
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    
+    ax.set_xticks(landmarks)
+    
+    ax.set_ylabel('Time factor versus trajectory')
+    ax.set_xlabel('Number of landmarks')
+    ax.set_title('Time factor of belief, state, and control versus trajectory')
+    
+    ax.plot(landmarks[:len(b_speeds)], b_speeds, label='belief')
+    ax.plot(landmarks, s_speeds, label='state')
+    ax.plot(landmarks, c_speeds, label='control')
+    
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles, labels)
+    
+    plt.show(block=False)
+    raw_input()
+    
+    	
+    
+    	
     
     for num_landmarks in [3,4,5]:
     	t = [file for file in traj_files if file.num_landmarks == num_landmarks][0]

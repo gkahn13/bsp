@@ -660,7 +660,7 @@ void planPath(std::vector<Matrix<P_DIM> > l, controlMPC_params& problem, control
 			catch (forces_exception &e) {
 				if (iter > 3) {
 					LOG_ERROR("Tried too many times, giving up");
-					pythonDisplayTrajectory(U, T, true);
+					pythonDisplayTrajectory(U, T, false);
 					//exit(-1);
 					return;
 				}

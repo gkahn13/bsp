@@ -84,311 +84,311 @@ typedef double beliefPenaltyMPC_FLOAT;
 /* fill this with data before calling the solver! */
 typedef struct beliefPenaltyMPC_params
 {
-    /* diagonal matrix of size [164 x 164] (only the diagonal is stored) */
-    beliefPenaltyMPC_FLOAT H1[164];
+    /* diagonal matrix of size [407 x 407] (only the diagonal is stored) */
+    beliefPenaltyMPC_FLOAT H1[407];
 
-    /* vector of size 164 */
-    beliefPenaltyMPC_FLOAT f1[164];
+    /* vector of size 407 */
+    beliefPenaltyMPC_FLOAT f1[407];
 
-    /* vector of size 164 */
-    beliefPenaltyMPC_FLOAT lb1[164];
+    /* vector of size 407 */
+    beliefPenaltyMPC_FLOAT lb1[407];
 
-    /* vector of size 56 */
-    beliefPenaltyMPC_FLOAT ub1[56];
+    /* vector of size 137 */
+    beliefPenaltyMPC_FLOAT ub1[137];
 
-    /* matrix of size [54 x 164] (column major format) */
-    beliefPenaltyMPC_FLOAT C1[8856];
+    /* matrix of size [135 x 407] (column major format) */
+    beliefPenaltyMPC_FLOAT C1[54945];
 
-    /* vector of size 54 */
-    beliefPenaltyMPC_FLOAT e1[54];
+    /* vector of size 135 */
+    beliefPenaltyMPC_FLOAT e1[135];
 
-    /* diagonal matrix of size [164 x 164] (only the diagonal is stored) */
-    beliefPenaltyMPC_FLOAT H2[164];
+    /* diagonal matrix of size [407 x 407] (only the diagonal is stored) */
+    beliefPenaltyMPC_FLOAT H2[407];
 
-    /* vector of size 164 */
-    beliefPenaltyMPC_FLOAT f2[164];
+    /* vector of size 407 */
+    beliefPenaltyMPC_FLOAT f2[407];
 
-    /* vector of size 164 */
-    beliefPenaltyMPC_FLOAT lb2[164];
+    /* vector of size 407 */
+    beliefPenaltyMPC_FLOAT lb2[407];
 
-    /* vector of size 56 */
-    beliefPenaltyMPC_FLOAT ub2[56];
+    /* vector of size 137 */
+    beliefPenaltyMPC_FLOAT ub2[137];
 
-    /* matrix of size [54 x 164] (column major format) */
-    beliefPenaltyMPC_FLOAT C2[8856];
+    /* matrix of size [135 x 407] (column major format) */
+    beliefPenaltyMPC_FLOAT C2[54945];
 
-    /* vector of size 54 */
-    beliefPenaltyMPC_FLOAT e2[54];
+    /* vector of size 135 */
+    beliefPenaltyMPC_FLOAT e2[135];
 
-    /* matrix of size [54 x 164] (column major format) */
-    beliefPenaltyMPC_FLOAT D2[8856];
+    /* matrix of size [135 x 407] (column major format) */
+    beliefPenaltyMPC_FLOAT D2[54945];
 
-    /* diagonal matrix of size [164 x 164] (only the diagonal is stored) */
-    beliefPenaltyMPC_FLOAT H3[164];
+    /* diagonal matrix of size [407 x 407] (only the diagonal is stored) */
+    beliefPenaltyMPC_FLOAT H3[407];
 
-    /* vector of size 164 */
-    beliefPenaltyMPC_FLOAT f3[164];
+    /* vector of size 407 */
+    beliefPenaltyMPC_FLOAT f3[407];
 
-    /* vector of size 164 */
-    beliefPenaltyMPC_FLOAT lb3[164];
+    /* vector of size 407 */
+    beliefPenaltyMPC_FLOAT lb3[407];
 
-    /* vector of size 56 */
-    beliefPenaltyMPC_FLOAT ub3[56];
+    /* vector of size 137 */
+    beliefPenaltyMPC_FLOAT ub3[137];
 
-    /* matrix of size [54 x 164] (column major format) */
-    beliefPenaltyMPC_FLOAT C3[8856];
+    /* matrix of size [135 x 407] (column major format) */
+    beliefPenaltyMPC_FLOAT C3[54945];
 
-    /* vector of size 54 */
-    beliefPenaltyMPC_FLOAT e3[54];
+    /* vector of size 135 */
+    beliefPenaltyMPC_FLOAT e3[135];
 
-    /* matrix of size [54 x 164] (column major format) */
-    beliefPenaltyMPC_FLOAT D3[8856];
+    /* matrix of size [135 x 407] (column major format) */
+    beliefPenaltyMPC_FLOAT D3[54945];
 
-    /* diagonal matrix of size [164 x 164] (only the diagonal is stored) */
-    beliefPenaltyMPC_FLOAT H4[164];
+    /* diagonal matrix of size [407 x 407] (only the diagonal is stored) */
+    beliefPenaltyMPC_FLOAT H4[407];
 
-    /* vector of size 164 */
-    beliefPenaltyMPC_FLOAT f4[164];
+    /* vector of size 407 */
+    beliefPenaltyMPC_FLOAT f4[407];
 
-    /* vector of size 164 */
-    beliefPenaltyMPC_FLOAT lb4[164];
+    /* vector of size 407 */
+    beliefPenaltyMPC_FLOAT lb4[407];
 
-    /* vector of size 56 */
-    beliefPenaltyMPC_FLOAT ub4[56];
+    /* vector of size 137 */
+    beliefPenaltyMPC_FLOAT ub4[137];
 
-    /* matrix of size [54 x 164] (column major format) */
-    beliefPenaltyMPC_FLOAT C4[8856];
+    /* matrix of size [135 x 407] (column major format) */
+    beliefPenaltyMPC_FLOAT C4[54945];
 
-    /* vector of size 54 */
-    beliefPenaltyMPC_FLOAT e4[54];
+    /* vector of size 135 */
+    beliefPenaltyMPC_FLOAT e4[135];
 
-    /* matrix of size [54 x 164] (column major format) */
-    beliefPenaltyMPC_FLOAT D4[8856];
+    /* matrix of size [135 x 407] (column major format) */
+    beliefPenaltyMPC_FLOAT D4[54945];
 
-    /* diagonal matrix of size [164 x 164] (only the diagonal is stored) */
-    beliefPenaltyMPC_FLOAT H5[164];
+    /* diagonal matrix of size [407 x 407] (only the diagonal is stored) */
+    beliefPenaltyMPC_FLOAT H5[407];
 
-    /* vector of size 164 */
-    beliefPenaltyMPC_FLOAT f5[164];
+    /* vector of size 407 */
+    beliefPenaltyMPC_FLOAT f5[407];
 
-    /* vector of size 164 */
-    beliefPenaltyMPC_FLOAT lb5[164];
+    /* vector of size 407 */
+    beliefPenaltyMPC_FLOAT lb5[407];
 
-    /* vector of size 56 */
-    beliefPenaltyMPC_FLOAT ub5[56];
+    /* vector of size 137 */
+    beliefPenaltyMPC_FLOAT ub5[137];
 
-    /* matrix of size [54 x 164] (column major format) */
-    beliefPenaltyMPC_FLOAT C5[8856];
+    /* matrix of size [135 x 407] (column major format) */
+    beliefPenaltyMPC_FLOAT C5[54945];
 
-    /* vector of size 54 */
-    beliefPenaltyMPC_FLOAT e5[54];
+    /* vector of size 135 */
+    beliefPenaltyMPC_FLOAT e5[135];
 
-    /* matrix of size [54 x 164] (column major format) */
-    beliefPenaltyMPC_FLOAT D5[8856];
+    /* matrix of size [135 x 407] (column major format) */
+    beliefPenaltyMPC_FLOAT D5[54945];
 
-    /* diagonal matrix of size [164 x 164] (only the diagonal is stored) */
-    beliefPenaltyMPC_FLOAT H6[164];
+    /* diagonal matrix of size [407 x 407] (only the diagonal is stored) */
+    beliefPenaltyMPC_FLOAT H6[407];
 
-    /* vector of size 164 */
-    beliefPenaltyMPC_FLOAT f6[164];
+    /* vector of size 407 */
+    beliefPenaltyMPC_FLOAT f6[407];
 
-    /* vector of size 164 */
-    beliefPenaltyMPC_FLOAT lb6[164];
+    /* vector of size 407 */
+    beliefPenaltyMPC_FLOAT lb6[407];
 
-    /* vector of size 56 */
-    beliefPenaltyMPC_FLOAT ub6[56];
+    /* vector of size 137 */
+    beliefPenaltyMPC_FLOAT ub6[137];
 
-    /* matrix of size [54 x 164] (column major format) */
-    beliefPenaltyMPC_FLOAT C6[8856];
+    /* matrix of size [135 x 407] (column major format) */
+    beliefPenaltyMPC_FLOAT C6[54945];
 
-    /* vector of size 54 */
-    beliefPenaltyMPC_FLOAT e6[54];
+    /* vector of size 135 */
+    beliefPenaltyMPC_FLOAT e6[135];
 
-    /* matrix of size [54 x 164] (column major format) */
-    beliefPenaltyMPC_FLOAT D6[8856];
+    /* matrix of size [135 x 407] (column major format) */
+    beliefPenaltyMPC_FLOAT D6[54945];
 
-    /* diagonal matrix of size [164 x 164] (only the diagonal is stored) */
-    beliefPenaltyMPC_FLOAT H7[164];
+    /* diagonal matrix of size [407 x 407] (only the diagonal is stored) */
+    beliefPenaltyMPC_FLOAT H7[407];
 
-    /* vector of size 164 */
-    beliefPenaltyMPC_FLOAT f7[164];
+    /* vector of size 407 */
+    beliefPenaltyMPC_FLOAT f7[407];
 
-    /* vector of size 164 */
-    beliefPenaltyMPC_FLOAT lb7[164];
+    /* vector of size 407 */
+    beliefPenaltyMPC_FLOAT lb7[407];
 
-    /* vector of size 56 */
-    beliefPenaltyMPC_FLOAT ub7[56];
+    /* vector of size 137 */
+    beliefPenaltyMPC_FLOAT ub7[137];
 
-    /* matrix of size [54 x 164] (column major format) */
-    beliefPenaltyMPC_FLOAT C7[8856];
+    /* matrix of size [135 x 407] (column major format) */
+    beliefPenaltyMPC_FLOAT C7[54945];
 
-    /* vector of size 54 */
-    beliefPenaltyMPC_FLOAT e7[54];
+    /* vector of size 135 */
+    beliefPenaltyMPC_FLOAT e7[135];
 
-    /* matrix of size [54 x 164] (column major format) */
-    beliefPenaltyMPC_FLOAT D7[8856];
+    /* matrix of size [135 x 407] (column major format) */
+    beliefPenaltyMPC_FLOAT D7[54945];
 
-    /* diagonal matrix of size [164 x 164] (only the diagonal is stored) */
-    beliefPenaltyMPC_FLOAT H8[164];
+    /* diagonal matrix of size [407 x 407] (only the diagonal is stored) */
+    beliefPenaltyMPC_FLOAT H8[407];
 
-    /* vector of size 164 */
-    beliefPenaltyMPC_FLOAT f8[164];
+    /* vector of size 407 */
+    beliefPenaltyMPC_FLOAT f8[407];
 
-    /* vector of size 164 */
-    beliefPenaltyMPC_FLOAT lb8[164];
+    /* vector of size 407 */
+    beliefPenaltyMPC_FLOAT lb8[407];
 
-    /* vector of size 56 */
-    beliefPenaltyMPC_FLOAT ub8[56];
+    /* vector of size 137 */
+    beliefPenaltyMPC_FLOAT ub8[137];
 
-    /* matrix of size [54 x 164] (column major format) */
-    beliefPenaltyMPC_FLOAT C8[8856];
+    /* matrix of size [135 x 407] (column major format) */
+    beliefPenaltyMPC_FLOAT C8[54945];
 
-    /* vector of size 54 */
-    beliefPenaltyMPC_FLOAT e8[54];
+    /* vector of size 135 */
+    beliefPenaltyMPC_FLOAT e8[135];
 
-    /* matrix of size [54 x 164] (column major format) */
-    beliefPenaltyMPC_FLOAT D8[8856];
+    /* matrix of size [135 x 407] (column major format) */
+    beliefPenaltyMPC_FLOAT D8[54945];
 
-    /* diagonal matrix of size [164 x 164] (only the diagonal is stored) */
-    beliefPenaltyMPC_FLOAT H9[164];
+    /* diagonal matrix of size [407 x 407] (only the diagonal is stored) */
+    beliefPenaltyMPC_FLOAT H9[407];
 
-    /* vector of size 164 */
-    beliefPenaltyMPC_FLOAT f9[164];
+    /* vector of size 407 */
+    beliefPenaltyMPC_FLOAT f9[407];
 
-    /* vector of size 164 */
-    beliefPenaltyMPC_FLOAT lb9[164];
+    /* vector of size 407 */
+    beliefPenaltyMPC_FLOAT lb9[407];
 
-    /* vector of size 56 */
-    beliefPenaltyMPC_FLOAT ub9[56];
+    /* vector of size 137 */
+    beliefPenaltyMPC_FLOAT ub9[137];
 
-    /* matrix of size [54 x 164] (column major format) */
-    beliefPenaltyMPC_FLOAT C9[8856];
+    /* matrix of size [135 x 407] (column major format) */
+    beliefPenaltyMPC_FLOAT C9[54945];
 
-    /* vector of size 54 */
-    beliefPenaltyMPC_FLOAT e9[54];
+    /* vector of size 135 */
+    beliefPenaltyMPC_FLOAT e9[135];
 
-    /* matrix of size [54 x 164] (column major format) */
-    beliefPenaltyMPC_FLOAT D9[8856];
+    /* matrix of size [135 x 407] (column major format) */
+    beliefPenaltyMPC_FLOAT D9[54945];
 
-    /* diagonal matrix of size [164 x 164] (only the diagonal is stored) */
-    beliefPenaltyMPC_FLOAT H10[164];
+    /* diagonal matrix of size [407 x 407] (only the diagonal is stored) */
+    beliefPenaltyMPC_FLOAT H10[407];
 
-    /* vector of size 164 */
-    beliefPenaltyMPC_FLOAT f10[164];
+    /* vector of size 407 */
+    beliefPenaltyMPC_FLOAT f10[407];
 
-    /* vector of size 164 */
-    beliefPenaltyMPC_FLOAT lb10[164];
+    /* vector of size 407 */
+    beliefPenaltyMPC_FLOAT lb10[407];
 
-    /* vector of size 56 */
-    beliefPenaltyMPC_FLOAT ub10[56];
+    /* vector of size 137 */
+    beliefPenaltyMPC_FLOAT ub10[137];
 
-    /* matrix of size [54 x 164] (column major format) */
-    beliefPenaltyMPC_FLOAT C10[8856];
+    /* matrix of size [135 x 407] (column major format) */
+    beliefPenaltyMPC_FLOAT C10[54945];
 
-    /* vector of size 54 */
-    beliefPenaltyMPC_FLOAT e10[54];
+    /* vector of size 135 */
+    beliefPenaltyMPC_FLOAT e10[135];
 
-    /* matrix of size [54 x 164] (column major format) */
-    beliefPenaltyMPC_FLOAT D10[8856];
+    /* matrix of size [135 x 407] (column major format) */
+    beliefPenaltyMPC_FLOAT D10[54945];
 
-    /* diagonal matrix of size [164 x 164] (only the diagonal is stored) */
-    beliefPenaltyMPC_FLOAT H11[164];
+    /* diagonal matrix of size [407 x 407] (only the diagonal is stored) */
+    beliefPenaltyMPC_FLOAT H11[407];
 
-    /* vector of size 164 */
-    beliefPenaltyMPC_FLOAT f11[164];
+    /* vector of size 407 */
+    beliefPenaltyMPC_FLOAT f11[407];
 
-    /* vector of size 164 */
-    beliefPenaltyMPC_FLOAT lb11[164];
+    /* vector of size 407 */
+    beliefPenaltyMPC_FLOAT lb11[407];
 
-    /* vector of size 56 */
-    beliefPenaltyMPC_FLOAT ub11[56];
+    /* vector of size 137 */
+    beliefPenaltyMPC_FLOAT ub11[137];
 
-    /* matrix of size [54 x 164] (column major format) */
-    beliefPenaltyMPC_FLOAT C11[8856];
+    /* matrix of size [135 x 407] (column major format) */
+    beliefPenaltyMPC_FLOAT C11[54945];
 
-    /* vector of size 54 */
-    beliefPenaltyMPC_FLOAT e11[54];
+    /* vector of size 135 */
+    beliefPenaltyMPC_FLOAT e11[135];
 
-    /* matrix of size [54 x 164] (column major format) */
-    beliefPenaltyMPC_FLOAT D11[8856];
+    /* matrix of size [135 x 407] (column major format) */
+    beliefPenaltyMPC_FLOAT D11[54945];
 
-    /* diagonal matrix of size [164 x 164] (only the diagonal is stored) */
-    beliefPenaltyMPC_FLOAT H12[164];
+    /* diagonal matrix of size [407 x 407] (only the diagonal is stored) */
+    beliefPenaltyMPC_FLOAT H12[407];
 
-    /* vector of size 164 */
-    beliefPenaltyMPC_FLOAT f12[164];
+    /* vector of size 407 */
+    beliefPenaltyMPC_FLOAT f12[407];
 
-    /* vector of size 164 */
-    beliefPenaltyMPC_FLOAT lb12[164];
+    /* vector of size 407 */
+    beliefPenaltyMPC_FLOAT lb12[407];
 
-    /* vector of size 56 */
-    beliefPenaltyMPC_FLOAT ub12[56];
+    /* vector of size 137 */
+    beliefPenaltyMPC_FLOAT ub12[137];
 
-    /* matrix of size [54 x 164] (column major format) */
-    beliefPenaltyMPC_FLOAT C12[8856];
+    /* matrix of size [135 x 407] (column major format) */
+    beliefPenaltyMPC_FLOAT C12[54945];
 
-    /* vector of size 54 */
-    beliefPenaltyMPC_FLOAT e12[54];
+    /* vector of size 135 */
+    beliefPenaltyMPC_FLOAT e12[135];
 
-    /* matrix of size [54 x 164] (column major format) */
-    beliefPenaltyMPC_FLOAT D12[8856];
+    /* matrix of size [135 x 407] (column major format) */
+    beliefPenaltyMPC_FLOAT D12[54945];
 
-    /* diagonal matrix of size [164 x 164] (only the diagonal is stored) */
-    beliefPenaltyMPC_FLOAT H13[164];
+    /* diagonal matrix of size [407 x 407] (only the diagonal is stored) */
+    beliefPenaltyMPC_FLOAT H13[407];
 
-    /* vector of size 164 */
-    beliefPenaltyMPC_FLOAT f13[164];
+    /* vector of size 407 */
+    beliefPenaltyMPC_FLOAT f13[407];
 
-    /* vector of size 164 */
-    beliefPenaltyMPC_FLOAT lb13[164];
+    /* vector of size 407 */
+    beliefPenaltyMPC_FLOAT lb13[407];
 
-    /* vector of size 56 */
-    beliefPenaltyMPC_FLOAT ub13[56];
+    /* vector of size 137 */
+    beliefPenaltyMPC_FLOAT ub13[137];
 
-    /* matrix of size [54 x 164] (column major format) */
-    beliefPenaltyMPC_FLOAT C13[8856];
+    /* matrix of size [135 x 407] (column major format) */
+    beliefPenaltyMPC_FLOAT C13[54945];
 
-    /* vector of size 54 */
-    beliefPenaltyMPC_FLOAT e13[54];
+    /* vector of size 135 */
+    beliefPenaltyMPC_FLOAT e13[135];
 
-    /* matrix of size [54 x 164] (column major format) */
-    beliefPenaltyMPC_FLOAT D13[8856];
+    /* matrix of size [135 x 407] (column major format) */
+    beliefPenaltyMPC_FLOAT D13[54945];
 
-    /* diagonal matrix of size [164 x 164] (only the diagonal is stored) */
-    beliefPenaltyMPC_FLOAT H14[164];
+    /* diagonal matrix of size [407 x 407] (only the diagonal is stored) */
+    beliefPenaltyMPC_FLOAT H14[407];
 
-    /* vector of size 164 */
-    beliefPenaltyMPC_FLOAT f14[164];
+    /* vector of size 407 */
+    beliefPenaltyMPC_FLOAT f14[407];
 
-    /* vector of size 164 */
-    beliefPenaltyMPC_FLOAT lb14[164];
+    /* vector of size 407 */
+    beliefPenaltyMPC_FLOAT lb14[407];
 
-    /* vector of size 56 */
-    beliefPenaltyMPC_FLOAT ub14[56];
+    /* vector of size 137 */
+    beliefPenaltyMPC_FLOAT ub14[137];
 
-    /* matrix of size [54 x 164] (column major format) */
-    beliefPenaltyMPC_FLOAT C14[8856];
+    /* matrix of size [135 x 407] (column major format) */
+    beliefPenaltyMPC_FLOAT C14[54945];
 
-    /* vector of size 54 */
-    beliefPenaltyMPC_FLOAT e14[54];
+    /* vector of size 135 */
+    beliefPenaltyMPC_FLOAT e14[135];
 
-    /* matrix of size [54 x 164] (column major format) */
-    beliefPenaltyMPC_FLOAT D14[8856];
+    /* matrix of size [135 x 407] (column major format) */
+    beliefPenaltyMPC_FLOAT D14[54945];
 
-    /* diagonal matrix of size [54 x 54] (only the diagonal is stored) */
-    beliefPenaltyMPC_FLOAT H15[54];
+    /* diagonal matrix of size [135 x 135] (only the diagonal is stored) */
+    beliefPenaltyMPC_FLOAT H15[135];
 
-    /* vector of size 54 */
-    beliefPenaltyMPC_FLOAT lb15[54];
+    /* vector of size 135 */
+    beliefPenaltyMPC_FLOAT lb15[135];
 
-    /* vector of size 54 */
-    beliefPenaltyMPC_FLOAT ub15[54];
+    /* vector of size 135 */
+    beliefPenaltyMPC_FLOAT ub15[135];
 
-    /* vector of size 54 */
-    beliefPenaltyMPC_FLOAT e15[54];
+    /* vector of size 135 */
+    beliefPenaltyMPC_FLOAT e15[135];
 
-    /* matrix of size [54 x 54] (column major format) */
-    beliefPenaltyMPC_FLOAT D15[2916];
+    /* matrix of size [135 x 135] (column major format) */
+    beliefPenaltyMPC_FLOAT D15[18225];
 
 } beliefPenaltyMPC_params;
 
@@ -397,50 +397,50 @@ typedef struct beliefPenaltyMPC_params
 /* the desired variables are put here by the solver */
 typedef struct beliefPenaltyMPC_output
 {
-    /* vector of size 56 */
-    beliefPenaltyMPC_FLOAT z1[56];
+    /* vector of size 137 */
+    beliefPenaltyMPC_FLOAT z1[137];
 
-    /* vector of size 56 */
-    beliefPenaltyMPC_FLOAT z2[56];
+    /* vector of size 137 */
+    beliefPenaltyMPC_FLOAT z2[137];
 
-    /* vector of size 56 */
-    beliefPenaltyMPC_FLOAT z3[56];
+    /* vector of size 137 */
+    beliefPenaltyMPC_FLOAT z3[137];
 
-    /* vector of size 56 */
-    beliefPenaltyMPC_FLOAT z4[56];
+    /* vector of size 137 */
+    beliefPenaltyMPC_FLOAT z4[137];
 
-    /* vector of size 56 */
-    beliefPenaltyMPC_FLOAT z5[56];
+    /* vector of size 137 */
+    beliefPenaltyMPC_FLOAT z5[137];
 
-    /* vector of size 56 */
-    beliefPenaltyMPC_FLOAT z6[56];
+    /* vector of size 137 */
+    beliefPenaltyMPC_FLOAT z6[137];
 
-    /* vector of size 56 */
-    beliefPenaltyMPC_FLOAT z7[56];
+    /* vector of size 137 */
+    beliefPenaltyMPC_FLOAT z7[137];
 
-    /* vector of size 56 */
-    beliefPenaltyMPC_FLOAT z8[56];
+    /* vector of size 137 */
+    beliefPenaltyMPC_FLOAT z8[137];
 
-    /* vector of size 56 */
-    beliefPenaltyMPC_FLOAT z9[56];
+    /* vector of size 137 */
+    beliefPenaltyMPC_FLOAT z9[137];
 
-    /* vector of size 56 */
-    beliefPenaltyMPC_FLOAT z10[56];
+    /* vector of size 137 */
+    beliefPenaltyMPC_FLOAT z10[137];
 
-    /* vector of size 56 */
-    beliefPenaltyMPC_FLOAT z11[56];
+    /* vector of size 137 */
+    beliefPenaltyMPC_FLOAT z11[137];
 
-    /* vector of size 56 */
-    beliefPenaltyMPC_FLOAT z12[56];
+    /* vector of size 137 */
+    beliefPenaltyMPC_FLOAT z12[137];
 
-    /* vector of size 56 */
-    beliefPenaltyMPC_FLOAT z13[56];
+    /* vector of size 137 */
+    beliefPenaltyMPC_FLOAT z13[137];
 
-    /* vector of size 56 */
-    beliefPenaltyMPC_FLOAT z14[56];
+    /* vector of size 137 */
+    beliefPenaltyMPC_FLOAT z14[137];
 
-    /* vector of size 54 */
-    beliefPenaltyMPC_FLOAT z15[54];
+    /* vector of size 135 */
+    beliefPenaltyMPC_FLOAT z15[135];
 
 } beliefPenaltyMPC_output;
 

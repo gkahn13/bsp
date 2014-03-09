@@ -1,5 +1,0 @@
-20
-sum_cov_trace 8317.83
-waypoint_distance_error 1.03321
-solve_time 13589.2
-initialization_time 231.205

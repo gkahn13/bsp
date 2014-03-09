@@ -688,7 +688,7 @@ void planPath(std::vector<Matrix<P_DIM> > l, controlMPC_params& problem, control
 
 		unVec(B[T-1], x0, SqrtSigma0);
 
-		pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
+		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 	}
 
 
@@ -699,7 +699,7 @@ void planPath(std::vector<Matrix<P_DIM> > l, controlMPC_params& problem, control
 
 	logDataToFile(f, B_total, totalSolveTime*1000, trajTime*1000);
 
-	//pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, true);
+	pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, false);
 
 }
 
@@ -715,8 +715,12 @@ int main(int argc, char* argv[])
 	std::ofstream f;
 	logDataHandle("slam/data/slam-control", f);
 
+	LOG_INFO("initializing casadi functions...");
+
 	casadi_cost_func = casadiCostFunc();
 	casadi_gradcost_func = casadiCostGradFunc();
+
+	LOG_INFO("casadi functions initialized");
 
 	for(size_t i=0; i < l_list.size(); ++i) {
 		planPath(l_list[i], problem, output, info, f);

@@ -6,10 +6,6 @@ namespace py = boost::python;
 
 const double step = 0.0078125*0.0078125;
 
-double sqrt_time = 0;
-double not_sqrt_time = 0;
-
-
 std::vector< Matrix<P_DIM> > waypoints(NUM_WAYPOINTS);
 std::vector< Matrix<P_DIM> > landmarks(NUM_LANDMARKS);
 
@@ -89,7 +85,7 @@ void initProblemParams(std::vector<Matrix<P_DIM> >& l)
 		xMax[2*i+1+C_DIM] = landmarks[i][1] + 5;
 	}
 
-	casadi_belief_func = casadiBeliefDynamicsFunc();
+	//casadi_belief_func = casadiBeliefDynamicsFunc();
 
 }
 
@@ -319,9 +315,6 @@ void vec(const Matrix<X_DIM>& x, const Matrix<X_DIM,X_DIM>& SqrtSigma, Matrix<B_
 
 // Belief dynamics
 Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
-	util::Timer not_sqrt_timer;
-	util::Timer_tic(&not_sqrt_timer);
-
 	Matrix<X_DIM> x;
 	Matrix<X_DIM,X_DIM> SqrtSigma;
 	unVec(b, x, SqrtSigma);
@@ -352,11 +345,6 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 
 	Sigma = (identity<X_DIM>() - K*H)*Sigma;
 
-	not_sqrt_time += util::Timer_toc(&not_sqrt_timer);
-
-	util::Timer sqrt_timer;
-	util::Timer_tic(&sqrt_timer);
-
 	SymmetricMatrix<X_DIM> SymmetricSigma, SqrtSymmetricSigma;
 	for(int i=0; i < X_DIM; ++i) {
 		for(int j=0; j < X_DIM; ++j) {
@@ -377,15 +365,10 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 //	Matrix<B_DIM> g;
 //	vec(x, sqrtm(Sigma), g);
 
-	sqrt_time += util::Timer_toc(&sqrt_timer);
-
 	return g;
 }
 
 Matrix<B_DIM> casadiBeliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
-	util::Timer not_sqrt_timer;
-	util::Timer_tic(&not_sqrt_timer);
-
 	casadi_belief_func.setInput(b.getPtr(),0);
 	casadi_belief_func.setInput(u.getPtr(),1);
 	casadi_belief_func.evaluate();
@@ -404,11 +387,6 @@ Matrix<B_DIM> casadiBeliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& 
 		}
 	}
 
-	not_sqrt_time += util::Timer_toc(&not_sqrt_timer);
-
-	util::Timer sqrt_timer;
-	util::Timer_tic(&sqrt_timer);
-
 	SymmetricMatrix<X_DIM> SymmetricSqrtSigma_tp1 = sqrt(Sigma_tp1);
 	Matrix<X_DIM,X_DIM> SqrtSigma_tp1;
 	for(int i=0; i < X_DIM; ++i) {
@@ -418,8 +396,6 @@ Matrix<B_DIM> casadiBeliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& 
 	}
 	Matrix<B_DIM> b_tp1;
 	vec(x_tp1, SqrtSigma_tp1, b_tp1);
-
-	sqrt_time += util::Timer_toc(&sqrt_timer);
 
 	return b_tp1;
 }

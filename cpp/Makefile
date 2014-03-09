@@ -400,7 +400,7 @@ SLAM_TRAJ_PLAN_FILES = trajMPC slam-traj slam-traj-plan logging slam
 SLAM_TRAJ_PLAN_OBJS = $(SLAM_TRAJ_PLAN_FILES:%=$(OBJ_DIR)/%.o)
 
 slam-traj-plan: | slam-traj-setup $(SLAM_TRAJ_PLAN_OBJS)
-	$(CXX) $(SLAM_TRAJ_PLAN_OBJS) $(BFLAGS) -o $(BIN_DIR)/slam-traj-plan $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
+	$(CXX) $(SLAM_TRAJ_PLAN_OBJS) $(BFLAGS) -o $(BIN_DIR)/slam-traj-plan-$(NUM_LANDMARKS) $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS) $(CASADI_FLAGS) $(CASADI_LIBS)
 	
 $(OBJ_DIR)/slam-traj-plan.o : $(SLAM_TRAJ_PLAN_DIR)/slam-traj-plan.cpp
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
@@ -432,7 +432,7 @@ slam-belief-setup:
 	bash $(SLAM_SETUP_FILE) belief $(T) $(NUM_LANDMARKS)
 
 slam-belief: | slam-belief-setup slam-traj-setup $(SLAM_BELIEF_OBJS)
-	$(CXX) $(BFLAGS) $(SLAM_BELIEF_OBJS) -o $(BIN_DIR)/slam-belief $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
+	$(CXX) $(BFLAGS) $(SLAM_BELIEF_OBJS) -o $(BIN_DIR)/slam-belief-$(NUM_LANDMARKS) $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS) $(CASADI_FLAGS) $(CASADI_LIBS)
 	
 $(OBJ_DIR)/slamBeliefPenaltyMPC.o : $(SLAM_BELIEF_DIR)/beliefPenaltyMPC.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
@@ -450,7 +450,7 @@ slam-state-setup:
 	bash $(SLAM_SETUP_FILE) state $(T) $(NUM_LANDMARKS)
 
 slam-state: | slam-state-setup slam-traj-setup $(SLAM_STATE_OBJS)
-	$(CXX) $(BFLAGS) $(SLAM_STATE_OBJS) -o $(BIN_DIR)/slam-state $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS) $(CASADI_FLAGS) $(CASADI_LIBS)
+	$(CXX) $(BFLAGS) $(SLAM_STATE_OBJS) -o $(BIN_DIR)/slam-state-$(NUM_LANDMARKS) $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS) $(CASADI_FLAGS) $(CASADI_LIBS)
 	
 $(OBJ_DIR)/slam-state-cost.o : $(SLAM_STATE_DIR)/slam-state-cost.c
 	$(CC) $(C_FLAGS) -c -o $@ $^
@@ -490,7 +490,7 @@ slam-control-setup:
 	bash $(SLAM_SETUP_FILE) control $(T) $(NUM_LANDMARKS)
 
 slam-control: | slam-control-setup slam-traj-setup $(SLAM_CONTROL_OBJS)
-	$(CXX) $(BFLAGS) $(SLAM_CONTROL_OBJS) -o $(BIN_DIR)/slam-control $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS) $(CASADI_FLAGS) $(CASADI_LIBS)
+	$(CXX) $(BFLAGS) $(SLAM_CONTROL_OBJS) -o $(BIN_DIR)/slam-control-$(NUM_LANDMARKS) $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS) $(CASADI_FLAGS) $(CASADI_LIBS)
 	
 $(OBJ_DIR)/slam-control-cost.o : $(SLAM_CONTROL_DIR)/slam-control-cost.c
 	$(CC) $(C_FLAGS) -c -o $@ $^
@@ -526,8 +526,6 @@ $(OBJ_DIR)/slam-ilqg.o : $(SLAM_ILQG_DIR)/slam-ilqg.cpp $(SLAM_ILQG_DIR)/ilqg.h
 ###### CLEAN ########
 
 clean:
-	rm -f -r bin/debug/*
-	rm -f -r bin/release/*
 	rm -f build/debug/*.o
 	rm -f build/release/*.o
 	

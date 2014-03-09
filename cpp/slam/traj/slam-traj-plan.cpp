@@ -69,7 +69,7 @@ int main(int argc, char* argv[])
 		LOG_INFO("Total trajectory solve time: %5.3f ms", trajTime*1000);
 		LOG_INFO("Total solve time: %5.3f ms", totalSolveTime*1000);
 
-		logDataToFile(f, B_total, totalSolveTime*1000, trajTime*1000);
+		logDataToFile(f, B_total, totalSolveTime*1000, 0);
 
 		//pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, true);
 

@@ -21,14 +21,6 @@ const double alpha_belief = 10; // 10;
 const double alpha_final_belief = 10; // 10;
 const double alpha_control = 1; // 1
 
-double casadi_time = 0;
-double forces_time = 0;
-double linearize_time = 0;
-double lbfgs_time = 0;
-double bounds_time = 0;
-double minimize_merit_time = 0;
-double casadi_compute_merit_time = 0;
-
 
 CasADi::SXFunction casadi_cost_func, casadi_gradcost_func;
 
@@ -147,9 +139,6 @@ void setupCasadiVars(const std::vector<Matrix<C_DIM> >& X, const std::vector<Mat
 
 double casadiComputeCost(const std::vector< Matrix<C_DIM> >& X, const std::vector< Matrix<U_DIM> >& U)
 {
-	util::Timer casadi_timer;
-	util::Timer_tic(&casadi_timer);
-
 	double XU_arr[CU_DIM];
 	double Sigma0_arr[X_DIM*X_DIM];
 	double l_arr[L_DIM];
@@ -167,8 +156,6 @@ double casadiComputeCost(const std::vector< Matrix<C_DIM> >& X, const std::vecto
 
 	casadi_cost_func.getOutput(&cost,0);
 
-	casadi_time += util::Timer_toc(&casadi_timer);
-
 	return cost;
 }
 
@@ -178,9 +165,6 @@ double casadiComputeMerit(const std::vector< Matrix<C_DIM> >& X, const std::vect
 	double merit = 0;
 
 	merit = casadiComputeCost(X, U);
-
-	util::Timer ccm_timer;
-	util::Timer_tic(&ccm_timer);
 
 	Matrix<C_DIM> c = X[0];
 	Matrix<C_DIM> dynviol;
@@ -196,16 +180,12 @@ double casadiComputeMerit(const std::vector< Matrix<C_DIM> >& X, const std::vect
 		}
 	}
 
-	casadi_compute_merit_time += util::Timer_toc(&ccm_timer);
 
 	return merit;
 }
 
 void casadiComputeCostGrad(const std::vector< Matrix<C_DIM> >& X, const std::vector< Matrix<U_DIM> >& U, double& cost, Matrix<CU_DIM>& Grad)
 {
-	util::Timer casadi_timer;
-	util::Timer_tic(&casadi_timer);
-
 	double XU_arr[CU_DIM];
 	double Sigma0_arr[X_DIM*X_DIM];
 	double l_arr[L_DIM];
@@ -221,8 +201,6 @@ void casadiComputeCostGrad(const std::vector< Matrix<C_DIM> >& X, const std::vec
 
 	casadi_gradcost_func.getOutput(&cost,0);
 	casadi_gradcost_func.getOutput(Grad.getPtr(),1);
-
-	casadi_time += util::Timer_toc(&casadi_timer);
 
 }
 
@@ -530,8 +508,6 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 		jac_constant = 0;
 		idx = 0;
 
-		util::Timer linearize_timer;
-		util::Timer_tic(&linearize_timer);
 
 		for (int t = 0; t < T-1; ++t)
 		{
@@ -614,20 +590,12 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 		LOG_DEBUG("  jacobian cost: %4.10f", jac_constant);
 		LOG_DEBUG("  constant cost: %4.10f", constant_cost);
 
-		linearize_time += util::Timer_toc(&linearize_timer);
-
-		//std::cout << "PAUSED INSIDE MINIMIZEMERITFUNCTION" << std::endl;
-		//int k;
-		//std::cin >> k;
-
 
 		// trust region size adjustment
 		while(true)
 		{
 			LOG_DEBUG("       trust region size: %2.6f %2.6f", Xeps, Ueps);
 
-			util::Timer bounds_timer;
-			util::Timer_tic(&bounds_timer);
 
 			// solve the innermost QP here
 			for(int t = 0; t < T-1; ++t)
@@ -682,17 +650,12 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			//ub[T-1][index++] = xGoal[2] + finalAngleDelta;
 			ub[T-1][index++] = nearestAngleFromTo(xT[2], xGoal[2] + finalAngleDelta);
 
-			bounds_time += util::Timer_toc(&bounds_timer);
+//			// Verify problem inputs
+//			if (!isValidInputs()) {
+//				std::cout << "Inputs are not valid!" << std::endl;
+//				exit(-1);
+//			}
 
-			// Verify problem inputs
-			if (!isValidInputs()) {
-				std::cout << "Inputs are not valid!" << std::endl;
-				exit(-1);
-			}
-
-
-			util::Timer forces_timer;
-			util::Timer_tic(&forces_timer);
 
 			int exitflag = stateMPC_solve(&problem, &output, &info);
 			if (exitflag == 1) {
@@ -718,8 +681,6 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 				throw forces_exception();
 			}
 
-			forces_time += util::Timer_toc(&forces_timer);
-
 
 			LOG_DEBUG("       Optimized cost: %4.10f", optcost);
 
@@ -738,12 +699,6 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 			LOG_DEBUG("       approx_merit_improve: %1.6f", approx_merit_improve);
 			LOG_DEBUG("       exact_merit_improve: %1.6f", exact_merit_improve);
 			LOG_DEBUG("       merit_improve_ratio: %1.6f", merit_improve_ratio);
-
-//			std::cout << "Uopt\n";
-//			pythonDisplayTrajectory(Uopt, T, true);
-//			std::cout << "U\n";
-//			pythonDisplayTrajectory(U, T, true);
-
 
 
 
@@ -775,9 +730,6 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 
 
 				casadiComputeCostGrad(Xopt, Uopt, cost, Gradopt);
-
-				util::Timer lbfgs_timer;
-				util::Timer_tic(&lbfgs_timer);
 
 				Matrix<CU_DIM> s, y;
 
@@ -839,9 +791,6 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 					B = B + fabs(minValue)*identity<CU_DIM>();
 				}
 
-				lbfgs_time += util::Timer_toc(&lbfgs_timer);
-
-
 				// Do not update B
 				//B = identity<CU_DIM>();
 
@@ -886,12 +835,7 @@ double statePenaltyCollocation(std::vector< Matrix<C_DIM> >& X, std::vector< Mat
 	// penalty loop
 	while(penalty_increases < cfg::max_penalty_coeff_increases)
 	{
-		util::Timer mm_timer;
-		util::Timer_tic(&mm_timer);
-
 		bool success = minimizeMeritFunction(X, U, problem, output, info, penalty_coeff);
-
-		minimize_merit_time += util::Timer_toc(&mm_timer);
 
 		double cntviol = 0;
 		Matrix<X_DIM> x_t, x_tp1;
@@ -974,15 +918,12 @@ void planPath(std::vector<Matrix<P_DIM> > l, stateMPC_params& problem, stateMPC_
 		std::vector<Matrix<U_DIM> > U(T-1);
 		bool initTrajSuccess = initTraj(x0.subMatrix<C_DIM,1>(0,0), xGoal.subMatrix<C_DIM,1>(0,0), U, T);
 		if (!initTrajSuccess) {
-			LOG_ERROR("Failed to initialize trajectory, exiting slam-state");
-			pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
-			exit(-1);
+			LOG_ERROR("Failed to initialize trajectory, continuing anyways");
+			//exit(-1);
 		}
 
 		double initTrajTime = util::Timer_toc(&trajTimer);
 		trajTime += initTrajTime;
-
-		std::cout << "propagating...\n";
 
 		vec(x0, SqrtSigma0, B[0]);
 		for(int t=0; t < T-1; ++t) {
@@ -991,25 +932,15 @@ void planPath(std::vector<Matrix<P_DIM> > l, stateMPC_params& problem, stateMPC_
 		}
 		X[T-1] = B[T-1].subMatrix<C_DIM,1>(0,0);
 
-		std::cout << "not sqrt time: " << not_sqrt_time*1000 << "\n";
-		std::cout << "sqrt time: " << sqrt_time*1000 << "\n";
 
-		double initTrajCost = computeCost(X, U);
-		LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
+		//double initTrajCost = computeCost(X, U);
+		//LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
 
-		double initCasadiTrajCost = casadiComputeCost(X, U);
-		LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
+		//double initCasadiTrajCost = casadiComputeCost(X, U);
+		//LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
 
-		exit(0);
 		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 
-		casadi_time = 0;
-		forces_time = 0;
-		linearize_time = 0;
-		lbfgs_time = 0;
-		bounds_time = 0;
-		minimize_merit_time = 0;
-		casadi_compute_merit_time = 0;
 		util::Timer_tic(&solveTimer);
 
 		int iter = 0;
@@ -1038,15 +969,6 @@ void planPath(std::vector<Matrix<P_DIM> > l, stateMPC_params& problem, stateMPC_
 
 		double solvetime = util::Timer_toc(&solveTimer);
 		totalSolveTime += solvetime;
-
-		LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
-		LOG_INFO("Casadi time: %5.3f ms", casadi_time*1000);
-		LOG_INFO("Forces time: %5.3f ms", forces_time*1000);
-		LOG_INFO("Linearize time: %5.3f ms", linearize_time*1000);
-		LOG_INFO("lbfgs time: %5.3f ms", lbfgs_time*1000);
-		LOG_INFO("bounds time: %5.3f ms", bounds_time*1000);
-		LOG_INFO("minimize merit time: %5.3f ms", minimize_merit_time*1000);
-		LOG_INFO("casadi compute merit time: %5.3f ms", casadi_compute_merit_time*1000);
 
 
 		vec(x0, SqrtSigma0, B[0]);
@@ -1079,7 +1001,7 @@ void planPath(std::vector<Matrix<P_DIM> > l, stateMPC_params& problem, stateMPC_
 	logDataToFile(f, B_total, totalSolveTime*1000, trajTime*1000);
 
 
-	pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, true);
+	pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, false);
 }
 
 int main(int argc, char* argv[])
@@ -1094,12 +1016,12 @@ int main(int argc, char* argv[])
 	std::ofstream f;
 	logDataHandle("slam/data/slam-state", f);
 
-	std::cout << "initializing casadi functions...\n";
+	LOG_INFO("initializing casadi functions...");
 
 	casadi_cost_func = casadiCostFunc();
 	casadi_gradcost_func = casadiCostGradFunc();
 
-	std::cout << "casadi functions initialized\n";
+	LOG_INFO("casadi functions initialized");
 
 	for(size_t i=0; i < l_list.size(); ++i) {
 		planPath(l_list[i], problem, output, info, f);

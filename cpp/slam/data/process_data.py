@@ -245,6 +245,27 @@ def process_data():
     	s_costs.append(File.compareAttr(s,t,'sum_cov_trace'))
     	c_costs.append(File.compareAttr(c,t,'sum_cov_trace'))
     	
+    	if num_landmarks <= 5:
+    		b = [file for file in belief_files if file.num_landmarks == num_landmarks][0]
+    		b_costs.append(File.compareAttr(b,t,'sum_cov_trace'))
+    	
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    
+    ax.set_xticks(landmarks)
+    
+    ax.set_ylabel('Cost factor versus trajectory')
+    ax.set_xlabel('Number of landmarks')
+    ax.set_title('Cost factor of belief, state, and control versus trajectory')
+    
+    ax.plot(landmarks[:len(b_costs)], b_costs, label='belief')
+    ax.plot(landmarks, s_costs, label='state')
+    ax.plot(landmarks, c_costs, label='control')
+    
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles, labels)
+    
+    plt.show(block=False)
     IPython.embed()
     return
     	

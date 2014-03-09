@@ -1,0 +1,25 @@
+35
+sum_cov_trace 9994.19
+waypoint_distance_error 5.62681
+solve_time 86950.5
+initialization_time 228.314
+sum_cov_trace 16501.9
+waypoint_distance_error 4.03032
+solve_time 86293.2
+initialization_time 928.854
+sum_cov_trace 10932.7
+waypoint_distance_error 10.4393
+solve_time 86114.1
+initialization_time 354.041
+sum_cov_trace 18089.9
+waypoint_distance_error 4.12671
+solve_time 85942.4
+initialization_time 3257.56
+sum_cov_trace 16566.4
+waypoint_distance_error 4.47846
+solve_time 86968.4
+initialization_time 877.764
+sum_cov_trace 8100.48
+waypoint_distance_error 5.59152
+solve_time 86105.1
+initialization_time 241.537

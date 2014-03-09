@@ -189,7 +189,7 @@ inline CasADi::SXMatrix SymProd(const CasADi::SXMatrix& M, const CasADi::SXMatri
 			for (size_t k = 0; k < _numRows; ++k) {
 				S(i,j) += M(i, k) * N(k, j);
 			}
-			//S(i, j) = temp;
+			S(j, i) = S(i,j);
 		}
 	}
 	return S;
@@ -212,7 +212,7 @@ inline void EKF(const CasADi::SXMatrix& x_t, const CasADi::SXMatrix& u_t, const 
 	Sigma2 = Sigma_t(CasADi::Slice(C_DIM,X_DIM),CasADi::Slice(0,C_DIM));
 	Sigma3 = Sigma_t(CasADi::Slice(C_DIM,X_DIM),CasADi::Slice(C_DIM,X_DIM));
 
-	Sigma_tp1(CasADi::Slice(0,C_DIM),CasADi::Slice(0,C_DIM)) = mul(Acar,mul(SigmaCar, trans(Acar)));//SymProd<C_DIM,C_DIM>(Acar, mul(SigmaCar, trans(Acar)));
+	Sigma_tp1(CasADi::Slice(0,C_DIM),CasADi::Slice(0,C_DIM)) = SymProd<C_DIM,C_DIM>(Acar, mul(SigmaCar, trans(Acar)));//mul(Acar,mul(SigmaCar, trans(Acar)));
 	Sigma_tp1(CasADi::Slice(0,C_DIM),CasADi::Slice(C_DIM,X_DIM)) = mul(Acar, Sigma1);
 	Sigma_tp1(CasADi::Slice(C_DIM,X_DIM),CasADi::Slice(0,C_DIM)) = mul(Sigma2, trans(Acar));
 	Sigma_tp1(CasADi::Slice(C_DIM,X_DIM),CasADi::Slice(C_DIM,X_DIM)) = Sigma3;
@@ -239,11 +239,13 @@ inline void EKF(const CasADi::SXMatrix& x_t, const CasADi::SXMatrix& u_t, const 
 	//K = ((Sigma_tp1*~H*delta)/(delta*H*Sigma_tp1*~H*delta + RC))*delta;
 	//CasADi::SXMatrix K = mul(mul(mul(Sigma_tp1, mul(trans(H), delta)), solve(mul(delta, mul(H, mul(Sigma_tp1, mul(trans(H), delta)))) + RC, CasADi::SXMatrix(CasADi::DMatrix::eye(Z_DIM)))), delta);
 	CasADi::SXMatrix HtransDelta = mul(trans(H), delta);
-	CasADi::SXMatrix Sigma_tp1HtransDelta = mul(Sigma_tp1, HtransDelta); // SymProd<X_DIM,X_DIM>(trans(HtransDelta), Sigma_tp1HtransDelta)
-	CasADi::SXMatrix K = mul(operator_divide<Z_DIM,X_DIM>(Sigma_tp1HtransDelta, mul(trans(HtransDelta), Sigma_tp1HtransDelta) + RC), delta);
-	//CasADi::SXMatrix K = mul(mul(Sigma_tp1HtransDelta, solve(mul(trans(HtransDelta), Sigma_tp1HtransDelta) + RC, CasADi::SXMatrix(CasADi::DMatrix::eye(Z_DIM)))), delta);
+	CasADi::SXMatrix Sigma_tp1HtransDelta = mul(Sigma_tp1, HtransDelta);
+	CasADi::SXMatrix K = mul(operator_divide<Z_DIM,X_DIM>(Sigma_tp1HtransDelta, SymProd<Z_DIM,X_DIM>(trans(HtransDelta), Sigma_tp1HtransDelta) + RC), delta);
+	// SymProd<Z_DIM,X_DIM>(trans(HtransDelta), Sigma_tp1HtransDelta)
+	// mul(trans(HtransDelta), Sigma_tp1HtransDelta)
 
-	Sigma_tp1 = Sigma_tp1 - mul(K,mul(H,Sigma_tp1));
+	//Sigma_tp1 = Sigma_tp1 - mul(K,mul(H,Sigma_tp1));
+	Sigma_tp1 = SymProd<X_DIM,X_DIM>(CasADi::SXMatrix(CasADi::DMatrix::eye(X_DIM)) - mul(K,H), Sigma_tp1);
 
 }
 

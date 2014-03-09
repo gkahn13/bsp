@@ -218,6 +218,22 @@ inline CasADi::SXMatrix operator_divide(const CasADi::SXMatrix& p, const CasADi:
 	return trans(operator_percent<_size,_numRows>(q, trans(p)));
 }
 
+// Compute product M*N of which one knows that the results is symmetric (and save half the computation)
+template <size_t _size, size_t _numRows>
+inline CasADi::SXMatrix SymProd(const CasADi::SXMatrix& M, const CasADi::SXMatrix& N) {
+	CasADi::SXMatrix S(_size,_size);
+	for (size_t j = 0; j < _size; ++j) {
+		for (size_t i = j; i < _size; ++i) {
+			//CasADi::SXMatrix temp(1,1);
+			for (size_t k = 0; k < _numRows; ++k) {
+				S(i,j) += M(i, k) * N(k, j);
+			}
+			S(j, i) = S(i,j);
+		}
+	}
+	return S;
+}
+
 void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMatrix& x_tp1, SXMatrix& Sigma_tp1)
 {
 	SXMatrix A(X_DIM,X_DIM), M(X_DIM,Q_DIM), QC(U_DIM,U_DIM), MMTcar(C_DIM,C_DIM);
@@ -235,7 +251,7 @@ void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMa
 	Sigma2 = Sigma_t(Slice(C_DIM,X_DIM),Slice(0,C_DIM));
 	Sigma3 = Sigma_t(Slice(C_DIM,X_DIM),Slice(C_DIM,X_DIM));
 
-	Sigma_tp1(Slice(0,C_DIM),Slice(0,C_DIM)) = mul(Acar,mul(SigmaCar, trans(Acar)));
+	Sigma_tp1(CasADi::Slice(0,C_DIM),CasADi::Slice(0,C_DIM)) = SymProd<C_DIM,C_DIM>(Acar, mul(SigmaCar, trans(Acar)));//mul(Acar,mul(SigmaCar, trans(Acar)));
 	Sigma_tp1(Slice(0,C_DIM),Slice(C_DIM,X_DIM)) = mul(Acar, Sigma1);
 	Sigma_tp1(Slice(C_DIM,X_DIM),Slice(0,C_DIM)) = mul(Sigma2, trans(Acar));
 	Sigma_tp1(Slice(C_DIM,X_DIM),Slice(C_DIM,X_DIM)) = Sigma3;
@@ -260,13 +276,15 @@ void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMa
 	}
 
 	//K = ((Sigma_tp1*~H*delta)/(delta*H*Sigma_tp1*~H*delta + RC))*delta;
-	//SXMatrix K = mul(mul(mul(Sigma_tp1, mul(trans(H), delta)), solve(mul(delta, mul(H, mul(Sigma_tp1, mul(trans(H), delta)))) + RC, SXMatrix(DMatrix::eye(Z_DIM)))), delta);
-	SXMatrix HtransDelta = mul(trans(H), delta);
-	SXMatrix Sigma_tp1HtransDelta = mul(Sigma_tp1, HtransDelta);
-	CasADi::SXMatrix K = mul(operator_divide<Z_DIM,X_DIM>(Sigma_tp1HtransDelta, mul(trans(HtransDelta), Sigma_tp1HtransDelta) + RC), delta);
-	//SXMatrix K = mul(mul(Sigma_tp1HtransDelta, solve(mul(trans(HtransDelta), Sigma_tp1HtransDelta) + RC, SXMatrix(DMatrix::eye(Z_DIM)))), delta);
+	//CasADi::SXMatrix K = mul(mul(mul(Sigma_tp1, mul(trans(H), delta)), solve(mul(delta, mul(H, mul(Sigma_tp1, mul(trans(H), delta)))) + RC, CasADi::SXMatrix(CasADi::DMatrix::eye(Z_DIM)))), delta);
+	CasADi::SXMatrix HtransDelta = mul(trans(H), delta);
+	CasADi::SXMatrix Sigma_tp1HtransDelta = mul(Sigma_tp1, HtransDelta);
+	CasADi::SXMatrix K = mul(operator_divide<Z_DIM,X_DIM>(Sigma_tp1HtransDelta, SymProd<Z_DIM,X_DIM>(trans(HtransDelta), Sigma_tp1HtransDelta) + RC), delta);
+	// SymProd<Z_DIM,X_DIM>(trans(HtransDelta), Sigma_tp1HtransDelta)
+	// mul(trans(HtransDelta), Sigma_tp1HtransDelta)
 
-	Sigma_tp1 = Sigma_tp1 - mul(K,mul(H,Sigma_tp1));
+	//Sigma_tp1 = Sigma_tp1 - mul(K,mul(H,Sigma_tp1));
+	Sigma_tp1 = SymProd<X_DIM,X_DIM>(CasADi::SXMatrix(CasADi::DMatrix::eye(X_DIM)) - mul(K,H), Sigma_tp1);
 
 }
 

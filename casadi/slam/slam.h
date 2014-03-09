@@ -7,7 +7,7 @@
 #include <cstdlib>
 
 //#define TIMESTEPS 15
-#define NUM_LANDMARKS 10
+#define NUM_LANDMARKS 6
 #define NUM_WAYPOINTS 4
 
 #define C_DIM 3 // car dimension [x, y, theta]
@@ -86,6 +86,42 @@ void linearizeDynamics(const SXMatrix& x, const SXMatrix& u, SXMatrix& A, SXMatr
 	A(1,2) = vtc;
 }
 
+inline void linearizeCarDynamics(const SXMatrix& x, const SXMatrix& u, const SXMatrix& QC, SXMatrix& Acar, SXMatrix& MMTcar) {
+	//g is control input steer angle
+	SXMatrix ssin = sin(u(1)+x(2));
+	SXMatrix ccos = cos(u(1)+x(2));
+
+	SXMatrix vts= u(0)*DT*ssin;
+	SXMatrix vtc= u(0)*DT*ccos;
+
+	SXMatrix a = DT*ccos;
+	SXMatrix b = DT*ssin;
+	SXMatrix c = DT*sin(u(1))/config::WHEELBASE;
+	SXMatrix d = -vts;
+	SXMatrix e = vtc;
+	SXMatrix f = u(0)*DT*cos(u(1))/config::WHEELBASE;
+
+	SXMatrix alpha = QC(0,0);
+	SXMatrix beta = QC(1,1);
+
+	MMTcar(0,0) = alpha*a*a + beta*d*d;
+	MMTcar(0,1) = alpha*a*b + beta*d*e;
+	MMTcar(0,2) = alpha*a*c + beta*d*f;
+	MMTcar(1,1) = alpha*b*b + beta*e*e;
+	MMTcar(1,2) = alpha*b*c + beta*e*f;
+	MMTcar(2,2) = alpha*c*c + beta*f*f;
+
+	MMTcar(1,0) = MMTcar(0,1);
+	MMTcar(2,0) = MMTcar(0,2);
+	MMTcar(2,1) = MMTcar(1,2);
+
+	Acar(0,0) = 1;
+	Acar(1,1) = 1;
+	Acar(2,2) = 1;
+	Acar(0,2) = -vts;
+	Acar(1,2) = vtc;
+}
+
 // Jacobians: dh(x,r)/dx, dh(x,r)/dr
 void linearizeObservation(const SXMatrix& x, SXMatrix& H, SXMatrix& N)
 {
@@ -135,16 +171,79 @@ SXMatrix deltaMatrix(const SXMatrix& x) {
 	return delta;
 }
 
+template <size_t _size, size_t _numColumns>
+inline CasADi::SXMatrix operator_percent(const CasADi::SXMatrix& p, const CasADi::SXMatrix& q) {
+	// Cholesky factorization p = L*~L
+	CasADi::SXMatrix L(_size,_size); // abuse SymmetricMatrix for triangular matrix
+	for (size_t i = 0; i < _size; ++i) {
+		for (size_t j = i; j < _size; ++j) {
+			CasADi::SXMatrix sum = p(j,i);
+			for (size_t k = 0; k < i; ++k) {
+				sum -= L(j,k)*L(i,k);
+			}
+			if (i == j) {
+				L(i,i) = sqrt(sum);
+			} else {
+				L(j,i) = sum / L(i,i);
+			}
+		}
+	}
+
+	// Backward and forward substitution
+	CasADi::SXMatrix M(_size, _numColumns);
+	for (size_t i = 0; i < _size; ++i) {
+		for (size_t k = 0; k < _numColumns; ++k) {
+			CasADi::SXMatrix sum = q(i,k);
+			for (size_t j = 0; j < i; ++j) {
+				sum -= L(i,j)*M(j,k);
+			}
+			M(i,k) = sum / L(i,i);
+		}
+	}
+	for (size_t i = _size - 1; i != -1; --i) {
+		for (size_t k = 0; k < _numColumns; ++k) {
+			CasADi::SXMatrix sum = M(i,k);
+			for (size_t j = i + 1; j < _size; ++j) {
+				sum -= L(j,i)*M(j,k);
+			}
+			M(i,k) = sum / L(i,i);
+		}
+	}
+	return M;
+}
+
+
+template <size_t _size, size_t _numRows>
+inline CasADi::SXMatrix operator_divide(const CasADi::SXMatrix& p, const CasADi::SXMatrix& q) {
+	return trans(operator_percent<_size,_numRows>(q, trans(p)));
+}
+
 void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMatrix& x_tp1, SXMatrix& Sigma_tp1)
 {
-	SXMatrix A(X_DIM,X_DIM), M(X_DIM,Q_DIM), QC(U_DIM,U_DIM);
-	linearizeDynamics(x_t, u_t, A, M);
-
+	SXMatrix A(X_DIM,X_DIM), M(X_DIM,Q_DIM), QC(U_DIM,U_DIM), MMTcar(C_DIM,C_DIM);
+	SXMatrix Acar(C_DIM,C_DIM);
 
 	QC(0,0) = config::VELOCITY_NOISE*config::VELOCITY_NOISE;
 	QC(1,1) = config::TURNING_NOISE*config::TURNING_NOISE;
 
-	Sigma_tp1 = mul(mul(A,Sigma_t),trans(A)) + mul(mul(M,QC),trans(M));
+	//linearizeDynamics(x_t, u_t, A, M);
+	linearizeCarDynamics(x_t, u_t, QC, Acar, MMTcar);
+
+	SXMatrix SigmaCar(C_DIM,C_DIM), Sigma1(C_DIM,L_DIM), Sigma2(L_DIM,C_DIM), Sigma3(L_DIM,L_DIM);
+	SigmaCar = Sigma_t(Slice(0,C_DIM),Slice(0,C_DIM));
+	Sigma1 = Sigma_t(Slice(0,C_DIM),Slice(C_DIM,X_DIM));
+	Sigma2 = Sigma_t(Slice(C_DIM,X_DIM),Slice(0,C_DIM));
+	Sigma3 = Sigma_t(Slice(C_DIM,X_DIM),Slice(C_DIM,X_DIM));
+
+	Sigma_tp1(Slice(0,C_DIM),Slice(0,C_DIM)) = mul(Acar,mul(SigmaCar, trans(Acar)));
+	Sigma_tp1(Slice(0,C_DIM),Slice(C_DIM,X_DIM)) = mul(Acar, Sigma1);
+	Sigma_tp1(Slice(C_DIM,X_DIM),Slice(0,C_DIM)) = mul(Sigma2, trans(Acar));
+	Sigma_tp1(Slice(C_DIM,X_DIM),Slice(C_DIM,X_DIM)) = Sigma3;
+
+	//Sigma_tp1 = Sigma_tp1 + mul(mul(M,QC),trans(M));
+	Sigma_tp1(Slice(0,C_DIM),Slice(0,C_DIM)) = Sigma_tp1(Slice(0,C_DIM),Slice(0,C_DIM)) + MMTcar;
+
+	//Sigma_tp1 = mul(mul(A,Sigma_t),trans(A)) + mul(mul(M,QC),trans(M));
 
 	x_tp1 = dynfunc(x_t, u_t);
 
@@ -161,7 +260,11 @@ void EKF(const SXMatrix& x_t, const SXMatrix& u_t, const SXMatrix& Sigma_t, SXMa
 	}
 
 	//K = ((Sigma_tp1*~H*delta)/(delta*H*Sigma_tp1*~H*delta + RC))*delta;
-	SXMatrix K = mul(mul(mul(Sigma_tp1, mul(trans(H), delta)), solve(mul(delta, mul(H, mul(Sigma_tp1, mul(trans(H), delta)))) + RC, SXMatrix(DMatrix::eye(Z_DIM)))), delta);
+	//SXMatrix K = mul(mul(mul(Sigma_tp1, mul(trans(H), delta)), solve(mul(delta, mul(H, mul(Sigma_tp1, mul(trans(H), delta)))) + RC, SXMatrix(DMatrix::eye(Z_DIM)))), delta);
+	SXMatrix HtransDelta = mul(trans(H), delta);
+	SXMatrix Sigma_tp1HtransDelta = mul(Sigma_tp1, HtransDelta);
+	CasADi::SXMatrix K = mul(operator_divide<Z_DIM,X_DIM>(Sigma_tp1HtransDelta, mul(trans(HtransDelta), Sigma_tp1HtransDelta) + RC), delta);
+	//SXMatrix K = mul(mul(Sigma_tp1HtransDelta, solve(mul(trans(HtransDelta), Sigma_tp1HtransDelta) + RC, SXMatrix(DMatrix::eye(Z_DIM)))), delta);
 
 	Sigma_tp1 = Sigma_tp1 - mul(K,mul(H,Sigma_tp1));
 

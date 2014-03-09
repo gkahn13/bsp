@@ -994,12 +994,13 @@ void planPath(std::vector<Matrix<P_DIM> > l, stateMPC_params& problem, stateMPC_
 		std::cout << "not sqrt time: " << not_sqrt_time*1000 << "\n";
 		std::cout << "sqrt time: " << sqrt_time*1000 << "\n";
 
-		//double initTrajCost = computeCost(X, U);
-		//LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
+		double initTrajCost = computeCost(X, U);
+		LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
 
-		//double initCasadiTrajCost = casadiComputeCost(X, U);
-		//LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
+		double initCasadiTrajCost = casadiComputeCost(X, U);
+		LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
 
+		exit(0);
 		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 
 		casadi_time = 0;

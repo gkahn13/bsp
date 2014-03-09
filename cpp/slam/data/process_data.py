@@ -232,7 +232,21 @@ def process_data():
     raw_input()
     
     	
-    
+    b_costs = []
+    s_costs = []
+    c_costs = []
+    # x axis: number landmarks
+    # y axis: percent of avg trajectory cost
+    for num_landmarks in landmarks:
+    	t = [file for file in traj_files if file.num_landmarks == num_landmarks][0]
+    	s = [file for file in state_files if file.num_landmarks == num_landmarks][0]
+    	c = [file for file in control_files if file.num_landmarks == num_landmarks][0]
+    	
+    	s_costs.append(File.compareAttr(s,t,'sum_cov_trace'))
+    	c_costs.append(File.compareAttr(c,t,'sum_cov_trace'))
+    	
+    IPython.embed()
+    return
     	
     
     for num_landmarks in [3,4,5]:

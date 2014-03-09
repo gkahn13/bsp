@@ -5,6 +5,9 @@ from collections import defaultdict
 import math
 import numpy as np
 
+import matplotlib
+import matplotlib.pyplot as plt
+
 attrs = ['sum_cov_trace','waypoint_distance_error','solve_time','initialization_time']
 
 class Data:
@@ -30,7 +33,7 @@ class Data:
 
 class File:
     attrs = ['sum_cov_trace','waypoint_distance_error','solve_time','initialization_time','total_time']
-    slam_types = ['slam-belief', 'slam-state', 'slam-control', 'slam-traj']
+    slam_types = ['slam-traj', 'slam-belief', 'slam-state', 'slam-control']
     
     def __init__(self, file_name, slam_type, file_time):
         self.file_name = file_name
@@ -65,6 +68,21 @@ class File:
                 
     def get(self, attr):
         return [self.example[i][attr] for i in xrange(self.num_examples)]
+        
+    def getAverage(self, attr):
+    	d = Data()
+    	for i in xrange(self.num_examples):
+    		d.add(self.example[i][attr])
+    		
+    	return d.mean
+    
+    def getSd(self, attr):
+    	d = Data()
+    	for i in xrange(self.num_examples):
+    		d.add(self.example[i][attr])
+    		
+    	return d.sd
+    
     
     def printAverages(self):
         for attr in File.attrs:
@@ -89,6 +107,13 @@ class File:
                     		d.add(datapoint)
                     print(attr + ': ' + str(d.mean) + ' +- ' + str(d.sd))
                 print('')
+                
+    # assume have same number of examples since over same landmarks
+    def compareAttr(file0, file1, attr):
+    	d = Data()
+    	for i in xrange(file0.num_examples):
+    		d.add(file0.example[i][attr] / file1.example[i][attr])
+    	return d.mean, d.sd
         
     # cost / slam-traj cost
     # slam-traj-speed / speed
@@ -119,6 +144,7 @@ class File:
             print(f1.slam_type+'/'+f0.slam_type+' speed: ' + str(speed_pct_data.mean*100) + ' +- ' + str(speed_pct_data.sd*100) + '%')
             print('')
             
+            
         
     
 def process_data():
@@ -132,10 +158,10 @@ def process_data():
     
     files = [File(data_file, slam_type, file_time) for data_file, slam_type, file_time in zip(data_files, slam_types, file_times) if slam_type in File.slam_types]
     
-    belief_files = [file for file in files if file.slam_type == 'slam-belief']
-    state_files = [file for file in files if file.slam_type == 'slam-state']
-    control_files = [file for file in files if file.slam_type == 'slam-control']
-    traj_files = [file for file in files if file.slam_type == 'slam-traj']
+    belief_files = sorted([file for file in files if file.slam_type == 'slam-belief'], key=lambda f: f.num_landmarks)
+    state_files = sorted([file for file in files if file.slam_type == 'slam-state'], key=lambda f: f.num_landmarks)
+    control_files = sorted([file for file in files if file.slam_type == 'slam-control'], key=lambda f: f.num_landmarks)
+    traj_files = sorted([file for file in files if file.slam_type == 'slam-traj'], key=lambda f: f.num_landmarks)
     
     print('traj_files statistics')
     File.printStatistics(traj_files)
@@ -153,6 +179,49 @@ def process_data():
     print('compare control to traj')
     File.compare(control_files, traj_files)
     
+    traj_avg_total_times = [f.getAverage('total_time') for f in traj_files]
+    belief_avg_total_times = [f.getAverage('total_time') for f in belief_files]
+    state_avg_total_times = [f.getAverage('total_time') for f in state_files]
+    control_avg_total_times = [f.getAverage('total_time') for f in control_files]
+    
+    print('Average total times for 3, 4, 5 landmarks')
+    print('Trajectory: ' + str(["%0.2f"%t for t in traj_avg_total_times]))
+    print('Belief: ' + str(["%0.2f"%t for t in belief_avg_total_times]))
+    print('State: ' + str(["%0.2f"%t for t in state_avg_total_times]))
+    print('Control: ' + str(["%0.2f"%t for t in control_avg_total_times]))
+    
+    
+    for num_landmarks in [3,4,5]:
+    	t = [file for file in traj_files if file.num_landmarks == num_landmarks][0]
+    	b = [file for file in belief_files if file.num_landmarks == num_landmarks][0]
+    	s = [file for file in state_files if file.num_landmarks == num_landmarks][0]
+    	c = [file for file in control_files if file.num_landmarks == num_landmarks][0]
+    	
+    	avg_sum_cov_traces = [f.getAverage('sum_cov_trace') for f in [t,b,s,c]]
+    	sd_sum_cov_traces = [f.getSd('sum_cov_trace') for f in [t,b,s,c]]
+    	
+    	fig = plt.figure()
+    	ax = fig.add_subplot(111)
+    	
+    	ind = np.arange(len(avg_sum_cov_traces))
+    	width = 0.35
+    	
+    	rects = ax.bar(ind, avg_sum_cov_traces, width,
+    					yerr=sd_sum_cov_traces,
+    					error_kw=dict(elinewidth=2,ecolor='red'))
+    	
+    	ax.set_xlim(-width,len(ind)+width)
+    	ax.set_ylabel('Trace of Covariance')
+    	ax.set_title('Average trace of covariance with {0} landmarks over {1} runs'.format(num_landmarks, b.num_examples))
+    	xTickMarks = File.slam_types
+    	ax.set_xticks(ind+width)
+    	xtickNames = ax.set_xticklabels(xTickMarks)
+    	
+    	plt.show(block=False)
+    	raw_input()
+    	
+    
+		
     #IPython.embed()
     
 

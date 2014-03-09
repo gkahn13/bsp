@@ -18,6 +18,7 @@ SymmetricMatrix<X_DIM> Qint;
 SymmetricMatrix<X_DIM> QGoal, QGoalVariance, QintVariance;
 SymmetricMatrix<X_DIM> Sigma0;
 Matrix<X_DIM,X_DIM> SqrtSigma0;
+Matrix<X_DIM,X_DIM> SqrtTemp;
 
 Matrix<X_DIM> x0, xGoal;
 
@@ -224,8 +225,8 @@ int main(int argc, char* argv[])
 	std::vector< Matrix<X_DIM> > xBar;
 	std::vector< SymmetricMatrix<X_DIM> > SigmaBar;
 	
-	SqrtSigma0(0,0) = 0.1;
-	SqrtSigma0(1,1) = 0.1;
+	SqrtSigma0(0,0) = 0.05;
+	SqrtSigma0(1,1) = 0.05;
 	SqrtSigma0(2,2) = 0.05;
 	SqrtSigma0(3,3) = 0.05;
 	SqrtSigma0(4,4) = 0.5;
@@ -241,6 +242,7 @@ int main(int argc, char* argv[])
 
 	std::vector< Matrix<B_DIM> > Bpomdp(T);
 	std::vector< Matrix<B_DIM> > Bekf(T);
+	vec(xBar[0], sqrt(SigmaBar[0]), Bekf[0]);
 	std::vector< Matrix<B_DIM> > Binitial(T);
 	vec(x0, sqrt(Sigma0), Binitial[0]);
 	for (int t = 0; t < T - 1; ++t)
@@ -265,7 +267,7 @@ int main(int argc, char* argv[])
 		}
 
 		
-		vec(xBar[0], sqrt(SigmaBar[0]), Bekf[0]);
+		
 
 		HistoryU[h] = uBar[0];
 		HistoryB[h] = Bekf[0];
@@ -290,7 +292,7 @@ int main(int argc, char* argv[])
 		xBar.clear(); 
 		SigmaBar.clear(); 
 
-		unVec(Bekf[0], x0, SqrtSigma0);
+		unVec(Bekf[0], x0, SqrtTemp);
 
 		xBar.push_back(x0); 
 

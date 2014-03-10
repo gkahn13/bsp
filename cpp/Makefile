@@ -2,7 +2,7 @@ CXX = g++
 CC = gcc
 INTELCC = icc
 
-OS := linux
+OS := mac
 
 LINKER_FLAGS.mac = -lm
 LINKER_FLAGS.linux = -lrt

@@ -336,7 +336,12 @@ inline void integrateControlPolicy(void (*linearizeDynamics)(const Matrix<_xDim>
 		uNext[t] = eps*l[t] + L[t]*(xNext[t] - xBar[t]) + uBar[t];
 
 		for(size_t i = 0; i < _uDim; ++i) {
-			uNext[t][i] = ((Umax-Umin)/2)*std::tanh(uNext[t][i]) + ((Umax+Umin)/2);
+			if(uNext[t][i] < -0.1){
+				uNext[t][i] = -0.1;
+			}
+			else if(uNext[t][i] > 0.1){
+				uNext[t][i] = 0.1;
+			}
 		}
 
 		linearizeDynamics(xNext[t], uNext[t], xNext[t+1], A, B, M, COMPUTE_c|COMPUTE_A|COMPUTE_M);
@@ -392,8 +397,9 @@ inline void forwardIteration(void (*linearizeDynamics)(const Matrix<_xDim>&, con
 	// Compute expected cost for eps = 0 (is always lower than current bestCost)
 	bestCost = computeExpectedCost(linearizeDynamics, quadratizeFinalCost, quadratizeCost, L,
 		xBar, SigmaBar, uBar, WBar);
+	//std::cout<<"BEST COST "<<bestCost<<"\n";
 	bestEps = 0.0;
-
+	std::cout<<"EPS "<<eps<<"\n"; 
 	while (eps > 0.0 && (!middleFound || !rightFound)) {
 		// Compute cost at current eps
 		integrateControlPolicy(linearizeDynamics, linearizeObservation,
@@ -407,7 +413,8 @@ inline void forwardIteration(void (*linearizeDynamics)(const Matrix<_xDim>&, con
 		//}
 
 		cost = computeExpectedCost(linearizeDynamics, quadratizeFinalCost, quadratizeCost, L, xNext, SigmaNext, uNext, WNext);
-
+			//std::cout<<"COST "<<cost<<"\n";
+			
 		if (cost < bestCost && abs(cost) < 1.0 / DBL_EPSILON) {
 			if (eps == 1.0) {
 				bestCost = cost;
@@ -560,7 +567,7 @@ inline void solvePOMDP(void (*linearizeDynamics)(const Matrix<_xDim>&, const Mat
 	size_t iter = 1;
 
 	// TODO: can't plan forever, needs MPC, so have max iterations
-	while(!terminate && iter<1000)
+	while(!terminate && iter<50)
 	{
 		backwardIteration(linearizeDynamics, linearizeObservation, quadratizeFinalCost, quadratizeCost, xBar, SigmaBar, uBar, L, l, gradient);
 		//double prevCost = bestCost;

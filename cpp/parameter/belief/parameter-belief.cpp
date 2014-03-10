@@ -675,7 +675,7 @@ int main(int argc, char* argv[])
 
 	vec(x0, SqrtSigma0, B[0]);
 	std::cout<<"HORIZON is "<<HORIZON<<'\n';
-	
+	srand(time(NULL));
 	util::Timer solveTimer;
 	util::Timer_tic(&solveTimer);
 	for(int h = 0; h < HORIZON; ++h) {

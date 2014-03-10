@@ -9,6 +9,8 @@
 #include <Python.h>
 #include <boost/python.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/random.hpp>
+#include <boost/random/normal_distribution.hpp>
 
 namespace py = boost::python;
 
@@ -22,6 +24,9 @@ Matrix<X_DIM,X_DIM> SqrtTemp;
 
 Matrix<X_DIM> x0, xGoal;
 
+boost::mt19937 rng; 
+boost::uniform_real<> dist(-0.1, 0.1);
+
 inline Matrix<X_DIM> f(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u)
 {
 	return dynfunc(x, u,zeros<Q_DIM,1>());
@@ -31,6 +36,16 @@ inline Matrix<X_DIM> f(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u)
 inline Matrix<Z_DIM> h(const Matrix<X_DIM>& x)
 {
 	return obsfunc(x,zeros<R_DIM,1>());
+}
+
+
+double uRand(){
+
+	
+  	boost::variate_generator<boost::mt19937&, 
+                           boost::uniform_real<> > random(rng, dist);
+	
+	return random();
 }
 
 // Jacobian df/dx(x,u)
@@ -271,7 +286,13 @@ int main(int argc, char* argv[])
 
 		HistoryU[h] = uBar[0];
 		HistoryB[h] = Bekf[0];
+		if(uBar[0][0]+uBar[0][1] < 1e-5){
+			for(int i = 0; i<U_DIM; i++){
+				uBar[0][i] = uRand(); 
+			}
+		}
 		Bekf[0] = executeControlStep(x_real, Bekf[0], uBar[0]);
+	
 		std::cout<<"U "<<~uBar[0]<<"\n";
 		std::cout<<"X "<<~xBar[0]<<"\n";
 		for (int t = 0; t < T - 1; ++t)

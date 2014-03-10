@@ -11,25 +11,25 @@ import matplotlib.pyplot as plt
 attrs = ['sum_cov_trace','waypoint_distance_error','solve_time','initialization_time']
 
 class Data:
-	def __init__(self):
-		self.data = []
-		
-	def add(self, d):
-		self.data.append(d)
-		
-	@property
-	def mean(self):
-		if len(self.data) > 0:
-			return sum(self.data)/float(len(self.data))
-		return None
-		
-	@property
-	def sd(self):
-		m = self.mean
-		if m is None:
-			return None
-			
-		return np.std(np.array(self.data))
+    def __init__(self):
+        self.data = []
+        
+    def add(self, d):
+        self.data.append(d)
+        
+    @property
+    def mean(self):
+        if len(self.data) > 0:
+            return sum(self.data)/float(len(self.data))
+        return None
+        
+    @property
+    def sd(self):
+        m = self.mean
+        if m is None:
+            return None
+            
+        return np.std(np.array(self.data))
 
 class File:
     attrs = ['sum_cov_trace','waypoint_distance_error','solve_time','initialization_time','total_time'] # 'failure'
@@ -72,48 +72,54 @@ class File:
             
 # assume one file per landmark number
 class FileGroup:
-	def __init__(self, files):
-		self.files = files
-		self.slam_type = self.files[0].slam_type
-		
-	def getFileWithLandmark(self, num_landmarks):
-		for f in self.files:
-			if f.num_landmarks == num_landmarks:
-				return f
-		return None
-		
-	def getStats(self, num_landmarks, attr):
-		f = self.getFileWithLandmark(num_landmarks)
-		
-		d = Data()
-		for i in xrange(f.num_examples):
-			if f.example[i]['failure'] == 0:
-				d.add(f.example[i][attr])
-				
-		return d.mean, d.sd
-		
-	def getCostStats(self, num_landmarks):
-		return self.getStats(num_landmarks, 'sum_cov_trace')
-		
-	def getTimeStats(self, num_landmarks):
-		return self.getStats(num_landmarks, 'solve_time')
-		
-	def compareAttr(self, otherFileGroup, num_landmarks, attr):
-		f_self = self.getFileWithLandmark(num_landmarks)
-		f_other = otherFileGroup.getFileWithLandmark(num_landmarks)
-		
-		d = Data()
-		for i in xrange(f_self.num_examples):
-			if f_self.example[i]['failure'] == 0 and f_other.example[i]['failure'] == 0:
-				d.add(f_self.example[i][attr] / f_other.example[i][attr])
-				
-		return d.mean, d.sd
-		
-	def compareCost(self, otherFileGroup, num_landmarks):
-		return self.compareAttr(otherFileGroup, num_landmarks, 'sum_cov_trace')
-		
-	def compareTime(self, otherFileGroup, num_landmarks):
-		return self.compareAttr(otherFileGroup, num_landmarks, 'total_time')	
+    def __init__(self, files):
+        self.files = files
+        self.slam_type = self.files[0].slam_type
+        
+    def getFileWithLandmark(self, num_landmarks):
+        for f in self.files:
+            if f.num_landmarks == num_landmarks:
+                return f
+        return None
+        
+    def getStats(self, num_landmarks, attr):
+        f = self.getFileWithLandmark(num_landmarks)
+        
+        d = Data()
+        for i in xrange(f.num_examples):
+            if f.example[i]['failure'] == 0:
+                d.add(f.example[i][attr])
+                
+        return d.mean, d.sd
+        
+    def getCostStats(self, num_landmarks):
+        return self.getStats(num_landmarks, 'sum_cov_trace')
+        
+    def getTimeStats(self, num_landmarks):
+        return self.getStats(num_landmarks, 'solve_time')
+    
+    def getWaypointErrorStats(self, num_landmarks):
+        return self.getStats(num_landmarks, 'waypoint_distance_error')
+        
+    def compareAttr(self, otherFileGroup, num_landmarks, attr):
+        f_self = self.getFileWithLandmark(num_landmarks)
+        f_other = otherFileGroup.getFileWithLandmark(num_landmarks)
+        
+        d = Data()
+        for i in xrange(f_self.num_examples):
+            if f_self.example[i]['failure'] == 0 and f_other.example[i]['failure'] == 0:
+                d.add(f_self.example[i][attr] / f_other.example[i][attr])
+                
+        return d.mean, d.sd
+        
+    def compareCost(self, otherFileGroup, num_landmarks):
+        return self.compareAttr(otherFileGroup, num_landmarks, 'sum_cov_trace')
+        
+    def compareTime(self, otherFileGroup, num_landmarks):
+        return self.compareAttr(otherFileGroup, num_landmarks, 'total_time')    
+    
+    def compareWaypointError(self, otherFileGroup, num_landmarks):
+        return self.compareAttr(otherFileGroup, num_landmarks, 'waypoint_distance_error')
         
     
 def process_data():
@@ -137,64 +143,91 @@ def process_data():
     controlFG = FileGroup(control_files)
     trajFG = FileGroup(traj_files)
     
-    landmarks = [3,4,5,6]
+    landmarks = [3,4,5,6,10,15,20,25,30,35,40,45,50]
+    
+    dist_err_abs_fig = plt.figure()
+    dist_err_abs_ax = dist_err_abs_fig.add_subplot(111)
     
     print('############ Absolute statistics #########')
-    for num_landmarks in landmarks:
-    	print('Number of landmarks: ' + str(num_landmarks))
-    	for fg in [trajFG, stateFG, controlFG]:
-    		cost_avg, cost_sd = fg.getCostStats(num_landmarks)
-    		time_avg, time_sd = fg.getTimeStats(num_landmarks)
-    		
-    		print(fg.slam_type)
-    		print('Cost: {0} +- {1}'.format(cost_avg, cost_sd))
-    		print('Time: {0} +- {1} ms'.format(time_avg, time_sd))
+    for fg in [trajFG, stateFG, controlFG]:
+        dist_err_avgs, dist_err_sds = [], []
+        for num_landmarks in landmarks:
+            print('Number of landmarks: ' + str(num_landmarks))
+    
+            cost_avg, cost_sd = fg.getCostStats(num_landmarks)
+            time_avg, time_sd = fg.getTimeStats(num_landmarks)
+            dist_err_avg, dist_err_sd = fg.getWaypointErrorStats(num_landmarks)
+            
+            dist_err_avgs.append(dist_err_avg)
+            dist_err_sds.append(dist_err_sd)
+            
+            print(fg.slam_type)
+            print('Cost: {0} +- {1}'.format(cost_avg, cost_sd))
+            print('Time: {0} +- {1} ms'.format(time_avg, time_sd))
+            print('Waypoint distance error: {0} +- {1} meters'.format(dist_err_avg, dist_err_sd))
+            print('')
+        
+        dist_err_abs_ax.errorbar(landmarks, dist_err_avgs, yerr=dist_err_sds, label=fg.slam_type)
     print('\n')
     
     print('############ Relative statistics #############')
-    cost_fig = plt.figure(1)
+    cost_fig = plt.figure()
     cost_ax = cost_fig.add_subplot(111)
-    time_fig = plt.figure(2)
+    time_fig = plt.figure()
     time_ax = time_fig.add_subplot(111)
+    dist_err_fig = plt.figure()
+    dist_err_ax = dist_err_fig.add_subplot(111)
     
     state_comp_times = []
     control_comp_times = []
     for fg in [stateFG, controlFG]:
-    	cost_comp_avgs, cost_comp_sds = [], []
-    	time_comp_avgs, time_comp_sds = [], []
+        cost_comp_avgs, cost_comp_sds = [], []
+        time_comp_avgs, time_comp_sds = [], []
+        dist_err_comp_avgs, dist_err_comp_sds = [], []
         for num_landmarks in landmarks:
             print('Number of landmarks: ' + str(num_landmarks))
             cost_comp_avg, cost_comp_sd = fg.compareCost(trajFG, num_landmarks)
             time_comp_avg, time_comp_sd = fg.compareTime(trajFG, num_landmarks)
+            dist_err_comp_avg, dist_err_comp_sd = fg.compareWaypointError(trajFG, num_landmarks)
             
             cost_comp_avgs.append(cost_comp_avg)
             cost_comp_sds.append(cost_comp_sd)
             time_comp_avgs.append(time_comp_avg)
             time_comp_sds.append(time_comp_sd)
-    		
+            dist_err_comp_avgs.append(dist_err_comp_avg)
+            dist_err_comp_sds.append(dist_err_comp_sd)
+            
             print(fg.slam_type + ' compared with ' + trajFG.slam_type)
             print('Cost: {0} +- {1}'.format(cost_comp_avg, cost_comp_sd))
             print('Time: {0} +- {1}'.format(time_comp_avg, time_comp_sd))
+            print('Waypoint error: {0} +- {1}'.format(dist_err_comp_avg, dist_err_comp_sd))
+            print('')
             
         cost_ax.errorbar(landmarks, cost_comp_avgs, yerr=cost_comp_sds, elinewidth=2, label=fg.slam_type)
         time_ax.errorbar(landmarks, time_comp_avgs, yerr=time_comp_sds, label=fg.slam_type)
+        dist_err_ax.errorbar(landmarks, dist_err_comp_avgs, yerr=dist_err_comp_sds, label=fg.slam_type)
             
-    for ax in [cost_ax, time_ax]:
+    # set titles, labels, etc for all the graphs
+    for ax in [dist_err_abs_ax, cost_ax, time_ax, dist_err_ax]:
         ax.set_xticks(landmarks)
         ax.set_xlabel('Number of landmarks')
         
         handles, labels = ax.get_legend_handles_labels()
         ax.legend(handles, labels)
     
+    dist_err_abs_ax.set_ylabel('Waypoint distance error (meters)')
     cost_ax.set_ylabel('Cost factor versus trajectory')
     time_ax.set_ylabel('Time factor versus trajectory')
+    dist_err_ax.set_ylabel('Waypoint distance error versus trajectory')
     
+    dist_err_abs_ax.set_title('Waypoint distance error of trajectory, belief, state and control')
     cost_ax.set_title('Cost factor of belief, state, and control versus trajectory')
     time_ax.set_title('Time factor of belief, state, and control versus trajectory')
+    dist_err_ax.set_title('Waypoint distance factor of belief, state, and control versus trajectory')
     
     plt.show(block=False)
     raw_input()
-    		
+            
     
 
 if __name__ == '__main__':

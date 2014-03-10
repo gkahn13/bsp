@@ -676,6 +676,8 @@ int main(int argc, char* argv[])
 	vec(x0, SqrtSigma0, B[0]);
 	std::cout<<"HORIZON is "<<HORIZON<<'\n';
 	
+	util::Timer solveTimer;
+	util::Timer_tic(&solveTimer);
 	for(int h = 0; h < HORIZON; ++h) {
 		for (int t = 0; t < T-1; ++t) {
 
@@ -686,8 +688,6 @@ int main(int argc, char* argv[])
 			*/ 
 		}
 
-		util::Timer solveTimer;
-		util::Timer_tic(&solveTimer);
 		
 		double cost = beliefPenaltyCollocation(B, U, problem, output, info);
 		

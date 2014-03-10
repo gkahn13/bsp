@@ -84,6 +84,9 @@ class FileGroup:
 		
 	def getStats(self, num_landmarks, attr):
 		f = self.getFileWithLandmark(num_landmarks)
+
+		if f is None:
+			return None, None
 		
 		d = Data()
 		for i in xrange(f.num_examples):
@@ -132,24 +135,30 @@ def process_data():
     control_files = [file for file in files if file.slam_type == 'slam-control']
     traj_files = [file for file in files if file.slam_type == 'slam-traj']
     
-    #beliefFG = FileGroup(belief_files)
+    beliefFG = FileGroup(belief_files)
     stateFG = FileGroup(state_files)
     controlFG = FileGroup(control_files)
     trajFG = FileGroup(traj_files)
+
+    IPython.embed()
+    return
     
     landmarks = [3,4,5,6,10,15,20,25,30,35,40,45,50]
     
     print('############ Absolute statistics #########')
     for num_landmarks in landmarks:
     	print('Number of landmarks: ' + str(num_landmarks))
-    	for fg in [trajFG, stateFG, controlFG]:
+    	for fg in [trajFG, beliefFG, stateFG, controlFG]:
     		cost_avg, cost_sd = fg.getCostStats(num_landmarks)
     		time_avg, time_sd = fg.getTimeStats(num_landmarks)
     		
-    		print(fg.slam_type)
-    		print('Cost: {0} +- {1}'.format(cost_avg, cost_sd))
-    		print('Time: {0} +- {1} ms'.format(time_avg, time_sd))
+		if cost_avg is not None:
+			print(fg.slam_type)
+			print('Cost: {0} +- {1}'.format(cost_avg, cost_sd))
+			print('Time: {0} +- {1} ms'.format(time_avg, time_sd))
     print('\n')
+
+    return
     
     print('############ Relative statistics #############')
     cost_fig = plt.figure(1)

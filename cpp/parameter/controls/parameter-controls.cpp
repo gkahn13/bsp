@@ -875,7 +875,7 @@ int main(int argc, char* argv[])
 		#endif
 
 	}
-	pythonDisplayHistory(HistoryU,HistoryB, SqrtSigma0, x0, HORIZON);
+	//pythonDisplayHistory(HistoryU,HistoryB, SqrtSigma0, x0, HORIZON);
 
 
 

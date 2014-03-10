@@ -183,7 +183,7 @@ int main(int argc, char* argv[])
 	// TODO: possibly switch to random controls
 	std::vector< Matrix<U_DIM> > uBar((T-1), (x0.subMatrix<U_DIM,1>(0,0) - x0.subMatrix<U_DIM,1>(0,0))/(double)(T-1));
 
-	Rint = 0.1*identity<U_DIM>();
+	Rint = 1e-3*identity<U_DIM>();
 
 	Qint(0,0) = 10.0;
 	Qint(1,1) = 10.0;
@@ -225,8 +225,8 @@ int main(int argc, char* argv[])
 	std::vector< Matrix<X_DIM> > xBar;
 	std::vector< SymmetricMatrix<X_DIM> > SigmaBar;
 	
-	SqrtSigma0(0,0) = 0.05;
-	SqrtSigma0(1,1) = 0.05;
+	SqrtSigma0(0,0) = 0.1;
+	SqrtSigma0(1,1) = 0.1;
 	SqrtSigma0(2,2) = 0.05;
 	SqrtSigma0(3,3) = 0.05;
 	SqrtSigma0(4,4) = 0.5;
@@ -292,7 +292,7 @@ int main(int argc, char* argv[])
 		xBar.clear(); 
 		SigmaBar.clear(); 
 
-		unVec(Bekf[0], x0, SqrtTemp);
+		unVec(Bekf[0], x0, SqrtSigma0);
 
 		xBar.push_back(x0); 
 

@@ -71,8 +71,9 @@ def plot_parameter_trajectory(B, U, bDim, xDim, uDim, T):
         X[:,i], Sigma = decompose_belief(B[:,i], bDim, xDim)
         SigmaList.append(Sigma)
    
-    output =open('random.pkl','wb')
-    pickle.dump(X,output)
+    output =open('data.pkl','wb')
+
+    pickle.dump([X, SigmaList] ,output)
     joint1pos = X[0,:].tolist()[0]
     joint2pos = X[1,:].tolist()[0]
     joint1vel = X[2,:].tolist()[0]
@@ -91,7 +92,7 @@ def plot_parameter_trajectory(B, U, bDim, xDim, uDim, T):
     length2cov = [S[5,5] for S in SigmaList]
     mass1cov = [S[6,6] for S in SigmaList]
     mass2cov = [S[7,7] for S in SigmaList]
-        
+
     #IPython.embed()
         
     plt.figure(1)
@@ -177,27 +178,42 @@ def plot_for_paper():
     pkl_file = open('data.pkl', 'rb')
     pkl_file2 = open('random.pkl', 'rb')
 
-    X = pickle.load(pkl_file)
-    Xrand = pickle.load(pkl_file2)
+    [X, SigmaList] = pickle.load(pkl_file)
+    [Xrand, SigmaListR] = pickle.load(pkl_file2)
     Base = X; 
-    IPython.embed()
+   # IPython.embed()
     Base[0,T-1] = 0.5; 
     
          
         
   
     length1_rand = (1/Xrand[4,:]).tolist()[0]
+    length1cov_rand = [S[4,4] for S in SigmaListR]
+
     length2_rand = (1/Xrand[5,:]).tolist()[0]
+    length2cov_rand = [(S[5,5]) for S in SigmaListR]
+
     mass1_rand = (1/Xrand[6,:]).tolist()[0]
+    mass1cov_rand = [(S[6,6]) for S in SigmaListR]
+
     mass2_rand = (1/Xrand[7,:]).tolist()[0]
+    mass2cov_rand = [(S[7,7]) for S in SigmaListR]
 
     length1 = (1/X[4,:]).tolist()[0]
+    length1cov = [S[4,4] for S in SigmaList]
+
     length2 = (1/X[5,:]).tolist()[0]
+    length2cov = [S[5,5] for S in SigmaList]
+
     mass1 = (1/X[6,:]).tolist()[0]
+    mass1cov = [S[6,6] for S in SigmaList]
+
     mass2 = (1/X[7,:]).tolist()[0]
-    base = (Base[0,:]).tolist()[0]
+    mass2cov = [S[7,7] for S in SigmaList]
 
+    base = [0.5 for i in range(500)]
 
+    Count = [i for i in range(500)]
         
     #IPython.embed()
         
@@ -206,34 +222,45 @@ def plot_for_paper():
     plt.cla()
    
     plt.autoscale(True,'x',True)
-    
+    lightgreen = '#00FF44'
     
     
     plt.subplot(4,1,1)
     plt.ylim((0.2,0.7))
     plt.ylabel('length1')
-    plt.plot(length1,'b-', linewidth = 4)
-    plt.plot(length1_rand,'g-', linewidth = 4)
+    plt.errorbar(Count,length1_rand,length1cov_rand,ecolor = 'c',errorevery=1)
+    plt.errorbar(Count,length1,length1cov,ecolor=lightgreen,errorevery=1)
+    plt.plot(length1_rand,'b',linewidth= 2)
+    plt.plot(length1,'g-', linewidth = 2)
     plt.plot(base,'r-', linewidth = 2)
     
     plt.subplot(4,1,2)
+    plt.ylim((0.2,0.7))
     plt.ylabel('length2')
-    plt.plot(length2,'b-', linewidth = 4)
-    plt.plot(length2_rand,'g-', linewidth = 4)
+    plt.errorbar(Count,length2_rand,length2cov_rand,ecolor ='c',errorevery=1)
+    plt.errorbar(Count,length2,length2cov, ecolor=lightgreen,errorevery=1)
+    plt.plot(length2_rand,'b',linewidth= 2)
+    plt.plot(length2,'g-', linewidth = 2)
     plt.plot(base,'r-', linewidth = 2)
+
 
     plt.subplot(4,1,3)
     plt.ylim((0.2,0.7))
     plt.ylabel('mass1')
-    plt.plot(mass1_rand,'g-', linewidth = 4)
-    plt.plot(mass1,'b-', linewidth = 4)
+    plt.errorbar(Count,mass1_rand,mass1cov_rand,ecolor ='c',errorevery=1)
+    plt.errorbar(Count,mass1,mass1cov,ecolor=lightgreen,errorevery=1)
+    plt.plot(mass1_rand,'b',linewidth= 2)
+    plt.plot(mass1,'g-', linewidth = 2)
     plt.plot(base,'r-', linewidth = 2)
 
     plt.subplot(4,1,4)
     plt.ylim((0.2,0.7))
     plt.ylabel('mass2')
-    plt.plot(mass2_rand,'g-', linewidth = 4)
-    plt.plot(mass2,'b-', linewidth = 4)
+    plt.xlabel('Timesteps')
+    plt.errorbar(Count,mass2_rand,mass2cov_rand,ecolor ='c',errorevery=1)
+    plt.errorbar(Count,mass2,mass2cov,ecolor=lightgreen,errorevery=1)
+    plt.plot(mass2_rand,'b',linewidth= 2)
+    plt.plot(mass2,'g-', linewidth = 2)
     plt.plot(base,'r-', linewidth = 2)
     
     

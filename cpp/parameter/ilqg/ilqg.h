@@ -328,7 +328,7 @@ inline void integrateControlPolicy(void (*linearizeDynamics)(const Matrix<_xDim>
 
 	size_t pathLen = uBar.size();
 
-	int Umax = 1, Umin = -1;
+	double Umax = 0.1, Umin = -0.1;
 
 	xNext[0] = xBar[0];
 	SigmaNext[0] = SigmaBar0;

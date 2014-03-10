@@ -397,8 +397,6 @@ inline void forwardIteration(void (*linearizeDynamics)(const Matrix<_xDim>&, con
 		return;
 	}
 	*/
-	std::cout << "in forward iteration\n";
-	std::cout << eps << std::endl;
 
 	// bracket minimum
 	double leftEps, rightEps, bestEps, leftCost, rightCost;
@@ -407,7 +405,6 @@ inline void forwardIteration(void (*linearizeDynamics)(const Matrix<_xDim>&, con
 	// Compute expected cost for eps = 0 (is always lower than current bestCost)
 	bestCost = computeExpectedCost(linearizeDynamics, quadratizeFinalCost, quadratizeCost, L,
 		xBar, SigmaBar, uBar, WBar);
-	std::cout << "bestCost after call: " << bestCost << "\n";
 	bestEps = 0.0;
 
 //	bestEps = 0.1;
@@ -429,8 +426,6 @@ inline void forwardIteration(void (*linearizeDynamics)(const Matrix<_xDim>&, con
 //	}
 //	return;
 	while (eps > 0.0 && (!middleFound || !rightFound)) {
-		//TODO: setting epsilon small
-		std::cout << eps << std::endl;
 
 		// Compute cost at current eps
 		integrateControlPolicy(linearizeDynamics, linearizeObservation,
@@ -593,7 +588,7 @@ inline void solvePOMDP(void (*linearizeDynamics)(const Matrix<_xDim>&, const Mat
 
 	while(!terminate)
 	{
-		std::cout << "iter: " << iter << "\n";
+		LOG_DEBUG("iter: %d", iter);
 		backwardIteration(linearizeDynamics, linearizeObservation, quadratizeFinalCost, quadratizeCost, xBar, SigmaBar, uBar, L, l, gradient);
 		//double prevCost = bestCost;
 		forwardIteration(linearizeDynamics, linearizeObservation, quadratizeFinalCost, quadratizeCost, L, l, xBar, SigmaBar, uBar, WBar, bestCost, eps, gradient);
@@ -608,7 +603,8 @@ inline void solvePOMDP(void (*linearizeDynamics)(const Matrix<_xDim>&, const Mat
 		terminate = (eps*eps*absl / absu < 1e-06);
 		//terminate = (abs((prevCost - bestCost) / bestCost) < 1e-06);
 		
-		std::cout << "Iter: " << iter << " Grad: " << gradient << " RelErr: " << eps*eps*absl / absu << " Eps: " << eps << " Cost: " << bestCost << std::endl;
+		LOG_DEBUG("Iter: %d Grad: %.2f RelErr: %.2f Eps: %.2f Cost: %.2f", iter, gradient, eps*eps*absl / absu, eps, bestCost);
+		//std::cout << "Iter: " << iter << " Grad: " << gradient << " RelErr: " << eps*eps*absl / absu << " Eps: " << eps << " Cost: " << bestCost << std::endl;
 
 		++iter;
 	}

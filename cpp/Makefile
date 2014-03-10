@@ -509,7 +509,7 @@ $(OBJ_DIR)/slam-control.o : $(SLAM_CONTROL_DIR)/slam-control.cpp $(SLAM_HEADERS)
 
 # make slam-ilqg
 SLAM_ILQG_DIR = slam/ilqg
-SLAM_ILQG_FILES = slam-ilqg logging slam
+SLAM_ILQG_FILES = slam-ilqg logging slam trajMPC slam-traj
 SLAM_ILQG_OBJS = $(SLAM_ILQG_FILES:%=$(OBJ_DIR)/%.o)
 
 slam-ilqg: | $(SLAM_ILQG_OBJS)

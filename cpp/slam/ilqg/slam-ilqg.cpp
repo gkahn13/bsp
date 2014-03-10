@@ -199,9 +199,13 @@ int main(int argc, char* argv[])
 	l[2][0] = 20; l[2][1] = 10;
 	initProblemParams(l);
 
+	Q *= 1;
+	R *= 1;
+
 	Rint = alpha_control*identity<U_DIM>();
 	Qint = alpha_belief*identity<X_DIM>();
 	QGoal = alpha_final_belief*identity<X_DIM>();
+
 
 	std::vector< Matrix<U_DIM, X_DIM> > L;
 	std::vector< Matrix<X_DIM> > xBar;
@@ -239,7 +243,7 @@ int main(int argc, char* argv[])
 		std::cout << ~uBar[t];
 	}
 
-	pythonDisplayTrajectory(uBar, T, true);
+	//pythonDisplayTrajectory(uBar, T, true);
 
 	util::Timer solveTimer;
 	Timer_tic(&solveTimer);
@@ -251,6 +255,7 @@ int main(int argc, char* argv[])
 
 	LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 	
+	pythonDisplayTrajectory(uBar, T, true);
 
 	for(int t=0; t < T-1; ++t) {
 		std::cout << ~uBar[t];

@@ -130,7 +130,7 @@ parameter-belief-setup:
 	touch $(PARAM_BELIEF_DIR)/parameter-belief.cpp
 	bash $(PARAM_SETUP_FILE) belief $(T)
 
-parameter-belief: | parameter-belief-setup $(PARAM_BELIEF_OBJS)
+parameter-belief: | $(PARAM_BELIEF_OBJS)
 	$(CXX) $(BFLAGS) $(PARAM_BELIEF_OBJS) -o $(BIN_DIR)/parameter-belief $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
 	
 $(OBJ_DIR)/parameterBeliefPenaltyMPC.o : $(PARAM_BELIEF_DIR)/beliefPenaltyMPC.c

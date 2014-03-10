@@ -5,9 +5,9 @@
 #include "../parameter.h"
 
 #include "util/matrix.h"
-//#include "util/Timer.h"
+#include "util/Timer.h"
 #include "util/logging.h"
-//#include "util/utils.h"
+#include "util/utils.h"
 
 #include <Python.h>
 #include <boost/python.hpp>
@@ -687,8 +687,8 @@ int main(int argc, char* argv[])
 			*/ 
 		}
 
-		//util::Timer solveTimer;
-		//util::Timer_tic(&solveTimer);
+		util::Timer solveTimer;
+		util::Timer_tic(&solveTimer);
 		
 		double cost = beliefPenaltyCollocation(B, U, problem, output, info);
 		
@@ -698,7 +698,8 @@ int main(int argc, char* argv[])
 		//pythonDisplayTrajectory(U, SqrtSigma0, x0, xGoal);
 		//pythonPlotRobot(U, SqrtSigma0, x0, xGoal);
 
-		//double solvetime = util::Timer_toc(&solveTimer);
+		double solvetime = util::Timer_toc(&solveTimer);
+		std::cout<<"Solve time: "<<solvetime*1000<<"\n";
 		//LOG_INFO("Optimized cost: %4.10f", cost);
 		//LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 		

@@ -1011,7 +1011,7 @@ int main(int argc, char* argv[])
 	Matrix<U_DIM> uinit;
 	uinit[0] = 0.0;
 	uinit[1] = 0.0;
-	
+	srand(time(NULL));
 	std::vector<Matrix<U_DIM> > U(T-1, uinit); 
 	std::vector<Matrix<X_DIM> > X(T);
 	std::vector<Matrix<B_DIM> > B(T);
@@ -1030,14 +1030,16 @@ int main(int argc, char* argv[])
 	vec(x0, SqrtSigma0, B[0]);
 	std::cout<<"HORIZON is "<<HORIZON<<'\n';
 
+	util::Timer solveTimer;
+	util::Timer_tic(&solveTimer);
+	
 	for(int h = 0; h < HORIZON; ++h) {
 		for (int t = 0; t < T-1; ++t) {
 			X[t] = B[t].subMatrix<X_DIM,1>(0,0);
 			B[t+1] = beliefDynamics(B[t], U[t]);
 		}
 		X[T-1] = B[T-1].subMatrix<X_DIM,1>(0,0);
-		util::Timer solveTimer;
-		util::Timer_tic(&solveTimer);
+		
 		
 		
 		double cost = statePenaltyCollocation(X, U, problem, output, info);
@@ -1047,8 +1049,7 @@ int main(int argc, char* argv[])
 		//pythonDisplayTrajectory(U, SqrtSigma0, x0, xGoal);
 		//pythonPlotRobot(U, SqrtSigma0, x0, xGoal);
 
-		double solvetime = util::Timer_toc(&solveTimer);
-		std::cout<<"Solve time: "<<solvetime*1000<<"\n";
+		
 		//LOG_INFO("Optimized cost: %4.10f", cost);
 		//LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 		
@@ -1071,7 +1072,7 @@ int main(int argc, char* argv[])
 
 		unVec(B[0], x0, SqrtSigma0);
 		//std::cout << "x0 after control step" << std::endl << ~x0;
-		#define SPEED_TEST
+		//#define SPEED_TEST
 		#ifdef SPEED_TEST
 		for(int t = 0; t < T-1; ++t) {
 			for(int l=0; l<U_DIM; l++){
@@ -1088,7 +1089,8 @@ int main(int argc, char* argv[])
 
 
 	}
-
+	double solvetime = util::Timer_toc(&solveTimer);
+	std::cout<<"Solve time: "<<solvetime*1000<<"\n";
 
 	pythonDisplayHistory(HistoryU,HistoryB, SqrtSigma0, x0, HORIZON);
 	cleanupBeliefMPCVars();

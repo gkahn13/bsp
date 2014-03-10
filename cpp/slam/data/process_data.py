@@ -144,7 +144,6 @@ def process_data():
     trajFG = FileGroup(traj_files)
     
     landmarks = [3,4,5,6,10,15,20,25,30,35,40,45,50]
-    
     dist_err_abs_fig = plt.figure()
     dist_err_abs_ax = dist_err_abs_fig.add_subplot(111)
     

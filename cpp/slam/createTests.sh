@@ -1,8 +1,8 @@
-num_runs_per_test=10
+num_runs_per_test=20
 landmarkDir=landmarkTextFiles
 mkdir -p $landmarkDir
 
-for num_landmarks in {10,15,20,25,30,35,40,45,50};
+for num_landmarks in {3,4,5,6};
 do
     python generate_landmarks.py $num_landmarks $num_runs_per_test
     cp landmarks.txt ${landmarkDir}/landmarks-${num_landmarks}.txt

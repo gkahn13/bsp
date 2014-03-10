@@ -22,7 +22,7 @@
 
 #define TIMESTEPS 15
 #define DT 1.0
-#define NUM_LANDMARKS 50
+#define NUM_LANDMARKS 6
 #define NUM_WAYPOINTS 4
 
 #define C_DIM 3 // car dimension [x, y, theta]
@@ -134,7 +134,7 @@ void linearizeBeliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u, Mat
 
 void logDataHandle(std::string file_name, std::ofstream& f);
 
-void logDataToFile(std::ofstream& f, const std::vector<Matrix<B_DIM> >& B, double solve_time, double initialization_time);
+void logDataToFile(std::ofstream& f, const std::vector<Matrix<B_DIM> >& B, double solve_time, double initialization_time, double failure);
 
 void pythonDisplayTrajectory(std::vector< Matrix<X_DIM> >& X, int time_steps, bool pause=false);
 

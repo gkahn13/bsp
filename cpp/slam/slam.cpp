@@ -594,7 +594,7 @@ void logDataHandle(std::string file_name, std::ofstream& f) {
 	f << NUM_LANDMARKS << "\n";
 }
 
-void logDataToFile(std::ofstream& f, const std::vector<Matrix<B_DIM> >& B, double solve_time, double initialization_time) {
+void logDataToFile(std::ofstream& f, const std::vector<Matrix<B_DIM> >& B, double solve_time, double initialization_time, double failure) {
 	double sum_cov_trace = 0;
 	Matrix<X_DIM> x;
 	Matrix<X_DIM,X_DIM> SqrtSigma;
@@ -622,6 +622,7 @@ void logDataToFile(std::ofstream& f, const std::vector<Matrix<B_DIM> >& B, doubl
 		f << "waypoint_distance_error " << waypoint_distance_error << "\n";
 		f << "solve_time " << solve_time << "\n";
 		f << "initialization_time " << initialization_time << "\n";
+		f << "failure " << failure << "\n";
 	} else {
 		LOG_ERROR("Couldn't write in logDataToFile");
 		return;

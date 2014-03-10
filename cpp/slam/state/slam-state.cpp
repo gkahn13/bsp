@@ -953,6 +953,7 @@ void planPath(std::vector<Matrix<P_DIM> > l, stateMPC_params& problem, stateMPC_
 				if (iter > 3) {
 					LOG_ERROR("Tried too many times, giving up");
 					pythonDisplayTrajectory(U, T, false);
+					logDataToFile(f, B_total, INFTY, INFTY, 1);
 					return;
 					//exit(-1);
 				}
@@ -999,7 +1000,7 @@ void planPath(std::vector<Matrix<P_DIM> > l, stateMPC_params& problem, stateMPC_
 	LOG_INFO("Total trajectory solve time: %5.3f ms", trajTime*1000);
 	LOG_INFO("Total solve time: %5.3f ms", totalSolveTime*1000);
 
-	logDataToFile(f, B_total, totalSolveTime*1000, trajTime*1000);
+	logDataToFile(f, B_total, totalSolveTime*1000, trajTime*1000, 0);
 
 
 	pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, false);

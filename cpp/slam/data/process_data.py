@@ -137,7 +137,7 @@ def process_data():
     controlFG = FileGroup(control_files)
     trajFG = FileGroup(traj_files)
     
-    landmarks = [3,4,5,6]
+    landmarks = [3,4,5,6,10,15,20,25,30,35,40,45,50]
     
     print('############ Absolute statistics #########')
     for num_landmarks in landmarks:

@@ -675,7 +675,7 @@ int main(int argc, char* argv[])
 
 	vec(x0, SqrtSigma0, B[0]);
 	std::cout<<"HORIZON is "<<HORIZON<<'\n';
-	boost::timer t; 
+	
 	for(int h = 0; h < HORIZON; ++h) {
 		for (int t = 0; t < T-1; ++t) {
 
@@ -697,8 +697,7 @@ int main(int argc, char* argv[])
 		//pythonDisplayTrajectory(U, SqrtSigma0, x0, xGoal);
 		//pythonPlotRobot(U, SqrtSigma0, x0, xGoal);
 
-		double solvetime = util::Timer_toc(&solveTimer);
-		std::cout<<"Solve time: "<<solvetime*1000<<"\n";
+		
 		//LOG_INFO("Optimized cost: %4.10f", cost);
 		//LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 		
@@ -724,7 +723,7 @@ int main(int argc, char* argv[])
 		unVec(B[0], x0, SqrtSigma0);
 		//std::cout << "x0 after control step" << std::endl << ~x0;
 
-		#define SPEED_TEST
+		//#define SPEED_TEST
 		#ifdef SPEED_TEST
 		for(int t = 0; t < T-1; ++t) {
 			for(int l=0; l<U_DIM; l++){
@@ -741,9 +740,10 @@ int main(int argc, char* argv[])
 
 
 	}
-	double elapsed_time = t.elapsed(); 
+	
+	double solvetime = util::Timer_toc(&solveTimer);
+	std::cout<<"Solve time: "<<solvetime*1000<<"\n";
 
-	std::cout<<"TIME TAKEN "<<elapsed_time<<"\n";
 	pythonDisplayHistory(HistoryU,HistoryB, SqrtSigma0, x0, HORIZON);
 	cleanupBeliefMPCVars();
 

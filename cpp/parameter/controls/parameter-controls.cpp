@@ -830,7 +830,7 @@ int main(int argc, char* argv[])
 		
 		double elapsed_time = t.elapsed(); 
 		std::cout<<"TIME TAKEN "<<elapsed_time<<"\n";
-		pythonDisplayHistory(HistoryU,HistoryB, SqrtSigma0, x0, HORIZON);
+		
 		//pythonDisplayTrajectory(U, SqrtSigma0, x0, xGoal);
 		//pythonPlotRobot(U, SqrtSigma0, x0, xGoal);
 
@@ -875,69 +875,9 @@ int main(int argc, char* argv[])
 		#endif
 
 	}
-	
+	pythonDisplayHistory(HistoryU,HistoryB, SqrtSigma0, x0, HORIZON);
 
 
-	
-	#ifdef PAPER_PLOT
-
-	std::vector<Matrix<U_DIM> > HistoryRandU(HORIZON);
-	std::vector<Matrix<B_DIM> > HistoryRandB(HORIZON);
-	SqrtSigma0(0,0) = 0.1;
-	SqrtSigma0(1,1) = 0.1;
-	SqrtSigma0(2,2) = 0.05;
-	SqrtSigma0(3,3) = 0.05;
-	SqrtSigma0(4,4) = 0.5;
-	SqrtSigma0(5,5) = 0.5;
-	SqrtSigma0(6,6) = 0.5;
-	SqrtSigma0(7,7) = 0.5;
-
-	Matrix<U_DIM> uinit_rand;
-	uinit_rand[0] = 0;
-	uinit_rand[1] = 0;
-	
-	std::vector<Matrix<U_DIM> > Urand(T-1, uinit); 
-	//std::vector<Matrix<B_DIM> > B(T);
-
-	// position, then velocity
-	x0[0] = M_PI*0.5; x0[1] = M_PI*0.5; x0[2] = 0; x0[3] = 0;
-	// parameter start estimates (alphabetical, then numerical order)
-	x0[4] = 1/length1_est; x0[5] = 1/length2_est; x0[6] = 1/mass1_est; x0[7] = 1/mass2_est;
-
-
-	
-	x_real[0] = M_PI*0.45; x_real[1] = M_PI*0.55; x_real[2] = -0.01; x_real[3] = 0.01;
-	x_real[4] = 1/dynamics::length1; x_real[5] = 1/dynamics::length2; x_real[6] = 1/dynamics::mass1; x_real[7] = 1/dynamics::mass2;
-	vec(x0, SqrtSigma0, B[0]);
-	for(int h = 0; h < HORIZON; ++h) {
-
-		for(int t = 0; t < T-1; ++t) {
-			for(int i = 0; i<U_DIM; i++){
-				U[t][i] = uRand(); 
-			}
-		}
-
-		
-
-		
-		unVec(B[0], x0, SqrtSigma0);
-		
-		LOG_INFO("Executing control step");
-		
-		HistoryRandU[h] = U[0];
-		HistoryRandB[h] = B[0];
-		
-		
-		B[0] = executeControlStep(x_real, B[0], U[0]);
-		
-		std::cout<<h<<"\n";
-		std::cout<<U[0]<<"\n";
-		std::cout<<~B[0]<<"\n";
-
-		unVec(B[0], x0, SqrtSigma0);
-		//std::cout << "x0 after control step" << std::endl << ~x0;
-		
-	}
 
 	//pythonPaperPlot(HistoryU,HistoryB,HistoryRandU,HistoryRandB,SqrtSigma0, x0, HORIZON);
 

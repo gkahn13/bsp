@@ -829,7 +829,8 @@ int main(int argc, char* argv[])
 		double cost = controlsPenaltyCollocation(U, problem, output, info);
 		
 		double elapsed_time = t.elapsed(); 
-		std::cout<<"TIME TAKEN "<<t.elapsed()<<"\n";
+		std::cout << std::fixed;
+		std::cout<<"TIME TAKEN "<<std::setprecision(8)<<elapsed_time<<"\n";
 		
 		//pythonDisplayTrajectory(U, SqrtSigma0, x0, xGoal);
 		//pythonPlotRobot(U, SqrtSigma0, x0, xGoal);

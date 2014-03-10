@@ -148,7 +148,7 @@ PARAM_controls_OBJS = $(PARAM_controls_FILES:%=$(OBJ_DIR)/%.o)
 parameter-controls-setup:
 	bash $(PARAM_SETUP_FILE) controls $(T)
 
-parameter-controls: | parameter-controls-setup $(PARAM_controls_OBJS)
+parameter-controls: | $(PARAM_controls_OBJS)
 	$(CXX) $(BFLAGS) $(PARAM_controls_OBJS) -o $(BIN_DIR)/parameter-controls $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
 	
 $(OBJ_DIR)/parameter-controls-cost.o : $(PARAM_controls_DIR)/parameter-controls-cost.c

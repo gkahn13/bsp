@@ -724,9 +724,20 @@ int main(int argc, char* argv[])
 		unVec(B[0], x0, SqrtSigma0);
 		//std::cout << "x0 after control step" << std::endl << ~x0;
 
+		#define SPEED_TEST
+		#ifdef SPEED_TEST
+		for(int t = 0; t < T-1; ++t) {
+			for(int l=0; l<U_DIM; l++){
+		
+				U[t][l] = 0;
+			}
+		}
+		#else
 		for(int t = 0; t < T-2; ++t) {
+		
 			U[t] = U[t+1];
 		}
+		#endif
 
 
 	}

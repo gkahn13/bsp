@@ -172,7 +172,7 @@ PARAM_STATE_OBJS = $(PARAM_STATE_FILES:%=$(OBJ_DIR)/%.o)
 parameter-state-setup:
 	bash $(PARAM_SETUP_FILE) state $(T)
 
-parameter-state: | parameter-state-setup $(PARAM_STATE_OBJS)
+parameter-state: | $(PARAM_STATE_OBJS)
 	$(CXX) $(BFLAGS) $(PARAM_STATE_OBJS) -o $(BIN_DIR)/parameter-state $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
 	
 $(OBJ_DIR)/parameter-state-cost.o : $(PARAM_STATE_DIR)/parameter-state-cost.c

@@ -5,9 +5,9 @@
 #include "../parameter.h"
 
 #include "util/matrix.h"
-//#include "util/Timer.h"
+#include "util/Timer.h"
 #include "util/logging.h"
-//#include "util/utils.h"
+#include "util/utils.h"
 
 #include <Python.h>
 #include <boost/python.hpp>
@@ -1029,29 +1029,16 @@ int main(int argc, char* argv[])
 
 	vec(x0, SqrtSigma0, B[0]);
 	std::cout<<"HORIZON is "<<HORIZON<<'\n';
-	boost::timer t; 
+
 	for(int h = 0; h < HORIZON; ++h) {
 		for (int t = 0; t < T-1; ++t) {
 			X[t] = B[t].subMatrix<X_DIM,1>(0,0);
 			B[t+1] = beliefDynamics(B[t], U[t]);
 		}
 		X[T-1] = B[T-1].subMatrix<X_DIM,1>(0,0);
-		//util::Timer solveTimer;
-		//util::Timer_tic(&solveTimer);
-		/*Matrix<(T-1)*(X_DIM+U_DIM)+X_DIM> grad = finiteGradTest( X,  U, SqrtSigma0);
-		int index=0; 
-		for (int t=0; t<T-1; t++){
-			std::cout<<"t "<<t<<"\n";
-			for (int j=0; j<X_DIM; j++){
-				std::cout<<grad[index++]<<" ";
-			}
-			std::cout<<"\n";
-			for (int j=0; j<U_DIM; j++){
-				std::cout<<grad[index++]<<" ";
-			}
-			std::cout<<"\n";
-		}
-		*/
+		util::Timer solveTimer;
+		util::Timer_tic(&solveTimer);
+		
 		
 		double cost = statePenaltyCollocation(X, U, problem, output, info);
 		
@@ -1060,7 +1047,8 @@ int main(int argc, char* argv[])
 		//pythonDisplayTrajectory(U, SqrtSigma0, x0, xGoal);
 		//pythonPlotRobot(U, SqrtSigma0, x0, xGoal);
 
-		//double solvetime = util::Timer_toc(&solveTimer);
+		double solvetime = util::Timer_toc(&solveTimer);
+		std::cout<<"Solve time: "<<solvetime*1000<<"\n";
 		//LOG_INFO("Optimized cost: %4.10f", cost);
 		//LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 		
@@ -1083,17 +1071,25 @@ int main(int argc, char* argv[])
 
 		unVec(B[0], x0, SqrtSigma0);
 		//std::cout << "x0 after control step" << std::endl << ~x0;
-
+		#define SPEED_TEST
+		#ifdef SPEED_TEST
+		for(int t = 0; t < T-1; ++t) {
+			for(int l=0; l<U_DIM; l++){
+		
+				U[t][l] = 0;
+			}
+		}
+		#else
 		for(int t = 0; t < T-2; ++t) {
 		
 			U[t] = U[t+1];
 		}
+		#endif
 
 
 	}
-	double elapsed_time = t.elapsed(); 
 
-	std::cout<<"TIME TAKEN "<<elapsed_time<<"\n";
+
 	pythonDisplayHistory(HistoryU,HistoryB, SqrtSigma0, x0, HORIZON);
 	cleanupBeliefMPCVars();
 

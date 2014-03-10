@@ -952,7 +952,7 @@ double statePenaltyCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Mat
 
 int main(int argc, char* argv[])
 {
-	for (int run = 0; run < 10; run++){
+	
 
 	// actual: 6.66, 6.66, 10.86, 13
 	double length1_est = .3,
@@ -1092,7 +1092,7 @@ int main(int argc, char* argv[])
 	}
 	double solvetime = util::Timer_toc(&solveTimer);
 	std::cout<<"Solve time: "<<solvetime*1000<<"\n";
-}
+
 	pythonDisplayHistory(HistoryU,HistoryB, SqrtSigma0, x0, HORIZON);
 	cleanupBeliefMPCVars();
 

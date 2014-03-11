@@ -3,12 +3,12 @@
 #include "util/matrix.h"
 
 #include "ilqg.h"
-
+#include "util/Timer.h"
 #include <time.h>
-
+#include "util/utils.h"
 #include <Python.h>
 #include <boost/python.hpp>
-#include <boost/filesystem.hpp>
+
 #include <boost/random.hpp>
 #include <boost/random/normal_distribution.hpp>
 
@@ -264,15 +264,19 @@ int main(int argc, char* argv[])
 	{
 		Binitial[t+1] = beliefDynamics(Binitial[t], uBar[t]);
 	}
+
+	std::cout<<"HORIZON is "<<HORIZON<<'\n';
+	util::Timer solveTimer;
+	util::Timer_tic(&solveTimer);
+
 	for (int h=0; h<HORIZON; h++){
 		
 		double cost_initial = costfunc(Binitial, uBar);
 
-		std::cout << "solvePOMDP " <<h<< std::endl;
+		
 
 		solvePOMDP(linearizeDynamics, linearizeObservation, quadratizeFinalCost, quadratizeCost, xBar, SigmaBar, uBar, L);
 
-		std::cout << "POMDP solved" << std::endl;
 
 	//for (size_t i = 0; i < xBar.size(); ++i) {
 	//	std::cout << ~(xBar[i]);
@@ -293,8 +297,7 @@ int main(int argc, char* argv[])
 		}
 		Bekf[0] = executeControlStep(x_real, Bekf[0], uBar[0]);
 	
-		std::cout<<"U "<<~uBar[0]<<"\n";
-		std::cout<<"X "<<~xBar[0]<<"\n";
+		
 		for (int t = 0; t < T - 1; ++t)
 		{
 			Bekf[t+1] = beliefDynamics(Bekf[t], uBar[t]);
@@ -305,10 +308,7 @@ int main(int argc, char* argv[])
 		double cost_pomdp = costfunc(Bpomdp, uBar);
 		double cost_ekf = costfunc(Bekf, uBar);
 
-		std::cout << "cost initial: " << cost_initial << std::endl;
-		std::cout << "cost pomdp: " << cost_pomdp << std::endl;
-		std::cout << "cost ekf: " << cost_ekf << std::endl;
-
+		
 		//Update XBar, SigmaBar, uBar
 		xBar.clear(); 
 		SigmaBar.clear(); 
@@ -320,14 +320,27 @@ int main(int argc, char* argv[])
 		for(int i=0; i < X_DIM; ++i) { Sigma0(i,i) = SqrtSigma0(i,i)*SqrtSigma0(i,i); } 
 
 		SigmaBar.push_back(Sigma0); 
-
+		#define SPEED_TEST
+		#ifdef SPEED_TEST
+		for(int t = 0; t < T-1; ++t) {
+			for(int l=0; l<U_DIM; l++){
+		
+				uBar[t][l] = 0;
+			}
+		}
+		#else
 		for(int t = 0; t < T-2; ++t) {
 		
-			uBar[t] = zeros<U_DIM,1>();
+			uBar[t] = uBar[t+1];
 		}
+		#endif
 
 
 	}
+	double solvetime = util::Timer_toc(&solveTimer);
+	//LOG_INFO("Optimized cost: %4.10f", cost);
+	std::cout<<"Solve time: "<<solvetime*1000<<"\n";
+
 	pythonDisplayHistory(HistoryU,HistoryB, SqrtSigma0, x0, HORIZON);
 	Matrix<X_DIM> xpomdp, xekf;
 	Matrix<X_DIM,X_DIM> SqrtSigmapomdp, SqrtSigmaekf;

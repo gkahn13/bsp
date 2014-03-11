@@ -167,6 +167,40 @@ def plot_parameter_trajectory(B, U, bDim, xDim, uDim, T):
     print 'Press enter:'
     raw_input()
 
+def plot_speed_bar(): 
+
+    groups = 3; 
+    index = np.arange(groups)
+
+    Height_1l = (3.638762,151.98886,1594.754)
+    std_1l = (2.20,109.3,67)
+
+    Height_ml = (418.5,16901.0,206438.4)
+    std_ml = (26.1,3897.4,36624.0)
+    error_config = {'ecolor': '0.3'}
+    bar_width = 0.4
+    plt.figure(1)
+    plt.clf()
+    
+    plt.cla()
+    plt.bar(index,Height_1l,bar_width,yerr=std_1l,error_kw=error_config)
+    plt.xticks(index+bar_width/2,('controls','state','belief'))
+    plt.title('Average Speed Over One Step')
+    plt.ylabel('Time (ms)')
+
+    plt.figure(2)
+    plt.clf()
+    plt.cla()
+    plt.bar(index,Height_ml,bar_width,yerr=std_ml,error_kw=error_config)
+    plt.xticks(index+bar_width/2,('controls','state','belief'))
+    plt.ylabel('Time (ms)')
+    plt.title('Average Speed Over 300 Step')
+    plt.show(block=False)
+    plt.pause(.05)
+    print 'Press enter:'
+
+
+
 def plot_for_paper():
     
    

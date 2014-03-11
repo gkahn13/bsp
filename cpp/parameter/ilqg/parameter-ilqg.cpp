@@ -266,17 +266,19 @@ int main(int argc, char* argv[])
 	}
 
 	std::cout<<"HORIZON is "<<HORIZON<<'\n';
-	util::Timer solveTimer;
-	util::Timer_tic(&solveTimer);
+	
 
 	for (int h=0; h<HORIZON; h++){
 		
 		double cost_initial = costfunc(Binitial, uBar);
 
 		
-
+		util::Timer solveTimer;
+		util::Timer_tic(&solveTimer);
 		solvePOMDP(linearizeDynamics, linearizeObservation, quadratizeFinalCost, quadratizeCost, xBar, SigmaBar, uBar, L);
-
+		double solvetime = util::Timer_toc(&solveTimer);
+		//LOG_INFO("Optimized cost: %4.10f", cost);
+		std::cout<<"Solve time: "<<solvetime*1000<<"\n";
 
 	//for (size_t i = 0; i < xBar.size(); ++i) {
 	//	std::cout << ~(xBar[i]);
@@ -337,9 +339,7 @@ int main(int argc, char* argv[])
 
 
 	}
-	double solvetime = util::Timer_toc(&solveTimer);
-	//LOG_INFO("Optimized cost: %4.10f", cost);
-	std::cout<<"Solve time: "<<solvetime*1000<<"\n";
+
 
 	pythonDisplayHistory(HistoryU,HistoryB, SqrtSigma0, x0, HORIZON);
 	Matrix<X_DIM> xpomdp, xekf;

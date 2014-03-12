@@ -25,7 +25,7 @@ Matrix<X_DIM,X_DIM> SqrtTemp;
 Matrix<X_DIM> x0, xGoal;
 
 boost::mt19937 rng; 
-boost::uniform_real<> dist(-0.1, 0.1);
+boost::uniform_real<> dist(-0.001, 0.001);
 
 inline Matrix<X_DIM> f(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u)
 {
@@ -288,13 +288,14 @@ int main(int argc, char* argv[])
 		
 		
 
-		HistoryU[h] = uBar[0];
-		HistoryB[h] = Bekf[0];
+		
 		if(uBar[0][0]+uBar[0][1] < 1e-5){
 			for(int i = 0; i<U_DIM; i++){
 				uBar[0][i] = uRand(); 
 			}
 		}
+		HistoryU[h] = uBar[0];
+		HistoryB[h] = Bekf[0];
 		Bekf[0] = executeControlStep(x_real, Bekf[0], uBar[0]);
 	
 		std::cout<<"U "<<~uBar[0]<<"\n";

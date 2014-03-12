@@ -512,8 +512,8 @@ SLAM_ILQG_DIR = slam/ilqg
 SLAM_ILQG_FILES = slam-ilqg logging slam trajMPC slam-traj
 SLAM_ILQG_OBJS = $(SLAM_ILQG_FILES:%=$(OBJ_DIR)/%.o)
 
-slam-ilqg: | $(SLAM_ILQG_OBJS)
-	$(CXX) $(BFLAGS) $(SLAM_ILQG_OBJS) -o $(BIN_DIR)/slam-ilqg $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS) $(CASADI_FLAGS) $(CASADI_LIBS)
+slam-ilqg: | slam-traj-setup $(SLAM_ILQG_OBJS)
+	$(CXX) $(BFLAGS) $(SLAM_ILQG_OBJS) -o $(BIN_DIR)/slam-ilqg-$(NUM_LANDMARKS) $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS) $(CASADI_FLAGS) $(CASADI_LIBS)
 
 $(OBJ_DIR)/slam-ilqg.o : $(SLAM_ILQG_DIR)/slam-ilqg.cpp $(SLAM_ILQG_DIR)/ilqg.h
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $< $(CASADI_FLAGS) $(CASADI_LIBS)

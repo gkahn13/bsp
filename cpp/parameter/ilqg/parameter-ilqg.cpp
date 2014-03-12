@@ -248,6 +248,7 @@ int main(int argc, char* argv[])
 	SqrtSigma0(5,5) = 0.5;
 	SqrtSigma0(6,6) = 0.5;
 	SqrtSigma0(7,7) = 0.5;
+	srand(time(NULL));
 	for(int i=0; i < X_DIM; ++i) { Sigma0(i,i) = SqrtSigma0(i,i)*SqrtSigma0(i,i); } 
 	xBar.push_back(x0);
 	SigmaBar.push_back(Sigma0);
@@ -265,7 +266,7 @@ int main(int argc, char* argv[])
 		Binitial[t+1] = beliefDynamics(Binitial[t], uBar[t]);
 	}
 
-	std::cout<<"HORIZON is "<<HORIZON<<'\n';
+	//std::cout<<"HORIZON is "<<HORIZON<<'\n';
 	util::Timer solveTimer;
 	util::Timer_tic(&solveTimer);
 
@@ -274,12 +275,12 @@ int main(int argc, char* argv[])
 		
 		double cost_initial = costfunc(Binitial, uBar);
 
-		std::cout<<"STEP "<<h<<"\n"; 
+		//std::cout<<"STEP "<<h<<"\n"; 
 		solvePOMDP(linearizeDynamics, linearizeObservation, quadratizeFinalCost, quadratizeCost, xBar, SigmaBar, uBar, L);
 		
 
 	//for (size_t i = 0; i < xBar.size(); ++i) {
-	//	std::cout << ~(xBar[i]);
+	//	//std::cout << ~(xBar[i]);
 	//}
 		for(int t = 0; t < T; ++t) {
 			vec(xBar[t], sqrt(SigmaBar[t]), Bpomdp[t]);
@@ -298,8 +299,8 @@ int main(int argc, char* argv[])
 		HistoryB[h] = Bekf[0];
 		Bekf[0] = executeControlStep(x_real, Bekf[0], uBar[0]);
 	
-		std::cout<<"U "<<~uBar[0]<<"\n";
-		std::cout<<"X "<<~xBar[0]<<"\n";
+		//std::cout<<"U "<<~uBar[0]<<"\n";
+		//std::cout<<"X "<<~xBar[0]<<"\n";
 		for (int t = 0; t < T - 1; ++t)
 		{
 			Bekf[t+1] = beliefDynamics(Bekf[t], uBar[t]);
@@ -310,10 +311,10 @@ int main(int argc, char* argv[])
 		double cost_pomdp = costfunc(Bpomdp, uBar);
 		double cost_ekf = costfunc(Bekf, uBar);
 
-		std::cout << "cost initial: " << cost_initial << std::endl;
+		//std::cout << "cost initial: " << cost_initial << std::endl;
  	
-		std::cout << "cost pomdp: " << cost_pomdp << std::endl;	 	
-		std::cout << "cost ekf: " << cost_ekf << std::endl;
+		//std::cout << "cost pomdp: " << cost_pomdp << std::endl;	 	
+		//std::cout << "cost ekf: " << cost_ekf << std::endl;
 		//Update XBar, SigmaBar, uBar
 		xBar.clear(); 
 		SigmaBar.clear(); 
@@ -341,7 +342,7 @@ int main(int argc, char* argv[])
 	}
 	double solvetime = util::Timer_toc(&solveTimer);
 	//LOG_INFO("Optimized cost: %4.10f", cost);
-	std::cout<<"Solve time: "<<solvetime*1000<<"\n";
+	//std::cout<<"Solve time: "<<solvetime*1000<<"\n";
 
 	pythonDisplayHistory(HistoryU,HistoryB, SqrtSigma0, x0, HORIZON);
 	Matrix<X_DIM> xpomdp, xekf;
@@ -349,14 +350,14 @@ int main(int argc, char* argv[])
 	for(int t = 0; t < T; ++t) {
 		unVec(Bpomdp[t], xpomdp, SqrtSigmapomdp);
 		unVec(Bekf[t], xekf, SqrtSigmaekf);
-		//std::cout << "t: " << t << " xpomdp" << std::endl;
-		//std::cout << ~xpomdp;
-		//std::cout << "t: " << t << " xekf" << std::endl;
-		//std::cout << ~xekf << std::endl;
-		std::cout << "t: " << t << " Sigmapomdp" << std::endl;
-		std::cout << ~SigmaDiag(SqrtSigmapomdp);
-		std::cout << "t: " << t << " Sigmaekf" << std::endl;
-		std::cout << ~SigmaDiag(SqrtSigmaekf) << std::endl << std::endl;
+		////std::cout << "t: " << t << " xpomdp" << std::endl;
+		////std::cout << ~xpomdp;
+		////std::cout << "t: " << t << " xekf" << std::endl;
+		////std::cout << ~xekf << std::endl;
+		//std::cout << "t: " << t << " Sigmapomdp" << std::endl;
+		//std::cout << ~SigmaDiag(SqrtSigmapomdp);
+		//std::cout << "t: " << t << " Sigmaekf" << std::endl;
+		//std::cout << ~SigmaDiag(SqrtSigmaekf) << std::endl << std::endl;
 	}
 
 

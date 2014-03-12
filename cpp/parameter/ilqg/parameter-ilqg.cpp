@@ -275,7 +275,7 @@ int main(int argc, char* argv[])
 		double cost_initial = costfunc(Binitial, uBar);
 
 		
-				solvePOMDP(linearizeDynamics, linearizeObservation, quadratizeFinalCost, quadratizeCost, xBar, SigmaBar, uBar, L);
+		solvePOMDP(linearizeDynamics, linearizeObservation, quadratizeFinalCost, quadratizeCost, xBar, SigmaBar, uBar, L);
 		
 
 	//for (size_t i = 0; i < xBar.size(); ++i) {
@@ -297,7 +297,8 @@ int main(int argc, char* argv[])
 		}
 		Bekf[0] = executeControlStep(x_real, Bekf[0], uBar[0]);
 	
-		
+		std::cout<<"U "<<~uBar[0]<<"\n";
+		std::cout<<"X "<<~xBar[0]<<"\n";
 		for (int t = 0; t < T - 1; ++t)
 		{
 			Bekf[t+1] = beliefDynamics(Bekf[t], uBar[t]);
@@ -308,7 +309,10 @@ int main(int argc, char* argv[])
 		double cost_pomdp = costfunc(Bpomdp, uBar);
 		double cost_ekf = costfunc(Bekf, uBar);
 
-		
+		std::cout << "cost initial: " << cost_initial << std::endl;
+ 	
+		std::cout << "cost pomdp: " << cost_pomdp << std::endl;	 	
+		std::cout << "cost ekf: " << cost_ekf << std::endl;
 		//Update XBar, SigmaBar, uBar
 		xBar.clear(); 
 		SigmaBar.clear(); 
@@ -322,11 +326,8 @@ int main(int argc, char* argv[])
 		SigmaBar.push_back(Sigma0); 
 		#define SPEED_TEST
 		#ifdef SPEED_TEST
-		for(int t = 0; t < T-1; ++t) {
-			for(int l=0; l<U_DIM; l++){
-		
-				uBar[t][l] = 0;
-			}
+		for(int t = 0; t < T-2; ++t) {
+			uBar[t] = zeros<U_DIM,1>();
 		}
 		#else
 		for(int t = 0; t < T-2; ++t) {

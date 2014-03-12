@@ -274,7 +274,7 @@ int main(int argc, char* argv[])
 		
 		double cost_initial = costfunc(Binitial, uBar);
 
-		
+		cout<<"STEP "<<h<<"\n"; 
 		solvePOMDP(linearizeDynamics, linearizeObservation, quadratizeFinalCost, quadratizeCost, xBar, SigmaBar, uBar, L);
 		
 

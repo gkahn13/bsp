@@ -342,7 +342,7 @@ int main(int argc, char* argv[])
 	}
 	double solvetime = util::Timer_toc(&solveTimer);
 	//LOG_INFO("Optimized cost: %4.10f", cost);
-	//std::cout<<"Solve time: "<<solvetime*1000<<"\n";
+	std::cout<<"Solve time: "<<solvetime*1000<<"\n";
 
 	pythonDisplayHistory(HistoryU,HistoryB, SqrtSigma0, x0, HORIZON);
 	Matrix<X_DIM> xpomdp, xekf;

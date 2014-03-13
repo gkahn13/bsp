@@ -46,3 +46,28 @@ cp ${MPC_H_FILE} ${DIR}/${MPC_FILE_NAME}".h"
 echo "replacing TIMESTEPS definition with new TIMESTEPS for arm.h in ${ARM_DIR}"
 H_WRITE="${ARM_DIR}/arm.h"
 sed -i "s/^${CPP_TIMESTEP_DEF}.*/${CPP_TIMESTEP_DEF} ${TIMESTEPS}/" $H_WRITE
+
+# make casadi files
+# move casadi files over if different
+if [ $PARAM_TYPE = "control" ]; then
+    CASADI_PARAM_DIR="${BSP_DIR}/casadi/arm/control"
+    echo "Making casadi files"
+    make -C ${CASADI_PARAM_DIR} all T=${TIMESTEPS}
+
+    CASADI_FILES=${CASADI_PARAM_DIR}/*.c
+    for CASADI_FILE in $CASADI_FILES
+    do
+    CASADI_FILE_NAME=$(basename $CASADI_FILE)
+    PARAM_CASADI_FILE=${PARAM_DIR}/${CASADI_FILE_NAME}
+
+    if [ ! -f $PARAM_CASADI_FILE ]; then
+        echo "casadi file ${CASADI_FILE_NAME} does not exit, copying over"
+        cp $CASADI_FILE $PARAM_CASADI_FILE
+    fi
+
+    if [ $(diff $CASADI_FILE $PARAM_CASADI_FILE | wc -w) -gt 0 ]; then
+        echo "casadi file ${CASADI_FILE_NAME} differs, copying new one over"
+        cp $CASADI_FILE $PARAM_CASADI_FILE
+    fi
+   done
+fi

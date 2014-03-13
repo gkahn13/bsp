@@ -3,9 +3,9 @@
 #include "util/matrix.h"
 
 #include "ilqg.h"
-#include "util/Timer.h"
+
 #include <time.h>
-#include "util/utils.h"
+
 #include <Python.h>
 #include <boost/python.hpp>
 
@@ -25,7 +25,7 @@ Matrix<X_DIM,X_DIM> SqrtTemp;
 Matrix<X_DIM> x0, xGoal;
 
 boost::mt19937 rng; 
-boost::uniform_real<> dist(-0.001, 0.001);
+boost::uniform_real<> dist(-0.1, 0.1);
 
 inline Matrix<X_DIM> f(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u)
 {
@@ -248,7 +248,7 @@ int main(int argc, char* argv[])
 	SqrtSigma0(5,5) = 0.5;
 	SqrtSigma0(6,6) = 0.5;
 	SqrtSigma0(7,7) = 0.5;
-	srand(time(NULL));
+	
 	for(int i=0; i < X_DIM; ++i) { Sigma0(i,i) = SqrtSigma0(i,i)*SqrtSigma0(i,i); } 
 	xBar.push_back(x0);
 	SigmaBar.push_back(Sigma0);
@@ -266,9 +266,7 @@ int main(int argc, char* argv[])
 		Binitial[t+1] = beliefDynamics(Binitial[t], uBar[t]);
 	}
 
-	//std::cout<<"HORIZON is "<<HORIZON<<'\n';
-	util::Timer solveTimer;
-	util::Timer_tic(&solveTimer);
+	
 
 
 	for (int h=0; h<HORIZON; h++){
@@ -326,7 +324,7 @@ int main(int argc, char* argv[])
 		for(int i=0; i < X_DIM; ++i) { Sigma0(i,i) = SqrtSigma0(i,i)*SqrtSigma0(i,i); } 
 
 		SigmaBar.push_back(Sigma0); 
-		#define SPEED_TEST
+		//#define SPEED_TEST
 		#ifdef SPEED_TEST
 		for(int t = 0; t < T-2; ++t) {
 			uBar[t] = zeros<U_DIM,1>();
@@ -340,9 +338,7 @@ int main(int argc, char* argv[])
 
 
 	}
-	double solvetime = util::Timer_toc(&solveTimer);
-	//LOG_INFO("Optimized cost: %4.10f", cost);
-	std::cout<<"Solve time: "<<solvetime*1000<<"\n";
+	
 
 	pythonDisplayHistory(HistoryU,HistoryB, SqrtSigma0, x0, HORIZON);
 	Matrix<X_DIM> xpomdp, xekf;

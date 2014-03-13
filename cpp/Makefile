@@ -2,7 +2,7 @@ CXX = g++
 CC = gcc
 INTELCC = icc
 
-OS := linux
+OS := mac
 
 LINKER_FLAGS.mac = -lm
 LINKER_FLAGS.linux = -lrt
@@ -111,6 +111,29 @@ $(OBJ_DIR)/arm-state-pos-goal.o : $(ARM_STATE_DIR)/arm-state-pos-goal-MPC.c
 	
 $(OBJ_DIR)/arm-state.o : $(ARM_STATE_DIR)/arm-state-pos-goal.cpp $(ARM_HEADERS)
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) -c -o $@ $<
+
+#make arm-control 
+ARM_CONTROL_DIR = arm/control
+ARM_CONTROL_FILES = arm-control-cost arm-control-grad arm-control-pos-goal arm-control logging
+ARM_CONTROL_OBJS = $(ARM_CONTROL_FILES:%=$(OBJ_DIR)/%.o)
+
+#touch-arm-CONTROL:
+#	touch $(ARM_CONTROL_DIR)/arm-CONTROL-pos-goal.cpp
+
+arm-control: | arm-control-setup $(ARM_CONTROL_OBJS)
+	$(CXX) $(BFLAGS) $(ARM_control_OBJS) -o $(BIN_DIR)/arm-control $(BOOST_FLAGS) $(LINKER_FLAGS)
+
+$(OBJ_DIR)/arm-control-cost.o : $(ARM_CONTROL_DIR)/arm-control-cost.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+
+$(OBJ_DIR)/arm-control-grad.o : $(ARM_CONTROL_DIR)/arm-control-grad.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+
+$(OBJ_DIR)/arm-control-pos-goal.o : $(ARM_CONTROL_DIR)/arm-control-pos-goal-MPC.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+	
+$(OBJ_DIR)/arm-control.o : $(ARM_CONTROL_DIR)/arm-control-pos-goal.cpp $(ARM_HEADERS)
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) -c -o $@ $<
 	
 
 
@@ -130,7 +153,7 @@ parameter-belief-setup:
 	touch $(PARAM_BELIEF_DIR)/parameter-belief.cpp
 	bash $(PARAM_SETUP_FILE) belief $(T)
 
-parameter-belief: | $(PARAM_BELIEF_OBJS)
+parameter-belief: | parameter-belief-setup $(PARAM_BELIEF_OBJS)
 	$(CXX) $(BFLAGS) $(PARAM_BELIEF_OBJS) -o $(BIN_DIR)/parameter-belief $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
 	
 $(OBJ_DIR)/parameterBeliefPenaltyMPC.o : $(PARAM_BELIEF_DIR)/beliefPenaltyMPC.c
@@ -148,7 +171,7 @@ PARAM_controls_OBJS = $(PARAM_controls_FILES:%=$(OBJ_DIR)/%.o)
 parameter-controls-setup:
 	bash $(PARAM_SETUP_FILE) controls $(T)
 
-parameter-controls: | $(PARAM_controls_OBJS)
+parameter-controls: | parameter-controls-setup $(PARAM_controls_OBJS)
 	$(CXX) $(BFLAGS) $(PARAM_controls_OBJS) -o $(BIN_DIR)/parameter-controls $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
 	
 $(OBJ_DIR)/parameter-controls-cost.o : $(PARAM_controls_DIR)/parameter-controls-cost.c
@@ -172,7 +195,7 @@ PARAM_STATE_OBJS = $(PARAM_STATE_FILES:%=$(OBJ_DIR)/%.o)
 parameter-state-setup:
 	bash $(PARAM_SETUP_FILE) state $(T)
 
-parameter-state: | $(PARAM_STATE_OBJS)
+parameter-state: | parameter-state-setup $(PARAM_STATE_OBJS)
 	$(CXX) $(BFLAGS) $(PARAM_STATE_OBJS) -o $(BIN_DIR)/parameter-state $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
 	
 $(OBJ_DIR)/parameter-state-cost.o : $(PARAM_STATE_DIR)/parameter-state-cost.c

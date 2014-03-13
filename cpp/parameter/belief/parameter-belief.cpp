@@ -5,9 +5,9 @@
 #include "../parameter.h"
 
 #include "util/matrix.h"
-#include "util/Timer.h"
+
 #include "util/logging.h"
-#include "util/utils.h"
+
 
 #include <Python.h>
 #include <boost/python.hpp>
@@ -675,9 +675,7 @@ int main(int argc, char* argv[])
 
 	vec(x0, SqrtSigma0, B[0]);
 	std::cout<<"HORIZON is "<<HORIZON<<'\n';
-	srand(time(NULL));
-	util::Timer solveTimer;
-	util::Timer_tic(&solveTimer);
+
 	for(int h = 0; h < HORIZON; ++h) {
 		for (int t = 0; t < T-1; ++t) {
 
@@ -741,8 +739,7 @@ int main(int argc, char* argv[])
 
 	}
 	
-	double solvetime = util::Timer_toc(&solveTimer);
-	std::cout<<"Solve time: "<<solvetime*1000<<"\n";
+
 
 	pythonDisplayHistory(HistoryU,HistoryB, SqrtSigma0, x0, HORIZON);
 	cleanupBeliefMPCVars();

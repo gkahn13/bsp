@@ -5,9 +5,9 @@
 #include "../parameter.h"
 
 #include "util/matrix.h"
-#include "util/Timer.h"
+//#include "util/Timer.h"
 #include "util/logging.h"
-#include "util/utils.h"
+//#include "util/utils.h"
 
 #include <Python.h>
 #include <boost/python.hpp>
@@ -1012,7 +1012,7 @@ int main(int argc, char* argv[])
 	Matrix<U_DIM> uinit;
 	uinit[0] = 0.0;
 	uinit[1] = 0.0;
-	srand(time(NULL));
+
 	std::vector<Matrix<U_DIM> > U(T-1, uinit); 
 	std::vector<Matrix<X_DIM> > X(T);
 	std::vector<Matrix<B_DIM> > B(T);
@@ -1031,8 +1031,6 @@ int main(int argc, char* argv[])
 	vec(x0, SqrtSigma0, B[0]);
 	std::cout<<"HORIZON is "<<HORIZON<<'\n';
 
-	util::Timer solveTimer;
-	util::Timer_tic(&solveTimer);
 
 	for(int h = 0; h < HORIZON; ++h) {
 		for (int t = 0; t < T-1; ++t) {
@@ -1090,8 +1088,7 @@ int main(int argc, char* argv[])
 
 
 	}
-	double solvetime = util::Timer_toc(&solveTimer);
-	std::cout<<"Solve time: "<<solvetime*1000<<"\n";
+
 
 	pythonDisplayHistory(HistoryU,HistoryB, SqrtSigma0, x0, HORIZON);
 	cleanupBeliefMPCVars();

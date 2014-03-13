@@ -282,7 +282,7 @@ inline void expectedCost(void (*linearizeDynamics)(const Matrix<_xDim>&, const M
 	if (retcode) {
 		s = q + s; // + scalar(vecTh(S)*vectorize(WBar));
 	} else {
-		std::cout << "retcode in expectedCost is infinity!" << std::endl;
+		std::cout << "retcode in expectedCost is infinity!" << "\n";
 		s = infCost;
 	}
 
@@ -409,7 +409,7 @@ inline void forwardIteration(void (*linearizeDynamics)(const Matrix<_xDim>&, con
 		//std::cout << "#";
 
 		//for (size_t i = 0; i < xBar.size(); ++i) {
-		//	std::cout << "xBar: " << i << " " << xBar[i][0] << " " << xBar[i][1] << std::endl;
+		//	std::cout << "xBar: " << i << " " << xBar[i][0] << " " << xBar[i][1] << "\n";
 		//}
 
 		cost = computeExpectedCost(linearizeDynamics, quadratizeFinalCost, quadratizeCost, L, xNext, SigmaNext, uNext, WNext);
@@ -444,7 +444,7 @@ inline void forwardIteration(void (*linearizeDynamics)(const Matrix<_xDim>&, con
 	if (eps == 0.0) {
 		return;
 	}
-	//std::cout << std::endl;
+	//std::cout << "\n";
 
 	// Approximate minimum by taking parabola through three points.
 	Matrix<3> costs; costs[0] = leftCost; costs[1] = bestCost; costs[2] = rightCost;
@@ -557,7 +557,7 @@ inline void solvePOMDP(void (*linearizeDynamics)(const Matrix<_xDim>&, const Mat
 
 	// compute expected cost 
 	double initialCost = computeExpectedCost(linearizeDynamics, quadratizeFinalCost, quadratizeCost, L, xBar, SigmaBar, uBar, WBar);
-	std::cout << "Cost to begin : " << initialCost << std::endl;
+	std::cout << "Cost to begin : " << initialCost << "\n";
 
 //#define PLOT
 #ifdef PLOT
@@ -582,7 +582,7 @@ inline void solvePOMDP(void (*linearizeDynamics)(const Matrix<_xDim>&, const Mat
 		terminate = (eps*eps*absl / absu < 1e-06);
 		//terminate = (abs((prevCost - bestCost) / bestCost) < 1e-06);
 
-		std::cout << "Iter: " << iter << " Grad: " << gradient << " RelErr: " << eps*eps*absl / absu << " Eps: " << eps << " Cost: " << bestCost << std::endl;
+		std::cout << "Iter: " << iter << " Grad: " << gradient << " RelErr: " << eps*eps*absl / absu << " Eps: " << eps << " Cost: " << bestCost << "\n";
 
 #ifdef PLOT
 			std::vector< Matrix<B_DIM> > B(T);

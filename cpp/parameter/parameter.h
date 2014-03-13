@@ -16,7 +16,7 @@
 #include <boost/python.hpp>
 
 
-#define LINUX
+
 #ifdef LINUX
 	#define WORKING_DIR  "/home/laskeymd/Documents/bsp/cpp"
 #else 

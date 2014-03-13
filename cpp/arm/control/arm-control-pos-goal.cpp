@@ -48,16 +48,13 @@ double computeLQGMPcost(const std::vector<Matrix<X_DIM> >& X, const std::vector<
 void setupCasadiVars(const std::vector<Matrix<X_DIM> >& X, const std::vector<Matrix<U_DIM> >& U, double* XU_arr, double* Sigma0_arr, double* params_arr, double* cam0_arr, double* cam1_arr)
 {
 	int index = 0;
+	for(int i=0; i < X_DIM; ++i) {
+		XU_arr[index++] = X[0][i];
+	}
+	for(int i=0; i<X_DIM; ++i){
+		XU_arr[index++] = X[T-1][i];
+	}
 	for(int t = 0; t < T-1; ++t) {
-		if(t == 0){		
-			for(int i=0; i < X_DIM; ++i) {
-				XU_arr[index++] = X[t][i];
-			}
-			for(int i=0; i<X_DIM; ++i){
-				XU_arr[index++] = X[T-1][i];
-			}
-		}
-
 		for(int i=0; i < U_DIM; ++i) {
 			XU_arr[index++] = U[t][i];
 		}
@@ -114,7 +111,7 @@ void casadiComputeCostGrad(const std::vector< Matrix<X_DIM> >& X, const std::vec
 {
 	double XU_arr[X0XGU_DIM];
 	double Sigma0_arr[X_DIM*X_DIM];
-	double params_arr[3];
+	double params_arr[4];
 	double cam0_arr[3];
 	double cam1_arr[3];
 
@@ -160,6 +157,8 @@ double computeCost(const std::vector< Matrix<X_DIM> >& X, const std::vector< Mat
 	unVec(b, x, SqrtSigma);
 	linearizeg(x, J);
 	cost += alpha_final_belief*tr(J*SqrtSigma*SqrtSigma*~J);
+	std::cout<<100*~(X[T-1]-xGoal)*(X[T-1]-xGoal)<<"\n";
+	cost += (alpha_goal_state*~(X[T-1]-xGoal)*(X[T-1]-xGoal))(0,0);
 
 	return cost;
 }

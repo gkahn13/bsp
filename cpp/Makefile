@@ -119,9 +119,11 @@ ARM_CONTROL_OBJS = $(ARM_CONTROL_FILES:%=$(OBJ_DIR)/%.o)
 
 #touch-arm-CONTROL:
 #	touch $(ARM_CONTROL_DIR)/arm-CONTROL-pos-goal.cpp
+arm-control-setup:
+	bash $(ARM_SETUP_FILE) control $(T)
 
 arm-control: | arm-control-setup $(ARM_CONTROL_OBJS)
-	$(CXX) $(BFLAGS) $(ARM_control_OBJS) -o $(BIN_DIR)/arm-control $(BOOST_FLAGS) $(LINKER_FLAGS)
+	$(CXX) $(BFLAGS) $(ARM_CONTROL_OBJS) -o $(BIN_DIR)/arm-control $(BOOST_FLAGS) $(LINKER_FLAGS)
 
 $(OBJ_DIR)/arm-control-cost.o : $(ARM_CONTROL_DIR)/arm-control-cost.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
@@ -129,7 +131,7 @@ $(OBJ_DIR)/arm-control-cost.o : $(ARM_CONTROL_DIR)/arm-control-cost.c
 $(OBJ_DIR)/arm-control-grad.o : $(ARM_CONTROL_DIR)/arm-control-grad.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
 
-$(OBJ_DIR)/arm-control-pos-goal.o : $(ARM_CONTROL_DIR)/arm-control-pos-goal-MPC.c
+$(OBJ_DIR)/arm-control-pos-goal.o : $(ARM_CONTROL_DIR)/controlPenaltyMPC.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
 	
 $(OBJ_DIR)/arm-control.o : $(ARM_CONTROL_DIR)/arm-control-pos-goal.cpp $(ARM_HEADERS)
@@ -164,26 +166,26 @@ $(OBJ_DIR)/parameter-belief.o : $(PARAM_BELIEF_DIR)/parameter-belief.cpp $(ARM_H
 	
 
 # make parameter-controls
-PARAM_controls_DIR = parameter/controls
-PARAM_controls_FILES = parameter-controls logging parameter-controls-cost parameter-controls-grad controlsPenaltyMPC
-PARAM_controls_OBJS = $(PARAM_controls_FILES:%=$(OBJ_DIR)/%.o)
+PARAM_CONTROLS_DIR = parameter/controls
+PARAM_CONTROLS_FILES = parameter-controls logging parameter-controls-cost parameter-controls-grad controlsPenaltyMPC
+PARAM_CONTROLS_OBJS = $(PARAM_CONTROLS_FILES:%=$(OBJ_DIR)/%.o)
 
 parameter-controls-setup:
 	bash $(PARAM_SETUP_FILE) controls $(T)
 
-parameter-controls: | parameter-controls-setup $(PARAM_controls_OBJS)
-	$(CXX) $(BFLAGS) $(PARAM_controls_OBJS) -o $(BIN_DIR)/parameter-controls $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
+parameter-controls: | parameter-controls-setup $(PARAM_CONTROLS_OBJS)
+	$(CXX) $(BFLAGS) $(PARAM_CONTROLS_OBJS) -o $(BIN_DIR)/parameter-controls $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
 	
-$(OBJ_DIR)/parameter-controls-cost.o : $(PARAM_controls_DIR)/parameter-controls-cost.c
+$(OBJ_DIR)/parameter-controls-cost.o : $(PARAM_CONTROLS_DIR)/parameter-controls-cost.c
 	$(CC) $(C_FLAGS) -c -o $@ $^
 
-$(OBJ_DIR)/parameter-controls-grad.o : $(PARAM_controls_DIR)/parameter-controls-grad.c
+$(OBJ_DIR)/parameter-controls-grad.o : $(PARAM_CONTROLS_DIR)/parameter-controls-grad.c
 	$(CC) $(C_FLAGS) -c -o $@ $^
 
-$(OBJ_DIR)/controlsPenaltyMPC.o : $(PARAM_controls_DIR)/controlsPenaltyMPC.c
+$(OBJ_DIR)/controlsPenaltyMPC.o : $(PARAM_CONTROLS_DIR)/controlsPenaltyMPC.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
 	
-$(OBJ_DIR)/parameter-controls.o : $(PARAM_controls_DIR)/parameter-controls.cpp $(ARM_HEADERS)
+$(OBJ_DIR)/parameter-controls.o : $(PARAM_CONTROLS_DIR)/parameter-controls.cpp $(ARM_HEADERS)
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
 
 
@@ -572,8 +574,8 @@ $(OBJ_DIR)/slam-ilqg.o : $(SLAM_ILQG_DIR)/slam-ilqg.cpp $(SLAM_ILQG_DIR)/ilqg.h
 clean:
 	rm -f -r bin/debug/*
 	rm -f -r bin/release/*
-	rm -f bin/debug/*.o
-	rm -f bin/release/*.o
+	rm -f build/debug/*.o
+	rm -f build/release/*.o
 	
 #### NOT FILES ######
 .PHONY: point-belief-setup point-state-setup point-lp-setup point-control-setup arm-belief-setup

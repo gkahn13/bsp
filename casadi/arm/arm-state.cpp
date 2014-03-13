@@ -221,8 +221,8 @@ int main()
 	//hess_f_fcn.init();
 
 	// Generate code
-	generateCode(f_fcn,"f");
-	generateCode(grad_f_fcn,"grad_f");
+	generateCode(f_fcn,"arm-state-cost");
+	generateCode(grad_f_fcn,"arm-state-grad");
 	//generateCode(hess_f_fcn,"hess_f");
 
 	// test evaluate function

@@ -72,3 +72,26 @@ if [ $ARM_TYPE = "control" ]; then
     fi
    done
 fi
+
+if [ $ARM_TYPE = "state" ]; then
+    CASADI_ARM_DIR="${BSP_DIR}/casadi/arm/"
+    echo "Making casadi files"
+    make -C ${CASADI_ARM_DIR} all T=${TIMESTEPS}
+
+    CASADI_FILES=${CASADI_ARM_DIR}/*.c
+    for CASADI_FILE in $CASADI_FILES
+    do
+    CASADI_FILE_NAME=$(basename $CASADI_FILE)
+    ARM_CASADI_FILE=${ARM_DIR}/${ARM_TYPE}/${CASADI_FILE_NAME}
+
+    if [ ! -f $ARM_CASADI_FILE ]; then
+        echo "casadi file ${CASADI_FILE_NAME} does not exit, copying over"
+        cp $CASADI_FILE $ARM_CASADI_FILE
+    fi
+
+    if [ $(diff $CASADI_FILE $ARM_CASADI_FILE | wc -w) -gt 0 ]; then
+        echo "casadi file ${CASADI_FILE_NAME} differs, copying new one over"
+        cp $CASADI_FILE $ARM_CASADI_FILE
+    fi
+   done
+fi

@@ -96,8 +96,10 @@ ARM_STATE_OBJS = $(ARM_STATE_FILES:%=$(OBJ_DIR)/%.o)
 
 #touch-arm-state:
 #	touch $(ARM_STATE_DIR)/arm-state-pos-goal.cpp
+arm-state-setup:
+	bash $(ARM_SETUP_FILE) state $(T)
 
-arm-state: | $(ARM_STATE_OBJS)
+arm-state: | arm-state-setup $(ARM_STATE_OBJS)
 	$(CXX) $(BFLAGS) $(ARM_STATE_OBJS) -o $(BIN_DIR)/arm-state $(BOOST_FLAGS) $(LINKER_FLAGS)
 
 $(OBJ_DIR)/arm-state-cost.o : $(ARM_STATE_DIR)/arm-state-cost.c

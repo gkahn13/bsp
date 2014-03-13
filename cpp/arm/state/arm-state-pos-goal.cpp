@@ -5,10 +5,10 @@
 #include "util/Timer.h"
 
 extern "C" {
-#include "arm-control-pos-goal-MPC.h"
+#include "statePenaltyMPC.h"
 statePenaltyMPC_FLOAT **Q, **f, **lb, **ub, **z;
 statePenaltyMPC_FLOAT *A, *b, *e;
-#include "arm-control-casadi.h"
+#include "arm-state-casadi.h"
 }
 
 #include "boost/preprocessor.hpp"

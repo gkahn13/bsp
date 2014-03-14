@@ -786,6 +786,7 @@ int main(int argc, char* argv[])
 		LOG_INFO("Optimized cost: %4.10f", cost);
 		LOG_INFO("Actual cost: %4.10f", computeCost(X, U));
 		LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
+		std::cout<<i<<" , "<<solvetime<<" , "<<solved_cost/initTrajCost<<'\n'; 
 	}
 	cleanupStateMPCVars();
 

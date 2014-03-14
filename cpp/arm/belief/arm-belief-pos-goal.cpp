@@ -638,7 +638,7 @@ int main(int argc, char* argv[])
 
 	double cost = beliefPenaltyCollocation(B, U, problem, output, info);
 
-	//double solvetime = util::Timer_toc(&solveTimer);
+	double solvetime = util::Timer_toc(&solveTimer);
 
 	Matrix<B_DIM> bt;
 	vec(x0, SqrtSigma0, bt);

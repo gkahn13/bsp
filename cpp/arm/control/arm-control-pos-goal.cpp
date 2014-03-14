@@ -45,14 +45,15 @@ double computeLQGMPcost(const std::vector<Matrix<X_DIM> >& X, const std::vector<
 	return cost;
 }
 
+// TODO: don't use X for start and end. those might not stay the same b/c of FORCES. use x0 and xGoal
 void setupCasadiVars(const std::vector<Matrix<X_DIM> >& X, const std::vector<Matrix<U_DIM> >& U, double* XU_arr, double* Sigma0_arr, double* params_arr, double* cam0_arr, double* cam1_arr)
 {
 	int index = 0;
 	for(int i=0; i < X_DIM; ++i) {
-		XU_arr[index++] = X[0][i];
+		XU_arr[index++] = x0[i]; //X[0][i];
 	}
 	for(int i=0; i<X_DIM; ++i){
-		XU_arr[index++] = X[T-1][i];
+		XU_arr[index++] = xGoal[i]; //X[T-1][i];
 	}
 	for(int t = 0; t < T-1; ++t) {
 		for(int i=0; i < U_DIM; ++i) {
@@ -238,6 +239,18 @@ void setupStateVars(controlPenaltyMPC_params& problem, controlPenaltyMPC_output&
 #define BOOST_PP_LOCAL_LIMITS (TIMESTEPS, TIMESTEPS)
 #include BOOST_PP_LOCAL_ITERATE()
 
+	for(int t=0; t < T-1; ++t) {
+		for(int i=0; i < (X_DIM+U_DIM); ++i) { Q[t][i] = INFTY; }
+		for(int i=0; i < (X_DIM+U_DIM); ++i) { f[t][i] = INFTY; }
+		for(int i=0; i < (X_DIM+U_DIM); ++i) { lb[t][i] = INFTY; }
+		for(int i=0; i < (X_DIM+U_DIM); ++i) { ub[t][i] = INFTY; }
+	}
+
+	for(int i=0; i < (X_DIM+2*G_DIM); ++i) { Q[T-1][i] = INFTY; }
+	for(int i=0; i < (X_DIM+2*G_DIM); ++i) { f[T-1][i] = INFTY; }
+	for(int i=0; i < (X_DIM+2*G_DIM); ++i) { lb[T-1][i] = INFTY; }
+	for(int i=0; i < (X_DIM); ++i) { ub[T-1][i] = INFTY; }
+
 }
 
 void cleanupStateMPCVars()
@@ -252,32 +265,41 @@ void cleanupStateMPCVars()
 // TODO: Check if all inputs are valid, Q, f, lb, ub, A, b at last time step
 bool isValidInputs()
 {
-	// check if Q, f, lb, ub, e are valid!
-	for(int t = 0; t < T-1; ++t)
-	{
-		//for(int i = 0; i < 144; ++i) {
-		//	std::cout << Q[t][i] << " ";
-		//}
-		for(int i = 0; i < 12; ++i) {
-			std::cout << lb[t][i] << " ";
-		}
-		std::cout << std::endl;
-		for(int i = 0; i < 12; ++i) {
-			std::cout << ub[t][i] << " ";
-		}
-		std::cout << "\n\n";
-	}
-	for(int i = 0; i < 12; ++i) {
-		std::cout << lb[T-1][i] << " ";
-	}
-	std::cout << std::endl;
-	for(int i = 0; i < 6; ++i) {
-		std::cout << ub[T-1][i] << " ";
-	}
-	std::cout << "\n\n";
 
-	int magic;
-	std::cin >> magic;
+	for(int t = 0; t < T-1; ++t) {
+		for(int i=0; i < (X_DIM+U_DIM); ++i) { if (Q[t][i] > INFTY/2) { return false; } }
+		for(int i=0; i < (X_DIM+U_DIM); ++i) { if (f[t][i] > INFTY/2) { return false; } }
+		for(int i=0; i < (X_DIM+U_DIM); ++i) { if (lb[t][i] > INFTY/2) { return false; } }
+		for(int i=0; i < (X_DIM+U_DIM); ++i) { if (ub[t][i] > INFTY/2) { return false; } }
+	}
+	for(int i=0; i < (X_DIM+2*G_DIM); ++i) { if (Q[T-1][i] > INFTY/2) { return false; } }
+	for(int i=0; i < (X_DIM+2*G_DIM); ++i) { if (f[T-1][i] > INFTY/2) { return false; } }
+	for(int i=0; i < (X_DIM+2*G_DIM); ++i) { if (lb[T-1][i] > INFTY/2) { return false; } }
+	for(int i=0; i < (X_DIM); ++i) { if (ub[T-1][i] > INFTY/2) { return false; } }
+
+//	// check if Q, f, lb, ub, e are valid!
+//	for(int t = 0; t < T-1; ++t)
+//	{
+//		//for(int i = 0; i < 144; ++i) {
+//		//	std::cout << Q[t][i] << " ";
+//		//}
+//		for(int i = 0; i < 12; ++i) {
+//			std::cout << lb[t][i] << " ";
+//		}
+//		std::cout << std::endl;
+//		for(int i = 0; i < 12; ++i) {
+//			std::cout << ub[t][i] << " ";
+//		}
+//		std::cout << "\n\n";
+//	}
+//	for(int i = 0; i < 12; ++i) {
+//		std::cout << lb[T-1][i] << " ";
+//	}
+//	std::cout << std::endl;
+//	for(int i = 0; i < 6; ++i) {
+//		std::cout << ub[T-1][i] << " ";
+//	}
+//	std::cout << "\n\n";
 
 	return true;
 }
@@ -358,7 +380,8 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 				QMat(i,i) = (val < 0) ? 0 : val;
 			}
 			
-			fillColMajor(Q[t], QMat);
+			for(int i=0; i < (X_DIM+U_DIM); ++i) { Q[t][i] = QMat(i,i); }
+			//fillColMajor(Q[t], QMat);
 
 			zbar.insert(0,0,xt);
 			zbar.insert(X_DIM,0,ut);
@@ -382,7 +405,8 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			QfMat(i,i) = (val < 0) ? 0 : val;
 		}
 
-		fillColMajor(Q[T-1], QfMat);
+		for(int i=0; i < (X_DIM+2*G_DIM); ++i) { Q[T-1][i] = QfMat(i,i); }
+		//fillColMajor(Q[T-1], QfMat);
 
 		for(int i = 0; i < X_DIM; ++i) {
 			hessian_constant += QfMat(i,i)*xT[i]*xT[i];
@@ -393,7 +417,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			f[T-1][X_DIM+i] = penalty_coeff;
 		}
 
-		
+		// double goal_constant = alpha_goal_state*tr(~xGoal*xGoal);
 		
 		constant_cost = 0.5*hessian_constant + jac_constant + cost;
 		LOG_DEBUG("  hessian cost: %4.10f", 0.5*hessian_constant);
@@ -447,10 +471,10 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			for(int i = 0; i < X_DIM; ++i) { ub[T-1][index++] = MIN(xMax[i], xT[i] + Xeps); }
 			
 			// Verify problem inputs
-			//if (!isValidInputs()) {
-			//	std::cout << "Inputs are not valid!" << std::endl;
-			//	exit(-1);
-			//}
+			if (!isValidInputs()) {
+				std::cout << "Inputs are not valid!" << std::endl;
+				exit(-1);
+			}
 
 			//std::cerr << "PAUSING INSIDE MINIMIZE MERIT FUNCTION FOR INPUT VERIFICATION" << std::endl;
 			//int num;
@@ -497,9 +521,8 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			LOG_DEBUG("       exact_merit_improve: %1.6f", exact_merit_improve);
 			LOG_DEBUG("       merit_improve_ratio: %1.6f", merit_improve_ratio);
 			
-			//std::cout << "PAUSED INSIDE minimizeMeritFunction AFTER OPTIMIZATION" << std::endl;
-			//int num;
-			//std::cin >> num;
+			std::cout << "PAUSED INSIDE minimizeMeritFunction AFTER OPTIMIZATION" << std::endl;
+			std::cin.ignore();
 
 			if (approx_merit_improve < -1e-5) {
 				//LOG_ERROR("Approximate merit function got worse: %1.6f", approx_merit_improve);
@@ -733,9 +756,5 @@ int main(int argc, char* argv[])
 	}
 	*/
 	
-	LOG_INFO("Finished");
-	int k;
-	std::cin >> k;
-
 	return 0;
 }

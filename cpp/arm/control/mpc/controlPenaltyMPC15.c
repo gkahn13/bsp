@@ -34,153 +34,9 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 /* SYSTEM INCLUDES FOR PRINTING ---------------------------------------- */
-#ifndef USEMEXPRINTS
-#include <stdio.h>
-#define PRINTTEXT printf
-#else
-#include "mex.h"
-#define PRINTTEXT mexPrintf
-#endif
-
-/* TIMING LIBRARY ------------------------------------------------- */
-
-/* ARE WE ON WINDOWS? */
-#if (defined WIN32 || defined _WIN64 || defined _WIN32)
-
-/* Use Windows QueryPerformanceCounter for timing */
-
-#include <windows.h>
-
-typedef struct controlPenaltyMPC_timer{
-	LARGE_INTEGER tic;
-	LARGE_INTEGER toc;
-	LARGE_INTEGER freq;
-} controlPenaltyMPC_timer;
-
-
-void controlPenaltyMPC_tic(controlPenaltyMPC_timer* t)
-{
-	QueryPerformanceFrequency(&t->freq);
-	QueryPerformanceCounter(&t->tic);
-}
 
 
 
-controlPenaltyMPC_FLOAT controlPenaltyMPC_toc(controlPenaltyMPC_timer* t)
-{
-	QueryPerformanceCounter(&t->toc);
-	return ((t->toc.QuadPart - t->tic.QuadPart) / (controlPenaltyMPC_FLOAT)t->freq.QuadPart);
-}
-
-
-/* WE ARE ON THE MAC */
-#elif (defined __APPLE__)
-#include <mach/mach_time.h>
-
-
-/* Use MAC OSX  mach_time for timing */
-typedef struct controlPenaltyMPC_timer{
-	uint64_t tic;
-	uint64_t toc;
-	mach_timebase_info_data_t tinfo;
-
-} controlPenaltyMPC_timer;
-
-
-void controlPenaltyMPC_tic(controlPenaltyMPC_timer* t)
-{
-    /* read current clock cycles */
-    t->tic = mach_absolute_time();
-}
-
-
-
-controlPenaltyMPC_FLOAT controlPenaltyMPC_toc(controlPenaltyMPC_timer* t)
-{
-    uint64_t duration; /* elapsed time in clock cycles*/
-    t->toc = mach_absolute_time();
-	duration = t->toc - t->tic;
-
-    /*conversion from clock cycles to nanoseconds*/
-    mach_timebase_info(&(t->tinfo));
-    duration *= t->tinfo.numer;
-    duration /= t->tinfo.denom;
-
-    return (controlPenaltyMPC_FLOAT)duration / 1000000000;
-}
-
-/* WE ARE ON SOME TEXAS INSTRUMENTS PLATFORM */
-#elif (defined __TI_COMPILER_VERSION__)
-
-/* TimeStamps */
-#include <c6x.h> /* make use of TSCL, TSCH */
-
-
-typedef struct controlPenaltyMPC_timer{
-	unsigned long long tic;
-	unsigned long long toc;
-} controlPenaltyMPC_timer;
-
-
-void controlPenaltyMPC_tic(controlPenaltyMPC_timer* t)
-{
-	TSCL = 0;	/* Initiate CPU timer by writing any val to TSCL */
-	t->tic = _itoll( TSCH, TSCL );
-}
-
-
-
-controlPenaltyMPC_FLOAT controlPenaltyMPC_toc(controlPenaltyMPC_timer* t)
-{
-	t->toc = _itoll( TSCH, TSCL );
-	unsigned long long t0;
-	unsigned long long overhead;
-	t0 = _itoll( TSCH, TSCL );
-	overhead = _itoll( TSCH, TSCL )  - t0;
-
-	return (controlPenaltyMPC_FLOAT)(t->toc - t->tic - overhead) / 1000000000;
-}
-
-
-
-/* WE ARE ON SOME OTHER UNIX/LINUX SYSTEM */
-#else
-
-/* Use POSIX clocl_gettime() for timing on non-Windows machines */
-#include <time.h>
-typedef struct controlPenaltyMPC_timer{
-	struct timespec tic;
-	struct timespec toc;
-} controlPenaltyMPC_timer;
-
-
-/* read current time */
-void controlPenaltyMPC_tic(controlPenaltyMPC_timer* t)
-{
-	clock_gettime(CLOCK_MONOTONIC, &t->tic);
-}
-
-
-
-/* return time passed since last call to tic on this timer */
-double controlPenaltyMPC_toc(controlPenaltyMPC_timer* t)
-{
-	struct timespec temp;
-	clock_gettime(CLOCK_MONOTONIC, &t->toc);	
-
-	if ((t->toc.tv_nsec - t->tic.tv_nsec)<0) {
-		temp.tv_sec = t->toc.tv_sec - t->tic.tv_sec-1;
-		temp.tv_nsec = 1000000000+t->toc.tv_nsec - t->tic.tv_nsec;
-	} else {
-		temp.tv_sec = t->toc.tv_sec - t->tic.tv_sec;
-		temp.tv_nsec = t->toc.tv_nsec - t->tic.tv_nsec;
-	}
-
-	return (controlPenaltyMPC_FLOAT)temp.tv_sec + (controlPenaltyMPC_FLOAT)temp.tv_nsec / 1000000000;
-}
-
-
-#endif
 
 /* LINEAR ALGEBRA LIBRARY ---------------------------------------------- */
 /*
@@ -238,25 +94,19 @@ void controlPenaltyMPC_LA_DOTACC_354(controlPenaltyMPC_FLOAT *x, controlPenaltyM
 /*
  * Calculates the gradient and the value for a quadratic function 0.5*z'*H*z + f'*z
  *
- * INPUTS:     H  - Symmetric Hessian, dense matrix of size [12 x 12]
+ * INPUTS:     H  - Symmetric Hessian, diag matrix of size [12 x 12]
  *             f  - column vector of size 12
  *             z  - column vector of size 12
  *
  * OUTPUTS: grad  - gradient at z (= H*z + f), column vector of size 12
  *          value <-- value + 0.5*z'*H*z + f'*z (value will be modified)
  */
-void controlPenaltyMPC_LA_DENSE_QUADFCN_12(controlPenaltyMPC_FLOAT* H, controlPenaltyMPC_FLOAT* f, controlPenaltyMPC_FLOAT* z, controlPenaltyMPC_FLOAT* grad, controlPenaltyMPC_FLOAT* value)
+void controlPenaltyMPC_LA_DIAG_QUADFCN_12(controlPenaltyMPC_FLOAT* H, controlPenaltyMPC_FLOAT* f, controlPenaltyMPC_FLOAT* z, controlPenaltyMPC_FLOAT* grad, controlPenaltyMPC_FLOAT* value)
 {
 	int i;
-	int j;
-	int k = 0;
 	controlPenaltyMPC_FLOAT hz;	
 	for( i=0; i<12; i++){
-		hz = 0;
-		for( j=0; j<12; j++ )
-		{
-			hz += H[k++]*z[j];
-		}
+		hz = H[i]*z[i];
 		grad[i] = hz + f[i];
 		*value += 0.5*hz*z[i] + f[i]*z[i];
 	}
@@ -525,208 +375,85 @@ void controlPenaltyMPC_LA_VVADD3_180(controlPenaltyMPC_FLOAT *u, controlPenaltyM
 
 
 /*
- * Special function to compute the Dense positive definite 
- * augmented Hessian for block size 12.
+ * Special function to compute the diagonal cholesky factorization of the 
+ * positive definite augmented Hessian for block size 12.
  *
- * Inputs: - H = dense cost Hessian in column major storage format
+ * Inputs: - H = diagonal cost Hessian in diagonal storage format
  *         - llbysl = L / S of lower bounds
  *         - lubysu = L / S of upper bounds
  *
- * Output: Phi = H + diag(llbysl) + diag(lubysu)
- * where Phi is stored in lower triangular row major format
+ * Output: Phi = sqrt(H + diag(llbysl) + diag(lubysu))
+ * where Phi is stored in diagonal storage format
  */
-void controlPenaltyMPC_LA_INEQ_DENSE_HESS_12_12_12(controlPenaltyMPC_FLOAT *H, controlPenaltyMPC_FLOAT *llbysl, int* lbIdx, controlPenaltyMPC_FLOAT *lubysu, int* ubIdx, controlPenaltyMPC_FLOAT *Phi)
+void controlPenaltyMPC_LA_DIAG_CHOL_ONELOOP_LBUB_12_12_12(controlPenaltyMPC_FLOAT *H, controlPenaltyMPC_FLOAT *llbysl, int* lbIdx, controlPenaltyMPC_FLOAT *lubysu, int* ubIdx, controlPenaltyMPC_FLOAT *Phi)
+
+
 {
 	int i;
-	int j;
-	int k = 0;
 	
-	/* copy lower triangular part of H into PHI */
+	/* compute cholesky */
 	for( i=0; i<12; i++ ){
-		for( j=0; j<=i; j++ ){
-			Phi[k++] = H[i*12+j];
-		}		
-	}
+		Phi[i] = H[i] + llbysl[i] + lubysu[i];
 
-	/* add llbysl onto Phi where necessary */
-	for( i=0; i<12; i++ ){
-		j = lbIdx[i];
-		Phi[((j+1)*(j+2))/2-1] += llbysl[i];
-	}
-
-	/* add lubysu onto Phi where necessary */
-	for( i=0; i<12; i++){
-		j = ubIdx[i];
-		Phi[((j+1)*(j+2))/2-1] +=  lubysu[i];
-	}
-
-}
-
-
-/**
- * Cholesky factorization as above, but working on a matrix in 
- * lower triangular storage format of size 12.
- */
-void controlPenaltyMPC_LA_DENSE_CHOL2_12(controlPenaltyMPC_FLOAT *A)
-{
-    int i, j, k, di, dj;
-	 int ii, jj;
-    controlPenaltyMPC_FLOAT l;
-    controlPenaltyMPC_FLOAT Mii;
-    
-	ii=0; di=0;
-    for( i=0; i<12; i++ ){
-        l = 0;
-        for( k=0; k<i; k++ ){
-            l += A[ii+k]*A[ii+k];
-        }        
-        
-        Mii = A[ii+i] - l;
-        
 #if controlPenaltyMPC_SET_PRINTLEVEL > 0 && defined PRINTNUMERICALWARNINGS
-        if( Mii < 1.0000000000000000E-013 ){
-             PRINTTEXT("WARNING (CHOL2): small %d-th pivot in Cholesky fact. (=%3.1e < eps=%3.1e), regularizing to %3.1e\n",i,Mii,1.0000000000000000E-013,4.0000000000000002E-004);
-			 A[ii+i] = 2.0000000000000000E-002;
-		} else
+		if( Phi[i] < 1.0000000000000000E-013 )
 		{
-			A[ii+i] = sqrt(Mii);
+            PRINTTEXT("WARNING: small pivot in Cholesky fact. (=%3.1e < eps=%3.1e), regularizing to %3.1e\n",Phi[i],1.0000000000000000E-013,4.0000000000000002E-004);
+			Phi[i] = 2.0000000000000000E-002;
+		}
+		else
+		{
+			Phi[i] = sqrt(Phi[i]);
 		}
 #else
-		A[ii+i] = Mii < 1.0000000000000000E-013 ? 2.0000000000000000E-002 : sqrt(Mii);
+		Phi[i] = Phi[i] < 1.0000000000000000E-013 ? 2.0000000000000000E-002 : sqrt(Phi[i]);
 #endif
-                    
-		jj = ((i+1)*(i+2))/2; dj = i+1;
-        for( j=i+1; j<12; j++ ){
-            l = 0;            
-            for( k=0; k<i; k++ ){
-                l += A[jj+k]*A[ii+k];
-            }
-
-			/* saturate values for numerical stability */
-			l = MIN(l,  BIGMM);
-			l = MAX(l, -BIGMM);
-
-            A[jj+i] = (A[jj+i] - l)/A[ii+i];            
-			jj += ++dj;
-        }
-		ii += ++di;
-    }
+	}
+	
 }
 
 
 /**
  * Forward substitution for the matrix equation A*L' = B
  * where A is to be computed and is of size [6 x 12],
- * B is given and of size [6 x 12], L is a lower tri-
- * angular matrix of size 12 stored in lower triangular 
- * storage format. Note the transpose of L!
+ * B is given and of size [6 x 12], L is a diagonal
+ * matrix of size 6 stored in diagonal matrix 
+ * storage format. Note the transpose of L has no impact!
  *
  * Result: A in column major storage format.
  *
  */
-void controlPenaltyMPC_LA_DENSE_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_FLOAT *L, controlPenaltyMPC_FLOAT *B, controlPenaltyMPC_FLOAT *A)
+void controlPenaltyMPC_LA_DIAG_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_FLOAT *L, controlPenaltyMPC_FLOAT *B, controlPenaltyMPC_FLOAT *A)
 {
-    int i,j,k,di;
-	 int ii;
-    controlPenaltyMPC_FLOAT a;
-    
-    ii=0; di=0;
-    for( j=0; j<12; j++ ){        
-        for( i=0; i<6; i++ ){
-            a = B[j*6+i];
-            for( k=0; k<j; k++ ){
-                a -= A[k*6+i]*L[ii+k];
-            }
+    int i,j;
+	 int k = 0;
 
-			/* saturate for numerical stability */
-			a = MIN(a, BIGM);
-			a = MAX(a, -BIGM); 
+	for( j=0; j<12; j++){
+		for( i=0; i<6; i++){
+			A[k] = B[k]/L[j];
+			k++;
+		}
+	}
 
-            A[j*6+i] = a/L[ii+j];
-        }
-        ii += ++di;
-    }
 }
 
 
 /**
  * Forward substitution for the matrix equation A*L' = B
  * where A is to be computed and is of size [6 x 12],
- * B is given and of size [6 x 12] stored in 
- * diagzero storage format, L is a lower tri-
- * angular matrix of size 12 stored in lower triangular 
+ * B is given and of size [6 x 12], L is a diagonal
+ *  matrix of size 12 stored in diagonal 
  * storage format. Note the transpose of L!
  *
- * Result: A in column major storage format.
+ * Result: A in diagonalzero storage format.
  *
  */
-void controlPenaltyMPC_LA_DENSE_DIAGZERO_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_FLOAT *L, controlPenaltyMPC_FLOAT *B, controlPenaltyMPC_FLOAT *A)
+void controlPenaltyMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_6_12(controlPenaltyMPC_FLOAT *L, controlPenaltyMPC_FLOAT *B, controlPenaltyMPC_FLOAT *A)
 {
-    int i,j,k,di;
-	 int ii;
-    controlPenaltyMPC_FLOAT a;
-	
-	/*
-	* The matrix A has the form
-	*
-	* d u u u r r r r r 
-	* 0 d u u r r r r r 
-	* 0 0 d u r r r r r 
-	* 0 0 0 d r r r r r
-	*
-	* |Part1|| Part 2 |
-	* 
-	* d: diagonal
-	* u: upper
-	* r: right
-	*/
-	
-	
-    /* Part 1 */
-    ii=0; di=0;
-    for( j=0; j<6; j++ ){        
-        for( i=0; i<j; i++ ){
-            /* Calculate part of A which is non-zero and not diagonal "u"
-             * i < j */
-            a = 0;
-			
-            for( k=i; k<j; k++ ){
-                a -= A[k*6+i]*L[ii+k];
-            }
-            A[j*6+i] = a/L[ii+j];
-        }
-        /* do the diagonal "d"
-         * i = j */
-        A[j*6+j] = B[i]/L[ii+j];
-        
-        /* fill lower triangular part with zeros "0"
-         * n > i > j */
-        for( i=j+1     ; i < 6; i++ ){
-            A[j*6+i] = 0;
-        }
-        
-        /* increment index of L */
-        ii += ++di;	
-    }
-	
-	/* Part 2 */ 
-	for( j=6; j<12; j++ ){        
-        for( i=0; i<6; i++ ){
-            /* Calculate part of A which is non-zero and not diagonal "r" */
-            a = 0;
-			
-            for( k=i; k<j; k++ ){
-                a -= A[k*6+i]*L[ii+k];
-            }
-            A[j*6+i] = a/L[ii+j];
-        }
-        
-        /* increment index of L */
-        ii += ++di;	
-    }
-	
-	
-	
+	int j;
+    for( j=0; j<12; j++ ){   
+		A[j] = B[j]/L[j];
+     }
 }
 
 
@@ -734,92 +461,89 @@ void controlPenaltyMPC_LA_DENSE_DIAGZERO_MATRIXFORWARDSUB_6_12(controlPenaltyMPC
  * Compute C = A*B' where 
  *
  *	size(A) = [6 x 12]
- *  size(B) = [6 x 12]
+ *  size(B) = [6 x 12] in diagzero format
  * 
- * and all matrices are stored in column major format.
- *
- * THIS ONE HAS THE WORST ACCES PATTERN POSSIBLE.  
+ * A and C matrices are stored in column major format.
+ * 
  * 
  */
-void controlPenaltyMPC_LA_DENSE_MMTM_6_12_6(controlPenaltyMPC_FLOAT *A, controlPenaltyMPC_FLOAT *B, controlPenaltyMPC_FLOAT *C)
+void controlPenaltyMPC_LA_DENSE_DIAGZERO_MMTM_6_12_6(controlPenaltyMPC_FLOAT *A, controlPenaltyMPC_FLOAT *B, controlPenaltyMPC_FLOAT *C)
 {
-    int i, j, k;
-    controlPenaltyMPC_FLOAT temp;
-    
-    for( i=0; i<6; i++ ){        
-        for( j=0; j<6; j++ ){
-            temp = 0; 
-            for( k=0; k<12; k++ ){
-                temp += A[k*6+i]*B[k*6+j];
-            }						
-            C[j*6+i] = temp;
-        }
-    }
+    int i, j;
+	
+	for( i=0; i<6; i++ ){
+		for( j=0; j<6; j++){
+			C[j*6+i] = B[i*6+j]*A[i];
+		}
+	}
+
 }
 
 
 /**
  * Forward substitution to solve L*y = b where L is a
- * lower triangular matrix in triangular storage format.
+ * diagonal matrix in vector storage format.
  * 
  * The dimensions involved are 12.
  */
-void controlPenaltyMPC_LA_DENSE_FORWARDSUB_12(controlPenaltyMPC_FLOAT *L, controlPenaltyMPC_FLOAT *b, controlPenaltyMPC_FLOAT *y)
+void controlPenaltyMPC_LA_DIAG_FORWARDSUB_12(controlPenaltyMPC_FLOAT *L, controlPenaltyMPC_FLOAT *b, controlPenaltyMPC_FLOAT *y)
 {
-    int i,j,ii,di;
-    controlPenaltyMPC_FLOAT yel;
-            
-    ii = 0; di = 0;
+    int i;
+
     for( i=0; i<12; i++ ){
-        yel = b[i];        
-        for( j=0; j<i; j++ ){
-            yel -= y[j]*L[ii+j];
-        }
-
-		/* saturate for numerical stability  */
-		yel = MIN(yel, BIGM);
-		yel = MAX(yel, -BIGM);
-
-        y[i] = yel / L[ii+i];
-        ii += ++di;
+		y[i] = b[i]/L[i];
     }
 }
 
 
 /*
- * Special function to compute the Dense positive definite 
- * augmented Hessian for block size 12.
+ * Special function to compute the diagonal cholesky factorization of the 
+ * positive definite augmented Hessian for block size 12.
  *
- * Inputs: - H = dense cost Hessian in column major storage format
+ * Inputs: - H = diagonal cost Hessian in diagonal storage format
  *         - llbysl = L / S of lower bounds
  *         - lubysu = L / S of upper bounds
  *
- * Output: Phi = H + diag(llbysl) + diag(lubysu)
- * where Phi is stored in lower triangular row major format
+ * Output: Phi = sqrt(H + diag(llbysl) + diag(lubysu))
+ * where Phi is stored in diagonal storage format
  */
-void controlPenaltyMPC_LA_INEQ_DENSE_HESS_12_12_6(controlPenaltyMPC_FLOAT *H, controlPenaltyMPC_FLOAT *llbysl, int* lbIdx, controlPenaltyMPC_FLOAT *lubysu, int* ubIdx, controlPenaltyMPC_FLOAT *Phi)
+void controlPenaltyMPC_LA_DIAG_CHOL_LBUB_12_12_6(controlPenaltyMPC_FLOAT *H, controlPenaltyMPC_FLOAT *llbysl, int* lbIdx, controlPenaltyMPC_FLOAT *lubysu, int* ubIdx, controlPenaltyMPC_FLOAT *Phi)
+
+
 {
 	int i;
-	int j;
-	int k = 0;
 	
-	/* copy lower triangular part of H into PHI */
+	/* copy  H into PHI */
 	for( i=0; i<12; i++ ){
-		for( j=0; j<=i; j++ ){
-			Phi[k++] = H[i*12+j];
-		}		
+		Phi[i] = H[i];
 	}
 
 	/* add llbysl onto Phi where necessary */
 	for( i=0; i<12; i++ ){
-		j = lbIdx[i];
-		Phi[((j+1)*(j+2))/2-1] += llbysl[i];
+		Phi[lbIdx[i]] += llbysl[i];
 	}
 
 	/* add lubysu onto Phi where necessary */
 	for( i=0; i<6; i++){
-		j = ubIdx[i];
-		Phi[((j+1)*(j+2))/2-1] +=  lubysu[i];
+		Phi[ubIdx[i]] +=  lubysu[i];
+	}
+	
+	/* compute cholesky */
+	for(i=0; i<12; i++)
+	{
+#if controlPenaltyMPC_SET_PRINTLEVEL > 0 && defined PRINTNUMERICALWARNINGS
+		if( Phi[i] < 1.0000000000000000E-013 )
+		{
+            PRINTTEXT("WARNING: small pivot in Cholesky fact. (=%3.1e < eps=%3.1e), regularizing to %3.1e\n",Phi[i],1.0000000000000000E-013,4.0000000000000002E-004);
+			Phi[i] = 2.0000000000000000E-002;
+		}
+		else
+		{
+			Phi[i] = sqrt(Phi[i]);
+		}
+#else
+		Phi[i] = Phi[i] < 1.0000000000000000E-013 ? 2.0000000000000000E-002 : sqrt(Phi[i]);
+#endif
 	}
 
 }
@@ -830,24 +554,14 @@ void controlPenaltyMPC_LA_INEQ_DENSE_HESS_12_12_6(controlPenaltyMPC_FLOAT *H, co
  * and B is a diagzero matrix of size [6 x 12] in column
  * storage format.
  * 
- * THIS ONE HAS THE WORST ACCES PATTERN POSSIBLE. 
- * POSSIBKE FIX: PUT A AND B INTO ROW MAJOR FORMAT FIRST.
- * 
  */
-void controlPenaltyMPC_LA_DENSE_MMT_6_12(controlPenaltyMPC_FLOAT *B, controlPenaltyMPC_FLOAT *L)
+void controlPenaltyMPC_LA_DIAGZERO_MMT_6(controlPenaltyMPC_FLOAT *B, controlPenaltyMPC_FLOAT *L)
 {
-    int i, j, k, ii, di;
-    controlPenaltyMPC_FLOAT ltemp;
+    int i, ii, di;
     
     ii = 0; di = 0;
     for( i=0; i<6; i++ ){        
-        for( j=0; j<=i; j++ ){
-            ltemp = 0; 		
-			for( k=0; k<12; k++ ){
-                ltemp += B[k*6+i]*B[k*6+j];
-            }
-            L[ii+j] = ltemp;
-        }
+		L[ii+i] = B[i]*B[i];
         ii += ++di;
     }
 }
@@ -855,37 +569,30 @@ void controlPenaltyMPC_LA_DENSE_MMT_6_12(controlPenaltyMPC_FLOAT *B, controlPena
 
 /* 
  * Computes r = b - B*u
- * where B is stored in column major format
+ * B is stored in diagzero format
  */
-void controlPenaltyMPC_LA_DENSE_MVMSUB7_6_12(controlPenaltyMPC_FLOAT *B, controlPenaltyMPC_FLOAT *u, controlPenaltyMPC_FLOAT *b, controlPenaltyMPC_FLOAT *r)
+void controlPenaltyMPC_LA_DIAGZERO_MVMSUB7_6(controlPenaltyMPC_FLOAT *B, controlPenaltyMPC_FLOAT *u, controlPenaltyMPC_FLOAT *b, controlPenaltyMPC_FLOAT *r)
 {
 	int i;
-	int m = 0;
-	int n;
 
 	for( i=0; i<6; i++ ){
-		r[i] = b[i] - B[m++]*u[0];
+		r[i] = b[i] - B[i]*u[i];
 	}	
 	
-	for( n=1; n<12; n++ ){
-		for( i=0; i<6; i++ ){
-			r[i] -= B[m++]*u[n];
-		}		
-	}
 }
 
 
 /**
  * Compute L = A*A' + B*B', where L is lower triangular of size NXp1
  * and A is a dense matrix of size [6 x 12] in column
- * storage format, and B is of size [6 x 12] also in column
+ * storage format, and B is of size [6 x 12] diagonalzero
  * storage format.
  * 
  * THIS ONE HAS THE WORST ACCES PATTERN POSSIBLE. 
  * POSSIBKE FIX: PUT A AND B INTO ROW MAJOR FORMAT FIRST.
  * 
  */
-void controlPenaltyMPC_LA_DENSE_MMT2_6_12_12(controlPenaltyMPC_FLOAT *A, controlPenaltyMPC_FLOAT *B, controlPenaltyMPC_FLOAT *L)
+void controlPenaltyMPC_LA_DENSE_DIAGZERO_MMT2_6_12_12(controlPenaltyMPC_FLOAT *A, controlPenaltyMPC_FLOAT *B, controlPenaltyMPC_FLOAT *L)
 {
     int i, j, k, ii, di;
     controlPenaltyMPC_FLOAT ltemp;
@@ -896,12 +603,12 @@ void controlPenaltyMPC_LA_DENSE_MMT2_6_12_12(controlPenaltyMPC_FLOAT *A, control
             ltemp = 0; 
             for( k=0; k<12; k++ ){
                 ltemp += A[k*6+i]*A[k*6+j];
-            }			
-			for( k=0; k<12; k++ ){
-                ltemp += B[k*6+i]*B[k*6+j];
-            }
+            }		
             L[ii+j] = ltemp;
         }
+		/* work on the diagonal
+		 * there might be i == j, but j has already been incremented so it is i == j-1 */
+		L[ii+i] += B[i]*B[i];
         ii += ++di;
     }
 }
@@ -909,30 +616,25 @@ void controlPenaltyMPC_LA_DENSE_MMT2_6_12_12(controlPenaltyMPC_FLOAT *A, control
 
 /* 
  * Computes r = b - A*x - B*u
- * where A an B are stored in column major format
+ * where A is stored in column major format
+ * and B is stored in diagzero format
  */
-void controlPenaltyMPC_LA_DENSE_MVMSUB2_6_12_12(controlPenaltyMPC_FLOAT *A, controlPenaltyMPC_FLOAT *x, controlPenaltyMPC_FLOAT *B, controlPenaltyMPC_FLOAT *u, controlPenaltyMPC_FLOAT *b, controlPenaltyMPC_FLOAT *r)
+void controlPenaltyMPC_LA_DENSE_DIAGZERO_2MVMSUB2_6_12_12(controlPenaltyMPC_FLOAT *A, controlPenaltyMPC_FLOAT *x, controlPenaltyMPC_FLOAT *B, controlPenaltyMPC_FLOAT *u, controlPenaltyMPC_FLOAT *b, controlPenaltyMPC_FLOAT *r)
 {
 	int i;
 	int j;
 	int k = 0;
-	int m = 0;
-	int n;
 
 	for( i=0; i<6; i++ ){
-		r[i] = b[i] - A[k++]*x[0] - B[m++]*u[0];
+		r[i] = b[i] - A[k++]*x[0] - B[i]*u[i];
 	}	
+
 	for( j=1; j<12; j++ ){		
 		for( i=0; i<6; i++ ){
 			r[i] -= A[k++]*x[j];
 		}
 	}
 	
-	for( n=1; n<12; n++ ){
-		for( i=0; i<6; i++ ){
-			r[i] -= B[m++]*u[n];
-		}		
-	}
 }
 
 
@@ -1175,49 +877,18 @@ void controlPenaltyMPC_LA_VSUB2_180(controlPenaltyMPC_FLOAT *x, controlPenaltyMP
 
 /**
  * Forward-Backward-Substitution to solve L*L^T*x = b where L is a
- * lower triangular matrix of size 12 in lower triangular
+ * diagonal matrix of size 12 in vector
  * storage format.
  */
-void controlPenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(controlPenaltyMPC_FLOAT *L, controlPenaltyMPC_FLOAT *b, controlPenaltyMPC_FLOAT *x)
+void controlPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_12(controlPenaltyMPC_FLOAT *L, controlPenaltyMPC_FLOAT *b, controlPenaltyMPC_FLOAT *x)
 {
-    int i, ii, di, j, jj, dj;
-    controlPenaltyMPC_FLOAT y[12];
-    controlPenaltyMPC_FLOAT yel,xel;
-	int start = 66;
+    int i;
             
-    /* first solve Ly = b by forward substitution */
-     ii = 0; di = 0;
+    /* solve Ly = b by forward and backward substitution */
     for( i=0; i<12; i++ ){
-        yel = b[i];        
-        for( j=0; j<i; j++ ){
-            yel -= y[j]*L[ii+j];
-        }
-
-		/* saturate for numerical stability */
-		yel = MIN(yel, BIGM);
-		yel = MAX(yel, -BIGM); 
-
-        y[i] = yel / L[ii+i];
-        ii += ++di;
+		x[i] = b[i]/(L[i]*L[i]);
     }
     
-    /* now solve L^T*x = y by backward substitution */
-    ii = start; di = 11;
-    for( i=11; i>=0; i-- ){        
-        xel = y[i];        
-        jj = start; dj = 11;
-        for( j=11; j>i; j-- ){
-            xel -= x[j]*L[jj+i];
-            jj -= dj--;
-        }
-
-		/* saturate for numerical stability */
-		xel = MIN(xel, BIGM);
-		xel = MAX(xel, -BIGM); 
-
-        x[i] = xel / L[ii+i];
-        ii -= di--;
-    }
 }
 
 
@@ -1375,41 +1046,33 @@ void controlPenaltyMPC_LA_VSUB6_INDEXED_12_12_12(controlPenaltyMPC_FLOAT *u, con
 
 
 /* 
- * Computes r = B*u
- * where B is stored in column major format
+ * Computes r =  B*u
+ * where B is stored in diagzero format
  */
-void controlPenaltyMPC_LA_DENSE_MVM_6_12(controlPenaltyMPC_FLOAT *B, controlPenaltyMPC_FLOAT *u, controlPenaltyMPC_FLOAT *r)
+void controlPenaltyMPC_LA_DIAGZERO_MVM_6(controlPenaltyMPC_FLOAT *B, controlPenaltyMPC_FLOAT *u, controlPenaltyMPC_FLOAT *r)
 {
 	int i;
-	int m = 0;
-	int n;
 
 	for( i=0; i<6; i++ ){
-		r[i] = B[m++]*u[0];
+		r[i] = B[i]*u[i];
 	}	
 	
-	for( n=1; n<12; n++ ){
-		for( i=0; i<6; i++ ){
-			r[i] += B[m++]*u[n];
-		}		
-	}
 }
 
 
 /* 
  * Computes r = A*x + B*u
- * where A an B are stored in column major format
+ * where A is stored in column major format
+ * and B is stored in diagzero format
  */
-void controlPenaltyMPC_LA_DENSE_2MVMADD_6_12_12(controlPenaltyMPC_FLOAT *A, controlPenaltyMPC_FLOAT *x, controlPenaltyMPC_FLOAT *B, controlPenaltyMPC_FLOAT *u, controlPenaltyMPC_FLOAT *r)
+void controlPenaltyMPC_LA_DENSE_DIAGZERO_2MVMADD_6_12_12(controlPenaltyMPC_FLOAT *A, controlPenaltyMPC_FLOAT *x, controlPenaltyMPC_FLOAT *B, controlPenaltyMPC_FLOAT *u, controlPenaltyMPC_FLOAT *r)
 {
 	int i;
 	int j;
 	int k = 0;
-	int m = 0;
-	int n;
 
 	for( i=0; i<6; i++ ){
-		r[i] = A[k++]*x[0] + B[m++]*u[0];
+		r[i] = A[k++]*x[0] + B[i]*u[i];
 	}	
 
 	for( j=1; j<12; j++ ){		
@@ -1418,11 +1081,6 @@ void controlPenaltyMPC_LA_DENSE_2MVMADD_6_12_12(controlPenaltyMPC_FLOAT *A, cont
 		}
 	}
 	
-	for( n=1; n<12; n++ ){
-		for( i=0; i<6; i++ ){
-			r[i] += B[m++]*u[n];
-		}		
-	}
 }
 
 
@@ -1683,14 +1341,14 @@ controlPenaltyMPC_FLOAT* controlPenaltyMPC_dsubaff00 = controlPenaltyMPC_ds_aff 
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_dlubcc00 = controlPenaltyMPC_dl_cc + 12;
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_dsubcc00 = controlPenaltyMPC_ds_cc + 12;
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_ccrhsub00 = controlPenaltyMPC_ccrhs + 12;
-controlPenaltyMPC_FLOAT controlPenaltyMPC_Phi00[78];
+controlPenaltyMPC_FLOAT controlPenaltyMPC_Phi00[12];
 controlPenaltyMPC_FLOAT controlPenaltyMPC_D00[12] = {1.0000000000000000E+000, 
 1.0000000000000000E+000, 
 1.0000000000000000E+000, 
 1.0000000000000000E+000, 
 1.0000000000000000E+000, 
 1.0000000000000000E+000};
-controlPenaltyMPC_FLOAT controlPenaltyMPC_W00[72];
+controlPenaltyMPC_FLOAT controlPenaltyMPC_W00[12];
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_z01 = controlPenaltyMPC_z + 12;
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_dzaff01 = controlPenaltyMPC_dz_aff + 12;
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_dzcc01 = controlPenaltyMPC_dz_cc + 12;
@@ -1732,14 +1390,14 @@ controlPenaltyMPC_FLOAT* controlPenaltyMPC_dsubaff01 = controlPenaltyMPC_ds_aff 
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_dlubcc01 = controlPenaltyMPC_dl_cc + 36;
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_dsubcc01 = controlPenaltyMPC_ds_cc + 36;
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_ccrhsub01 = controlPenaltyMPC_ccrhs + 36;
-controlPenaltyMPC_FLOAT controlPenaltyMPC_Phi01[78];
+controlPenaltyMPC_FLOAT controlPenaltyMPC_Phi01[12];
 controlPenaltyMPC_FLOAT controlPenaltyMPC_D01[12] = {-1.0000000000000000E+000, 
 -1.0000000000000000E+000, 
 -1.0000000000000000E+000, 
 -1.0000000000000000E+000, 
 -1.0000000000000000E+000, 
 -1.0000000000000000E+000};
-controlPenaltyMPC_FLOAT controlPenaltyMPC_W01[72];
+controlPenaltyMPC_FLOAT controlPenaltyMPC_W01[12];
 controlPenaltyMPC_FLOAT controlPenaltyMPC_Ysd01[36];
 controlPenaltyMPC_FLOAT controlPenaltyMPC_Lsd01[36];
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_z02 = controlPenaltyMPC_z + 24;
@@ -1783,8 +1441,8 @@ controlPenaltyMPC_FLOAT* controlPenaltyMPC_dsubaff02 = controlPenaltyMPC_ds_aff 
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_dlubcc02 = controlPenaltyMPC_dl_cc + 60;
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_dsubcc02 = controlPenaltyMPC_ds_cc + 60;
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_ccrhsub02 = controlPenaltyMPC_ccrhs + 60;
-controlPenaltyMPC_FLOAT controlPenaltyMPC_Phi02[78];
-controlPenaltyMPC_FLOAT controlPenaltyMPC_W02[72];
+controlPenaltyMPC_FLOAT controlPenaltyMPC_Phi02[12];
+controlPenaltyMPC_FLOAT controlPenaltyMPC_W02[12];
 controlPenaltyMPC_FLOAT controlPenaltyMPC_Ysd02[36];
 controlPenaltyMPC_FLOAT controlPenaltyMPC_Lsd02[36];
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_z03 = controlPenaltyMPC_z + 36;
@@ -1828,8 +1486,8 @@ controlPenaltyMPC_FLOAT* controlPenaltyMPC_dsubaff03 = controlPenaltyMPC_ds_aff 
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_dlubcc03 = controlPenaltyMPC_dl_cc + 84;
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_dsubcc03 = controlPenaltyMPC_ds_cc + 84;
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_ccrhsub03 = controlPenaltyMPC_ccrhs + 84;
-controlPenaltyMPC_FLOAT controlPenaltyMPC_Phi03[78];
-controlPenaltyMPC_FLOAT controlPenaltyMPC_W03[72];
+controlPenaltyMPC_FLOAT controlPenaltyMPC_Phi03[12];
+controlPenaltyMPC_FLOAT controlPenaltyMPC_W03[12];
 controlPenaltyMPC_FLOAT controlPenaltyMPC_Ysd03[36];
 controlPenaltyMPC_FLOAT controlPenaltyMPC_Lsd03[36];
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_z04 = controlPenaltyMPC_z + 48;
@@ -1873,8 +1531,8 @@ controlPenaltyMPC_FLOAT* controlPenaltyMPC_dsubaff04 = controlPenaltyMPC_ds_aff 
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_dlubcc04 = controlPenaltyMPC_dl_cc + 108;
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_dsubcc04 = controlPenaltyMPC_ds_cc + 108;
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_ccrhsub04 = controlPenaltyMPC_ccrhs + 108;
-controlPenaltyMPC_FLOAT controlPenaltyMPC_Phi04[78];
-controlPenaltyMPC_FLOAT controlPenaltyMPC_W04[72];
+controlPenaltyMPC_FLOAT controlPenaltyMPC_Phi04[12];
+controlPenaltyMPC_FLOAT controlPenaltyMPC_W04[12];
 controlPenaltyMPC_FLOAT controlPenaltyMPC_Ysd04[36];
 controlPenaltyMPC_FLOAT controlPenaltyMPC_Lsd04[36];
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_z05 = controlPenaltyMPC_z + 60;
@@ -1918,8 +1576,8 @@ controlPenaltyMPC_FLOAT* controlPenaltyMPC_dsubaff05 = controlPenaltyMPC_ds_aff 
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_dlubcc05 = controlPenaltyMPC_dl_cc + 132;
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_dsubcc05 = controlPenaltyMPC_ds_cc + 132;
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_ccrhsub05 = controlPenaltyMPC_ccrhs + 132;
-controlPenaltyMPC_FLOAT controlPenaltyMPC_Phi05[78];
-controlPenaltyMPC_FLOAT controlPenaltyMPC_W05[72];
+controlPenaltyMPC_FLOAT controlPenaltyMPC_Phi05[12];
+controlPenaltyMPC_FLOAT controlPenaltyMPC_W05[12];
 controlPenaltyMPC_FLOAT controlPenaltyMPC_Ysd05[36];
 controlPenaltyMPC_FLOAT controlPenaltyMPC_Lsd05[36];
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_z06 = controlPenaltyMPC_z + 72;
@@ -1963,8 +1621,8 @@ controlPenaltyMPC_FLOAT* controlPenaltyMPC_dsubaff06 = controlPenaltyMPC_ds_aff 
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_dlubcc06 = controlPenaltyMPC_dl_cc + 156;
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_dsubcc06 = controlPenaltyMPC_ds_cc + 156;
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_ccrhsub06 = controlPenaltyMPC_ccrhs + 156;
-controlPenaltyMPC_FLOAT controlPenaltyMPC_Phi06[78];
-controlPenaltyMPC_FLOAT controlPenaltyMPC_W06[72];
+controlPenaltyMPC_FLOAT controlPenaltyMPC_Phi06[12];
+controlPenaltyMPC_FLOAT controlPenaltyMPC_W06[12];
 controlPenaltyMPC_FLOAT controlPenaltyMPC_Ysd06[36];
 controlPenaltyMPC_FLOAT controlPenaltyMPC_Lsd06[36];
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_z07 = controlPenaltyMPC_z + 84;
@@ -2008,8 +1666,8 @@ controlPenaltyMPC_FLOAT* controlPenaltyMPC_dsubaff07 = controlPenaltyMPC_ds_aff 
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_dlubcc07 = controlPenaltyMPC_dl_cc + 180;
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_dsubcc07 = controlPenaltyMPC_ds_cc + 180;
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_ccrhsub07 = controlPenaltyMPC_ccrhs + 180;
-controlPenaltyMPC_FLOAT controlPenaltyMPC_Phi07[78];
-controlPenaltyMPC_FLOAT controlPenaltyMPC_W07[72];
+controlPenaltyMPC_FLOAT controlPenaltyMPC_Phi07[12];
+controlPenaltyMPC_FLOAT controlPenaltyMPC_W07[12];
 controlPenaltyMPC_FLOAT controlPenaltyMPC_Ysd07[36];
 controlPenaltyMPC_FLOAT controlPenaltyMPC_Lsd07[36];
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_z08 = controlPenaltyMPC_z + 96;
@@ -2053,8 +1711,8 @@ controlPenaltyMPC_FLOAT* controlPenaltyMPC_dsubaff08 = controlPenaltyMPC_ds_aff 
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_dlubcc08 = controlPenaltyMPC_dl_cc + 204;
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_dsubcc08 = controlPenaltyMPC_ds_cc + 204;
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_ccrhsub08 = controlPenaltyMPC_ccrhs + 204;
-controlPenaltyMPC_FLOAT controlPenaltyMPC_Phi08[78];
-controlPenaltyMPC_FLOAT controlPenaltyMPC_W08[72];
+controlPenaltyMPC_FLOAT controlPenaltyMPC_Phi08[12];
+controlPenaltyMPC_FLOAT controlPenaltyMPC_W08[12];
 controlPenaltyMPC_FLOAT controlPenaltyMPC_Ysd08[36];
 controlPenaltyMPC_FLOAT controlPenaltyMPC_Lsd08[36];
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_z09 = controlPenaltyMPC_z + 108;
@@ -2098,8 +1756,8 @@ controlPenaltyMPC_FLOAT* controlPenaltyMPC_dsubaff09 = controlPenaltyMPC_ds_aff 
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_dlubcc09 = controlPenaltyMPC_dl_cc + 228;
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_dsubcc09 = controlPenaltyMPC_ds_cc + 228;
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_ccrhsub09 = controlPenaltyMPC_ccrhs + 228;
-controlPenaltyMPC_FLOAT controlPenaltyMPC_Phi09[78];
-controlPenaltyMPC_FLOAT controlPenaltyMPC_W09[72];
+controlPenaltyMPC_FLOAT controlPenaltyMPC_Phi09[12];
+controlPenaltyMPC_FLOAT controlPenaltyMPC_W09[12];
 controlPenaltyMPC_FLOAT controlPenaltyMPC_Ysd09[36];
 controlPenaltyMPC_FLOAT controlPenaltyMPC_Lsd09[36];
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_z10 = controlPenaltyMPC_z + 120;
@@ -2143,8 +1801,8 @@ controlPenaltyMPC_FLOAT* controlPenaltyMPC_dsubaff10 = controlPenaltyMPC_ds_aff 
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_dlubcc10 = controlPenaltyMPC_dl_cc + 252;
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_dsubcc10 = controlPenaltyMPC_ds_cc + 252;
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_ccrhsub10 = controlPenaltyMPC_ccrhs + 252;
-controlPenaltyMPC_FLOAT controlPenaltyMPC_Phi10[78];
-controlPenaltyMPC_FLOAT controlPenaltyMPC_W10[72];
+controlPenaltyMPC_FLOAT controlPenaltyMPC_Phi10[12];
+controlPenaltyMPC_FLOAT controlPenaltyMPC_W10[12];
 controlPenaltyMPC_FLOAT controlPenaltyMPC_Ysd10[36];
 controlPenaltyMPC_FLOAT controlPenaltyMPC_Lsd10[36];
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_z11 = controlPenaltyMPC_z + 132;
@@ -2188,8 +1846,8 @@ controlPenaltyMPC_FLOAT* controlPenaltyMPC_dsubaff11 = controlPenaltyMPC_ds_aff 
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_dlubcc11 = controlPenaltyMPC_dl_cc + 276;
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_dsubcc11 = controlPenaltyMPC_ds_cc + 276;
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_ccrhsub11 = controlPenaltyMPC_ccrhs + 276;
-controlPenaltyMPC_FLOAT controlPenaltyMPC_Phi11[78];
-controlPenaltyMPC_FLOAT controlPenaltyMPC_W11[72];
+controlPenaltyMPC_FLOAT controlPenaltyMPC_Phi11[12];
+controlPenaltyMPC_FLOAT controlPenaltyMPC_W11[12];
 controlPenaltyMPC_FLOAT controlPenaltyMPC_Ysd11[36];
 controlPenaltyMPC_FLOAT controlPenaltyMPC_Lsd11[36];
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_z12 = controlPenaltyMPC_z + 144;
@@ -2233,8 +1891,8 @@ controlPenaltyMPC_FLOAT* controlPenaltyMPC_dsubaff12 = controlPenaltyMPC_ds_aff 
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_dlubcc12 = controlPenaltyMPC_dl_cc + 300;
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_dsubcc12 = controlPenaltyMPC_ds_cc + 300;
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_ccrhsub12 = controlPenaltyMPC_ccrhs + 300;
-controlPenaltyMPC_FLOAT controlPenaltyMPC_Phi12[78];
-controlPenaltyMPC_FLOAT controlPenaltyMPC_W12[72];
+controlPenaltyMPC_FLOAT controlPenaltyMPC_Phi12[12];
+controlPenaltyMPC_FLOAT controlPenaltyMPC_W12[12];
 controlPenaltyMPC_FLOAT controlPenaltyMPC_Ysd12[36];
 controlPenaltyMPC_FLOAT controlPenaltyMPC_Lsd12[36];
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_z13 = controlPenaltyMPC_z + 156;
@@ -2278,8 +1936,8 @@ controlPenaltyMPC_FLOAT* controlPenaltyMPC_dsubaff13 = controlPenaltyMPC_ds_aff 
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_dlubcc13 = controlPenaltyMPC_dl_cc + 324;
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_dsubcc13 = controlPenaltyMPC_ds_cc + 324;
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_ccrhsub13 = controlPenaltyMPC_ccrhs + 324;
-controlPenaltyMPC_FLOAT controlPenaltyMPC_Phi13[78];
-controlPenaltyMPC_FLOAT controlPenaltyMPC_W13[72];
+controlPenaltyMPC_FLOAT controlPenaltyMPC_Phi13[12];
+controlPenaltyMPC_FLOAT controlPenaltyMPC_W13[12];
 controlPenaltyMPC_FLOAT controlPenaltyMPC_Ysd13[36];
 controlPenaltyMPC_FLOAT controlPenaltyMPC_Lsd13[36];
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_z14 = controlPenaltyMPC_z + 168;
@@ -2323,12 +1981,15 @@ controlPenaltyMPC_FLOAT* controlPenaltyMPC_dsubaff14 = controlPenaltyMPC_ds_aff 
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_dlubcc14 = controlPenaltyMPC_dl_cc + 348;
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_dsubcc14 = controlPenaltyMPC_ds_cc + 348;
 controlPenaltyMPC_FLOAT* controlPenaltyMPC_ccrhsub14 = controlPenaltyMPC_ccrhs + 348;
-controlPenaltyMPC_FLOAT controlPenaltyMPC_Phi14[78];
-controlPenaltyMPC_FLOAT controlPenaltyMPC_W14[72];
+controlPenaltyMPC_FLOAT controlPenaltyMPC_Phi14[12];
+controlPenaltyMPC_FLOAT controlPenaltyMPC_W14[12];
 controlPenaltyMPC_FLOAT controlPenaltyMPC_Ysd14[36];
 controlPenaltyMPC_FLOAT controlPenaltyMPC_Lsd14[36];
 controlPenaltyMPC_FLOAT musigma;
 controlPenaltyMPC_FLOAT sigma_3rdroot;
+controlPenaltyMPC_FLOAT controlPenaltyMPC_Diag1_0[12];
+controlPenaltyMPC_FLOAT controlPenaltyMPC_Diag2_0[12];
+controlPenaltyMPC_FLOAT controlPenaltyMPC_L_0[66];
 
 
 
@@ -2351,27 +2012,23 @@ controlPenaltyMPC_LA_INITIALIZEVECTOR_354(controlPenaltyMPC_s, 1);
 info->mu = 0;
 controlPenaltyMPC_LA_DOTACC_354(controlPenaltyMPC_l, controlPenaltyMPC_s, &info->mu);
 info->mu /= 354;
-PRINTTEXT("This is controlPenaltyMPC, a solver generated by FORCES (forces.ethz.ch).\n");
-PRINTTEXT("(c) Alexander Domahidi, Automatic Control Laboratory, ETH Zurich, 2011-2014.\n");
-PRINTTEXT("\n  #it  res_eq   res_ineq     pobj         dobj       dgap     rdgap     mu\n");
-PRINTTEXT("  ---------------------------------------------------------------------------\n");
 while( 1 ){
 info->pobj = 0;
-controlPenaltyMPC_LA_DENSE_QUADFCN_12(params->Q1, params->f1, controlPenaltyMPC_z00, controlPenaltyMPC_grad_cost00, &info->pobj);
-controlPenaltyMPC_LA_DENSE_QUADFCN_12(params->Q2, params->f2, controlPenaltyMPC_z01, controlPenaltyMPC_grad_cost01, &info->pobj);
-controlPenaltyMPC_LA_DENSE_QUADFCN_12(params->Q3, params->f3, controlPenaltyMPC_z02, controlPenaltyMPC_grad_cost02, &info->pobj);
-controlPenaltyMPC_LA_DENSE_QUADFCN_12(params->Q4, params->f4, controlPenaltyMPC_z03, controlPenaltyMPC_grad_cost03, &info->pobj);
-controlPenaltyMPC_LA_DENSE_QUADFCN_12(params->Q5, params->f5, controlPenaltyMPC_z04, controlPenaltyMPC_grad_cost04, &info->pobj);
-controlPenaltyMPC_LA_DENSE_QUADFCN_12(params->Q6, params->f6, controlPenaltyMPC_z05, controlPenaltyMPC_grad_cost05, &info->pobj);
-controlPenaltyMPC_LA_DENSE_QUADFCN_12(params->Q7, params->f7, controlPenaltyMPC_z06, controlPenaltyMPC_grad_cost06, &info->pobj);
-controlPenaltyMPC_LA_DENSE_QUADFCN_12(params->Q8, params->f8, controlPenaltyMPC_z07, controlPenaltyMPC_grad_cost07, &info->pobj);
-controlPenaltyMPC_LA_DENSE_QUADFCN_12(params->Q9, params->f9, controlPenaltyMPC_z08, controlPenaltyMPC_grad_cost08, &info->pobj);
-controlPenaltyMPC_LA_DENSE_QUADFCN_12(params->Q10, params->f10, controlPenaltyMPC_z09, controlPenaltyMPC_grad_cost09, &info->pobj);
-controlPenaltyMPC_LA_DENSE_QUADFCN_12(params->Q11, params->f11, controlPenaltyMPC_z10, controlPenaltyMPC_grad_cost10, &info->pobj);
-controlPenaltyMPC_LA_DENSE_QUADFCN_12(params->Q12, params->f12, controlPenaltyMPC_z11, controlPenaltyMPC_grad_cost11, &info->pobj);
-controlPenaltyMPC_LA_DENSE_QUADFCN_12(params->Q13, params->f13, controlPenaltyMPC_z12, controlPenaltyMPC_grad_cost12, &info->pobj);
-controlPenaltyMPC_LA_DENSE_QUADFCN_12(params->Q14, params->f14, controlPenaltyMPC_z13, controlPenaltyMPC_grad_cost13, &info->pobj);
-controlPenaltyMPC_LA_DENSE_QUADFCN_12(params->Q15, params->f15, controlPenaltyMPC_z14, controlPenaltyMPC_grad_cost14, &info->pobj);
+controlPenaltyMPC_LA_DIAG_QUADFCN_12(params->Q1, params->f1, controlPenaltyMPC_z00, controlPenaltyMPC_grad_cost00, &info->pobj);
+controlPenaltyMPC_LA_DIAG_QUADFCN_12(params->Q2, params->f2, controlPenaltyMPC_z01, controlPenaltyMPC_grad_cost01, &info->pobj);
+controlPenaltyMPC_LA_DIAG_QUADFCN_12(params->Q3, params->f3, controlPenaltyMPC_z02, controlPenaltyMPC_grad_cost02, &info->pobj);
+controlPenaltyMPC_LA_DIAG_QUADFCN_12(params->Q4, params->f4, controlPenaltyMPC_z03, controlPenaltyMPC_grad_cost03, &info->pobj);
+controlPenaltyMPC_LA_DIAG_QUADFCN_12(params->Q5, params->f5, controlPenaltyMPC_z04, controlPenaltyMPC_grad_cost04, &info->pobj);
+controlPenaltyMPC_LA_DIAG_QUADFCN_12(params->Q6, params->f6, controlPenaltyMPC_z05, controlPenaltyMPC_grad_cost05, &info->pobj);
+controlPenaltyMPC_LA_DIAG_QUADFCN_12(params->Q7, params->f7, controlPenaltyMPC_z06, controlPenaltyMPC_grad_cost06, &info->pobj);
+controlPenaltyMPC_LA_DIAG_QUADFCN_12(params->Q8, params->f8, controlPenaltyMPC_z07, controlPenaltyMPC_grad_cost07, &info->pobj);
+controlPenaltyMPC_LA_DIAG_QUADFCN_12(params->Q9, params->f9, controlPenaltyMPC_z08, controlPenaltyMPC_grad_cost08, &info->pobj);
+controlPenaltyMPC_LA_DIAG_QUADFCN_12(params->Q10, params->f10, controlPenaltyMPC_z09, controlPenaltyMPC_grad_cost09, &info->pobj);
+controlPenaltyMPC_LA_DIAG_QUADFCN_12(params->Q11, params->f11, controlPenaltyMPC_z10, controlPenaltyMPC_grad_cost10, &info->pobj);
+controlPenaltyMPC_LA_DIAG_QUADFCN_12(params->Q12, params->f12, controlPenaltyMPC_z11, controlPenaltyMPC_grad_cost11, &info->pobj);
+controlPenaltyMPC_LA_DIAG_QUADFCN_12(params->Q13, params->f13, controlPenaltyMPC_z12, controlPenaltyMPC_grad_cost12, &info->pobj);
+controlPenaltyMPC_LA_DIAG_QUADFCN_12(params->Q14, params->f14, controlPenaltyMPC_z13, controlPenaltyMPC_grad_cost13, &info->pobj);
+controlPenaltyMPC_LA_DIAG_QUADFCN_12(params->Q15, params->f15, controlPenaltyMPC_z14, controlPenaltyMPC_grad_cost14, &info->pobj);
 info->res_eq = 0;
 info->dgap = 0;
 controlPenaltyMPC_LA_DIAGZERO_MVMSUB6_6(controlPenaltyMPC_D00, controlPenaltyMPC_z00, params->e1, controlPenaltyMPC_v00, controlPenaltyMPC_re00, &info->dgap, &info->res_eq);
@@ -2453,135 +2110,117 @@ controlPenaltyMPC_LA_INEQ_B_GRAD_12_12_6(controlPenaltyMPC_lub14, controlPenalty
 info->dobj = info->pobj - info->dgap;
 info->rdgap = info->pobj ? info->dgap / info->pobj : 1e6;
 if( info->rdgap < 0 ) info->rdgap = -info->rdgap;
-PRINTTEXT("  %3d  %3.1e  %3.1e  %+6.4e  %+6.4e  %+3.1e  %3.1e  %3.1e\n",info->it, info->res_eq, info->res_ineq, info->pobj, info->dobj, info->dgap, info->rdgap, info->mu);
 if( info->mu < controlPenaltyMPC_SET_ACC_KKTCOMPL
     && (info->rdgap < controlPenaltyMPC_SET_ACC_RDGAP || info->dgap < controlPenaltyMPC_SET_ACC_KKTCOMPL)
     && info->res_eq < controlPenaltyMPC_SET_ACC_RESEQ
     && info->res_ineq < controlPenaltyMPC_SET_ACC_RESINEQ ){
-PRINTTEXT("OPTIMAL (within RESEQ=%2.1e, RESINEQ=%2.1e, (R)DGAP=(%2.1e)%2.1e, MU=%2.1e).\n",controlPenaltyMPC_SET_ACC_RESEQ, controlPenaltyMPC_SET_ACC_RESINEQ,controlPenaltyMPC_SET_ACC_KKTCOMPL,controlPenaltyMPC_SET_ACC_RDGAP,controlPenaltyMPC_SET_ACC_KKTCOMPL);
 exitcode = controlPenaltyMPC_OPTIMAL; break; }
 if( info->it == controlPenaltyMPC_SET_MAXIT ){
-PRINTTEXT("Maximum number of iterations reached, exiting.\n");
 exitcode = controlPenaltyMPC_MAXITREACHED; break; }
 controlPenaltyMPC_LA_VVADD3_180(controlPenaltyMPC_grad_cost, controlPenaltyMPC_grad_eq, controlPenaltyMPC_grad_ineq, controlPenaltyMPC_rd);
-controlPenaltyMPC_LA_INEQ_DENSE_HESS_12_12_12(params->Q1, controlPenaltyMPC_llbbyslb00, controlPenaltyMPC_lbIdx00, controlPenaltyMPC_lubbysub00, controlPenaltyMPC_ubIdx00, controlPenaltyMPC_Phi00);
-controlPenaltyMPC_LA_DENSE_CHOL2_12(controlPenaltyMPC_Phi00);
-controlPenaltyMPC_LA_DENSE_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi00, controlPenaltyMPC_C00, controlPenaltyMPC_V00);
-controlPenaltyMPC_LA_DENSE_DIAGZERO_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi00, controlPenaltyMPC_D00, controlPenaltyMPC_W00);
-controlPenaltyMPC_LA_DENSE_MMTM_6_12_6(controlPenaltyMPC_W00, controlPenaltyMPC_V00, controlPenaltyMPC_Ysd01);
-controlPenaltyMPC_LA_DENSE_FORWARDSUB_12(controlPenaltyMPC_Phi00, controlPenaltyMPC_rd00, controlPenaltyMPC_Lbyrd00);
-controlPenaltyMPC_LA_INEQ_DENSE_HESS_12_12_12(params->Q2, controlPenaltyMPC_llbbyslb01, controlPenaltyMPC_lbIdx01, controlPenaltyMPC_lubbysub01, controlPenaltyMPC_ubIdx01, controlPenaltyMPC_Phi01);
-controlPenaltyMPC_LA_DENSE_CHOL2_12(controlPenaltyMPC_Phi01);
-controlPenaltyMPC_LA_DENSE_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi01, controlPenaltyMPC_C00, controlPenaltyMPC_V01);
-controlPenaltyMPC_LA_DENSE_DIAGZERO_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi01, controlPenaltyMPC_D01, controlPenaltyMPC_W01);
-controlPenaltyMPC_LA_DENSE_MMTM_6_12_6(controlPenaltyMPC_W01, controlPenaltyMPC_V01, controlPenaltyMPC_Ysd02);
-controlPenaltyMPC_LA_DENSE_FORWARDSUB_12(controlPenaltyMPC_Phi01, controlPenaltyMPC_rd01, controlPenaltyMPC_Lbyrd01);
-controlPenaltyMPC_LA_INEQ_DENSE_HESS_12_12_12(params->Q3, controlPenaltyMPC_llbbyslb02, controlPenaltyMPC_lbIdx02, controlPenaltyMPC_lubbysub02, controlPenaltyMPC_ubIdx02, controlPenaltyMPC_Phi02);
-controlPenaltyMPC_LA_DENSE_CHOL2_12(controlPenaltyMPC_Phi02);
-controlPenaltyMPC_LA_DENSE_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi02, controlPenaltyMPC_C00, controlPenaltyMPC_V02);
-controlPenaltyMPC_LA_DENSE_DIAGZERO_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi02, controlPenaltyMPC_D01, controlPenaltyMPC_W02);
-controlPenaltyMPC_LA_DENSE_MMTM_6_12_6(controlPenaltyMPC_W02, controlPenaltyMPC_V02, controlPenaltyMPC_Ysd03);
-controlPenaltyMPC_LA_DENSE_FORWARDSUB_12(controlPenaltyMPC_Phi02, controlPenaltyMPC_rd02, controlPenaltyMPC_Lbyrd02);
-controlPenaltyMPC_LA_INEQ_DENSE_HESS_12_12_12(params->Q4, controlPenaltyMPC_llbbyslb03, controlPenaltyMPC_lbIdx03, controlPenaltyMPC_lubbysub03, controlPenaltyMPC_ubIdx03, controlPenaltyMPC_Phi03);
-controlPenaltyMPC_LA_DENSE_CHOL2_12(controlPenaltyMPC_Phi03);
-controlPenaltyMPC_LA_DENSE_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi03, controlPenaltyMPC_C00, controlPenaltyMPC_V03);
-controlPenaltyMPC_LA_DENSE_DIAGZERO_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi03, controlPenaltyMPC_D01, controlPenaltyMPC_W03);
-controlPenaltyMPC_LA_DENSE_MMTM_6_12_6(controlPenaltyMPC_W03, controlPenaltyMPC_V03, controlPenaltyMPC_Ysd04);
-controlPenaltyMPC_LA_DENSE_FORWARDSUB_12(controlPenaltyMPC_Phi03, controlPenaltyMPC_rd03, controlPenaltyMPC_Lbyrd03);
-controlPenaltyMPC_LA_INEQ_DENSE_HESS_12_12_12(params->Q5, controlPenaltyMPC_llbbyslb04, controlPenaltyMPC_lbIdx04, controlPenaltyMPC_lubbysub04, controlPenaltyMPC_ubIdx04, controlPenaltyMPC_Phi04);
-controlPenaltyMPC_LA_DENSE_CHOL2_12(controlPenaltyMPC_Phi04);
-controlPenaltyMPC_LA_DENSE_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi04, controlPenaltyMPC_C00, controlPenaltyMPC_V04);
-controlPenaltyMPC_LA_DENSE_DIAGZERO_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi04, controlPenaltyMPC_D01, controlPenaltyMPC_W04);
-controlPenaltyMPC_LA_DENSE_MMTM_6_12_6(controlPenaltyMPC_W04, controlPenaltyMPC_V04, controlPenaltyMPC_Ysd05);
-controlPenaltyMPC_LA_DENSE_FORWARDSUB_12(controlPenaltyMPC_Phi04, controlPenaltyMPC_rd04, controlPenaltyMPC_Lbyrd04);
-controlPenaltyMPC_LA_INEQ_DENSE_HESS_12_12_12(params->Q6, controlPenaltyMPC_llbbyslb05, controlPenaltyMPC_lbIdx05, controlPenaltyMPC_lubbysub05, controlPenaltyMPC_ubIdx05, controlPenaltyMPC_Phi05);
-controlPenaltyMPC_LA_DENSE_CHOL2_12(controlPenaltyMPC_Phi05);
-controlPenaltyMPC_LA_DENSE_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi05, controlPenaltyMPC_C00, controlPenaltyMPC_V05);
-controlPenaltyMPC_LA_DENSE_DIAGZERO_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi05, controlPenaltyMPC_D01, controlPenaltyMPC_W05);
-controlPenaltyMPC_LA_DENSE_MMTM_6_12_6(controlPenaltyMPC_W05, controlPenaltyMPC_V05, controlPenaltyMPC_Ysd06);
-controlPenaltyMPC_LA_DENSE_FORWARDSUB_12(controlPenaltyMPC_Phi05, controlPenaltyMPC_rd05, controlPenaltyMPC_Lbyrd05);
-controlPenaltyMPC_LA_INEQ_DENSE_HESS_12_12_12(params->Q7, controlPenaltyMPC_llbbyslb06, controlPenaltyMPC_lbIdx06, controlPenaltyMPC_lubbysub06, controlPenaltyMPC_ubIdx06, controlPenaltyMPC_Phi06);
-controlPenaltyMPC_LA_DENSE_CHOL2_12(controlPenaltyMPC_Phi06);
-controlPenaltyMPC_LA_DENSE_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi06, controlPenaltyMPC_C00, controlPenaltyMPC_V06);
-controlPenaltyMPC_LA_DENSE_DIAGZERO_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi06, controlPenaltyMPC_D01, controlPenaltyMPC_W06);
-controlPenaltyMPC_LA_DENSE_MMTM_6_12_6(controlPenaltyMPC_W06, controlPenaltyMPC_V06, controlPenaltyMPC_Ysd07);
-controlPenaltyMPC_LA_DENSE_FORWARDSUB_12(controlPenaltyMPC_Phi06, controlPenaltyMPC_rd06, controlPenaltyMPC_Lbyrd06);
-controlPenaltyMPC_LA_INEQ_DENSE_HESS_12_12_12(params->Q8, controlPenaltyMPC_llbbyslb07, controlPenaltyMPC_lbIdx07, controlPenaltyMPC_lubbysub07, controlPenaltyMPC_ubIdx07, controlPenaltyMPC_Phi07);
-controlPenaltyMPC_LA_DENSE_CHOL2_12(controlPenaltyMPC_Phi07);
-controlPenaltyMPC_LA_DENSE_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi07, controlPenaltyMPC_C00, controlPenaltyMPC_V07);
-controlPenaltyMPC_LA_DENSE_DIAGZERO_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi07, controlPenaltyMPC_D01, controlPenaltyMPC_W07);
-controlPenaltyMPC_LA_DENSE_MMTM_6_12_6(controlPenaltyMPC_W07, controlPenaltyMPC_V07, controlPenaltyMPC_Ysd08);
-controlPenaltyMPC_LA_DENSE_FORWARDSUB_12(controlPenaltyMPC_Phi07, controlPenaltyMPC_rd07, controlPenaltyMPC_Lbyrd07);
-controlPenaltyMPC_LA_INEQ_DENSE_HESS_12_12_12(params->Q9, controlPenaltyMPC_llbbyslb08, controlPenaltyMPC_lbIdx08, controlPenaltyMPC_lubbysub08, controlPenaltyMPC_ubIdx08, controlPenaltyMPC_Phi08);
-controlPenaltyMPC_LA_DENSE_CHOL2_12(controlPenaltyMPC_Phi08);
-controlPenaltyMPC_LA_DENSE_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi08, controlPenaltyMPC_C00, controlPenaltyMPC_V08);
-controlPenaltyMPC_LA_DENSE_DIAGZERO_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi08, controlPenaltyMPC_D01, controlPenaltyMPC_W08);
-controlPenaltyMPC_LA_DENSE_MMTM_6_12_6(controlPenaltyMPC_W08, controlPenaltyMPC_V08, controlPenaltyMPC_Ysd09);
-controlPenaltyMPC_LA_DENSE_FORWARDSUB_12(controlPenaltyMPC_Phi08, controlPenaltyMPC_rd08, controlPenaltyMPC_Lbyrd08);
-controlPenaltyMPC_LA_INEQ_DENSE_HESS_12_12_12(params->Q10, controlPenaltyMPC_llbbyslb09, controlPenaltyMPC_lbIdx09, controlPenaltyMPC_lubbysub09, controlPenaltyMPC_ubIdx09, controlPenaltyMPC_Phi09);
-controlPenaltyMPC_LA_DENSE_CHOL2_12(controlPenaltyMPC_Phi09);
-controlPenaltyMPC_LA_DENSE_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi09, controlPenaltyMPC_C00, controlPenaltyMPC_V09);
-controlPenaltyMPC_LA_DENSE_DIAGZERO_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi09, controlPenaltyMPC_D01, controlPenaltyMPC_W09);
-controlPenaltyMPC_LA_DENSE_MMTM_6_12_6(controlPenaltyMPC_W09, controlPenaltyMPC_V09, controlPenaltyMPC_Ysd10);
-controlPenaltyMPC_LA_DENSE_FORWARDSUB_12(controlPenaltyMPC_Phi09, controlPenaltyMPC_rd09, controlPenaltyMPC_Lbyrd09);
-controlPenaltyMPC_LA_INEQ_DENSE_HESS_12_12_12(params->Q11, controlPenaltyMPC_llbbyslb10, controlPenaltyMPC_lbIdx10, controlPenaltyMPC_lubbysub10, controlPenaltyMPC_ubIdx10, controlPenaltyMPC_Phi10);
-controlPenaltyMPC_LA_DENSE_CHOL2_12(controlPenaltyMPC_Phi10);
-controlPenaltyMPC_LA_DENSE_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi10, controlPenaltyMPC_C00, controlPenaltyMPC_V10);
-controlPenaltyMPC_LA_DENSE_DIAGZERO_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi10, controlPenaltyMPC_D01, controlPenaltyMPC_W10);
-controlPenaltyMPC_LA_DENSE_MMTM_6_12_6(controlPenaltyMPC_W10, controlPenaltyMPC_V10, controlPenaltyMPC_Ysd11);
-controlPenaltyMPC_LA_DENSE_FORWARDSUB_12(controlPenaltyMPC_Phi10, controlPenaltyMPC_rd10, controlPenaltyMPC_Lbyrd10);
-controlPenaltyMPC_LA_INEQ_DENSE_HESS_12_12_12(params->Q12, controlPenaltyMPC_llbbyslb11, controlPenaltyMPC_lbIdx11, controlPenaltyMPC_lubbysub11, controlPenaltyMPC_ubIdx11, controlPenaltyMPC_Phi11);
-controlPenaltyMPC_LA_DENSE_CHOL2_12(controlPenaltyMPC_Phi11);
-controlPenaltyMPC_LA_DENSE_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi11, controlPenaltyMPC_C00, controlPenaltyMPC_V11);
-controlPenaltyMPC_LA_DENSE_DIAGZERO_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi11, controlPenaltyMPC_D01, controlPenaltyMPC_W11);
-controlPenaltyMPC_LA_DENSE_MMTM_6_12_6(controlPenaltyMPC_W11, controlPenaltyMPC_V11, controlPenaltyMPC_Ysd12);
-controlPenaltyMPC_LA_DENSE_FORWARDSUB_12(controlPenaltyMPC_Phi11, controlPenaltyMPC_rd11, controlPenaltyMPC_Lbyrd11);
-controlPenaltyMPC_LA_INEQ_DENSE_HESS_12_12_12(params->Q13, controlPenaltyMPC_llbbyslb12, controlPenaltyMPC_lbIdx12, controlPenaltyMPC_lubbysub12, controlPenaltyMPC_ubIdx12, controlPenaltyMPC_Phi12);
-controlPenaltyMPC_LA_DENSE_CHOL2_12(controlPenaltyMPC_Phi12);
-controlPenaltyMPC_LA_DENSE_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi12, controlPenaltyMPC_C00, controlPenaltyMPC_V12);
-controlPenaltyMPC_LA_DENSE_DIAGZERO_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi12, controlPenaltyMPC_D01, controlPenaltyMPC_W12);
-controlPenaltyMPC_LA_DENSE_MMTM_6_12_6(controlPenaltyMPC_W12, controlPenaltyMPC_V12, controlPenaltyMPC_Ysd13);
-controlPenaltyMPC_LA_DENSE_FORWARDSUB_12(controlPenaltyMPC_Phi12, controlPenaltyMPC_rd12, controlPenaltyMPC_Lbyrd12);
-controlPenaltyMPC_LA_INEQ_DENSE_HESS_12_12_12(params->Q14, controlPenaltyMPC_llbbyslb13, controlPenaltyMPC_lbIdx13, controlPenaltyMPC_lubbysub13, controlPenaltyMPC_ubIdx13, controlPenaltyMPC_Phi13);
-controlPenaltyMPC_LA_DENSE_CHOL2_12(controlPenaltyMPC_Phi13);
-controlPenaltyMPC_LA_DENSE_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi13, controlPenaltyMPC_C00, controlPenaltyMPC_V13);
-controlPenaltyMPC_LA_DENSE_DIAGZERO_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi13, controlPenaltyMPC_D01, controlPenaltyMPC_W13);
-controlPenaltyMPC_LA_DENSE_MMTM_6_12_6(controlPenaltyMPC_W13, controlPenaltyMPC_V13, controlPenaltyMPC_Ysd14);
-controlPenaltyMPC_LA_DENSE_FORWARDSUB_12(controlPenaltyMPC_Phi13, controlPenaltyMPC_rd13, controlPenaltyMPC_Lbyrd13);
-controlPenaltyMPC_LA_INEQ_DENSE_HESS_12_12_6(params->Q15, controlPenaltyMPC_llbbyslb14, controlPenaltyMPC_lbIdx14, controlPenaltyMPC_lubbysub14, controlPenaltyMPC_ubIdx14, controlPenaltyMPC_Phi14);
-controlPenaltyMPC_LA_DENSE_CHOL2_12(controlPenaltyMPC_Phi14);
-controlPenaltyMPC_LA_DENSE_DIAGZERO_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi14, controlPenaltyMPC_D01, controlPenaltyMPC_W14);
-controlPenaltyMPC_LA_DENSE_FORWARDSUB_12(controlPenaltyMPC_Phi14, controlPenaltyMPC_rd14, controlPenaltyMPC_Lbyrd14);
-controlPenaltyMPC_LA_DENSE_MMT_6_12(controlPenaltyMPC_W00, controlPenaltyMPC_Yd00);
-controlPenaltyMPC_LA_DENSE_MVMSUB7_6_12(controlPenaltyMPC_W00, controlPenaltyMPC_Lbyrd00, controlPenaltyMPC_re00, controlPenaltyMPC_beta00);
-controlPenaltyMPC_LA_DENSE_MMT2_6_12_12(controlPenaltyMPC_V00, controlPenaltyMPC_W01, controlPenaltyMPC_Yd01);
-controlPenaltyMPC_LA_DENSE_MVMSUB2_6_12_12(controlPenaltyMPC_V00, controlPenaltyMPC_Lbyrd00, controlPenaltyMPC_W01, controlPenaltyMPC_Lbyrd01, controlPenaltyMPC_re01, controlPenaltyMPC_beta01);
-controlPenaltyMPC_LA_DENSE_MMT2_6_12_12(controlPenaltyMPC_V01, controlPenaltyMPC_W02, controlPenaltyMPC_Yd02);
-controlPenaltyMPC_LA_DENSE_MVMSUB2_6_12_12(controlPenaltyMPC_V01, controlPenaltyMPC_Lbyrd01, controlPenaltyMPC_W02, controlPenaltyMPC_Lbyrd02, controlPenaltyMPC_re02, controlPenaltyMPC_beta02);
-controlPenaltyMPC_LA_DENSE_MMT2_6_12_12(controlPenaltyMPC_V02, controlPenaltyMPC_W03, controlPenaltyMPC_Yd03);
-controlPenaltyMPC_LA_DENSE_MVMSUB2_6_12_12(controlPenaltyMPC_V02, controlPenaltyMPC_Lbyrd02, controlPenaltyMPC_W03, controlPenaltyMPC_Lbyrd03, controlPenaltyMPC_re03, controlPenaltyMPC_beta03);
-controlPenaltyMPC_LA_DENSE_MMT2_6_12_12(controlPenaltyMPC_V03, controlPenaltyMPC_W04, controlPenaltyMPC_Yd04);
-controlPenaltyMPC_LA_DENSE_MVMSUB2_6_12_12(controlPenaltyMPC_V03, controlPenaltyMPC_Lbyrd03, controlPenaltyMPC_W04, controlPenaltyMPC_Lbyrd04, controlPenaltyMPC_re04, controlPenaltyMPC_beta04);
-controlPenaltyMPC_LA_DENSE_MMT2_6_12_12(controlPenaltyMPC_V04, controlPenaltyMPC_W05, controlPenaltyMPC_Yd05);
-controlPenaltyMPC_LA_DENSE_MVMSUB2_6_12_12(controlPenaltyMPC_V04, controlPenaltyMPC_Lbyrd04, controlPenaltyMPC_W05, controlPenaltyMPC_Lbyrd05, controlPenaltyMPC_re05, controlPenaltyMPC_beta05);
-controlPenaltyMPC_LA_DENSE_MMT2_6_12_12(controlPenaltyMPC_V05, controlPenaltyMPC_W06, controlPenaltyMPC_Yd06);
-controlPenaltyMPC_LA_DENSE_MVMSUB2_6_12_12(controlPenaltyMPC_V05, controlPenaltyMPC_Lbyrd05, controlPenaltyMPC_W06, controlPenaltyMPC_Lbyrd06, controlPenaltyMPC_re06, controlPenaltyMPC_beta06);
-controlPenaltyMPC_LA_DENSE_MMT2_6_12_12(controlPenaltyMPC_V06, controlPenaltyMPC_W07, controlPenaltyMPC_Yd07);
-controlPenaltyMPC_LA_DENSE_MVMSUB2_6_12_12(controlPenaltyMPC_V06, controlPenaltyMPC_Lbyrd06, controlPenaltyMPC_W07, controlPenaltyMPC_Lbyrd07, controlPenaltyMPC_re07, controlPenaltyMPC_beta07);
-controlPenaltyMPC_LA_DENSE_MMT2_6_12_12(controlPenaltyMPC_V07, controlPenaltyMPC_W08, controlPenaltyMPC_Yd08);
-controlPenaltyMPC_LA_DENSE_MVMSUB2_6_12_12(controlPenaltyMPC_V07, controlPenaltyMPC_Lbyrd07, controlPenaltyMPC_W08, controlPenaltyMPC_Lbyrd08, controlPenaltyMPC_re08, controlPenaltyMPC_beta08);
-controlPenaltyMPC_LA_DENSE_MMT2_6_12_12(controlPenaltyMPC_V08, controlPenaltyMPC_W09, controlPenaltyMPC_Yd09);
-controlPenaltyMPC_LA_DENSE_MVMSUB2_6_12_12(controlPenaltyMPC_V08, controlPenaltyMPC_Lbyrd08, controlPenaltyMPC_W09, controlPenaltyMPC_Lbyrd09, controlPenaltyMPC_re09, controlPenaltyMPC_beta09);
-controlPenaltyMPC_LA_DENSE_MMT2_6_12_12(controlPenaltyMPC_V09, controlPenaltyMPC_W10, controlPenaltyMPC_Yd10);
-controlPenaltyMPC_LA_DENSE_MVMSUB2_6_12_12(controlPenaltyMPC_V09, controlPenaltyMPC_Lbyrd09, controlPenaltyMPC_W10, controlPenaltyMPC_Lbyrd10, controlPenaltyMPC_re10, controlPenaltyMPC_beta10);
-controlPenaltyMPC_LA_DENSE_MMT2_6_12_12(controlPenaltyMPC_V10, controlPenaltyMPC_W11, controlPenaltyMPC_Yd11);
-controlPenaltyMPC_LA_DENSE_MVMSUB2_6_12_12(controlPenaltyMPC_V10, controlPenaltyMPC_Lbyrd10, controlPenaltyMPC_W11, controlPenaltyMPC_Lbyrd11, controlPenaltyMPC_re11, controlPenaltyMPC_beta11);
-controlPenaltyMPC_LA_DENSE_MMT2_6_12_12(controlPenaltyMPC_V11, controlPenaltyMPC_W12, controlPenaltyMPC_Yd12);
-controlPenaltyMPC_LA_DENSE_MVMSUB2_6_12_12(controlPenaltyMPC_V11, controlPenaltyMPC_Lbyrd11, controlPenaltyMPC_W12, controlPenaltyMPC_Lbyrd12, controlPenaltyMPC_re12, controlPenaltyMPC_beta12);
-controlPenaltyMPC_LA_DENSE_MMT2_6_12_12(controlPenaltyMPC_V12, controlPenaltyMPC_W13, controlPenaltyMPC_Yd13);
-controlPenaltyMPC_LA_DENSE_MVMSUB2_6_12_12(controlPenaltyMPC_V12, controlPenaltyMPC_Lbyrd12, controlPenaltyMPC_W13, controlPenaltyMPC_Lbyrd13, controlPenaltyMPC_re13, controlPenaltyMPC_beta13);
-controlPenaltyMPC_LA_DENSE_MMT2_6_12_12(controlPenaltyMPC_V13, controlPenaltyMPC_W14, controlPenaltyMPC_Yd14);
-controlPenaltyMPC_LA_DENSE_MVMSUB2_6_12_12(controlPenaltyMPC_V13, controlPenaltyMPC_Lbyrd13, controlPenaltyMPC_W14, controlPenaltyMPC_Lbyrd14, controlPenaltyMPC_re14, controlPenaltyMPC_beta14);
+controlPenaltyMPC_LA_DIAG_CHOL_ONELOOP_LBUB_12_12_12(params->Q1, controlPenaltyMPC_llbbyslb00, controlPenaltyMPC_lbIdx00, controlPenaltyMPC_lubbysub00, controlPenaltyMPC_ubIdx00, controlPenaltyMPC_Phi00);
+controlPenaltyMPC_LA_DIAG_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi00, controlPenaltyMPC_C00, controlPenaltyMPC_V00);
+controlPenaltyMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_6_12(controlPenaltyMPC_Phi00, controlPenaltyMPC_D00, controlPenaltyMPC_W00);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_MMTM_6_12_6(controlPenaltyMPC_W00, controlPenaltyMPC_V00, controlPenaltyMPC_Ysd01);
+controlPenaltyMPC_LA_DIAG_FORWARDSUB_12(controlPenaltyMPC_Phi00, controlPenaltyMPC_rd00, controlPenaltyMPC_Lbyrd00);
+controlPenaltyMPC_LA_DIAG_CHOL_ONELOOP_LBUB_12_12_12(params->Q2, controlPenaltyMPC_llbbyslb01, controlPenaltyMPC_lbIdx01, controlPenaltyMPC_lubbysub01, controlPenaltyMPC_ubIdx01, controlPenaltyMPC_Phi01);
+controlPenaltyMPC_LA_DIAG_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi01, controlPenaltyMPC_C00, controlPenaltyMPC_V01);
+controlPenaltyMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_6_12(controlPenaltyMPC_Phi01, controlPenaltyMPC_D01, controlPenaltyMPC_W01);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_MMTM_6_12_6(controlPenaltyMPC_W01, controlPenaltyMPC_V01, controlPenaltyMPC_Ysd02);
+controlPenaltyMPC_LA_DIAG_FORWARDSUB_12(controlPenaltyMPC_Phi01, controlPenaltyMPC_rd01, controlPenaltyMPC_Lbyrd01);
+controlPenaltyMPC_LA_DIAG_CHOL_ONELOOP_LBUB_12_12_12(params->Q3, controlPenaltyMPC_llbbyslb02, controlPenaltyMPC_lbIdx02, controlPenaltyMPC_lubbysub02, controlPenaltyMPC_ubIdx02, controlPenaltyMPC_Phi02);
+controlPenaltyMPC_LA_DIAG_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi02, controlPenaltyMPC_C00, controlPenaltyMPC_V02);
+controlPenaltyMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_6_12(controlPenaltyMPC_Phi02, controlPenaltyMPC_D01, controlPenaltyMPC_W02);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_MMTM_6_12_6(controlPenaltyMPC_W02, controlPenaltyMPC_V02, controlPenaltyMPC_Ysd03);
+controlPenaltyMPC_LA_DIAG_FORWARDSUB_12(controlPenaltyMPC_Phi02, controlPenaltyMPC_rd02, controlPenaltyMPC_Lbyrd02);
+controlPenaltyMPC_LA_DIAG_CHOL_ONELOOP_LBUB_12_12_12(params->Q4, controlPenaltyMPC_llbbyslb03, controlPenaltyMPC_lbIdx03, controlPenaltyMPC_lubbysub03, controlPenaltyMPC_ubIdx03, controlPenaltyMPC_Phi03);
+controlPenaltyMPC_LA_DIAG_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi03, controlPenaltyMPC_C00, controlPenaltyMPC_V03);
+controlPenaltyMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_6_12(controlPenaltyMPC_Phi03, controlPenaltyMPC_D01, controlPenaltyMPC_W03);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_MMTM_6_12_6(controlPenaltyMPC_W03, controlPenaltyMPC_V03, controlPenaltyMPC_Ysd04);
+controlPenaltyMPC_LA_DIAG_FORWARDSUB_12(controlPenaltyMPC_Phi03, controlPenaltyMPC_rd03, controlPenaltyMPC_Lbyrd03);
+controlPenaltyMPC_LA_DIAG_CHOL_ONELOOP_LBUB_12_12_12(params->Q5, controlPenaltyMPC_llbbyslb04, controlPenaltyMPC_lbIdx04, controlPenaltyMPC_lubbysub04, controlPenaltyMPC_ubIdx04, controlPenaltyMPC_Phi04);
+controlPenaltyMPC_LA_DIAG_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi04, controlPenaltyMPC_C00, controlPenaltyMPC_V04);
+controlPenaltyMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_6_12(controlPenaltyMPC_Phi04, controlPenaltyMPC_D01, controlPenaltyMPC_W04);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_MMTM_6_12_6(controlPenaltyMPC_W04, controlPenaltyMPC_V04, controlPenaltyMPC_Ysd05);
+controlPenaltyMPC_LA_DIAG_FORWARDSUB_12(controlPenaltyMPC_Phi04, controlPenaltyMPC_rd04, controlPenaltyMPC_Lbyrd04);
+controlPenaltyMPC_LA_DIAG_CHOL_ONELOOP_LBUB_12_12_12(params->Q6, controlPenaltyMPC_llbbyslb05, controlPenaltyMPC_lbIdx05, controlPenaltyMPC_lubbysub05, controlPenaltyMPC_ubIdx05, controlPenaltyMPC_Phi05);
+controlPenaltyMPC_LA_DIAG_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi05, controlPenaltyMPC_C00, controlPenaltyMPC_V05);
+controlPenaltyMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_6_12(controlPenaltyMPC_Phi05, controlPenaltyMPC_D01, controlPenaltyMPC_W05);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_MMTM_6_12_6(controlPenaltyMPC_W05, controlPenaltyMPC_V05, controlPenaltyMPC_Ysd06);
+controlPenaltyMPC_LA_DIAG_FORWARDSUB_12(controlPenaltyMPC_Phi05, controlPenaltyMPC_rd05, controlPenaltyMPC_Lbyrd05);
+controlPenaltyMPC_LA_DIAG_CHOL_ONELOOP_LBUB_12_12_12(params->Q7, controlPenaltyMPC_llbbyslb06, controlPenaltyMPC_lbIdx06, controlPenaltyMPC_lubbysub06, controlPenaltyMPC_ubIdx06, controlPenaltyMPC_Phi06);
+controlPenaltyMPC_LA_DIAG_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi06, controlPenaltyMPC_C00, controlPenaltyMPC_V06);
+controlPenaltyMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_6_12(controlPenaltyMPC_Phi06, controlPenaltyMPC_D01, controlPenaltyMPC_W06);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_MMTM_6_12_6(controlPenaltyMPC_W06, controlPenaltyMPC_V06, controlPenaltyMPC_Ysd07);
+controlPenaltyMPC_LA_DIAG_FORWARDSUB_12(controlPenaltyMPC_Phi06, controlPenaltyMPC_rd06, controlPenaltyMPC_Lbyrd06);
+controlPenaltyMPC_LA_DIAG_CHOL_ONELOOP_LBUB_12_12_12(params->Q8, controlPenaltyMPC_llbbyslb07, controlPenaltyMPC_lbIdx07, controlPenaltyMPC_lubbysub07, controlPenaltyMPC_ubIdx07, controlPenaltyMPC_Phi07);
+controlPenaltyMPC_LA_DIAG_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi07, controlPenaltyMPC_C00, controlPenaltyMPC_V07);
+controlPenaltyMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_6_12(controlPenaltyMPC_Phi07, controlPenaltyMPC_D01, controlPenaltyMPC_W07);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_MMTM_6_12_6(controlPenaltyMPC_W07, controlPenaltyMPC_V07, controlPenaltyMPC_Ysd08);
+controlPenaltyMPC_LA_DIAG_FORWARDSUB_12(controlPenaltyMPC_Phi07, controlPenaltyMPC_rd07, controlPenaltyMPC_Lbyrd07);
+controlPenaltyMPC_LA_DIAG_CHOL_ONELOOP_LBUB_12_12_12(params->Q9, controlPenaltyMPC_llbbyslb08, controlPenaltyMPC_lbIdx08, controlPenaltyMPC_lubbysub08, controlPenaltyMPC_ubIdx08, controlPenaltyMPC_Phi08);
+controlPenaltyMPC_LA_DIAG_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi08, controlPenaltyMPC_C00, controlPenaltyMPC_V08);
+controlPenaltyMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_6_12(controlPenaltyMPC_Phi08, controlPenaltyMPC_D01, controlPenaltyMPC_W08);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_MMTM_6_12_6(controlPenaltyMPC_W08, controlPenaltyMPC_V08, controlPenaltyMPC_Ysd09);
+controlPenaltyMPC_LA_DIAG_FORWARDSUB_12(controlPenaltyMPC_Phi08, controlPenaltyMPC_rd08, controlPenaltyMPC_Lbyrd08);
+controlPenaltyMPC_LA_DIAG_CHOL_ONELOOP_LBUB_12_12_12(params->Q10, controlPenaltyMPC_llbbyslb09, controlPenaltyMPC_lbIdx09, controlPenaltyMPC_lubbysub09, controlPenaltyMPC_ubIdx09, controlPenaltyMPC_Phi09);
+controlPenaltyMPC_LA_DIAG_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi09, controlPenaltyMPC_C00, controlPenaltyMPC_V09);
+controlPenaltyMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_6_12(controlPenaltyMPC_Phi09, controlPenaltyMPC_D01, controlPenaltyMPC_W09);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_MMTM_6_12_6(controlPenaltyMPC_W09, controlPenaltyMPC_V09, controlPenaltyMPC_Ysd10);
+controlPenaltyMPC_LA_DIAG_FORWARDSUB_12(controlPenaltyMPC_Phi09, controlPenaltyMPC_rd09, controlPenaltyMPC_Lbyrd09);
+controlPenaltyMPC_LA_DIAG_CHOL_ONELOOP_LBUB_12_12_12(params->Q11, controlPenaltyMPC_llbbyslb10, controlPenaltyMPC_lbIdx10, controlPenaltyMPC_lubbysub10, controlPenaltyMPC_ubIdx10, controlPenaltyMPC_Phi10);
+controlPenaltyMPC_LA_DIAG_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi10, controlPenaltyMPC_C00, controlPenaltyMPC_V10);
+controlPenaltyMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_6_12(controlPenaltyMPC_Phi10, controlPenaltyMPC_D01, controlPenaltyMPC_W10);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_MMTM_6_12_6(controlPenaltyMPC_W10, controlPenaltyMPC_V10, controlPenaltyMPC_Ysd11);
+controlPenaltyMPC_LA_DIAG_FORWARDSUB_12(controlPenaltyMPC_Phi10, controlPenaltyMPC_rd10, controlPenaltyMPC_Lbyrd10);
+controlPenaltyMPC_LA_DIAG_CHOL_ONELOOP_LBUB_12_12_12(params->Q12, controlPenaltyMPC_llbbyslb11, controlPenaltyMPC_lbIdx11, controlPenaltyMPC_lubbysub11, controlPenaltyMPC_ubIdx11, controlPenaltyMPC_Phi11);
+controlPenaltyMPC_LA_DIAG_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi11, controlPenaltyMPC_C00, controlPenaltyMPC_V11);
+controlPenaltyMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_6_12(controlPenaltyMPC_Phi11, controlPenaltyMPC_D01, controlPenaltyMPC_W11);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_MMTM_6_12_6(controlPenaltyMPC_W11, controlPenaltyMPC_V11, controlPenaltyMPC_Ysd12);
+controlPenaltyMPC_LA_DIAG_FORWARDSUB_12(controlPenaltyMPC_Phi11, controlPenaltyMPC_rd11, controlPenaltyMPC_Lbyrd11);
+controlPenaltyMPC_LA_DIAG_CHOL_ONELOOP_LBUB_12_12_12(params->Q13, controlPenaltyMPC_llbbyslb12, controlPenaltyMPC_lbIdx12, controlPenaltyMPC_lubbysub12, controlPenaltyMPC_ubIdx12, controlPenaltyMPC_Phi12);
+controlPenaltyMPC_LA_DIAG_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi12, controlPenaltyMPC_C00, controlPenaltyMPC_V12);
+controlPenaltyMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_6_12(controlPenaltyMPC_Phi12, controlPenaltyMPC_D01, controlPenaltyMPC_W12);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_MMTM_6_12_6(controlPenaltyMPC_W12, controlPenaltyMPC_V12, controlPenaltyMPC_Ysd13);
+controlPenaltyMPC_LA_DIAG_FORWARDSUB_12(controlPenaltyMPC_Phi12, controlPenaltyMPC_rd12, controlPenaltyMPC_Lbyrd12);
+controlPenaltyMPC_LA_DIAG_CHOL_ONELOOP_LBUB_12_12_12(params->Q14, controlPenaltyMPC_llbbyslb13, controlPenaltyMPC_lbIdx13, controlPenaltyMPC_lubbysub13, controlPenaltyMPC_ubIdx13, controlPenaltyMPC_Phi13);
+controlPenaltyMPC_LA_DIAG_MATRIXFORWARDSUB_6_12(controlPenaltyMPC_Phi13, controlPenaltyMPC_C00, controlPenaltyMPC_V13);
+controlPenaltyMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_6_12(controlPenaltyMPC_Phi13, controlPenaltyMPC_D01, controlPenaltyMPC_W13);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_MMTM_6_12_6(controlPenaltyMPC_W13, controlPenaltyMPC_V13, controlPenaltyMPC_Ysd14);
+controlPenaltyMPC_LA_DIAG_FORWARDSUB_12(controlPenaltyMPC_Phi13, controlPenaltyMPC_rd13, controlPenaltyMPC_Lbyrd13);
+controlPenaltyMPC_LA_DIAG_CHOL_LBUB_12_12_6(params->Q15, controlPenaltyMPC_llbbyslb14, controlPenaltyMPC_lbIdx14, controlPenaltyMPC_lubbysub14, controlPenaltyMPC_ubIdx14, controlPenaltyMPC_Phi14);
+controlPenaltyMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_6_12(controlPenaltyMPC_Phi14, controlPenaltyMPC_D01, controlPenaltyMPC_W14);
+controlPenaltyMPC_LA_DIAG_FORWARDSUB_12(controlPenaltyMPC_Phi14, controlPenaltyMPC_rd14, controlPenaltyMPC_Lbyrd14);
+controlPenaltyMPC_LA_DIAGZERO_MMT_6(controlPenaltyMPC_W00, controlPenaltyMPC_Yd00);
+controlPenaltyMPC_LA_DIAGZERO_MVMSUB7_6(controlPenaltyMPC_W00, controlPenaltyMPC_Lbyrd00, controlPenaltyMPC_re00, controlPenaltyMPC_beta00);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_MMT2_6_12_12(controlPenaltyMPC_V00, controlPenaltyMPC_W01, controlPenaltyMPC_Yd01);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_2MVMSUB2_6_12_12(controlPenaltyMPC_V00, controlPenaltyMPC_Lbyrd00, controlPenaltyMPC_W01, controlPenaltyMPC_Lbyrd01, controlPenaltyMPC_re01, controlPenaltyMPC_beta01);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_MMT2_6_12_12(controlPenaltyMPC_V01, controlPenaltyMPC_W02, controlPenaltyMPC_Yd02);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_2MVMSUB2_6_12_12(controlPenaltyMPC_V01, controlPenaltyMPC_Lbyrd01, controlPenaltyMPC_W02, controlPenaltyMPC_Lbyrd02, controlPenaltyMPC_re02, controlPenaltyMPC_beta02);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_MMT2_6_12_12(controlPenaltyMPC_V02, controlPenaltyMPC_W03, controlPenaltyMPC_Yd03);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_2MVMSUB2_6_12_12(controlPenaltyMPC_V02, controlPenaltyMPC_Lbyrd02, controlPenaltyMPC_W03, controlPenaltyMPC_Lbyrd03, controlPenaltyMPC_re03, controlPenaltyMPC_beta03);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_MMT2_6_12_12(controlPenaltyMPC_V03, controlPenaltyMPC_W04, controlPenaltyMPC_Yd04);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_2MVMSUB2_6_12_12(controlPenaltyMPC_V03, controlPenaltyMPC_Lbyrd03, controlPenaltyMPC_W04, controlPenaltyMPC_Lbyrd04, controlPenaltyMPC_re04, controlPenaltyMPC_beta04);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_MMT2_6_12_12(controlPenaltyMPC_V04, controlPenaltyMPC_W05, controlPenaltyMPC_Yd05);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_2MVMSUB2_6_12_12(controlPenaltyMPC_V04, controlPenaltyMPC_Lbyrd04, controlPenaltyMPC_W05, controlPenaltyMPC_Lbyrd05, controlPenaltyMPC_re05, controlPenaltyMPC_beta05);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_MMT2_6_12_12(controlPenaltyMPC_V05, controlPenaltyMPC_W06, controlPenaltyMPC_Yd06);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_2MVMSUB2_6_12_12(controlPenaltyMPC_V05, controlPenaltyMPC_Lbyrd05, controlPenaltyMPC_W06, controlPenaltyMPC_Lbyrd06, controlPenaltyMPC_re06, controlPenaltyMPC_beta06);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_MMT2_6_12_12(controlPenaltyMPC_V06, controlPenaltyMPC_W07, controlPenaltyMPC_Yd07);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_2MVMSUB2_6_12_12(controlPenaltyMPC_V06, controlPenaltyMPC_Lbyrd06, controlPenaltyMPC_W07, controlPenaltyMPC_Lbyrd07, controlPenaltyMPC_re07, controlPenaltyMPC_beta07);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_MMT2_6_12_12(controlPenaltyMPC_V07, controlPenaltyMPC_W08, controlPenaltyMPC_Yd08);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_2MVMSUB2_6_12_12(controlPenaltyMPC_V07, controlPenaltyMPC_Lbyrd07, controlPenaltyMPC_W08, controlPenaltyMPC_Lbyrd08, controlPenaltyMPC_re08, controlPenaltyMPC_beta08);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_MMT2_6_12_12(controlPenaltyMPC_V08, controlPenaltyMPC_W09, controlPenaltyMPC_Yd09);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_2MVMSUB2_6_12_12(controlPenaltyMPC_V08, controlPenaltyMPC_Lbyrd08, controlPenaltyMPC_W09, controlPenaltyMPC_Lbyrd09, controlPenaltyMPC_re09, controlPenaltyMPC_beta09);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_MMT2_6_12_12(controlPenaltyMPC_V09, controlPenaltyMPC_W10, controlPenaltyMPC_Yd10);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_2MVMSUB2_6_12_12(controlPenaltyMPC_V09, controlPenaltyMPC_Lbyrd09, controlPenaltyMPC_W10, controlPenaltyMPC_Lbyrd10, controlPenaltyMPC_re10, controlPenaltyMPC_beta10);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_MMT2_6_12_12(controlPenaltyMPC_V10, controlPenaltyMPC_W11, controlPenaltyMPC_Yd11);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_2MVMSUB2_6_12_12(controlPenaltyMPC_V10, controlPenaltyMPC_Lbyrd10, controlPenaltyMPC_W11, controlPenaltyMPC_Lbyrd11, controlPenaltyMPC_re11, controlPenaltyMPC_beta11);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_MMT2_6_12_12(controlPenaltyMPC_V11, controlPenaltyMPC_W12, controlPenaltyMPC_Yd12);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_2MVMSUB2_6_12_12(controlPenaltyMPC_V11, controlPenaltyMPC_Lbyrd11, controlPenaltyMPC_W12, controlPenaltyMPC_Lbyrd12, controlPenaltyMPC_re12, controlPenaltyMPC_beta12);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_MMT2_6_12_12(controlPenaltyMPC_V12, controlPenaltyMPC_W13, controlPenaltyMPC_Yd13);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_2MVMSUB2_6_12_12(controlPenaltyMPC_V12, controlPenaltyMPC_Lbyrd12, controlPenaltyMPC_W13, controlPenaltyMPC_Lbyrd13, controlPenaltyMPC_re13, controlPenaltyMPC_beta13);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_MMT2_6_12_12(controlPenaltyMPC_V13, controlPenaltyMPC_W14, controlPenaltyMPC_Yd14);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_2MVMSUB2_6_12_12(controlPenaltyMPC_V13, controlPenaltyMPC_Lbyrd13, controlPenaltyMPC_W14, controlPenaltyMPC_Lbyrd14, controlPenaltyMPC_re14, controlPenaltyMPC_beta14);
 controlPenaltyMPC_LA_DENSE_CHOL_6(controlPenaltyMPC_Yd00, controlPenaltyMPC_Ld00);
 controlPenaltyMPC_LA_DENSE_FORWARDSUB_6(controlPenaltyMPC_Ld00, controlPenaltyMPC_beta00, controlPenaltyMPC_yy00);
 controlPenaltyMPC_LA_DENSE_MATRIXTFORWARDSUB_6_6(controlPenaltyMPC_Ld00, controlPenaltyMPC_Ysd01, controlPenaltyMPC_Lsd01);
@@ -2699,21 +2338,21 @@ controlPenaltyMPC_LA_DENSE_DIAGZERO_MTVM2_6_12_6(controlPenaltyMPC_C00, controlP
 controlPenaltyMPC_LA_DENSE_DIAGZERO_MTVM2_6_12_6(controlPenaltyMPC_C00, controlPenaltyMPC_dvaff14, controlPenaltyMPC_D01, controlPenaltyMPC_dvaff13, controlPenaltyMPC_grad_eq13);
 controlPenaltyMPC_LA_DIAGZERO_MTVM_6_12(controlPenaltyMPC_D01, controlPenaltyMPC_dvaff14, controlPenaltyMPC_grad_eq14);
 controlPenaltyMPC_LA_VSUB2_180(controlPenaltyMPC_rd, controlPenaltyMPC_grad_eq, controlPenaltyMPC_rd);
-controlPenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi00, controlPenaltyMPC_rd00, controlPenaltyMPC_dzaff00);
-controlPenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi01, controlPenaltyMPC_rd01, controlPenaltyMPC_dzaff01);
-controlPenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi02, controlPenaltyMPC_rd02, controlPenaltyMPC_dzaff02);
-controlPenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi03, controlPenaltyMPC_rd03, controlPenaltyMPC_dzaff03);
-controlPenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi04, controlPenaltyMPC_rd04, controlPenaltyMPC_dzaff04);
-controlPenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi05, controlPenaltyMPC_rd05, controlPenaltyMPC_dzaff05);
-controlPenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi06, controlPenaltyMPC_rd06, controlPenaltyMPC_dzaff06);
-controlPenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi07, controlPenaltyMPC_rd07, controlPenaltyMPC_dzaff07);
-controlPenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi08, controlPenaltyMPC_rd08, controlPenaltyMPC_dzaff08);
-controlPenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi09, controlPenaltyMPC_rd09, controlPenaltyMPC_dzaff09);
-controlPenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi10, controlPenaltyMPC_rd10, controlPenaltyMPC_dzaff10);
-controlPenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi11, controlPenaltyMPC_rd11, controlPenaltyMPC_dzaff11);
-controlPenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi12, controlPenaltyMPC_rd12, controlPenaltyMPC_dzaff12);
-controlPenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi13, controlPenaltyMPC_rd13, controlPenaltyMPC_dzaff13);
-controlPenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi14, controlPenaltyMPC_rd14, controlPenaltyMPC_dzaff14);
+controlPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi00, controlPenaltyMPC_rd00, controlPenaltyMPC_dzaff00);
+controlPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi01, controlPenaltyMPC_rd01, controlPenaltyMPC_dzaff01);
+controlPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi02, controlPenaltyMPC_rd02, controlPenaltyMPC_dzaff02);
+controlPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi03, controlPenaltyMPC_rd03, controlPenaltyMPC_dzaff03);
+controlPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi04, controlPenaltyMPC_rd04, controlPenaltyMPC_dzaff04);
+controlPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi05, controlPenaltyMPC_rd05, controlPenaltyMPC_dzaff05);
+controlPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi06, controlPenaltyMPC_rd06, controlPenaltyMPC_dzaff06);
+controlPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi07, controlPenaltyMPC_rd07, controlPenaltyMPC_dzaff07);
+controlPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi08, controlPenaltyMPC_rd08, controlPenaltyMPC_dzaff08);
+controlPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi09, controlPenaltyMPC_rd09, controlPenaltyMPC_dzaff09);
+controlPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi10, controlPenaltyMPC_rd10, controlPenaltyMPC_dzaff10);
+controlPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi11, controlPenaltyMPC_rd11, controlPenaltyMPC_dzaff11);
+controlPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi12, controlPenaltyMPC_rd12, controlPenaltyMPC_dzaff12);
+controlPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi13, controlPenaltyMPC_rd13, controlPenaltyMPC_dzaff13);
+controlPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi14, controlPenaltyMPC_rd14, controlPenaltyMPC_dzaff14);
 controlPenaltyMPC_LA_VSUB_INDEXED_12(controlPenaltyMPC_dzaff00, controlPenaltyMPC_lbIdx00, controlPenaltyMPC_rilb00, controlPenaltyMPC_dslbaff00);
 controlPenaltyMPC_LA_VSUB3_12(controlPenaltyMPC_llbbyslb00, controlPenaltyMPC_dslbaff00, controlPenaltyMPC_llb00, controlPenaltyMPC_dllbaff00);
 controlPenaltyMPC_LA_VSUB2_INDEXED_12(controlPenaltyMPC_riub00, controlPenaltyMPC_dzaff00, controlPenaltyMPC_ubIdx00, controlPenaltyMPC_dsubaff00);
@@ -2776,7 +2415,6 @@ controlPenaltyMPC_LA_VSUB2_INDEXED_6(controlPenaltyMPC_riub14, controlPenaltyMPC
 controlPenaltyMPC_LA_VSUB3_6(controlPenaltyMPC_lubbysub14, controlPenaltyMPC_dsubaff14, controlPenaltyMPC_lub14, controlPenaltyMPC_dlubaff14);
 info->lsit_aff = controlPenaltyMPC_LINESEARCH_BACKTRACKING_AFFINE(controlPenaltyMPC_l, controlPenaltyMPC_s, controlPenaltyMPC_dl_aff, controlPenaltyMPC_ds_aff, &info->step_aff, &info->mu_aff);
 if( info->lsit_aff == controlPenaltyMPC_NOPROGRESS ){
-PRINTTEXT("Affine line search could not proceed at iteration %d.\nThe problem might be infeasible -- exiting.\n",info->it+1);
 exitcode = controlPenaltyMPC_NOPROGRESS; break;
 }
 sigma_3rdroot = info->mu_aff / info->mu;
@@ -2785,76 +2423,76 @@ musigma = info->mu * info->sigma;
 controlPenaltyMPC_LA_VSUB5_354(controlPenaltyMPC_ds_aff, controlPenaltyMPC_dl_aff, musigma, controlPenaltyMPC_ccrhs);
 controlPenaltyMPC_LA_VSUB6_INDEXED_12_12_12(controlPenaltyMPC_ccrhsub00, controlPenaltyMPC_sub00, controlPenaltyMPC_ubIdx00, controlPenaltyMPC_ccrhsl00, controlPenaltyMPC_slb00, controlPenaltyMPC_lbIdx00, controlPenaltyMPC_rd00);
 controlPenaltyMPC_LA_VSUB6_INDEXED_12_12_12(controlPenaltyMPC_ccrhsub01, controlPenaltyMPC_sub01, controlPenaltyMPC_ubIdx01, controlPenaltyMPC_ccrhsl01, controlPenaltyMPC_slb01, controlPenaltyMPC_lbIdx01, controlPenaltyMPC_rd01);
-controlPenaltyMPC_LA_DENSE_FORWARDSUB_12(controlPenaltyMPC_Phi00, controlPenaltyMPC_rd00, controlPenaltyMPC_Lbyrd00);
-controlPenaltyMPC_LA_DENSE_FORWARDSUB_12(controlPenaltyMPC_Phi01, controlPenaltyMPC_rd01, controlPenaltyMPC_Lbyrd01);
-controlPenaltyMPC_LA_DENSE_MVM_6_12(controlPenaltyMPC_W00, controlPenaltyMPC_Lbyrd00, controlPenaltyMPC_beta00);
+controlPenaltyMPC_LA_DIAG_FORWARDSUB_12(controlPenaltyMPC_Phi00, controlPenaltyMPC_rd00, controlPenaltyMPC_Lbyrd00);
+controlPenaltyMPC_LA_DIAG_FORWARDSUB_12(controlPenaltyMPC_Phi01, controlPenaltyMPC_rd01, controlPenaltyMPC_Lbyrd01);
+controlPenaltyMPC_LA_DIAGZERO_MVM_6(controlPenaltyMPC_W00, controlPenaltyMPC_Lbyrd00, controlPenaltyMPC_beta00);
 controlPenaltyMPC_LA_DENSE_FORWARDSUB_6(controlPenaltyMPC_Ld00, controlPenaltyMPC_beta00, controlPenaltyMPC_yy00);
-controlPenaltyMPC_LA_DENSE_2MVMADD_6_12_12(controlPenaltyMPC_V00, controlPenaltyMPC_Lbyrd00, controlPenaltyMPC_W01, controlPenaltyMPC_Lbyrd01, controlPenaltyMPC_beta01);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_2MVMADD_6_12_12(controlPenaltyMPC_V00, controlPenaltyMPC_Lbyrd00, controlPenaltyMPC_W01, controlPenaltyMPC_Lbyrd01, controlPenaltyMPC_beta01);
 controlPenaltyMPC_LA_DENSE_MVMSUB1_6_6(controlPenaltyMPC_Lsd01, controlPenaltyMPC_yy00, controlPenaltyMPC_beta01, controlPenaltyMPC_bmy01);
 controlPenaltyMPC_LA_DENSE_FORWARDSUB_6(controlPenaltyMPC_Ld01, controlPenaltyMPC_bmy01, controlPenaltyMPC_yy01);
 controlPenaltyMPC_LA_VSUB6_INDEXED_12_12_12(controlPenaltyMPC_ccrhsub02, controlPenaltyMPC_sub02, controlPenaltyMPC_ubIdx02, controlPenaltyMPC_ccrhsl02, controlPenaltyMPC_slb02, controlPenaltyMPC_lbIdx02, controlPenaltyMPC_rd02);
-controlPenaltyMPC_LA_DENSE_FORWARDSUB_12(controlPenaltyMPC_Phi02, controlPenaltyMPC_rd02, controlPenaltyMPC_Lbyrd02);
-controlPenaltyMPC_LA_DENSE_2MVMADD_6_12_12(controlPenaltyMPC_V01, controlPenaltyMPC_Lbyrd01, controlPenaltyMPC_W02, controlPenaltyMPC_Lbyrd02, controlPenaltyMPC_beta02);
+controlPenaltyMPC_LA_DIAG_FORWARDSUB_12(controlPenaltyMPC_Phi02, controlPenaltyMPC_rd02, controlPenaltyMPC_Lbyrd02);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_2MVMADD_6_12_12(controlPenaltyMPC_V01, controlPenaltyMPC_Lbyrd01, controlPenaltyMPC_W02, controlPenaltyMPC_Lbyrd02, controlPenaltyMPC_beta02);
 controlPenaltyMPC_LA_DENSE_MVMSUB1_6_6(controlPenaltyMPC_Lsd02, controlPenaltyMPC_yy01, controlPenaltyMPC_beta02, controlPenaltyMPC_bmy02);
 controlPenaltyMPC_LA_DENSE_FORWARDSUB_6(controlPenaltyMPC_Ld02, controlPenaltyMPC_bmy02, controlPenaltyMPC_yy02);
 controlPenaltyMPC_LA_VSUB6_INDEXED_12_12_12(controlPenaltyMPC_ccrhsub03, controlPenaltyMPC_sub03, controlPenaltyMPC_ubIdx03, controlPenaltyMPC_ccrhsl03, controlPenaltyMPC_slb03, controlPenaltyMPC_lbIdx03, controlPenaltyMPC_rd03);
-controlPenaltyMPC_LA_DENSE_FORWARDSUB_12(controlPenaltyMPC_Phi03, controlPenaltyMPC_rd03, controlPenaltyMPC_Lbyrd03);
-controlPenaltyMPC_LA_DENSE_2MVMADD_6_12_12(controlPenaltyMPC_V02, controlPenaltyMPC_Lbyrd02, controlPenaltyMPC_W03, controlPenaltyMPC_Lbyrd03, controlPenaltyMPC_beta03);
+controlPenaltyMPC_LA_DIAG_FORWARDSUB_12(controlPenaltyMPC_Phi03, controlPenaltyMPC_rd03, controlPenaltyMPC_Lbyrd03);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_2MVMADD_6_12_12(controlPenaltyMPC_V02, controlPenaltyMPC_Lbyrd02, controlPenaltyMPC_W03, controlPenaltyMPC_Lbyrd03, controlPenaltyMPC_beta03);
 controlPenaltyMPC_LA_DENSE_MVMSUB1_6_6(controlPenaltyMPC_Lsd03, controlPenaltyMPC_yy02, controlPenaltyMPC_beta03, controlPenaltyMPC_bmy03);
 controlPenaltyMPC_LA_DENSE_FORWARDSUB_6(controlPenaltyMPC_Ld03, controlPenaltyMPC_bmy03, controlPenaltyMPC_yy03);
 controlPenaltyMPC_LA_VSUB6_INDEXED_12_12_12(controlPenaltyMPC_ccrhsub04, controlPenaltyMPC_sub04, controlPenaltyMPC_ubIdx04, controlPenaltyMPC_ccrhsl04, controlPenaltyMPC_slb04, controlPenaltyMPC_lbIdx04, controlPenaltyMPC_rd04);
-controlPenaltyMPC_LA_DENSE_FORWARDSUB_12(controlPenaltyMPC_Phi04, controlPenaltyMPC_rd04, controlPenaltyMPC_Lbyrd04);
-controlPenaltyMPC_LA_DENSE_2MVMADD_6_12_12(controlPenaltyMPC_V03, controlPenaltyMPC_Lbyrd03, controlPenaltyMPC_W04, controlPenaltyMPC_Lbyrd04, controlPenaltyMPC_beta04);
+controlPenaltyMPC_LA_DIAG_FORWARDSUB_12(controlPenaltyMPC_Phi04, controlPenaltyMPC_rd04, controlPenaltyMPC_Lbyrd04);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_2MVMADD_6_12_12(controlPenaltyMPC_V03, controlPenaltyMPC_Lbyrd03, controlPenaltyMPC_W04, controlPenaltyMPC_Lbyrd04, controlPenaltyMPC_beta04);
 controlPenaltyMPC_LA_DENSE_MVMSUB1_6_6(controlPenaltyMPC_Lsd04, controlPenaltyMPC_yy03, controlPenaltyMPC_beta04, controlPenaltyMPC_bmy04);
 controlPenaltyMPC_LA_DENSE_FORWARDSUB_6(controlPenaltyMPC_Ld04, controlPenaltyMPC_bmy04, controlPenaltyMPC_yy04);
 controlPenaltyMPC_LA_VSUB6_INDEXED_12_12_12(controlPenaltyMPC_ccrhsub05, controlPenaltyMPC_sub05, controlPenaltyMPC_ubIdx05, controlPenaltyMPC_ccrhsl05, controlPenaltyMPC_slb05, controlPenaltyMPC_lbIdx05, controlPenaltyMPC_rd05);
-controlPenaltyMPC_LA_DENSE_FORWARDSUB_12(controlPenaltyMPC_Phi05, controlPenaltyMPC_rd05, controlPenaltyMPC_Lbyrd05);
-controlPenaltyMPC_LA_DENSE_2MVMADD_6_12_12(controlPenaltyMPC_V04, controlPenaltyMPC_Lbyrd04, controlPenaltyMPC_W05, controlPenaltyMPC_Lbyrd05, controlPenaltyMPC_beta05);
+controlPenaltyMPC_LA_DIAG_FORWARDSUB_12(controlPenaltyMPC_Phi05, controlPenaltyMPC_rd05, controlPenaltyMPC_Lbyrd05);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_2MVMADD_6_12_12(controlPenaltyMPC_V04, controlPenaltyMPC_Lbyrd04, controlPenaltyMPC_W05, controlPenaltyMPC_Lbyrd05, controlPenaltyMPC_beta05);
 controlPenaltyMPC_LA_DENSE_MVMSUB1_6_6(controlPenaltyMPC_Lsd05, controlPenaltyMPC_yy04, controlPenaltyMPC_beta05, controlPenaltyMPC_bmy05);
 controlPenaltyMPC_LA_DENSE_FORWARDSUB_6(controlPenaltyMPC_Ld05, controlPenaltyMPC_bmy05, controlPenaltyMPC_yy05);
 controlPenaltyMPC_LA_VSUB6_INDEXED_12_12_12(controlPenaltyMPC_ccrhsub06, controlPenaltyMPC_sub06, controlPenaltyMPC_ubIdx06, controlPenaltyMPC_ccrhsl06, controlPenaltyMPC_slb06, controlPenaltyMPC_lbIdx06, controlPenaltyMPC_rd06);
-controlPenaltyMPC_LA_DENSE_FORWARDSUB_12(controlPenaltyMPC_Phi06, controlPenaltyMPC_rd06, controlPenaltyMPC_Lbyrd06);
-controlPenaltyMPC_LA_DENSE_2MVMADD_6_12_12(controlPenaltyMPC_V05, controlPenaltyMPC_Lbyrd05, controlPenaltyMPC_W06, controlPenaltyMPC_Lbyrd06, controlPenaltyMPC_beta06);
+controlPenaltyMPC_LA_DIAG_FORWARDSUB_12(controlPenaltyMPC_Phi06, controlPenaltyMPC_rd06, controlPenaltyMPC_Lbyrd06);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_2MVMADD_6_12_12(controlPenaltyMPC_V05, controlPenaltyMPC_Lbyrd05, controlPenaltyMPC_W06, controlPenaltyMPC_Lbyrd06, controlPenaltyMPC_beta06);
 controlPenaltyMPC_LA_DENSE_MVMSUB1_6_6(controlPenaltyMPC_Lsd06, controlPenaltyMPC_yy05, controlPenaltyMPC_beta06, controlPenaltyMPC_bmy06);
 controlPenaltyMPC_LA_DENSE_FORWARDSUB_6(controlPenaltyMPC_Ld06, controlPenaltyMPC_bmy06, controlPenaltyMPC_yy06);
 controlPenaltyMPC_LA_VSUB6_INDEXED_12_12_12(controlPenaltyMPC_ccrhsub07, controlPenaltyMPC_sub07, controlPenaltyMPC_ubIdx07, controlPenaltyMPC_ccrhsl07, controlPenaltyMPC_slb07, controlPenaltyMPC_lbIdx07, controlPenaltyMPC_rd07);
-controlPenaltyMPC_LA_DENSE_FORWARDSUB_12(controlPenaltyMPC_Phi07, controlPenaltyMPC_rd07, controlPenaltyMPC_Lbyrd07);
-controlPenaltyMPC_LA_DENSE_2MVMADD_6_12_12(controlPenaltyMPC_V06, controlPenaltyMPC_Lbyrd06, controlPenaltyMPC_W07, controlPenaltyMPC_Lbyrd07, controlPenaltyMPC_beta07);
+controlPenaltyMPC_LA_DIAG_FORWARDSUB_12(controlPenaltyMPC_Phi07, controlPenaltyMPC_rd07, controlPenaltyMPC_Lbyrd07);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_2MVMADD_6_12_12(controlPenaltyMPC_V06, controlPenaltyMPC_Lbyrd06, controlPenaltyMPC_W07, controlPenaltyMPC_Lbyrd07, controlPenaltyMPC_beta07);
 controlPenaltyMPC_LA_DENSE_MVMSUB1_6_6(controlPenaltyMPC_Lsd07, controlPenaltyMPC_yy06, controlPenaltyMPC_beta07, controlPenaltyMPC_bmy07);
 controlPenaltyMPC_LA_DENSE_FORWARDSUB_6(controlPenaltyMPC_Ld07, controlPenaltyMPC_bmy07, controlPenaltyMPC_yy07);
 controlPenaltyMPC_LA_VSUB6_INDEXED_12_12_12(controlPenaltyMPC_ccrhsub08, controlPenaltyMPC_sub08, controlPenaltyMPC_ubIdx08, controlPenaltyMPC_ccrhsl08, controlPenaltyMPC_slb08, controlPenaltyMPC_lbIdx08, controlPenaltyMPC_rd08);
-controlPenaltyMPC_LA_DENSE_FORWARDSUB_12(controlPenaltyMPC_Phi08, controlPenaltyMPC_rd08, controlPenaltyMPC_Lbyrd08);
-controlPenaltyMPC_LA_DENSE_2MVMADD_6_12_12(controlPenaltyMPC_V07, controlPenaltyMPC_Lbyrd07, controlPenaltyMPC_W08, controlPenaltyMPC_Lbyrd08, controlPenaltyMPC_beta08);
+controlPenaltyMPC_LA_DIAG_FORWARDSUB_12(controlPenaltyMPC_Phi08, controlPenaltyMPC_rd08, controlPenaltyMPC_Lbyrd08);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_2MVMADD_6_12_12(controlPenaltyMPC_V07, controlPenaltyMPC_Lbyrd07, controlPenaltyMPC_W08, controlPenaltyMPC_Lbyrd08, controlPenaltyMPC_beta08);
 controlPenaltyMPC_LA_DENSE_MVMSUB1_6_6(controlPenaltyMPC_Lsd08, controlPenaltyMPC_yy07, controlPenaltyMPC_beta08, controlPenaltyMPC_bmy08);
 controlPenaltyMPC_LA_DENSE_FORWARDSUB_6(controlPenaltyMPC_Ld08, controlPenaltyMPC_bmy08, controlPenaltyMPC_yy08);
 controlPenaltyMPC_LA_VSUB6_INDEXED_12_12_12(controlPenaltyMPC_ccrhsub09, controlPenaltyMPC_sub09, controlPenaltyMPC_ubIdx09, controlPenaltyMPC_ccrhsl09, controlPenaltyMPC_slb09, controlPenaltyMPC_lbIdx09, controlPenaltyMPC_rd09);
-controlPenaltyMPC_LA_DENSE_FORWARDSUB_12(controlPenaltyMPC_Phi09, controlPenaltyMPC_rd09, controlPenaltyMPC_Lbyrd09);
-controlPenaltyMPC_LA_DENSE_2MVMADD_6_12_12(controlPenaltyMPC_V08, controlPenaltyMPC_Lbyrd08, controlPenaltyMPC_W09, controlPenaltyMPC_Lbyrd09, controlPenaltyMPC_beta09);
+controlPenaltyMPC_LA_DIAG_FORWARDSUB_12(controlPenaltyMPC_Phi09, controlPenaltyMPC_rd09, controlPenaltyMPC_Lbyrd09);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_2MVMADD_6_12_12(controlPenaltyMPC_V08, controlPenaltyMPC_Lbyrd08, controlPenaltyMPC_W09, controlPenaltyMPC_Lbyrd09, controlPenaltyMPC_beta09);
 controlPenaltyMPC_LA_DENSE_MVMSUB1_6_6(controlPenaltyMPC_Lsd09, controlPenaltyMPC_yy08, controlPenaltyMPC_beta09, controlPenaltyMPC_bmy09);
 controlPenaltyMPC_LA_DENSE_FORWARDSUB_6(controlPenaltyMPC_Ld09, controlPenaltyMPC_bmy09, controlPenaltyMPC_yy09);
 controlPenaltyMPC_LA_VSUB6_INDEXED_12_12_12(controlPenaltyMPC_ccrhsub10, controlPenaltyMPC_sub10, controlPenaltyMPC_ubIdx10, controlPenaltyMPC_ccrhsl10, controlPenaltyMPC_slb10, controlPenaltyMPC_lbIdx10, controlPenaltyMPC_rd10);
-controlPenaltyMPC_LA_DENSE_FORWARDSUB_12(controlPenaltyMPC_Phi10, controlPenaltyMPC_rd10, controlPenaltyMPC_Lbyrd10);
-controlPenaltyMPC_LA_DENSE_2MVMADD_6_12_12(controlPenaltyMPC_V09, controlPenaltyMPC_Lbyrd09, controlPenaltyMPC_W10, controlPenaltyMPC_Lbyrd10, controlPenaltyMPC_beta10);
+controlPenaltyMPC_LA_DIAG_FORWARDSUB_12(controlPenaltyMPC_Phi10, controlPenaltyMPC_rd10, controlPenaltyMPC_Lbyrd10);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_2MVMADD_6_12_12(controlPenaltyMPC_V09, controlPenaltyMPC_Lbyrd09, controlPenaltyMPC_W10, controlPenaltyMPC_Lbyrd10, controlPenaltyMPC_beta10);
 controlPenaltyMPC_LA_DENSE_MVMSUB1_6_6(controlPenaltyMPC_Lsd10, controlPenaltyMPC_yy09, controlPenaltyMPC_beta10, controlPenaltyMPC_bmy10);
 controlPenaltyMPC_LA_DENSE_FORWARDSUB_6(controlPenaltyMPC_Ld10, controlPenaltyMPC_bmy10, controlPenaltyMPC_yy10);
 controlPenaltyMPC_LA_VSUB6_INDEXED_12_12_12(controlPenaltyMPC_ccrhsub11, controlPenaltyMPC_sub11, controlPenaltyMPC_ubIdx11, controlPenaltyMPC_ccrhsl11, controlPenaltyMPC_slb11, controlPenaltyMPC_lbIdx11, controlPenaltyMPC_rd11);
-controlPenaltyMPC_LA_DENSE_FORWARDSUB_12(controlPenaltyMPC_Phi11, controlPenaltyMPC_rd11, controlPenaltyMPC_Lbyrd11);
-controlPenaltyMPC_LA_DENSE_2MVMADD_6_12_12(controlPenaltyMPC_V10, controlPenaltyMPC_Lbyrd10, controlPenaltyMPC_W11, controlPenaltyMPC_Lbyrd11, controlPenaltyMPC_beta11);
+controlPenaltyMPC_LA_DIAG_FORWARDSUB_12(controlPenaltyMPC_Phi11, controlPenaltyMPC_rd11, controlPenaltyMPC_Lbyrd11);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_2MVMADD_6_12_12(controlPenaltyMPC_V10, controlPenaltyMPC_Lbyrd10, controlPenaltyMPC_W11, controlPenaltyMPC_Lbyrd11, controlPenaltyMPC_beta11);
 controlPenaltyMPC_LA_DENSE_MVMSUB1_6_6(controlPenaltyMPC_Lsd11, controlPenaltyMPC_yy10, controlPenaltyMPC_beta11, controlPenaltyMPC_bmy11);
 controlPenaltyMPC_LA_DENSE_FORWARDSUB_6(controlPenaltyMPC_Ld11, controlPenaltyMPC_bmy11, controlPenaltyMPC_yy11);
 controlPenaltyMPC_LA_VSUB6_INDEXED_12_12_12(controlPenaltyMPC_ccrhsub12, controlPenaltyMPC_sub12, controlPenaltyMPC_ubIdx12, controlPenaltyMPC_ccrhsl12, controlPenaltyMPC_slb12, controlPenaltyMPC_lbIdx12, controlPenaltyMPC_rd12);
-controlPenaltyMPC_LA_DENSE_FORWARDSUB_12(controlPenaltyMPC_Phi12, controlPenaltyMPC_rd12, controlPenaltyMPC_Lbyrd12);
-controlPenaltyMPC_LA_DENSE_2MVMADD_6_12_12(controlPenaltyMPC_V11, controlPenaltyMPC_Lbyrd11, controlPenaltyMPC_W12, controlPenaltyMPC_Lbyrd12, controlPenaltyMPC_beta12);
+controlPenaltyMPC_LA_DIAG_FORWARDSUB_12(controlPenaltyMPC_Phi12, controlPenaltyMPC_rd12, controlPenaltyMPC_Lbyrd12);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_2MVMADD_6_12_12(controlPenaltyMPC_V11, controlPenaltyMPC_Lbyrd11, controlPenaltyMPC_W12, controlPenaltyMPC_Lbyrd12, controlPenaltyMPC_beta12);
 controlPenaltyMPC_LA_DENSE_MVMSUB1_6_6(controlPenaltyMPC_Lsd12, controlPenaltyMPC_yy11, controlPenaltyMPC_beta12, controlPenaltyMPC_bmy12);
 controlPenaltyMPC_LA_DENSE_FORWARDSUB_6(controlPenaltyMPC_Ld12, controlPenaltyMPC_bmy12, controlPenaltyMPC_yy12);
 controlPenaltyMPC_LA_VSUB6_INDEXED_12_12_12(controlPenaltyMPC_ccrhsub13, controlPenaltyMPC_sub13, controlPenaltyMPC_ubIdx13, controlPenaltyMPC_ccrhsl13, controlPenaltyMPC_slb13, controlPenaltyMPC_lbIdx13, controlPenaltyMPC_rd13);
-controlPenaltyMPC_LA_DENSE_FORWARDSUB_12(controlPenaltyMPC_Phi13, controlPenaltyMPC_rd13, controlPenaltyMPC_Lbyrd13);
-controlPenaltyMPC_LA_DENSE_2MVMADD_6_12_12(controlPenaltyMPC_V12, controlPenaltyMPC_Lbyrd12, controlPenaltyMPC_W13, controlPenaltyMPC_Lbyrd13, controlPenaltyMPC_beta13);
+controlPenaltyMPC_LA_DIAG_FORWARDSUB_12(controlPenaltyMPC_Phi13, controlPenaltyMPC_rd13, controlPenaltyMPC_Lbyrd13);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_2MVMADD_6_12_12(controlPenaltyMPC_V12, controlPenaltyMPC_Lbyrd12, controlPenaltyMPC_W13, controlPenaltyMPC_Lbyrd13, controlPenaltyMPC_beta13);
 controlPenaltyMPC_LA_DENSE_MVMSUB1_6_6(controlPenaltyMPC_Lsd13, controlPenaltyMPC_yy12, controlPenaltyMPC_beta13, controlPenaltyMPC_bmy13);
 controlPenaltyMPC_LA_DENSE_FORWARDSUB_6(controlPenaltyMPC_Ld13, controlPenaltyMPC_bmy13, controlPenaltyMPC_yy13);
 controlPenaltyMPC_LA_VSUB6_INDEXED_12_6_12(controlPenaltyMPC_ccrhsub14, controlPenaltyMPC_sub14, controlPenaltyMPC_ubIdx14, controlPenaltyMPC_ccrhsl14, controlPenaltyMPC_slb14, controlPenaltyMPC_lbIdx14, controlPenaltyMPC_rd14);
-controlPenaltyMPC_LA_DENSE_FORWARDSUB_12(controlPenaltyMPC_Phi14, controlPenaltyMPC_rd14, controlPenaltyMPC_Lbyrd14);
-controlPenaltyMPC_LA_DENSE_2MVMADD_6_12_12(controlPenaltyMPC_V13, controlPenaltyMPC_Lbyrd13, controlPenaltyMPC_W14, controlPenaltyMPC_Lbyrd14, controlPenaltyMPC_beta14);
+controlPenaltyMPC_LA_DIAG_FORWARDSUB_12(controlPenaltyMPC_Phi14, controlPenaltyMPC_rd14, controlPenaltyMPC_Lbyrd14);
+controlPenaltyMPC_LA_DENSE_DIAGZERO_2MVMADD_6_12_12(controlPenaltyMPC_V13, controlPenaltyMPC_Lbyrd13, controlPenaltyMPC_W14, controlPenaltyMPC_Lbyrd14, controlPenaltyMPC_beta14);
 controlPenaltyMPC_LA_DENSE_MVMSUB1_6_6(controlPenaltyMPC_Lsd14, controlPenaltyMPC_yy13, controlPenaltyMPC_beta14, controlPenaltyMPC_bmy14);
 controlPenaltyMPC_LA_DENSE_FORWARDSUB_6(controlPenaltyMPC_Ld14, controlPenaltyMPC_bmy14, controlPenaltyMPC_yy14);
 controlPenaltyMPC_LA_DENSE_BACKWARDSUB_6(controlPenaltyMPC_Ld14, controlPenaltyMPC_yy14, controlPenaltyMPC_dvcc14);
@@ -2902,21 +2540,21 @@ controlPenaltyMPC_LA_DENSE_DIAGZERO_MTVM2_6_12_6(controlPenaltyMPC_C00, controlP
 controlPenaltyMPC_LA_DENSE_DIAGZERO_MTVM2_6_12_6(controlPenaltyMPC_C00, controlPenaltyMPC_dvcc14, controlPenaltyMPC_D01, controlPenaltyMPC_dvcc13, controlPenaltyMPC_grad_eq13);
 controlPenaltyMPC_LA_DIAGZERO_MTVM_6_12(controlPenaltyMPC_D01, controlPenaltyMPC_dvcc14, controlPenaltyMPC_grad_eq14);
 controlPenaltyMPC_LA_VSUB_180(controlPenaltyMPC_rd, controlPenaltyMPC_grad_eq, controlPenaltyMPC_rd);
-controlPenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi00, controlPenaltyMPC_rd00, controlPenaltyMPC_dzcc00);
-controlPenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi01, controlPenaltyMPC_rd01, controlPenaltyMPC_dzcc01);
-controlPenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi02, controlPenaltyMPC_rd02, controlPenaltyMPC_dzcc02);
-controlPenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi03, controlPenaltyMPC_rd03, controlPenaltyMPC_dzcc03);
-controlPenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi04, controlPenaltyMPC_rd04, controlPenaltyMPC_dzcc04);
-controlPenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi05, controlPenaltyMPC_rd05, controlPenaltyMPC_dzcc05);
-controlPenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi06, controlPenaltyMPC_rd06, controlPenaltyMPC_dzcc06);
-controlPenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi07, controlPenaltyMPC_rd07, controlPenaltyMPC_dzcc07);
-controlPenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi08, controlPenaltyMPC_rd08, controlPenaltyMPC_dzcc08);
-controlPenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi09, controlPenaltyMPC_rd09, controlPenaltyMPC_dzcc09);
-controlPenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi10, controlPenaltyMPC_rd10, controlPenaltyMPC_dzcc10);
-controlPenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi11, controlPenaltyMPC_rd11, controlPenaltyMPC_dzcc11);
-controlPenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi12, controlPenaltyMPC_rd12, controlPenaltyMPC_dzcc12);
-controlPenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi13, controlPenaltyMPC_rd13, controlPenaltyMPC_dzcc13);
-controlPenaltyMPC_LA_DENSE_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi14, controlPenaltyMPC_rd14, controlPenaltyMPC_dzcc14);
+controlPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi00, controlPenaltyMPC_rd00, controlPenaltyMPC_dzcc00);
+controlPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi01, controlPenaltyMPC_rd01, controlPenaltyMPC_dzcc01);
+controlPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi02, controlPenaltyMPC_rd02, controlPenaltyMPC_dzcc02);
+controlPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi03, controlPenaltyMPC_rd03, controlPenaltyMPC_dzcc03);
+controlPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi04, controlPenaltyMPC_rd04, controlPenaltyMPC_dzcc04);
+controlPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi05, controlPenaltyMPC_rd05, controlPenaltyMPC_dzcc05);
+controlPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi06, controlPenaltyMPC_rd06, controlPenaltyMPC_dzcc06);
+controlPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi07, controlPenaltyMPC_rd07, controlPenaltyMPC_dzcc07);
+controlPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi08, controlPenaltyMPC_rd08, controlPenaltyMPC_dzcc08);
+controlPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi09, controlPenaltyMPC_rd09, controlPenaltyMPC_dzcc09);
+controlPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi10, controlPenaltyMPC_rd10, controlPenaltyMPC_dzcc10);
+controlPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi11, controlPenaltyMPC_rd11, controlPenaltyMPC_dzcc11);
+controlPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi12, controlPenaltyMPC_rd12, controlPenaltyMPC_dzcc12);
+controlPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi13, controlPenaltyMPC_rd13, controlPenaltyMPC_dzcc13);
+controlPenaltyMPC_LA_DIAG_FORWARDBACKWARDSUB_12(controlPenaltyMPC_Phi14, controlPenaltyMPC_rd14, controlPenaltyMPC_dzcc14);
 controlPenaltyMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_12(controlPenaltyMPC_ccrhsl00, controlPenaltyMPC_slb00, controlPenaltyMPC_llbbyslb00, controlPenaltyMPC_dzcc00, controlPenaltyMPC_lbIdx00, controlPenaltyMPC_dllbcc00);
 controlPenaltyMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_12(controlPenaltyMPC_ccrhsub00, controlPenaltyMPC_sub00, controlPenaltyMPC_lubbysub00, controlPenaltyMPC_dzcc00, controlPenaltyMPC_ubIdx00, controlPenaltyMPC_dlubcc00);
 controlPenaltyMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_12(controlPenaltyMPC_ccrhsl01, controlPenaltyMPC_slb01, controlPenaltyMPC_llbbyslb01, controlPenaltyMPC_dzcc01, controlPenaltyMPC_lbIdx01, controlPenaltyMPC_dllbcc01);
@@ -2954,7 +2592,6 @@ controlPenaltyMPC_LA_VADD_354(controlPenaltyMPC_dl_cc, controlPenaltyMPC_dl_aff)
 controlPenaltyMPC_LA_VADD_354(controlPenaltyMPC_ds_cc, controlPenaltyMPC_ds_aff);
 info->lsit_cc = controlPenaltyMPC_LINESEARCH_BACKTRACKING_COMBINED(controlPenaltyMPC_z, controlPenaltyMPC_v, controlPenaltyMPC_l, controlPenaltyMPC_s, controlPenaltyMPC_dz_cc, controlPenaltyMPC_dv_cc, controlPenaltyMPC_dl_cc, controlPenaltyMPC_ds_cc, &info->step_cc, &info->mu);
 if( info->lsit_cc == controlPenaltyMPC_NOPROGRESS ){
-PRINTTEXT("Line search could not proceed at iteration %d, exiting.\n",info->it+1);
 exitcode = controlPenaltyMPC_NOPROGRESS; break;
 }
 info->it++;

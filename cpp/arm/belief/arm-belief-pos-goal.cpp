@@ -591,7 +591,7 @@ bool testInitializationFeasibility(const std::vector<Matrix<B_DIM> >& B, const s
 
 int main(int argc, char* argv[])
 {	ifs.open("random-start.txt",std::ifstream::in);
-	for(int i=0; i<100; i++){
+	for(int i=0; i<1; i++){
 	initProblemParams(0);
 
 	LOG_INFO("init problem params");

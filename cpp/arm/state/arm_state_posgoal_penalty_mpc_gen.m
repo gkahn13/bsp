@@ -34,7 +34,7 @@ stages(i).dims.p = 0;                 % number of affine constraints
 stages(i).dims.q = 0;                 % number of quadratic constraints
 
 % cost
-params(1) = newParam(['Q',istr], i, 'cost.H');
+params(1) = newParam(['Q',istr], i, 'cost.H', 'diag');
 params(end+1) = newParam(['f',istr], i, 'cost.f');
 
 % lower bounds
@@ -62,7 +62,7 @@ for i = 2:N
     stages(i).dims.r = nx;       % number of equality constraints
     
     % cost
-    params(end+1) = newParam(['Q',istr], i, 'cost.H');
+    params(end+1) = newParam(['Q',istr], i, 'cost.H', 'diag');
     params(end+1) = newParam(['f',istr], i, 'cost.f');
     
     % lower bounds
@@ -91,11 +91,11 @@ stages(i).dims.n = nx+2*ng;  % number of stage variables
 stages(i).dims.r = nx;    % number of equality constraints
 stages(i).dims.l = nx+2*ng;    % number of lower bounds
 stages(i).dims.u = nx;    % number of upper bounds
-stages(i).dims.p = 2*nx;  % number of polytopic constraints
+stages(i).dims.p = 2*ng;  % number of polytopic constraints
 stages(i).dims.q = 0;     % number of quadratic constraints
 
 % cost
-params(end+1) = newParam(['Q',istr], i, 'cost.H');
+params(end+1) = newParam(['Q',istr], i, 'cost.H', 'diag');
 params(end+1) = newParam(['f',istr], i, 'cost.f');
 
 % lower bounds
@@ -127,8 +127,8 @@ outputs(i) = newOutput(var,i,1:nx);
 % solver settings
 mpcname = 'statePenaltyMPC';
 codeoptions = getOptions(mpcname);
-codeoptions.printlevel = 2;
-codeoptions.timing = 1;
+codeoptions.printlevel = 0;
+codeoptions.timing = 0;
 codeoptions.maxit = 40;
 
 % generate code

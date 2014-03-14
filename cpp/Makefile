@@ -2,7 +2,7 @@ CXX = g++
 CC = gcc
 INTELCC = icc
 
-OS := linux
+OS := mac
 
 LINKER_FLAGS.mac = -lm
 LINKER_FLAGS.linux = -lrt
@@ -116,7 +116,8 @@ $(OBJ_DIR)/arm-state.o : $(ARM_STATE_DIR)/arm-state-pos-goal.cpp $(ARM_HEADERS)
 
 #make arm-control 
 ARM_CONTROL_DIR = arm/control
-ARM_CONTROL_FILES = arm-control-cost arm-control-grad arm-statePenaltyMPC arm-control logging
+# arm-statePenaltyMPC
+ARM_CONTROL_FILES = arm-control-cost arm-control-grad arm-control-pos-goal arm-control logging
 ARM_CONTROL_OBJS = $(ARM_CONTROL_FILES:%=$(OBJ_DIR)/%.o)
 
 #touch-arm-CONTROL:

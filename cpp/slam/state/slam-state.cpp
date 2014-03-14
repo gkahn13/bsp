@@ -356,7 +356,7 @@ bool isValidInputs()
 		for(int i=0; i < (3*C_DIM+U_DIM); ++i) { if (H[t][i] > INFTY/2) { return false; } }
 		for(int i=0; i < (3*C_DIM+U_DIM); ++i) { if (f[t][i] > INFTY/2) { return false; } }
 		for(int i=0; i < (3*C_DIM+U_DIM); ++i) { if (lb[t][i] > INFTY/2) { return false; } }
-		for(int i=0; i < (C_DIM+U_DIM); ++i) {if (lb[t][i] > INFTY/2) { return false; } }
+		for(int i=0; i < (C_DIM+U_DIM); ++i) {if (ub[t][i] > INFTY/2) { return false; } }
 		for(int i=0; i < (C_DIM*(3*C_DIM+U_DIM)); ++i) { if (C[t][i] > INFTY/2) { return false; } }
 		for(int i=0; i < C_DIM; ++i) { if (e[t][i] > INFTY/2) { return false; } }
 	}

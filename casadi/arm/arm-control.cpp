@@ -167,7 +167,9 @@ SXMatrix costfunc(const SXMatrix& XU, const SXMatrix& Sigma_0, const SXMatrix& p
 
 	J = linearizeg(x_t);
 	cost += params[2]*trace(mul(mul(J,Sigma_t),trans(J)));
-	cost += params[3]*inner_prod(x_t - x_goal, x_t - x_goal);
+	SXMatrix pos_goal = g(x_goal); 
+	SXMatrix pos_comp = g(x_t);
+	cost += params[3]*inner_prod(x_goal - x_t, x_goal - x_t);
 
 	return cost;
 }

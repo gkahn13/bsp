@@ -2,7 +2,7 @@
 #include <iomanip>
 
 #include "util/matrix.h"
-#include "util/Timer.h"
+//#include "util/Timer.h"
 #include "util/logging.h"
 
 extern "C" {
@@ -545,7 +545,7 @@ double beliefPenaltyCollocation(std::vector< Matrix<B_DIM> >& B, std::vector< Ma
 	
 	    success = success && (cntviol < cfg::cnt_tolerance);
 	    
-		LOG_DEBUG("Constraint violations: %2.10f",cntviol);
+		LOG_INFO("Constraint violations: %2.10f",cntviol);
 
 	    if (!success) {
 	        penalty_increases++;
@@ -591,8 +591,10 @@ bool testInitializationFeasibility(const std::vector<Matrix<B_DIM> >& B, const s
 
 int main(int argc, char* argv[])
 {	ifs.open("random-start.txt",std::ifstream::in);
+
 	for(int i=0; i<100; i++){
 	initProblemParams(i);
+
 
 	LOG_INFO("init problem params");
 
@@ -633,12 +635,12 @@ int main(int argc, char* argv[])
 
 	setupBeliefVars(problem, output);
 
-	util::Timer solveTimer;
-	Timer_tic(&solveTimer);
+	//util::Timer solveTimer;
+	//Timer_tic(&solveTimer);
 
 	double cost = beliefPenaltyCollocation(B, U, problem, output, info);
 
-	double solvetime = util::Timer_toc(&solveTimer);
+	//double solvetime = util::Timer_toc(&solveTimer);
 
 	Matrix<B_DIM> bt;
 	vec(x0, SqrtSigma0, bt);
@@ -649,8 +651,8 @@ int main(int argc, char* argv[])
 	double solved_cost = computeCost(B,U); 
 	LOG_INFO("Optimized cost: %4.10f", cost);
 	LOG_INFO("Actual cost: %4.10f", computeCost(B,U));
-	LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
-	std::cout<<i<<" , "<<solvetime<<" , "<<cost/initTrajCost<<'\n'; 
+	//LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
+	//std::cout<<i<<" , "<<solvetime<<" , "<<cost/initTrajCost<<'\n'; 
 	}
 	cleanupBeliefMPCVars();
 	

@@ -237,6 +237,21 @@ void setupStateVars(statePenaltyMPC_params& problem, statePenaltyMPC_output& out
 #define BOOST_PP_LOCAL_LIMITS (TIMESTEPS, TIMESTEPS)
 #include BOOST_PP_LOCAL_ITERATE()
 
+	for(int t=0; t < T-1; ++t) {
+		for(int i=0; i < (X_DIM+U_DIM); ++i) { Q[t][i] = INFTY; }
+		for(int i=0; i < (X_DIM+U_DIM); ++i) { f[t][i] = INFTY; }
+		for(int i=0; i < (X_DIM+U_DIM); ++i) { lb[t][i] = INFTY; }
+		for(int i=0; i < (X_DIM+U_DIM); ++i) { ub[t][i] = INFTY; }
+	}
+
+	for(int i=0; i < (X_DIM+2*G_DIM); ++i) { Q[T-1][i] = INFTY; }
+	for(int i=0; i < (X_DIM+2*G_DIM); ++i) { f[T-1][i] = INFTY; }
+	for(int i=0; i < (X_DIM+2*G_DIM); ++i) { lb[T-1][i] = INFTY; }
+	for(int i=0; i < (X_DIM); ++i) { ub[T-1][i] = INFTY; }
+
+	for(int i=0; i < ((2*G_DIM)*(X_DIM+2*G_DIM)); ++i) { A[i] = INFTY; }
+	for(int i=0; i < (2*G_DIM); ++i) { b[i] = INFTY; }
+
 }
 
 void cleanupStateMPCVars()
@@ -251,41 +266,66 @@ void cleanupStateMPCVars()
 // TODO: Check if all inputs are valid, Q, f, lb, ub, A, b at last time step
 bool isValidInputs()
 {
+
+	for(int t = 0; t < T-1; ++t) {
+		for(int i=0; i < (X_DIM+U_DIM); ++i) { if (Q[t][i] > INFTY/2) { return false; } }
+		for(int i=0; i < (X_DIM+U_DIM); ++i) { if (f[t][i] > INFTY/2) { return false; } }
+		for(int i=0; i < (X_DIM+U_DIM); ++i) { if (lb[t][i] > INFTY/2) { return false; } }
+		for(int i=0; i < (X_DIM+U_DIM); ++i) { if (ub[t][i] > INFTY/2) { return false; } }
+	}
+	for(int i=0; i < (X_DIM+2*G_DIM); ++i) { if (Q[T-1][i] > INFTY/2) { return false; } }
+	for(int i=0; i < (X_DIM+2*G_DIM); ++i) { if (f[T-1][i] > INFTY/2) { return false; } }
+	for(int i=0; i < (X_DIM+2*G_DIM); ++i) { if (lb[T-1][i] > INFTY/2) { return false; } }
+	for(int i=0; i < (X_DIM); ++i) { if (ub[T-1][i] > INFTY/2) { return false; } }
+
+	for(int i=0; i < ((2*G_DIM)*(X_DIM+2*G_DIM)); ++i) { if (A[i] > INFTY/2) { return false; } }
+	for(int i=0; i < (2*G_DIM); ++i) { if (b[i] > INFTY/2) { return false; } }
+
+
 	// check if Q, f, lb, ub, e are valid!
 	for(int t = 0; t < T-1; ++t)
 	{
 		//for(int i = 0; i < 144; ++i) {
 		//	std::cout << Q[t][i] << " ";
 		//}
-		for(int i = 0; i < 12; ++i) {
+		std::cout << "lb ";
+		for(int i = 0; i < (X_DIM+U_DIM); ++i) {
 			std::cout << lb[t][i] << " ";
 		}
 		std::cout << std::endl;
-		for(int i = 0; i < 12; ++i) {
+
+		std::cout << "ub ";
+		for(int i = 0; i < (X_DIM+U_DIM); ++i) {
 			std::cout << ub[t][i] << " ";
 		}
 		std::cout << "\n\n";
 	}
-	for(int i = 0; i < 12; ++i) {
+	std::cout << "lb ";
+	for(int i = 0; i < (X_DIM+2*G_DIM); ++i) {
 		std::cout << lb[T-1][i] << " ";
 	}
 	std::cout << std::endl;
-	for(int i = 0; i < 6; ++i) {
+
+	std::cout << "ub ";
+	for(int i = 0; i < (X_DIM); ++i) {
 		std::cout << ub[T-1][i] << " ";
 	}
 	std::cout << "\n\n";
 
-	for(int i = 0; i < 72; ++i) {
+	std::cout << "A ";
+	for(int i = 0; i < ((2*G_DIM)*(X_DIM+2*G_DIM)); ++i) {
 		std::cout << A[i] << " ";
 	}
 	std::cout << "\n\n";
-	for(int i = 0; i < 6; ++i) {
+
+	std::cout << "b ";
+	for(int i = 0; i < (2*G_DIM); ++i) {
 		std::cout << b[i] << "  ";
 	}
 	std::cout << "\n\n";
 
-	int magic;
-	std::cin >> magic;
+//	int magic;
+//	std::cin >> magic;
 
 	return true;
 }
@@ -366,7 +406,8 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 				QMat(i,i) = (val < 0) ? 0 : val;
 			}
 			
-			fillColMajor(Q[t], QMat);
+			for(int i=0; i < (X_DIM+U_DIM); ++i) { Q[t][i] = QMat(i,i); }
+			//fillColMajor(Q[t], QMat);
 
 			zbar.insert(0,0,xt);
 			zbar.insert(X_DIM,0,ut);
@@ -390,7 +431,8 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			QfMat(i,i) = (val < 0) ? 0 : val;
 		}
 
-		fillColMajor(Q[T-1], QfMat);
+		for(int i=0; i < (X_DIM+2*G_DIM); ++i) { Q[T-1][i] = QfMat(i,i); }
+		//fillColMajor(Q[T-1], QfMat);
 
 		for(int i = 0; i < X_DIM; ++i) {
 			hessian_constant += QfMat(i,i)*xT[i]*xT[i];
@@ -470,11 +512,13 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			// xGoal upper bound
 			for(int i = 0; i < X_DIM; ++i) { ub[T-1][index++] = MIN(xMax[i], xT[i] + Xeps); }
 			
+
 			// Verify problem inputs
-			if (!isValidInputs()) {
-				std::cout << "Inputs are not valid!" << std::endl;
-				exit(-1);
-			}
+//			if (!isValidInputs()) {
+//				std::cout << "Inputs are not valid!" << std::endl;
+//				exit(-1);
+//			}
+
 
 			//std::cerr << "PAUSING INSIDE MINIMIZE MERIT FUNCTION FOR INPUT VERIFICATION" << std::endl;
 			//int num;
@@ -688,7 +732,7 @@ bool testInitializationFeasibility(const std::vector<Matrix<X_DIM> >& X, const s
 }
 
 int main(int argc, char* argv[])
-{
+{	ifs.open("random-start.txt",std::ifstream::in);
 	//for(int i=0; i<100; i++){
 		initProblemParams(0);
 
@@ -757,10 +801,6 @@ int main(int argc, char* argv[])
 		B[t+1] = beliefDynamics(B[t], U[t]);
 	}
 	*/
-	
-	LOG_INFO("Finished");
-	int k;
-	std::cin >> k;
 
 	return 0;
 }

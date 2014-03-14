@@ -34,7 +34,7 @@ stages(i).dims.p = 0;                 % number of affine constraints
 stages(i).dims.q = 0;                 % number of quadratic constraints
 
 % cost
-params(1) = newParam(['Q',istr], i, 'cost.H');
+params(1) = newParam(['Q',istr], i, 'cost.H', 'diag');
 params(end+1) = newParam(['f',istr], i, 'cost.f');
 
 % lower bounds
@@ -62,7 +62,7 @@ for i = 2:N
     stages(i).dims.r = nx;       % number of equality constraints
     
     % cost
-    params(end+1) = newParam(['Q',istr], i, 'cost.H');
+    params(end+1) = newParam(['Q',istr], i, 'cost.H', 'diag');
     params(end+1) = newParam(['f',istr], i, 'cost.f');
     
     % lower bounds
@@ -87,15 +87,15 @@ i = N+1;
 istr = sprintf('%d',i);
 
 % dimension
-stages(i).dims.n = nx+2*ng;  % number of stage variables
+stages(i).dims.n = nx;  % number of stage variables
 stages(i).dims.r = nx;    % number of equality constraints
-stages(i).dims.l = nx+2*ng;    % number of lower bounds
+stages(i).dims.l = nx;    % number of lower bounds
 stages(i).dims.u = nx;    % number of upper bounds
 stages(i).dims.p = 0;  % number of polytopic constraints
 stages(i).dims.q = 0;     % number of quadratic constraints
 
 % cost
-params(end+1) = newParam(['Q',istr], i, 'cost.H');
+params(end+1) = newParam(['Q',istr], i, 'cost.H', 'diag');
 params(end+1) = newParam(['f',istr], i, 'cost.f');
 
 % lower bounds
@@ -109,7 +109,7 @@ params(end+1) = newParam(['ub',istr], i, 'ineq.b.ub');
 % equality constraints
 %params(end+1) = newParam(['e',istr], i, 'eq.c');
 stages(i).eq.c = zeros(nx,1);
-stages(i).eq.D = [-eye(nx), zeros(nx,2*ng)];
+stages(i).eq.D = -eye(nx);
 
 %--------------------------------------------------------------------------
 % define outputs of the solver
@@ -124,8 +124,8 @@ outputs(i) = newOutput(var,i,1:nx);
 % solver settings
 mpcname = 'controlPenaltyMPC';
 codeoptions = getOptions(mpcname);
-codeoptions.printlevel = 2;
-codeoptions.timing = 1;
+codeoptions.printlevel = 0;
+codeoptions.timing = 0;
 codeoptions.maxit = 40;
 
 % generate code

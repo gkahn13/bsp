@@ -28,12 +28,12 @@ typedef double controlPenaltyMPC_FLOAT;
 /* SOLVER SETTINGS ------------------------------------------------------*/
 /* print level */
 #ifndef controlPenaltyMPC_SET_PRINTLEVEL
-#define controlPenaltyMPC_SET_PRINTLEVEL    (2)
+#define controlPenaltyMPC_SET_PRINTLEVEL    (0)
 #endif
 
 /* timing */
 #ifndef controlPenaltyMPC_SET_TIMING
-#define controlPenaltyMPC_SET_TIMING    (1)
+#define controlPenaltyMPC_SET_TIMING    (0)
 #endif
 
 /* Numeric Warnings */
@@ -84,8 +84,8 @@ typedef double controlPenaltyMPC_FLOAT;
 /* fill this with data before calling the solver! */
 typedef struct controlPenaltyMPC_params
 {
-    /* matrix of size [12 x 12] (column major format) */
-    controlPenaltyMPC_FLOAT Q1[144];
+    /* diagonal matrix of size [12 x 12] (only the diagonal is stored) */
+    controlPenaltyMPC_FLOAT Q1[12];
 
     /* vector of size 12 */
     controlPenaltyMPC_FLOAT f1[12];
@@ -99,8 +99,8 @@ typedef struct controlPenaltyMPC_params
     /* vector of size 6 */
     controlPenaltyMPC_FLOAT e1[6];
 
-    /* matrix of size [12 x 12] (column major format) */
-    controlPenaltyMPC_FLOAT Q2[144];
+    /* diagonal matrix of size [12 x 12] (only the diagonal is stored) */
+    controlPenaltyMPC_FLOAT Q2[12];
 
     /* vector of size 12 */
     controlPenaltyMPC_FLOAT f2[12];
@@ -111,8 +111,8 @@ typedef struct controlPenaltyMPC_params
     /* vector of size 12 */
     controlPenaltyMPC_FLOAT ub2[12];
 
-    /* matrix of size [12 x 12] (column major format) */
-    controlPenaltyMPC_FLOAT Q3[144];
+    /* diagonal matrix of size [12 x 12] (only the diagonal is stored) */
+    controlPenaltyMPC_FLOAT Q3[12];
 
     /* vector of size 12 */
     controlPenaltyMPC_FLOAT f3[12];
@@ -123,8 +123,8 @@ typedef struct controlPenaltyMPC_params
     /* vector of size 12 */
     controlPenaltyMPC_FLOAT ub3[12];
 
-    /* matrix of size [12 x 12] (column major format) */
-    controlPenaltyMPC_FLOAT Q4[144];
+    /* diagonal matrix of size [12 x 12] (only the diagonal is stored) */
+    controlPenaltyMPC_FLOAT Q4[12];
 
     /* vector of size 12 */
     controlPenaltyMPC_FLOAT f4[12];
@@ -135,8 +135,8 @@ typedef struct controlPenaltyMPC_params
     /* vector of size 12 */
     controlPenaltyMPC_FLOAT ub4[12];
 
-    /* matrix of size [12 x 12] (column major format) */
-    controlPenaltyMPC_FLOAT Q5[144];
+    /* diagonal matrix of size [12 x 12] (only the diagonal is stored) */
+    controlPenaltyMPC_FLOAT Q5[12];
 
     /* vector of size 12 */
     controlPenaltyMPC_FLOAT f5[12];
@@ -147,8 +147,8 @@ typedef struct controlPenaltyMPC_params
     /* vector of size 12 */
     controlPenaltyMPC_FLOAT ub5[12];
 
-    /* matrix of size [12 x 12] (column major format) */
-    controlPenaltyMPC_FLOAT Q6[144];
+    /* diagonal matrix of size [12 x 12] (only the diagonal is stored) */
+    controlPenaltyMPC_FLOAT Q6[12];
 
     /* vector of size 12 */
     controlPenaltyMPC_FLOAT f6[12];
@@ -159,8 +159,8 @@ typedef struct controlPenaltyMPC_params
     /* vector of size 12 */
     controlPenaltyMPC_FLOAT ub6[12];
 
-    /* matrix of size [12 x 12] (column major format) */
-    controlPenaltyMPC_FLOAT Q7[144];
+    /* diagonal matrix of size [12 x 12] (only the diagonal is stored) */
+    controlPenaltyMPC_FLOAT Q7[12];
 
     /* vector of size 12 */
     controlPenaltyMPC_FLOAT f7[12];
@@ -171,8 +171,8 @@ typedef struct controlPenaltyMPC_params
     /* vector of size 12 */
     controlPenaltyMPC_FLOAT ub7[12];
 
-    /* matrix of size [12 x 12] (column major format) */
-    controlPenaltyMPC_FLOAT Q8[144];
+    /* diagonal matrix of size [12 x 12] (only the diagonal is stored) */
+    controlPenaltyMPC_FLOAT Q8[12];
 
     /* vector of size 12 */
     controlPenaltyMPC_FLOAT f8[12];
@@ -183,8 +183,8 @@ typedef struct controlPenaltyMPC_params
     /* vector of size 12 */
     controlPenaltyMPC_FLOAT ub8[12];
 
-    /* matrix of size [12 x 12] (column major format) */
-    controlPenaltyMPC_FLOAT Q9[144];
+    /* diagonal matrix of size [12 x 12] (only the diagonal is stored) */
+    controlPenaltyMPC_FLOAT Q9[12];
 
     /* vector of size 12 */
     controlPenaltyMPC_FLOAT f9[12];
@@ -195,8 +195,8 @@ typedef struct controlPenaltyMPC_params
     /* vector of size 12 */
     controlPenaltyMPC_FLOAT ub9[12];
 
-    /* matrix of size [12 x 12] (column major format) */
-    controlPenaltyMPC_FLOAT Q10[144];
+    /* diagonal matrix of size [12 x 12] (only the diagonal is stored) */
+    controlPenaltyMPC_FLOAT Q10[12];
 
     /* vector of size 12 */
     controlPenaltyMPC_FLOAT f10[12];
@@ -207,8 +207,8 @@ typedef struct controlPenaltyMPC_params
     /* vector of size 12 */
     controlPenaltyMPC_FLOAT ub10[12];
 
-    /* matrix of size [12 x 12] (column major format) */
-    controlPenaltyMPC_FLOAT Q11[144];
+    /* diagonal matrix of size [12 x 12] (only the diagonal is stored) */
+    controlPenaltyMPC_FLOAT Q11[12];
 
     /* vector of size 12 */
     controlPenaltyMPC_FLOAT f11[12];
@@ -219,8 +219,8 @@ typedef struct controlPenaltyMPC_params
     /* vector of size 12 */
     controlPenaltyMPC_FLOAT ub11[12];
 
-    /* matrix of size [12 x 12] (column major format) */
-    controlPenaltyMPC_FLOAT Q12[144];
+    /* diagonal matrix of size [12 x 12] (only the diagonal is stored) */
+    controlPenaltyMPC_FLOAT Q12[12];
 
     /* vector of size 12 */
     controlPenaltyMPC_FLOAT f12[12];
@@ -231,8 +231,8 @@ typedef struct controlPenaltyMPC_params
     /* vector of size 12 */
     controlPenaltyMPC_FLOAT ub12[12];
 
-    /* matrix of size [12 x 12] (column major format) */
-    controlPenaltyMPC_FLOAT Q13[144];
+    /* diagonal matrix of size [12 x 12] (only the diagonal is stored) */
+    controlPenaltyMPC_FLOAT Q13[12];
 
     /* vector of size 12 */
     controlPenaltyMPC_FLOAT f13[12];
@@ -243,8 +243,8 @@ typedef struct controlPenaltyMPC_params
     /* vector of size 12 */
     controlPenaltyMPC_FLOAT ub13[12];
 
-    /* matrix of size [12 x 12] (column major format) */
-    controlPenaltyMPC_FLOAT Q14[144];
+    /* diagonal matrix of size [12 x 12] (only the diagonal is stored) */
+    controlPenaltyMPC_FLOAT Q14[12];
 
     /* vector of size 12 */
     controlPenaltyMPC_FLOAT f14[12];
@@ -255,8 +255,8 @@ typedef struct controlPenaltyMPC_params
     /* vector of size 12 */
     controlPenaltyMPC_FLOAT ub14[12];
 
-    /* matrix of size [12 x 12] (column major format) */
-    controlPenaltyMPC_FLOAT Q15[144];
+    /* diagonal matrix of size [12 x 12] (only the diagonal is stored) */
+    controlPenaltyMPC_FLOAT Q15[12];
 
     /* vector of size 12 */
     controlPenaltyMPC_FLOAT f15[12];

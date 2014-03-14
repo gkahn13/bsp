@@ -792,7 +792,7 @@ int main(int argc, char* argv[])
 	LOG_INFO("Optimized cost: %4.10f", cost);
 	LOG_INFO("Actual cost: %4.10f", computeCost(X, U));
 	LOG_INFO("Dist to Goal: %4.10f", GoalDist(X));
-	std::cout<<i<<" , "<<solvetime<<" , "<<solved_cost/initTrajCost<<GoalDist(X)<<'\n'; 
+	std::cout<<i<<" , "<<solvetime<<" , "<<solved_cost/initTrajCost<<" , "<<GoalDist(X)<<'\n'; 
 	}
 	cleanupStateMPCVars();
 

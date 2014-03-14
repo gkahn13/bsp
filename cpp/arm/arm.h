@@ -57,7 +57,7 @@ SymmetricMatrix<X_DIM> Qint;
 SymmetricMatrix<X_DIM> QGoal;
 SymmetricMatrix<X_DIM> Sigma0;
 
-const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 1, alpha_goal_state = 100;
+const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 1, alpha_goal_state = 150;
 
 // callisto visualization stuff
 int cal_environment, cal_paths, cal_objects, cal_ellipse;

@@ -737,7 +737,7 @@ int main(int argc, char* argv[])
 		initProblemParams(0);
 
 		LOG_INFO("init problem params");
-		std::cout<<~x0<<"\n";
+		//std::cout<<~x0<<"\n";
 		Matrix<U_DIM> uinit = (xGoal - x0) / (double)((T-1)*DT);
 		std::vector<Matrix<U_DIM> > U(T-1, uinit);
 
@@ -782,7 +782,7 @@ int main(int argc, char* argv[])
 		cost = statePenaltyCollocation(X, U, problem, output, info);
 
 		double solvetime = util::Timer_toc(&solveTimer);
-
+		double solved_cost = computeCost(B,U); 
 		LOG_INFO("Optimized cost: %4.10f", cost);
 		LOG_INFO("Actual cost: %4.10f", computeCost(X, U));
 		LOG_INFO("Solve time: %5.3f ms", solvetime*1000);

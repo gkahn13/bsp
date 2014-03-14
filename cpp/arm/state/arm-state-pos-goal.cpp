@@ -782,7 +782,7 @@ int main(int argc, char* argv[])
 		cost = statePenaltyCollocation(X, U, problem, output, info);
 
 		double solvetime = util::Timer_toc(&solveTimer);
-		double solved_cost = computeCost(B,U); 
+		double solved_cost = computeCost(X,U); 
 		LOG_INFO("Optimized cost: %4.10f", cost);
 		LOG_INFO("Actual cost: %4.10f", computeCost(X, U));
 		LOG_INFO("Solve time: %5.3f ms", solvetime*1000);

@@ -64,6 +64,7 @@ int cal_environment, cal_paths, cal_objects, cal_ellipse;
 int joint_group[6];
 float null_joint[6];
 std::ifstream ifs; 
+
 Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<U_DIM>& q)
 {
 	Matrix<X_DIM> xNew = x + (u + q)*DT;
@@ -249,8 +250,8 @@ void initProblemParams(int iter)
 	cam1[0] = 4;  cam1[1] = 11.5; cam1[2] = -23;*/
 
 	if(iter==0){
-		std::cout<<252<<"\n";
-		ifs.open("random-start.txt",std::ifstream::in);
+		int temp = 0; 
+		
 	}
 	if(iter == 99){
 		ifs.close();
@@ -261,7 +262,7 @@ void initProblemParams(int iter)
 	for(int i = 0; i<6; i++){
 		double temp =0; 
 		ifs>>temp;
-		std::cout<<temp<<"\n";
+		
 		x0[i] = temp; 
 	}
 	SqrtSigma0 = identity<X_DIM>();

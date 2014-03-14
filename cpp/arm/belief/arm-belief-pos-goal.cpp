@@ -2,7 +2,7 @@
 #include <iomanip>
 
 #include "util/matrix.h"
-//#include "util/Timer.h"
+#include "util/Timer.h"
 #include "util/logging.h"
 
 extern "C" {
@@ -590,7 +590,7 @@ bool testInitializationFeasibility(const std::vector<Matrix<B_DIM> >& B, const s
 }
 
 int main(int argc, char* argv[])
-{
+{	ifs.open("random-start.txt",std::ifstream::in);
 	for(int i=0; i<100; i++){
 	initProblemParams(0);
 
@@ -633,8 +633,8 @@ int main(int argc, char* argv[])
 
 	setupBeliefVars(problem, output);
 
-	//util::Timer solveTimer;
-	//Timer_tic(&solveTimer);
+	util::Timer solveTimer;
+	Timer_tic(&solveTimer);
 
 	double cost = beliefPenaltyCollocation(B, U, problem, output, info);
 
@@ -646,10 +646,11 @@ int main(int argc, char* argv[])
 		bt = beliefDynamics(bt, U[t]);
 		B[t+1] = bt;//std::cout << ~B[t] << std::endl;
 	}
-
+	double solved_cost = computeCost(B,U); 
 	LOG_INFO("Optimized cost: %4.10f", cost);
 	LOG_INFO("Actual cost: %4.10f", computeCost(B,U));
-	//LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
+	LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
+	std::cout<<i<<" , "<<solvetime<<" , "<<solved_cost/initTrajCost; 
 	}
 	cleanupBeliefMPCVars();
 	

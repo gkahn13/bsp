@@ -33,7 +33,7 @@ class Data:
 
 class File:
     attrs = ['sum_cov_trace','waypoint_distance_error','solve_time','initialization_time','total_time'] # 'failure'
-    slam_types = ['slam-traj', 'slam-belief', 'slam-state', 'slam-control']
+    slam_types = ['slam-traj', 'slam-belief', 'slam-state', 'slam-control', 'slam-ilqg']
     
     def __init__(self, file_name, slam_type, file_time):
         self.file_name = file_name
@@ -68,6 +68,19 @@ class File:
                 
     def get(self, attr):
         return [self.example[i][attr] for i in xrange(self.num_examples)]
+    
+    def __str__(self):
+        if self.slam_type == 'slam-traj':
+            return 'Trajectory'
+        if self.slam_type == 'slam-ilqg':
+            return 'iLQG'
+        if self.slam_type == 'slam-belief':
+            return 'Belief'
+        if self.slam_type == 'slam-state':
+            return 'State'
+        if self.slam_type == 'slam-control':
+            return 'Control'
+        
         
             
 # assume one file per landmark number
@@ -99,7 +112,7 @@ class FileGroup:
         return self.getStats(num_landmarks, 'sum_cov_trace')
         
     def getTimeStats(self, num_landmarks):
-        return self.getStats(num_landmarks, 'solve_time')
+        return self.getStats(num_landmarks, 'total_time')
     
     def getWaypointErrorStats(self, num_landmarks):
         return self.getStats(num_landmarks, 'waypoint_distance_error')
@@ -126,6 +139,24 @@ class FileGroup:
     
     def compareWaypointError(self, otherFileGroup, num_landmarks):
         return self.compareAttr(otherFileGroup, num_landmarks, 'waypoint_distance_error')
+    
+    def __str__(self):
+        return str(self.files[0])
+    
+    @staticmethod
+    def toLatexTable(fileGroups, landmarks, attr, shiftFactor=1.):
+        latex_str = '\hline & ' + ' & '.join([str(fg) for fg in fileGroups]) + ' \\\\ \n'
+        for l in landmarks:
+            latex_str += '\hline {0} '.format(l)
+            for fg in fileGroups:
+                mean, sd = fg.getStats(l, attr)
+                if mean is None:
+                    latex_str += ' & -'
+                else:
+                    latex_str += ' & {0:.2f} $\pm$ {1:.2f}'.format(shiftFactor*mean, shiftFactor*sd)
+            latex_str += ' \\\\ \n'
+        latex_str += '\hline'
+        return latex_str
         
     
 def process_data():
@@ -139,21 +170,25 @@ def process_data():
     
     files = [File(data_file, slam_type, file_time) for data_file, slam_type, file_time in zip(data_files, slam_types, file_times) if slam_type in File.slam_types]
     
+    traj_files = [file for file in files if file.slam_type == 'slam-traj']
+    ilqg_files = [file for file in files if file.slam_type == 'slam-ilqg' and file.num_landmarks <= 35]
     belief_files = [file for file in files if file.slam_type == 'slam-belief']
     state_files = [file for file in files if file.slam_type == 'slam-state']
     control_files = [file for file in files if file.slam_type == 'slam-control']
-    traj_files = [file for file in files if file.slam_type == 'slam-traj']
     
+    trajFG = FileGroup(traj_files)
+    ilqgFG = FileGroup(ilqg_files)
     beliefFG = FileGroup(belief_files)
     stateFG = FileGroup(state_files)
     controlFG = FileGroup(control_files)
-    trajFG = FileGroup(traj_files)
 
     landmarks = [3,4,5,6,10,15,20,25,30,35,40,45,50]
     time_abs_fig = plt.figure()
     time_abs_ax = time_abs_fig.add_subplot(111)
     dist_err_abs_fig = plt.figure()
     dist_err_abs_ax = dist_err_abs_fig.add_subplot(111)
+    
+    
     
     """
     print([(l, trajFG.getTimeStats(l)) for l in landmarks])
@@ -162,10 +197,11 @@ def process_data():
     	print('{0:.2f} $\pm$ {1:.2f}'.format(m,s))
     return
     """
+    print(FileGroup.toLatexTable([trajFG, ilqgFG, beliefFG, stateFG, controlFG], landmarks, 'total_time', shiftFactor=.001))
     
     print('############ Absolute statistics #########')
 
-    for fg in [beliefFG, stateFG, controlFG]:
+    for fg in [ilqgFG, beliefFG, stateFG, controlFG]:
     	time_abs_avgs, time_abs_sds = [], []
         dist_err_avgs, dist_err_sds = [], []
         for num_landmarks in landmarks:
@@ -186,8 +222,8 @@ def process_data():
                 print('Waypoint distance error: {0} +- {1} meters'.format(dist_err_avg, dist_err_sd))
                 print('')
         
-        time_abs_ax.errorbar(landmarks[:len(time_abs_avgs)], time_abs_avgs, yerr=time_abs_sds, label=fg.slam_type)
-        dist_err_abs_ax.errorbar(landmarks[:len(dist_err_avgs)], dist_err_avgs, yerr=dist_err_sds, label=fg.slam_type)
+        time_abs_ax.errorbar(landmarks[:len(time_abs_avgs)], time_abs_avgs, yerr=time_abs_sds, label=str(fg))
+        dist_err_abs_ax.errorbar(landmarks[:len(dist_err_avgs)], dist_err_avgs, yerr=dist_err_sds, label=str(fg))
     print('\n')
 
     
@@ -201,7 +237,7 @@ def process_data():
     
     state_comp_times = []
     control_comp_times = []
-    for fg in [beliefFG, stateFG, controlFG]:
+    for fg in [ilqgFG, beliefFG, stateFG, controlFG]:
         cost_comp_avgs, cost_comp_sds = [], []
         time_comp_avgs, time_comp_sds = [], []
         dist_err_comp_avgs, dist_err_comp_sds = [], []
@@ -225,9 +261,9 @@ def process_data():
                 print('Waypoint error: {0} +- {1}'.format(dist_err_comp_avg, dist_err_comp_sd))
                 print('')
             
-        cost_ax.errorbar(landmarks[:len(cost_comp_avgs)], cost_comp_avgs, yerr=cost_comp_sds, elinewidth=2, label=fg.slam_type)
+        cost_ax.errorbar(landmarks[:len(cost_comp_avgs)], cost_comp_avgs, yerr=cost_comp_sds, elinewidth=2, label=str(fg))
         time_ax.errorbar(landmarks[:len(time_comp_avgs)], time_comp_avgs, yerr=time_comp_sds, label=fg.slam_type)
-        dist_err_ax.errorbar(landmarks[:len(dist_err_comp_avgs)], dist_err_comp_avgs, yerr=dist_err_comp_sds, label=fg.slam_type)
+        dist_err_ax.errorbar(landmarks[:len(dist_err_comp_avgs)], dist_err_comp_avgs, yerr=dist_err_comp_sds, label=str(fg))
             
     # set titles, labels, etc for all the graphs
     for ax in [time_abs_ax, dist_err_abs_ax, cost_ax, time_ax, dist_err_ax]:
@@ -239,13 +275,13 @@ def process_data():
     
     time_abs_ax.set_ylabel('Time (seconds)')
     dist_err_abs_ax.set_ylabel('Waypoint distance error (meters)')
-    cost_ax.set_ylabel('Cost factor versus trajectory')
-    time_ax.set_ylabel('Time factor versus trajectory')
+    cost_ax.set_ylabel('Cost factor')
+    time_ax.set_ylabel('Time factor')
     dist_err_ax.set_ylabel('Waypoint distance error versus trajectory')
     
-    time_abs_ax.set_title('Time per number landmarks for belief, state, and control')
-    dist_err_abs_ax.set_title('Waypoint distance error of trajectory, belief, state and control')
-    cost_ax.set_title('Cost factor of belief, state, and control versus trajectory')
+    time_abs_ax.set_title('Time per number landmarks')
+    dist_err_abs_ax.set_title('Waypoint distance error')
+    cost_ax.set_title('Cost factor versus trajectory')
     time_ax.set_title('Time factor of belief, state, and control versus trajectory')
     dist_err_ax.set_title('Waypoint distance factor of belief, state, and control versus trajectory')
     

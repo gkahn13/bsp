@@ -2,7 +2,7 @@
 #include <iomanip>
 
 #include "util/matrix.h"
-#include "util/Timer.h"
+//#include "util/Timer.h"
 
 extern "C" {
 #include "statePenaltyMPC.h"
@@ -471,10 +471,10 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			for(int i = 0; i < X_DIM; ++i) { ub[T-1][index++] = MIN(xMax[i], xT[i] + Xeps); }
 			
 			// Verify problem inputs
-			//if (!isValidInputs()) {
-			//	std::cout << "Inputs are not valid!" << std::endl;
-			//	exit(-1);
-			//}
+			if (!isValidInputs()) {
+				std::cout << "Inputs are not valid!" << std::endl;
+				exit(-1);
+			}
 
 			//std::cerr << "PAUSING INSIDE MINIMIZE MERIT FUNCTION FOR INPUT VERIFICATION" << std::endl;
 			//int num;
@@ -689,33 +689,33 @@ bool testInitializationFeasibility(const std::vector<Matrix<X_DIM> >& X, const s
 
 int main(int argc, char* argv[])
 {
-	
-	initProblemParams();
+	//for(int i=0; i<100; i++){
+		initProblemParams(0);
 
-	LOG_INFO("init problem params");
+		LOG_INFO("init problem params");
+		std::cout<<~x0<<"\n";
+		Matrix<U_DIM> uinit = (xGoal - x0) / (double)((T-1)*DT);
+		std::vector<Matrix<U_DIM> > U(T-1, uinit);
 
-	Matrix<U_DIM> uinit = (xGoal - x0) / (double)((T-1)*DT);
-	std::vector<Matrix<U_DIM> > U(T-1, uinit);
+		std::vector<Matrix<X_DIM> > X(T);
+		X[0] = x0;
 
-	std::vector<Matrix<X_DIM> > X(T);
-	X[0] = x0;
-
-	for (size_t t = 0; t < T-1; ++t) {
-		X[t+1] = dynfunc(X[t], U[t], zeros<Q_DIM,1>());
+		for (size_t t = 0; t < T-1; ++t) {
+			X[t+1] = dynfunc(X[t], U[t], zeros<Q_DIM,1>());
 		//std::cout << ~X[t] << std::endl;
-	}
+		}
 
-	bool feasible = testInitializationFeasibility(X, U);
-	if (!feasible) {
-		LOG_ERROR("Infeasible trajectory initialization detected");
-		exit(-1);
-	}
+		bool feasible = testInitializationFeasibility(X, U);
+		if (!feasible) {
+			LOG_ERROR("Infeasible trajectory initialization detected");
+			exit(-1);
+		}
 
-	double initTrajCost = computeCost(X, U);
-	double casadiInitCost = casadiComputeCost(X, U);
+		double initTrajCost = computeCost(X, U);
+		double casadiInitCost = casadiComputeCost(X, U);
 
-	LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
-	LOG_INFO("Initial casadi cost: %4.10f", casadiInitCost);
+		LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
+		LOG_INFO("Initial casadi cost: %4.10f", casadiInitCost);
 
 	//readTrajectoryFromFile("data\\trajectory.txt", X);
 
@@ -724,31 +724,31 @@ int main(int argc, char* argv[])
 
 	//displayStateTrajectory(X, U, false);
 
-	statePenaltyMPC_params problem;
-	statePenaltyMPC_output output;
-	statePenaltyMPC_info info;
+		statePenaltyMPC_params problem;
+		statePenaltyMPC_output output;
+		statePenaltyMPC_info info;
 
-	setupStateVars(problem, output);
-	double cost;
-	Matrix<XU_DIM> G;
+		setupStateVars(problem, output);
+		double cost;
+		Matrix<XU_DIM> G;
 
-	util::Timer solveTimer;
-	Timer_tic(&solveTimer);
+		//util::Timer solveTimer;
+		//Timer_tic(&solveTimer);
 
-	cost = statePenaltyCollocation(X, U, problem, output, info);
+		cost = statePenaltyCollocation(X, U, problem, output, info);
 
-	double solvetime = util::Timer_toc(&solveTimer);
+		//double solvetime = util::Timer_toc(&solveTimer);
 
-	LOG_INFO("Optimized cost: %4.10f", cost);
-	LOG_INFO("Actual cost: %4.10f", computeCost(X, U));
-	LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
-
+		LOG_INFO("Optimized cost: %4.10f", cost);
+		LOG_INFO("Actual cost: %4.10f", computeCost(X, U));
+		//LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
+	//}
 	cleanupStateMPCVars();
 
 	//double finalLQGMPcost = computeLQGMPcost(X, U);
 	//LOG_DEBUG("Final trajectory LQG-MP cost: %4.10f",finalLQGMPcost);
 
-	saveOptimizedTrajectory(U);
+	//saveOptimizedTrajectory(U);
 	//readOptimizedTrajectory(U);
 	
 	/*

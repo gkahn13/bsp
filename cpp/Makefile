@@ -91,7 +91,7 @@ $(OBJ_DIR)/arm-ilqg.o : $(ARM_ILQG_DIR)/arm-ilqg-pos-goal.cpp $(ARM_ILQG_DIR)/il
 	
 # make arm-state
 ARM_STATE_DIR = arm/state
-ARM_STATE_FILES = arm-state-cost arm-state-grad arm-state-pos-goal arm-state logging
+ARM_STATE_FILES = arm-state-cost arm-state-grad arm-statePenaltyMPC arm-state logging
 ARM_STATE_OBJS = $(ARM_STATE_FILES:%=$(OBJ_DIR)/%.o)
 
 #touch-arm-state:
@@ -108,7 +108,7 @@ $(OBJ_DIR)/arm-state-cost.o : $(ARM_STATE_DIR)/arm-state-cost.c
 $(OBJ_DIR)/arm-state-grad.o : $(ARM_STATE_DIR)/arm-state-grad.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
 
-$(OBJ_DIR)/arm-state-pos-goal.o : $(ARM_STATE_DIR)/arm-state-pos-goal-MPC.c
+$(OBJ_DIR)/arm-statePenaltyMPC.o : $(ARM_STATE_DIR)/statePenaltyMPC.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
 	
 $(OBJ_DIR)/arm-state.o : $(ARM_STATE_DIR)/arm-state-pos-goal.cpp $(ARM_HEADERS)
@@ -116,7 +116,7 @@ $(OBJ_DIR)/arm-state.o : $(ARM_STATE_DIR)/arm-state-pos-goal.cpp $(ARM_HEADERS)
 
 #make arm-control 
 ARM_CONTROL_DIR = arm/control
-ARM_CONTROL_FILES = arm-control-cost arm-control-grad arm-control-pos-goal arm-control logging
+ARM_CONTROL_FILES = arm-control-cost arm-control-grad arm-statePenaltyMPC arm-control logging
 ARM_CONTROL_OBJS = $(ARM_CONTROL_FILES:%=$(OBJ_DIR)/%.o)
 
 #touch-arm-CONTROL:

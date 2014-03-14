@@ -666,7 +666,7 @@ bool testInitializationFeasibility(const std::vector<Matrix<X_DIM> >& X, const s
 int main(int argc, char* argv[])
 {
 	
-	initProblemParams();
+	initProblemParams(0);
 
 	LOG_INFO("init problem params");
 

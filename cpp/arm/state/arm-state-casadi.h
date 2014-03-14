@@ -4,7 +4,7 @@
 #include <math.h>
 
 inline double sq(double x){ return x*x;}
-//#define sq(x) ((x)*(x))
+#define sq(x) ((x)*(x))
 
 inline double sign(double x){ return x<0 ? -1 : x>0 ? 1 : x;}
 

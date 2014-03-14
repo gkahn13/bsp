@@ -73,9 +73,9 @@ inline void beliefDynamicsiLQG(const Matrix<_xDim,1>& x, const Matrix<_xDim, _xD
 	// Sigma*~H/(H*Sigma*~H + N)
 //	W = SymProd(~HSigma,(SymProd(HSigma,~H) + N) % HSigma);
 
-	Matrix<X_DIM,Z_DIM> K = ((SigmaNew*~H*delta)/(delta*H*SigmaNew*~H*delta + R))*delta;
+	Matrix<X_DIM,Z_DIM> K = ((~HSigma*delta)/(delta*HSigma*~H*delta + R))*delta;
 
-	Matrix<_xDim, _xDim> W_nonsym = K*H*Sigma;
+	Matrix<_xDim, _xDim> W_nonsym = K*H*SigmaNew;
 	for(int i=0; i < _xDim; ++i) {
 		for(int j=0; j < _xDim; ++j) {
 			W(i,j) = W_nonsym(i,j);
@@ -89,7 +89,7 @@ inline void beliefDynamicsiLQG(const Matrix<_xDim,1>& x, const Matrix<_xDim, _xD
 		}
 	}
 
-	std::cout << "max_in_w: " << max_in_w << "\n";
+	//std::cout << "max_in_w: " << max_in_w << "\n";
 	//std::cout << "W\n" << W << "\n\n";
 
 	SigmaNew -= W;
@@ -346,10 +346,10 @@ inline void integrateControlPolicy(void (*linearizeDynamics)(const Matrix<_xDim>
 	for (size_t t = 0; t < pathLen; ++t) {
 		uNext[t] = eps*l[t] + L[t]*(xNext[t] - xBar[t]) + uBar[t];
 	
-		// squashing function for joint angle limits
-		for(size_t i = 0; i < _uDim; ++i) {
-			uNext[t][i] = ((uMax[i] - uMin[i])*0.5)*std::tanh(uNext[t][i]) + ((uMax[i] - uMin[i])*0.5);
-		}
+//		// squashing function for joint angle limits
+//		for(size_t i = 0; i < _uDim; ++i) {
+//			uNext[t][i] = ((uMax[i] - uMin[i])*0.5)*std::tanh(uNext[t][i]) + ((uMax[i] - uMin[i])*0.5);
+//		}
 
 		linearizeDynamics(xNext[t], uNext[t], xNext[t+1], A, B, M, COMPUTE_c|COMPUTE_A|COMPUTE_M);
 		linearizeObservation(xNext[t+1], H, N);
@@ -407,7 +407,26 @@ inline void forwardIteration(void (*linearizeDynamics)(const Matrix<_xDim>&, con
 		xBar, SigmaBar, uBar, WBar);
 	bestEps = 0.0;
 
+//	bestEps = 0.1;
+//	integrateControlPolicy(linearizeDynamics, linearizeObservation,
+//				L, l, bestEps, xBar, SigmaBar[0], uBar,
+//				xNext, SigmaNext, uNext, WNext);
+//	cost = computeExpectedCost(linearizeDynamics, quadratizeFinalCost, quadratizeCost, L, xNext, SigmaNext, uNext, WNext);
+//	std::cout << "cost after call: " << cost << "\n";
+//
+//	pythonDisplayTrajectory(uNext, T, true);
+//
+//	if (cost < bestCost) {
+//		bestCost = cost;
+//		xBar = xNext;
+//		SigmaBar = SigmaNext;
+//		uBar = uNext;
+//		WBar = WNext;
+//		std::cout << "cost < bestCost\n";
+//	}
+//	return;
 	while (eps > 0.0 && (!middleFound || !rightFound)) {
+
 		// Compute cost at current eps
 		integrateControlPolicy(linearizeDynamics, linearizeObservation,
 			L, l, eps, xBar, SigmaBar[0], uBar,
@@ -450,6 +469,7 @@ inline void forwardIteration(void (*linearizeDynamics)(const Matrix<_xDim>&, con
 	if (eps == 0.0) {
 		return;
 	}
+
 	//std::cout << std::endl;
 
 	// Approximate minimum by taking parabola through three points.
@@ -568,9 +588,11 @@ inline void solvePOMDP(void (*linearizeDynamics)(const Matrix<_xDim>&, const Mat
 
 	while(!terminate)
 	{
+		LOG_DEBUG("iter: %d", iter);
 		backwardIteration(linearizeDynamics, linearizeObservation, quadratizeFinalCost, quadratizeCost, xBar, SigmaBar, uBar, L, l, gradient);
 		//double prevCost = bestCost;
 		forwardIteration(linearizeDynamics, linearizeObservation, quadratizeFinalCost, quadratizeCost, L, l, xBar, SigmaBar, uBar, WBar, bestCost, eps, gradient);
+
 
 		double absl = 0.0;
 		double absu = 0.0;
@@ -581,7 +603,8 @@ inline void solvePOMDP(void (*linearizeDynamics)(const Matrix<_xDim>&, const Mat
 		terminate = (eps*eps*absl / absu < 1e-06);
 		//terminate = (abs((prevCost - bestCost) / bestCost) < 1e-06);
 		
-		std::cout << "Iter: " << iter << " Grad: " << gradient << " RelErr: " << eps*eps*absl / absu << " Eps: " << eps << " Cost: " << bestCost << std::endl;
+		LOG_DEBUG("Iter: %d Grad: %.2f RelErr: %.2f Eps: %.2f Cost: %.2f", iter, gradient, eps*eps*absl / absu, eps, bestCost);
+		//std::cout << "Iter: " << iter << " Grad: " << gradient << " RelErr: " << eps*eps*absl / absu << " Eps: " << eps << " Cost: " << bestCost << std::endl;
 
 		++iter;
 	}

@@ -18,7 +18,7 @@
 #include <boost/python.hpp>
 #include <boost/preprocessor/iteration/local.hpp>
 #include <boost/preprocessor/arithmetic/sub.hpp>
-#include <boost/filesystem.hpp>
+//#include <boost/filesystem.hpp>
 
 namespace py = boost::python;
 

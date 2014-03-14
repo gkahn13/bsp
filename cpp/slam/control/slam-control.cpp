@@ -1,6 +1,8 @@
 #include "../slam.h"
 #include "../traj/slam-traj.h"
 
+#include "../casadi/casadi-slam-control.h"
+
 
 #include <vector>
 #include <iomanip>
@@ -11,7 +13,6 @@
 extern "C" {
 #include "controlMPC.h"
 controlMPC_FLOAT **H, **f, **lb, **ub, **z;
-#include "slam-control-casadi.h"
 }
 
 #include "boost/preprocessor.hpp"
@@ -21,6 +22,7 @@ const double alpha_final_belief = 10; // 10;
 const double alpha_control = .1; // .1
 const double alpha_goal_state = 10; // 10
 
+CasADi::SXFunction casadi_cost_func, casadi_gradcost_func;
 
 namespace cfg {
 const double improve_ratio_threshold = .1; // .1
@@ -139,18 +141,17 @@ double casadiComputeCost(const std::vector< Matrix<U_DIM> >& U)
 
 	setupCasadiVars(U, U_arr, x0_arr, Sigma0_arr, xGoal_arr, params_arr);
 
-	const double **casadi_input = new const double*[4];
-	casadi_input[0] = U_arr;
-	casadi_input[1] = x0_arr;
-	casadi_input[2] = Sigma0_arr;
-	casadi_input[3] = xGoal_arr;
-	casadi_input[4] = params_arr;
-
 	double cost = 0;
-	double **cost_arr = new double*[1];
-	cost_arr[0] = &cost;
 
-	evaluateCostWrap(casadi_input, cost_arr);
+	casadi_cost_func.setInput(U_arr,0);
+	casadi_cost_func.setInput(x0_arr,1);
+	casadi_cost_func.setInput(Sigma0_arr,2);
+	casadi_cost_func.setInput(xGoal_arr,3);
+	casadi_cost_func.setInput(params_arr,4);
+
+	casadi_cost_func.evaluate();
+
+	casadi_cost_func.getOutput(&cost,0);
 
 	return cost;
 }
@@ -165,18 +166,16 @@ void casadiComputeCostGrad(const std::vector< Matrix<U_DIM> >& U, double& cost, 
 
 	setupCasadiVars(U, U_arr, x0_arr, Sigma0_arr, xGoal_arr, params_arr);
 
-	const double **casadi_input = new const double*[4];
-	casadi_input[0] = U_arr;
-	casadi_input[1] = x0_arr;
-	casadi_input[2] = Sigma0_arr;
-	casadi_input[3] = xGoal_arr;
-	casadi_input[4] = params_arr;
+	casadi_gradcost_func.setInput(U_arr,0);
+	casadi_gradcost_func.setInput(x0_arr,1);
+	casadi_gradcost_func.setInput(Sigma0_arr,2);
+	casadi_gradcost_func.setInput(xGoal_arr,3);
+	casadi_gradcost_func.setInput(params_arr,4);
 
-	double **costgrad_arr = new double*[2];
-	costgrad_arr[0] = &cost;
-	costgrad_arr[1] = Grad.getPtr();
+	casadi_gradcost_func.evaluate();
 
-	evaluateCostGradWrap(casadi_input, costgrad_arr);
+	casadi_gradcost_func.getOutput(&cost,0);
+	casadi_gradcost_func.getOutput(Grad.getPtr(),1);
 
 }
 
@@ -384,7 +383,6 @@ bool controlCollocation(std::vector< Matrix<U_DIM> >& U, controlMPC_params& prob
 	double constant_cost, hessian_constant, jac_constant;
 
 	int index = 0;
-	bool success;
 
 	Matrix<C_DIM+U_DIM, C_DIM+U_DIM> HMat; // TODO: reduce
 	Matrix<C_DIM,C_DIM> HfMat;
@@ -437,7 +435,7 @@ bool controlCollocation(std::vector< Matrix<U_DIM> >& U, controlMPC_params& prob
 			}
 		}
 
-		Matrix<C_DIM,1> cGoal = xGoal.subMatrix<C_DIM,1>(0,0);
+		//Matrix<C_DIM,1> cGoal = xGoal.subMatrix<C_DIM,1>(0,0);
 		//double goal_cost = -alpha_goal_state*tr(~cGoal*cGoal);
 		double goal_cost = 0;
 
@@ -447,9 +445,6 @@ bool controlCollocation(std::vector< Matrix<U_DIM> >& U, controlMPC_params& prob
 		LOG_DEBUG("  goal cost: %4.10f", goal_cost);
 		LOG_DEBUG("  constant cost: %4.10f", constant_cost);
 
-		//std::cout << "PAUSED INSIDE MINIMIZEMERITFUNCTION" << std::endl;
-		//int k;
-		//std::cin >> k;
 
 
 		// trust region size adjustment
@@ -461,8 +456,6 @@ bool controlCollocation(std::vector< Matrix<U_DIM> >& U, controlMPC_params& prob
 			for(int t = 0; t < T-1; ++t)
 			{
 				Matrix<U_DIM>& ut = U[t];
-
-				// Fill in lb, ub
 
 				index = 0;
 				// u velocity lower bound
@@ -520,11 +513,6 @@ bool controlCollocation(std::vector< Matrix<U_DIM> >& U, controlMPC_params& prob
 			LOG_DEBUG("       approx_merit_improve: %1.6f", approx_merit_improve);
 			LOG_DEBUG("       exact_merit_improve: %1.6f", exact_merit_improve);
 			LOG_DEBUG("       merit_improve_ratio: %1.6f", merit_improve_ratio);
-
-			//std::cout << "PAUSED INSIDE minimizeMeritFunction AFTER OPTIMIZATION" << std::endl;
-			//int num;
-			//std::cin >> num;
-
 
 
 			if (approx_merit_improve < -1e-5) {
@@ -597,38 +585,9 @@ bool controlCollocation(std::vector< Matrix<U_DIM> >& U, controlMPC_params& prob
 		} // trust region loop
 	} // iter loop
 
-	return success;
+	return false;
 }
 
-
-/*
-void testCasadi() {
-	initProblemParams();
-
-	Matrix<U_DIM> uinit;
-
-	xGoal = x0;
-	xGoal.insert(0, 0, waypoints[0]);
-
-	std::cout << "x0: " << ~x0;
-	std::cout << "xGoal: " << ~xGoal << "\n";
-
-	// initialize velocity to dist / timesteps
-	uinit[0] = sqrt((x0[0] - xGoal[0])*(x0[0] - xGoal[0]) + (x0[1] - xGoal[1])*(x0[1] - xGoal[1])) / (double)((T-1)*DT);
-	// angle already pointed at goal, so is 0
-	uinit[1] = 0;
-
-	std::vector<Matrix<U_DIM> > U(T-1, uinit);
-
-	double initTrajCost = computeCost(U);
-	LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
-
-	double initCasadiTrajCost = casadiComputeCost(U);
-	LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
-
-
-}
-*/
 
 void planPath(std::vector<Matrix<P_DIM> > l, controlMPC_params& problem, controlMPC_output& output, controlMPC_info& info, std::ofstream& f) {
 	initProblemParams(l);
@@ -637,8 +596,6 @@ void planPath(std::vector<Matrix<P_DIM> > l, controlMPC_params& problem, control
 	double totalSolveTime = 0, trajTime = 0;
 
 	double totalTrajCost = 0;
-
-	int num_loops = 1;
 
 	std::vector<Matrix<B_DIM> > B_total(T*NUM_WAYPOINTS);
 	std::vector<Matrix<U_DIM> > U_total((T-1)*NUM_WAYPOINTS);
@@ -684,27 +641,27 @@ void planPath(std::vector<Matrix<P_DIM> > l, controlMPC_params& problem, control
 			B[t+1] = beliefDynamics(B[t], U[t]);
 		}
 
-		double initTrajCost = computeCost(U);
+		//double initTrajCost = computeCost(U);
 		//LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
 
-		double initCasadiTrajCost = casadiComputeCost(U);
+		//double initCasadiTrajCost = casadiComputeCost(U);
 		//LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
 
 		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 
 		util::Timer_tic(&solveTimer);
 
-		double cost = 0;
 		int iter = 0;
 		while(true) {
 			try {
-				cost = controlCollocation(U, problem, output, info);
+				controlCollocation(U, problem, output, info);
 				break;
 			}
 			catch (forces_exception &e) {
 				if (iter > 3) {
 					LOG_ERROR("Tried too many times, giving up");
-					pythonDisplayTrajectory(U, T, true);
+					pythonDisplayTrajectory(U, T, false);
+					logDataToFile(f, B_total, INFTY, INFTY, 1);
 					//exit(-1);
 					return;
 				}
@@ -741,9 +698,9 @@ void planPath(std::vector<Matrix<P_DIM> > l, controlMPC_params& problem, control
 	LOG_INFO("Total trajectory solve time: %5.3f ms", trajTime*1000);
 	LOG_INFO("Total solve time: %5.3f ms", totalSolveTime*1000);
 
-	logDataToFile(f, B_total, totalSolveTime*1000, trajTime*1000);
+	logDataToFile(f, B_total, totalSolveTime*1000, trajTime*1000, 0);
 
-	//pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, true);
+	pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, false);
 
 }
 
@@ -759,7 +716,14 @@ int main(int argc, char* argv[])
 	std::ofstream f;
 	logDataHandle("slam/data/slam-control", f);
 
-	for(int i=0; i < l_list.size(); ++i) {
+	LOG_INFO("initializing casadi functions...");
+
+	casadi_cost_func = casadiCostFunc();
+	casadi_gradcost_func = casadiCostGradFunc();
+
+	LOG_INFO("casadi functions initialized");
+
+	for(size_t i=0; i < l_list.size(); ++i) {
 		planPath(l_list[i], problem, output, info, f);
 	}
 	cleanupControlMPCVars();

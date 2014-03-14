@@ -18,7 +18,7 @@ beliefPenaltyMPC_FLOAT **H, **f, **lb, **ub, **C, **D, **e, **z;
 
 const double alpha_belief = 10; // 10;
 const double alpha_final_belief = 10; // 10;
-const double alpha_control = .1; // .1
+const double alpha_control = 1; // .1
 
 
 namespace cfg {
@@ -26,8 +26,8 @@ const double improve_ratio_threshold = .1; // .1
 const double min_approx_improve = 1e-2; // 1e-3
 const double min_trust_box_size = 1e-3; // 1e-2
 
-const double trust_shrink_ratio = .75; // .5
-const double trust_expand_ratio = 1.25; // 1.2
+const double trust_shrink_ratio = .5; // .75
+const double trust_expand_ratio = 1.25; // 1.25
 
 const double cnt_tolerance = .5;
 const double penalty_coeff_increase_ratio = 5; // 2
@@ -383,22 +383,13 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 		// Problem linearization and definition
 		// fill in H, f, C, e
 		
-		util::Timer constructCETimer;
-		util::Timer_tic(&constructCETimer);
-
-		util::Timer linearizeTimer, fillCETimer;
-		double linearizeTime = 0, fillCETime = 0;
 		for (int t = 0; t < T-1; ++t) 
 		{
 			Matrix<B_DIM>& bt = B[t];
 			Matrix<U_DIM>& ut = U[t];
 
-			util::Timer_tic(&linearizeTimer);
 			linearizeBeliefDynamics(bt, ut, F[t], G[t], h[t]);
-			linearizeTime += util::Timer_toc(&linearizeTimer);
 
-			
-			util::Timer_tic(&fillCETimer);
 			// initialize f in cost function to penalize
 			// belief dynamics slack variables
 			index = 0;
@@ -423,13 +414,7 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			eVec = -h[t] + F[t]*bt + G[t]*ut;
 			fillCol(e[t+1], eVec);
 
-			fillCETime += util::Timer_toc(&fillCETimer);
 		}
-
-		double constructCETime = util::Timer_toc(&constructCETimer);
-		//std::cout << "construct CE time = " << constructCETime*1000 << "ms" << std::endl;
-		//std::cout << "linearize time = " << linearizeTime*1000 << "ms" << std::endl;
-		//std::cout << "fill CE time = " << fillCETime*1000 << "ms" << std::endl;
 		
 
 		// trust region size adjustment
@@ -441,8 +426,6 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 
 			LOG_DEBUG("       trust region size: %2.6f %2.6f", Beps, Ueps);
 
-			util::Timer fillVarsTimer;
-			util::Timer_tic(&fillVarsTimer);
 			// solve the innermost QP here
 			for(int t = 0; t < T-1; ++t)
 			{
@@ -525,22 +508,12 @@ bool minimizeMeritFunction(std::vector< Matrix<B_DIM> >& B, std::vector< Matrix<
 			// sigma upper bound
 			for(int i = 0; i < S_DIM; ++i) { ub[T-1][index] = bT[index] + Beps; index++;}
 
-			//std::cout << "b[T-1][2]: " << bT[2] << std::endl;
-
-			//std::cout << "lb[T-1][2] orig: " << xGoal[2] - finalAngleDelta << std::endl;
-			//std::cout << "ub[T-1][2] orig: " << xGoal[2] + finalAngleDelta << std::endl;
-
-			//std::cout << "lb[T-1][2]: " << lb[T-1][2] << std::endl;
-			//std::cout << "ub[T-1][2]: " << ub[T-1][2] << std::endl << std::endl;
-
 			// Verify problem inputs
 			//if (!isValidInputs()) {
 			//	std::cout << "Inputs are not valid!" << std::endl;
 			//	exit(-1);
 			//}
 
-			double fillVarsTime = util::Timer_toc(&fillVarsTimer);
-			//std::cout << "fill variables time = " << fillVarsTime*1000 << "ms" << std::endl;
 
 			int exitflag = beliefPenaltyMPC_solve(&problem, &output, &info);
 			if (exitflag == 1) {
@@ -717,7 +690,7 @@ void planPath(std::vector<Matrix<P_DIM> > l, beliefPenaltyMPC_params& problem, b
 		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, false);
 
 
-		double initTrajCost = computeCost(B, U);
+		//double initTrajCost = computeCost(B, U);
 		//LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
 
 		Timer_tic(&solveTimer);
@@ -732,7 +705,8 @@ void planPath(std::vector<Matrix<P_DIM> > l, beliefPenaltyMPC_params& problem, b
 			catch (forces_exception &e) {
 				if (iter > 3) {
 					LOG_ERROR("Tried too many times, giving up");
-					pythonDisplayTrajectory(U, T, true);
+					pythonDisplayTrajectory(U, T, false);
+					logDataToFile(f, B_total, INFTY, INFTY, 1);
 					//exit(-1);
 					return;
 				}
@@ -763,7 +737,7 @@ void planPath(std::vector<Matrix<P_DIM> > l, beliefPenaltyMPC_params& problem, b
 //		LOG_INFO("Actual cost: %4.10f", computeCost(B,U));
 //		LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 
-		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, false);
+		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 
 		unVec(B[T-1], x0, SqrtSigma0);
 
@@ -773,37 +747,13 @@ void planPath(std::vector<Matrix<P_DIM> > l, beliefPenaltyMPC_params& problem, b
 	LOG_INFO("Total trajectory solve time: %5.3f ms", trajTime*1000);
 	LOG_INFO("Total solve time: %5.3f ms", totalSolveTime*1000);
 
-	logDataToFile(f, B_total, totalSolveTime*1000, trajTime*1000);
+	logDataToFile(f, B_total, totalSolveTime*1000, trajTime*1000, 0);
 
-	//pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, true);
+	pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, false);
 }
 
 int main(int argc, char* argv[])
 {
-//	const rlim_t stackSize = 32 * 1024 * 1024;   // min stack size = 32 MB
-//	struct rlimit rl;
-//	int result;
-//
-//	result = getrlimit(RLIMIT_STACK, &rl);
-//	if (result == 0)
-//	{
-//		if (rl.rlim_cur < stackSize)
-//		{
-//			rl.rlim_cur = stackSize;
-//			result = setrlimit(RLIMIT_STACK, &rl);
-//			if (result != 0)
-//			{
-//				LOG_ERROR("setrlimit returned result = %d\n", result);
-//				exit(-1);
-//			}
-//		}
-//	} else {
-//		LOG_ERROR("Could not get stack limit");
-//		exit(-1);
-//	}
-
-
-
 	LOG_INFO("Setting up belief variables");
 	std::cout << "size of params: " << sizeof(struct beliefPenaltyMPC_params)*9.53674e-7 << "mb" << std::endl;
 	std::cout << "size of output: " << sizeof(struct beliefPenaltyMPC_output)*9.53674e-7 << "mb" << std::endl;

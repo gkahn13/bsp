@@ -44,8 +44,9 @@ int main(int argc, char* argv[])
 			std::vector<Matrix<U_DIM> > U(T-1);
 			bool initTrajSuccess = initTraj(x0.subMatrix<C_DIM,1>(0,0), xGoal.subMatrix<C_DIM,1>(0,0), U, T);
 			if (!initTrajSuccess) {
-				LOG_ERROR("Failed to initialize trajectory, exiting slam-state");
-				exit(-1);
+				LOG_ERROR("Failed to initialize trajectory");
+				logDataToFile(f, B_total, INFTY, INFTY, 1);
+				//exit(-1);
 			}
 
 			double initTrajTime = util::Timer_toc(&trajTimer);
@@ -69,7 +70,7 @@ int main(int argc, char* argv[])
 		LOG_INFO("Total trajectory solve time: %5.3f ms", trajTime*1000);
 		LOG_INFO("Total solve time: %5.3f ms", totalSolveTime*1000);
 
-		logDataToFile(f, B_total, totalSolveTime*1000, trajTime*1000);
+		logDataToFile(f, B_total, totalSolveTime*1000, 0, 0);
 
 		//pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, true);
 

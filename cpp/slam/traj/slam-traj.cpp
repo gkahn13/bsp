@@ -31,9 +31,9 @@ const double min_approx_improve = 1e-2; // 1e-2
 const double min_trust_box_size = 1e-2; // 1e-2
 
 const double trust_shrink_ratio = .5; // .5
-const double trust_expand_ratio = 2; // 2
+const double trust_expand_ratio = 1.5; // 2
 
-const double cnt_tolerance = 1e-2;
+const double cnt_tolerance = .5; // 1e-2
 const double penalty_coeff_increase_ratio = 10; // 10
 const double initial_penalty_coeff = 20; // 20
 

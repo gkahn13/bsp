@@ -2,7 +2,7 @@
 #include <iomanip>
 
 #include "util/matrix.h"
-#include "util/Timer.h"
+//#include "util/Timer.h"
 #include "util/logging.h"
 
 extern "C" {
@@ -591,8 +591,8 @@ bool testInitializationFeasibility(const std::vector<Matrix<B_DIM> >& B, const s
 
 int main(int argc, char* argv[])
 {
-	
-	initProblemParams();
+	for(int i=0; i<100; i++){
+	initProblemParams(0);
 
 	LOG_INFO("init problem params");
 
@@ -633,12 +633,12 @@ int main(int argc, char* argv[])
 
 	setupBeliefVars(problem, output);
 
-	util::Timer solveTimer;
-	Timer_tic(&solveTimer);
+	//util::Timer solveTimer;
+	//Timer_tic(&solveTimer);
 
 	double cost = beliefPenaltyCollocation(B, U, problem, output, info);
 
-	double solvetime = util::Timer_toc(&solveTimer);
+	//double solvetime = util::Timer_toc(&solveTimer);
 
 	Matrix<B_DIM> bt;
 	vec(x0, SqrtSigma0, bt);
@@ -649,12 +649,12 @@ int main(int argc, char* argv[])
 
 	LOG_INFO("Optimized cost: %4.10f", cost);
 	LOG_INFO("Actual cost: %4.10f", computeCost(B,U));
-	LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
-	
+	//LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
+	}
 	cleanupBeliefMPCVars();
 	
-	double finalLQGMPcost = computeLQGMPcost(X, U);
-	LOG_DEBUG("Final trajectory LQG-MP cost: %4.10f",finalLQGMPcost);
+	//double finalLQGMPcost = computeLQGMPcost(X, U);
+	//LOG_DEBUG("Final trajectory LQG-MP cost: %4.10f",finalLQGMPcost);
 
 	//saveOptimizedTrajectory(U);
 	//readOptimizedTrajectory(U);
@@ -665,12 +665,12 @@ int main(int argc, char* argv[])
 		B[t+1] = beliefDynamics(B[t], U[t]);
 	}
 	*/
-
+	/*
 	X.clear();
 	for(int t = 0; t < T; ++t) {
 		X.push_back(B[t].subMatrix<X_DIM,1>(0,0));
 	}
-
+	*/
 	int k;
 	std::cin >> k;
 

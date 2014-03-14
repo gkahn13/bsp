@@ -12,7 +12,7 @@
 #include <Python.h>
 //#include <pythonrun.h>
 #include <boost/python.hpp>
-#include <boost/filesystem.hpp>
+//#include <boost/filesystem.hpp>
 
 namespace py = boost::python;
 
@@ -194,8 +194,9 @@ void pythonDisplayTrajectory(std::vector< Matrix<B_DIM> >& B, std::vector< Matri
 		xGoal_list.append(xGoal[i]);
 	}
 
-	std::string workingDir = boost::filesystem::current_path().normalize().string();
-	std::string bspDir = workingDir.substr(0,workingDir.find("bsp"));
+	//std::string workingDir = boost::filesystem::current_path().normalize().string();
+	//std::string bspDir = workingDir.substr(0,workingDir.find("bsp"));
+	std::string bspDir = "/home/gkahn/";
 
 	try
 	{

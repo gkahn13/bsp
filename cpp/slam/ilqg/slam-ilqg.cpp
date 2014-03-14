@@ -4,6 +4,7 @@
 #include "util/Timer.h"
 
 #include "../slam.h"
+#include "../traj/slam-traj.h"
 #include "ilqg.h"
 
 const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 1, alpha_goal_state = 1;
@@ -13,6 +14,34 @@ SymmetricMatrix<U_DIM> Rint;
 SymmetricMatrix<X_DIM> Qint;
 SymmetricMatrix<X_DIM> QGoal;
 SymmetricMatrix<X_DIM> Sigma0;
+
+double nearestAngleFromTo(double from, double to) {
+
+	while (to > from) {
+		if (to - 2*M_PI < from) {
+			if (fabs(to - from) < (fabs(to - 2*M_PI - from))) {
+				return to;
+			} else {
+				return to - 2*M_PI;
+			}
+		}
+		to -= 2*M_PI;
+	}
+
+	while (to < from) {
+		if (to + 2*M_PI > from) {
+			if (fabs(to - from) < (fabs(to + 2*M_PI - from))) {
+				return to;
+			} else {
+				return to + 2*M_PI;
+			}
+		}
+		to += 2*M_PI;
+	}
+
+	// should never reach this point
+	return to;
+}
 
 Matrix<X_DIM> f(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u)
 {
@@ -41,20 +70,20 @@ double computeLQGMPcost(const std::vector<Matrix<X_DIM> >& X, const std::vector<
 }
 */
 
-double computeCost(const std::vector< Matrix<B_DIM> >& B, const std::vector< Matrix<U_DIM> >& U)
-{
-	double cost = 0;
-	Matrix<X_DIM> x;
-	Matrix<X_DIM, X_DIM> SqrtSigma;
-
-	for(int t = 0; t < T-1; ++t) {
-		unVec(B[t], x, SqrtSigma);
-		cost += alpha_belief*tr(SqrtSigma*SqrtSigma) + alpha_control*tr(~U[t]*U[t]);
-	}
-	unVec(B[T-1], x, SqrtSigma);
-	cost += alpha_final_belief*tr(SqrtSigma*SqrtSigma);
-	return cost;
-}
+//double computeCost(const std::vector< Matrix<B_DIM> >& B, const std::vector< Matrix<U_DIM> >& U)
+//{
+//	double cost = 0;
+//	Matrix<X_DIM> x;
+//	Matrix<X_DIM, X_DIM> SqrtSigma;
+//
+//	for(int t = 0; t < T-1; ++t) {
+//		unVec(B[t], x, SqrtSigma);
+//		cost += alpha_belief*tr(SqrtSigma*SqrtSigma) + alpha_control*tr(~U[t]*U[t]);
+//	}
+//	unVec(B[T-1], x, SqrtSigma);
+//	cost += alpha_final_belief*tr(SqrtSigma*SqrtSigma);
+//	return cost;
+//}
 
 // Jacobian df/dx(x,u)
 template <size_t _xDim, size_t _uDim>
@@ -159,103 +188,128 @@ inline void linearizeObservation(const Matrix<X_DIM>& xBar, Matrix<Z_DIM, X_DIM>
 	N = varN(xBar);
 }
 
-/*
-bool testInitializationFeasibility(const std::vector<Matrix<B_DIM> >& B, const std::vector<Matrix<U_DIM> >& U)
-{
-	//std::cout << "X initial" << std::endl;
-	for (int t = 0; t < T; ++t) { 
-		const Matrix<U_DIM>& xt = B[t].subMatrix<X_DIM,1>(0,0);
-		for (int i = 0; i < X_DIM; ++i) {
-			if (xt[i] > xMax[i] || xt[i] < xMin[i]) {
-				LOG_ERROR("Joint angle limit violated at joint %d and time %d", i,t);
-				return false;
-			}
+
+void planPath(std::vector<Matrix<P_DIM> > l, std::ofstream& f) {
+	LOG_INFO("Initializing problem parameters");
+	initProblemParams(l);
+
+
+	util::Timer solveTimer, trajTimer;
+	double totalSolveTime = 0, trajTime = 0;
+
+	double totalTrajCost = 0;
+
+	std::vector<Matrix<B_DIM> > B_total(T*NUM_WAYPOINTS);
+	std::vector<Matrix<U_DIM> > U_total((T-1)*NUM_WAYPOINTS);
+	int B_total_idx = 0, U_total_idx = 0;
+
+
+	std::vector<Matrix<B_DIM> > B(T);
+
+
+	Matrix<U_DIM> uinit;
+
+	Matrix<X_DIM,1> x;
+	Matrix<X_DIM,X_DIM> s;
+	x0[2] = nearestAngleFromTo(0, x0[2]); // need to remod back to near 0
+	for(int i=0; i < NUM_WAYPOINTS; ++i) {
+		LOG_INFO("Going to waypoint %d",i);
+		// goal is waypoint position + direct angle + landmarks
+		xGoal.insert(0, 0, waypoints[i]);
+
+		// want to be facing the next waypoint
+		if (i < NUM_WAYPOINTS - 1) {
+			xGoal[2] = atan2(waypoints[i+1][1] - waypoints[i][1], waypoints[i+1][0] - waypoints[i][0]);
+		} else {
+			xGoal[2] = atan2(xGoal[1] - x0[1], xGoal[0] - x0[0]);
 		}
 
-		//std::cout << std::setprecision(8) << ~xt; 
-	}
 
-	//std::cout << "U initial" << std::endl;
-	for (int t = 0; t < T-1; ++t) { 
-		const Matrix<U_DIM>& ut = U[t];
-		for (int i = 0; i < U_DIM; ++i) {
-			if (ut[i] > uMax[i] || ut[i] < uMin[i]) {
-				LOG_ERROR("Control limit violated at joint %d and time %d", i,t);
-				return false;
-			}
+		xGoal.insert(C_DIM, 0, x0.subMatrix<L_DIM,1>(C_DIM,0));
+
+		util::Timer_tic(&trajTimer);
+
+		std::vector<Matrix<U_DIM> > U(T-1);
+		bool initTrajSuccess = initTraj(x0.subMatrix<C_DIM,1>(0,0), xGoal.subMatrix<C_DIM,1>(0,0), U, T);
+		if (!initTrajSuccess) {
+			LOG_ERROR("Failed to initialize trajectory, continuing anyways");
+			//exit(-1);
 		}
-		//std::cout << std::setprecision(8) << ~ut; 
+
+		double initTrajTime = util::Timer_toc(&trajTimer);
+		trajTime += initTrajTime;
+
+		vec(x0, SqrtSigma0, B[0]);
+		for(int t=0; t < T-1; ++t) {
+			B[t+1] = beliefDynamics(B[t], U[t]);
+		}
+
+
+		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
+
+		std::vector< Matrix<U_DIM, X_DIM> > L;
+		std::vector< Matrix<X_DIM> > xBar;
+		std::vector< SymmetricMatrix<X_DIM> > SigmaBar;
+
+		xBar.push_back(x0);
+
+		Sigma0 = SymProd(SqrtSigma0,SqrtSigma0);
+		SigmaBar.push_back(Sigma0);
+
+		util::Timer_tic(&solveTimer);
+
+		solvePOMDP(linearizeDynamics, linearizeObservation, quadratizeFinalCost, quadratizeCost, xBar, SigmaBar, U, L);
+
+		double solvetime = util::Timer_toc(&solveTimer);
+		totalSolveTime += solvetime;
+
+
+		vec(x0, SqrtSigma0, B[0]);
+		for (int t = 0; t < T-1; ++t) {
+			B[t+1] = beliefDynamics(B[t], U[t]);
+		}
+
+
+		for (int t = 0; t < T-1; ++t) {
+			B_total[B_total_idx++] = B[t];
+			U_total[U_total_idx++] = U[t];
+		}
+		B_total[B_total_idx++] = B[T-1];
+
+		//totalTrajCost += computeCost(X,U);
+
+		unVec(B[T-1], x0, SqrtSigma0);
+
+		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
+
 	}
 
-	return true;
+	//LOG_INFO("Total trajectory cost: %4.10f", totalTrajCost);
+	LOG_INFO("Total trajectory solve time: %5.3f ms", trajTime*1000);
+	LOG_INFO("Total solve time: %5.3f ms", totalSolveTime*1000);
+
+	logDataToFile(f, B_total, totalSolveTime*1000, trajTime*1000, 0);
+
+
+	pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, false);
 }
-*/
 
 int main(int argc, char* argv[])
 {
-	std::vector<Matrix<P_DIM> > l(NUM_LANDMARKS);
-	l[0][0] = 30; l[0][1] = -10;
-	l[1][0] = 70; l[1][1] = 12.5;
-	l[2][0] = 20; l[2][1] = 10;
-	initProblemParams(l);
-
 	Rint = alpha_control*identity<U_DIM>();
 	Qint = alpha_belief*identity<X_DIM>();
 	QGoal = alpha_final_belief*identity<X_DIM>();
 
-	std::vector< Matrix<U_DIM, X_DIM> > L;
-	std::vector< Matrix<X_DIM> > xBar;
-	std::vector< SymmetricMatrix<X_DIM> > SigmaBar;
-	
-	xGoal = x0;
-	xGoal[0] = 60;
-	xGoal[1] = 0;
-	xGoal[2] = 0;
+	std::vector<std::vector<Matrix<P_DIM> > > l_list = landmarks_list();
 
-	// TODO: should I initialize using slam-traj?
-	Matrix<U_DIM> uinit;
-	uinit[0] = (xGoal[0] - x0[0])/((double)(T-1)*DT);
-	uinit[1] = 0;
-	std::vector<Matrix<U_DIM> > uBar(T-1, uinit);
+	std::ofstream f;
+	logDataHandle("slam/data/slam-ilqg", f);
 
-	uBar[0][1] = 3.14/6;
-	uBar[6][1] = -2*3.14/6;
-
-	Sigma0 = SymProd(SqrtSigma0,SqrtSigma0); //identity<X_DIM>();
-	xBar.push_back(x0);
-
-	SigmaBar.push_back(Sigma0);
-
-//	std::cout << "Rint\n" << Rint;
-//	std::cout << "Qint\n" << Qint;
-//	std::cout << "QGoal\n" << QGoal;
-//	std::cout << "uinit: " << ~uinit;
-//	std::cout << "x0: " << ~x0;
-//	std::cout << "xGoal: " << ~xGoal;
-//	std::cout << "varM\n" << varM(x0, uinit);
-//	std::cout << "varN\n" << varN(x0);
-
-	for(int t=0; t < T-1; ++t) {
-		std::cout << ~uBar[t];
+	for(size_t i=0; i < l_list.size(); ++i) {
+		planPath(l_list[i], f);
 	}
-
-	pythonDisplayTrajectory(uBar, T, true);
-
-	util::Timer solveTimer;
-	Timer_tic(&solveTimer);
-
-	// solve ilqg here
-	solvePOMDP(linearizeDynamics, linearizeObservation, quadratizeFinalCost, quadratizeCost, xBar, SigmaBar, uBar, L);
-
-	double solvetime = util::Timer_toc(&solveTimer);
-
-	LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
-	
-
-	for(int t=0; t < T-1; ++t) {
-		std::cout << ~uBar[t];
-	}
-
 
 	return 0;
 }
+
+

@@ -5,32 +5,35 @@ from collections import defaultdict
 import math
 import numpy as np
 
+import matplotlib
+import matplotlib.pyplot as plt
+
 attrs = ['sum_cov_trace','waypoint_distance_error','solve_time','initialization_time']
 
 class Data:
-	def __init__(self):
-		self.data = []
-		
-	def add(self, d):
-		self.data.append(d)
-		
-	@property
-	def mean(self):
-		if len(self.data) > 0:
-			return sum(self.data)/float(len(self.data))
-		return None
-		
-	@property
-	def sd(self):
-		m = self.mean
-		if m is None:
-			return None
-			
-		return np.std(np.array(self.data))
+    def __init__(self):
+        self.data = []
+        
+    def add(self, d):
+        self.data.append(d)
+        
+    @property
+    def mean(self):
+        if len(self.data) > 0:
+            return sum(self.data)/float(len(self.data))
+        return None
+        
+    @property
+    def sd(self):
+        m = self.mean
+        if m is None:
+            return None
+            
+        return np.std(np.array(self.data))
 
 class File:
-    attrs = ['sum_cov_trace','waypoint_distance_error','solve_time','initialization_time','total_time']
-    slam_types = ['slam-belief', 'slam-state', 'slam-control', 'slam-traj']
+    attrs = ['sum_cov_trace','waypoint_distance_error','solve_time','initialization_time','total_time'] # 'failure'
+    slam_types = ['slam-traj', 'slam-belief', 'slam-state', 'slam-control', 'slam-ilqg']
     
     def __init__(self, file_name, slam_type, file_time):
         self.file_name = file_name
@@ -66,59 +69,94 @@ class File:
     def get(self, attr):
         return [self.example[i][attr] for i in xrange(self.num_examples)]
     
-    def printAverages(self):
-        for attr in File.attrs:
-            avg = sum([self.example[i][attr] for i in xrange(self.num_examples)])/float(self.num_examples)
-            print(attr + ': ' + str(avg))
-        print('')
+    def __str__(self):
+        if self.slam_type == 'slam-traj':
+            return 'Trajectory'
+        if self.slam_type == 'slam-ilqg':
+            return 'iLQG'
+        if self.slam_type == 'slam-belief':
+            return 'Belief'
+        if self.slam_type == 'slam-state':
+            return 'State'
+        if self.slam_type == 'slam-control':
+            return 'Control'
+        
+        
             
+# assume one file per landmark number
+class FileGroup:
+    def __init__(self, files):
+        self.files = files
+        self.slam_type = self.files[0].slam_type
+        
+    def getFileWithLandmark(self, num_landmarks):
+        for f in self.files:
+            if f.num_landmarks == num_landmarks:
+                return f
+        return None
+        
+    def getStats(self, num_landmarks, attr):
+        f = self.getFileWithLandmark(num_landmarks)
+        
+        if f is None:
+        	return None, None
+        
+        d = Data()
+        for i in xrange(f.num_examples):
+            if f.example[i]['failure'] == 0:
+                d.add(f.example[i][attr])
+                
+        return d.mean, d.sd
+        
+    def getCostStats(self, num_landmarks):
+        return self.getStats(num_landmarks, 'sum_cov_trace')
+        
+    def getTimeStats(self, num_landmarks):
+        return self.getStats(num_landmarks, 'total_time')
+    
+    def getWaypointErrorStats(self, num_landmarks):
+        return self.getStats(num_landmarks, 'waypoint_distance_error')
+        
+    def compareAttr(self, otherFileGroup, num_landmarks, attr):
+        f_self = self.getFileWithLandmark(num_landmarks)
+        f_other = otherFileGroup.getFileWithLandmark(num_landmarks)
+        
+        if f_self is None or f_other is None:
+        	return None, None
+        
+        d = Data()
+        for i in xrange(f_self.num_examples):
+            if f_self.example[i]['failure'] == 0 and f_other.example[i]['failure'] == 0:
+                d.add(f_self.example[i][attr] / f_other.example[i][attr])
+                
+        return d.mean, d.sd
+        
+    def compareCost(self, otherFileGroup, num_landmarks):
+        return self.compareAttr(otherFileGroup, num_landmarks, 'sum_cov_trace')
+        
+    def compareTime(self, otherFileGroup, num_landmarks):
+        return self.compareAttr(otherFileGroup, num_landmarks, 'total_time')    
+    
+    def compareWaypointError(self, otherFileGroup, num_landmarks):
+        return self.compareAttr(otherFileGroup, num_landmarks, 'waypoint_distance_error')
+    
+    def __str__(self):
+        return str(self.files[0])
+    
     @staticmethod
-    def printStatistics(files):
-        landmark_numbers = sorted(list(set([f.num_landmarks for f in files])))
-        
-        for num_landmarks in landmark_numbers:
-            files_l = [f for f in files if f.num_landmarks == num_landmarks]
-            combined_num_examples = float(sum([f.num_examples for f in files_l]))
-            if combined_num_examples > 0:
-                print('Number of landmarks: ' + str(num_landmarks))
-                for attr in File.attrs:
-                    attr_vals = []
-                    d = Data()
-                    for f in files_l:
-                    	for datapoint in f.get(attr):
-                    		d.add(datapoint)
-                    print(attr + ': ' + str(d.mean) + ' +- ' + str(d.sd))
-                print('')
-        
-    # cost / slam-traj cost
-    # slam-traj-speed / speed
-    @staticmethod
-    def compare(files0, files1):
-        landmark_numbers = sorted(list(set([f.num_landmarks for f in files0])))
-        
-        for num_landmarks in landmark_numbers:
-            print('Number of landmarks: ' + str(num_landmarks))
-            files0_l = [f for f in files0 if f.num_landmarks == num_landmarks]
-            files1_l = [f for f in files1 if f.num_landmarks == num_landmarks]
-            
-            files0_l_sorted, files1_l_sorted = [], []
-            for f0 in files0_l:
-                for f1 in files1_l:
-                    if f0.file_time == f1.file_time:
-                        files0_l_sorted.append(f0)
-                        files1_l_sorted.append(f1)
-            
-            sum_cov_trace_pct_data = Data()
-            speed_pct_data = Data()
-            for f0, f1 in zip(files0_l_sorted, files1_l_sorted):
-                for i in xrange(f0.num_examples):
-                	sum_cov_trace_pct_data.add(f0.example[i]['sum_cov_trace'] / f1.example[i]['sum_cov_trace'])
-                	speed_pct_data.add(f1.example[i]['total_time'] / f0.example[i]['total_time'])
-            
-            print(f0.slam_type+'/'+f1.slam_type+' sum_cov_trace: ' + str(sum_cov_trace_pct_data.mean*100) + ' +- ' + str(sum_cov_trace_pct_data.sd*100) + '%')
-            print(f1.slam_type+'/'+f0.slam_type+' speed: ' + str(speed_pct_data.mean*100) + ' +- ' + str(speed_pct_data.sd*100) + '%')
-            print('')
-            
+    def toLatexTable(fileGroups, landmarks, attr, shiftFactor=1.):
+        latex_str = '\hline & ' + ' & '.join([str(fg) for fg in fileGroups]) + ' \\\\ \n'
+        for l in landmarks:
+            latex_str += '\hline {0} '.format(l)
+            for fg in fileGroups:
+                mean, sd = fg.getStats(l, attr)
+                if mean is None:
+                    latex_str += ' & -'
+                else:
+                    latex_str += ' & {0:.2f} $\pm$ {1:.2f}'.format(shiftFactor*mean, shiftFactor*sd)
+            latex_str += ' \\\\ \n'
+        latex_str += '\hline'
+        return latex_str
         
     
 def process_data():
@@ -132,28 +170,124 @@ def process_data():
     
     files = [File(data_file, slam_type, file_time) for data_file, slam_type, file_time in zip(data_files, slam_types, file_times) if slam_type in File.slam_types]
     
+    traj_files = [file for file in files if file.slam_type == 'slam-traj']
+    ilqg_files = [file for file in files if file.slam_type == 'slam-ilqg' and file.num_landmarks <= 35]
     belief_files = [file for file in files if file.slam_type == 'slam-belief']
     state_files = [file for file in files if file.slam_type == 'slam-state']
     control_files = [file for file in files if file.slam_type == 'slam-control']
-    traj_files = [file for file in files if file.slam_type == 'slam-traj']
     
-    print('traj_files statistics')
-    File.printStatistics(traj_files)
-    print('belief_files statistics')
-    File.printStatistics(belief_files)
-    print('state_files average')
-    File.printStatistics(state_files)
-    print('control_files average')
-    File.printStatistics(control_files)
+    trajFG = FileGroup(traj_files)
+    ilqgFG = FileGroup(ilqg_files)
+    beliefFG = FileGroup(belief_files)
+    stateFG = FileGroup(state_files)
+    controlFG = FileGroup(control_files)
+
+    landmarks = [3,4,5,6,10,15,20,25,30,35,40,45,50]
+    time_abs_fig = plt.figure()
+    time_abs_ax = time_abs_fig.add_subplot(111)
+    dist_err_abs_fig = plt.figure()
+    dist_err_abs_ax = dist_err_abs_fig.add_subplot(111)
     
-    print('compare belief to traj')
-    File.compare(belief_files, traj_files)
-    print('compare state to traj')
-    File.compare(state_files, traj_files)
-    print('compare control to traj')
-    File.compare(control_files, traj_files)
     
-    #IPython.embed()
+    
+    """
+    print([(l, trajFG.getTimeStats(l)) for l in landmarks])
+    for l in landmarks:
+    	m, s = trajFG.getTimeStats(l)
+    	print('{0:.2f} $\pm$ {1:.2f}'.format(m,s))
+    return
+    """
+    print(FileGroup.toLatexTable([trajFG, ilqgFG, beliefFG, stateFG, controlFG], landmarks, 'total_time', shiftFactor=.001))
+    
+    print('############ Absolute statistics #########')
+
+    for fg in [ilqgFG, beliefFG, stateFG, controlFG]:
+    	time_abs_avgs, time_abs_sds = [], []
+        dist_err_avgs, dist_err_sds = [], []
+        for num_landmarks in landmarks:
+            cost_avg, cost_sd = fg.getCostStats(num_landmarks)
+            time_avg, time_sd = fg.getTimeStats(num_landmarks)
+            dist_err_avg, dist_err_sd = fg.getWaypointErrorStats(num_landmarks)
+            
+            if cost_avg is not None:
+            	time_abs_avgs.append(time_avg / 1000.)
+            	time_abs_sds.append(time_sd / 1000.)
+            	dist_err_avgs.append(dist_err_avg)
+             	dist_err_sds.append(dist_err_sd)
+            
+                print('Number of landmarks: ' + str(num_landmarks))
+                print(fg.slam_type)
+                print('Cost: {0} +- {1}'.format(cost_avg, cost_sd))
+                print('Time: {0} +- {1} ms'.format(time_avg, time_sd))
+                print('Waypoint distance error: {0} +- {1} meters'.format(dist_err_avg, dist_err_sd))
+                print('')
+        
+        time_abs_ax.errorbar(landmarks[:len(time_abs_avgs)], time_abs_avgs, yerr=time_abs_sds, label=str(fg))
+        dist_err_abs_ax.errorbar(landmarks[:len(dist_err_avgs)], dist_err_avgs, yerr=dist_err_sds, label=str(fg))
+    print('\n')
+
+    
+    print('############ Relative statistics #############')
+    cost_fig = plt.figure()
+    cost_ax = cost_fig.add_subplot(111)
+    time_fig = plt.figure()
+    time_ax = time_fig.add_subplot(111)
+    dist_err_fig = plt.figure()
+    dist_err_ax = dist_err_fig.add_subplot(111)
+    
+    state_comp_times = []
+    control_comp_times = []
+    for fg in [ilqgFG, beliefFG, stateFG, controlFG]:
+        cost_comp_avgs, cost_comp_sds = [], []
+        time_comp_avgs, time_comp_sds = [], []
+        dist_err_comp_avgs, dist_err_comp_sds = [], []
+        for num_landmarks in landmarks:
+            cost_comp_avg, cost_comp_sd = fg.compareCost(trajFG, num_landmarks)
+            time_comp_avg, time_comp_sd = fg.compareTime(trajFG, num_landmarks)
+            dist_err_comp_avg, dist_err_comp_sd = fg.compareWaypointError(trajFG, num_landmarks)
+            
+            if cost_comp_avg is not None:
+                cost_comp_avgs.append(cost_comp_avg)
+                cost_comp_sds.append(cost_comp_sd)
+                time_comp_avgs.append(time_comp_avg)
+                time_comp_sds.append(time_comp_sd)
+                dist_err_comp_avgs.append(dist_err_comp_avg)
+                dist_err_comp_sds.append(dist_err_comp_sd)
+	            
+                print('Number of landmarks: ' + str(num_landmarks))
+                print(fg.slam_type + ' compared with ' + trajFG.slam_type)
+                print('Cost: {0} +- {1}'.format(cost_comp_avg, cost_comp_sd))
+                print('Time: {0} +- {1}'.format(time_comp_avg, time_comp_sd))
+                print('Waypoint error: {0} +- {1}'.format(dist_err_comp_avg, dist_err_comp_sd))
+                print('')
+            
+        cost_ax.errorbar(landmarks[:len(cost_comp_avgs)], cost_comp_avgs, yerr=cost_comp_sds, elinewidth=2, label=str(fg))
+        time_ax.errorbar(landmarks[:len(time_comp_avgs)], time_comp_avgs, yerr=time_comp_sds, label=fg.slam_type)
+        dist_err_ax.errorbar(landmarks[:len(dist_err_comp_avgs)], dist_err_comp_avgs, yerr=dist_err_comp_sds, label=str(fg))
+            
+    # set titles, labels, etc for all the graphs
+    for ax in [time_abs_ax, dist_err_abs_ax, cost_ax, time_ax, dist_err_ax]:
+        ax.set_xticks(landmarks)
+        ax.set_xlabel('Number of landmarks')
+        
+        handles, labels = ax.get_legend_handles_labels()
+        ax.legend(handles, labels)
+    
+    time_abs_ax.set_ylabel('Time (seconds)')
+    dist_err_abs_ax.set_ylabel('Waypoint distance error (meters)')
+    cost_ax.set_ylabel('Cost factor')
+    time_ax.set_ylabel('Time factor')
+    dist_err_ax.set_ylabel('Waypoint distance error versus trajectory')
+    
+    time_abs_ax.set_title('Time per number landmarks')
+    dist_err_abs_ax.set_title('Waypoint distance error')
+    cost_ax.set_title('Cost factor versus trajectory')
+    time_ax.set_title('Time factor of belief, state, and control versus trajectory')
+    dist_err_ax.set_title('Waypoint distance factor of belief, state, and control versus trajectory')
+    
+    plt.show(block=False)
+    raw_input()
+            
     
 
 if __name__ == '__main__':

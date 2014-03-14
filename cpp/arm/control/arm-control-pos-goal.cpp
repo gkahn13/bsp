@@ -24,7 +24,7 @@ const double trust_expand_ratio = 2;
 const double cnt_tolerance = 1e-4;
 const double penalty_coeff_increase_ratio = 5;
 const double initial_penalty_coeff = 5;
-const double initial_trust_box_size = 0.1;
+const double initial_trust_box_size = 1;
 const int max_penalty_coeff_increases = 3;
 const int max_sqp_iterations = 50;
 }
@@ -53,7 +53,7 @@ void setupCasadiVars(const std::vector<Matrix<X_DIM> >& X, const std::vector<Mat
 		XU_arr[index++] = X[0][i];
 	}
 	for(int i=0; i<X_DIM; ++i){
-		XU_arr[index++] = X[T-1][i];
+		XU_arr[index++] = xGoal[i];
 	}
 	for(int t = 0; t < T-1; ++t) {
 		for(int i=0; i < U_DIM; ++i) {
@@ -127,9 +127,31 @@ void casadiComputeCostGrad(const std::vector< Matrix<X_DIM> >& X, const std::vec
 
 	double **costgrad_arr = new double*[2];
 	costgrad_arr[0] = &cost;
-	costgrad_arr[1] = G.getPtr();
+	Matrix<X0XGU_DIM> Gmini; 
+	costgrad_arr[1] = Gmini.getPtr();
 
 	evaluateCostGradWrap(casadi_input, costgrad_arr);
+	int idx =0;
+	G.reset();  
+	for(int i=0; i<X_DIM+U_DIM; i++){
+		G[i] = Gmini[i]; 
+	}
+	
+	idx=U_DIM+X_DIM;  
+
+	for(int i=0; i<T-2; i++){
+		idx+= X_DIM; 
+		for(int t=0; t<U_DIM; t++){
+			G[idx] = Gmini[t+i*U_DIM]; 
+			
+			idx++; 
+		}
+		
+	}
+
+	for(int i=0; i<X_DIM; i++){
+		G[idx] = Gmini[i+X_DIM]; 
+	}
 
 	/*
 	double jac_cost = 0;
@@ -161,7 +183,7 @@ double computeCost(const std::vector< Matrix<X_DIM> >& X, const std::vector< Mat
 	std::cout<<100*~(X[T-1]-xGoal)*(X[T-1]-xGoal)<<"\n";
 	Matrix<G_DIM> pos_goal = g(xGoal);
 	Matrix<G_DIM> pos_comp = g(X[T-1]);
-	cost += (alpha_goal_state*~(X[T-1]-xGoal)*(X[T-1]-xGoal))(0,0);
+	cost += (alpha_goal_state*~(pos_goal-pos_comp)*(pos_goal-pos_comp))(0,0);
 
 	return cost;
 }
@@ -365,14 +387,13 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 
 		hessian_constant = 0;
 		jac_constant = 0;
-		idx = 0;
 
 		for (int t = 0; t < T-1; ++t) 
 		{
 			Matrix<X_DIM>& xt = X[t];
 			Matrix<U_DIM>& ut = U[t];
 
-			idx = t*(X_DIM+U_DIM);
+			idx = t*(U_DIM+X_DIM);
 			//LOG_DEBUG("idx: %d",idx);
 
 			QMat.reset();
@@ -520,8 +541,8 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			LOG_DEBUG("       exact_merit_improve: %1.6f", exact_merit_improve);
 			LOG_DEBUG("       merit_improve_ratio: %1.6f", merit_improve_ratio);
 			
-			std::cout << "PAUSED INSIDE minimizeMeritFunction AFTER OPTIMIZATION" << std::endl;
-			std::cin.ignore();
+			//std::cout << "PAUSED INSIDE minimizeMeritFunction AFTER OPTIMIZATION" << std::endl;
+			//std::cin.ignore();
 
 			if (approx_merit_improve < -1e-5) {
 				//LOG_ERROR("Approximate merit function got worse: %1.6f", approx_merit_improve);
@@ -687,7 +708,7 @@ bool testInitializationFeasibility(const std::vector<Matrix<X_DIM> >& X, const s
 
 int main(int argc, char* argv[])
 {
-	
+	ifs.open("random-start.txt",std::ifstream::in);
 	initProblemParams(0);
 
 	LOG_INFO("init problem params");

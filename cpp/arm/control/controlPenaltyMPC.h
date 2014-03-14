@@ -255,14 +255,14 @@ typedef struct controlPenaltyMPC_params
     /* vector of size 12 */
     controlPenaltyMPC_FLOAT ub14[12];
 
-    /* diagonal matrix of size [12 x 12] (only the diagonal is stored) */
-    controlPenaltyMPC_FLOAT Q15[12];
+    /* diagonal matrix of size [6 x 6] (only the diagonal is stored) */
+    controlPenaltyMPC_FLOAT Q15[6];
 
-    /* vector of size 12 */
-    controlPenaltyMPC_FLOAT f15[12];
+    /* vector of size 6 */
+    controlPenaltyMPC_FLOAT f15[6];
 
-    /* vector of size 12 */
-    controlPenaltyMPC_FLOAT lb15[12];
+    /* vector of size 6 */
+    controlPenaltyMPC_FLOAT lb15[6];
 
     /* vector of size 6 */
     controlPenaltyMPC_FLOAT ub15[6];

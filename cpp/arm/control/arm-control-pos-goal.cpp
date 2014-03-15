@@ -1,6 +1,6 @@
 #include <vector>
 #include <iomanip>
-
+#include "util/Timer.h"
 #include "util/matrix.h"
 
 
@@ -161,6 +161,34 @@ void casadiComputeCostGrad(const std::vector< Matrix<X_DIM> >& X, const std::vec
 	LOG_DEBUG("jac cost: %4.10f",jac_cost);
 	*/
 }
+double GoalDist(const std::vector< Matrix<X_DIM> >& X){
+
+	Matrix<G_DIM> pos_goal = g(xGoal);
+	Matrix<G_DIM> pos_comp = g(X[T-1]);
+	return sqrt((~(pos_goal-pos_comp)*(pos_goal-pos_comp))(0,0));
+}
+
+double computeCompCost(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matrix<U_DIM> >& U)
+{
+	double cost = 0;
+	Matrix<B_DIM> b;
+	Matrix<X_DIM> x;
+	Matrix<X_DIM, X_DIM> SqrtSigma;
+	vec(x0, SqrtSigma0, b);
+	Matrix<G_DIM,X_DIM> J;
+
+	for(int t = 0; t < T-1; ++t) {
+		unVec(b, x, SqrtSigma);
+		linearizeg(x, J);
+		cost += alpha_belief*tr(J*SqrtSigma*SqrtSigma*~J) + alpha_control*tr(~U[t]*U[t]);
+		b = beliefDynamics(b, U[t]);
+	}
+	unVec(b, x, SqrtSigma);
+	linearizeg(x, J);
+	cost += alpha_final_belief*tr(J*SqrtSigma*SqrtSigma*~J);	
+
+	return cost;
+}
 
 double computeCost(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matrix<U_DIM> >& U)
 {
@@ -180,7 +208,7 @@ double computeCost(const std::vector< Matrix<X_DIM> >& X, const std::vector< Mat
 	unVec(b, x, SqrtSigma);
 	linearizeg(x, J);
 	cost += alpha_final_belief*tr(J*SqrtSigma*SqrtSigma*~J);
-	std::cout<<100*~(X[T-1]-xGoal)*(X[T-1]-xGoal)<<"\n";
+	
 	Matrix<G_DIM> pos_goal = g(xGoal);
 	Matrix<G_DIM> pos_comp = g(X[T-1]);
 	cost += (alpha_goal_state*~(pos_goal-pos_comp)*(pos_goal-pos_comp))(0,0);
@@ -709,6 +737,7 @@ bool testInitializationFeasibility(const std::vector<Matrix<X_DIM> >& X, const s
 int main(int argc, char* argv[])
 {
 	ifs.open("random-start.txt",std::ifstream::in);
+	for(int i=0; i<100; i++){
 	initProblemParams(0);
 
 	LOG_INFO("init problem params");
@@ -751,22 +780,26 @@ int main(int argc, char* argv[])
 	double cost;
 	Matrix<XU_DIM> G;
 
-
+	util::Timer solveTimer;
+	Timer_tic(&solveTimer);
 
 	cost = controlPenaltyCollocation(X, U, problem, output, info);
 
 	
+	double solvetime = util::Timer_toc(&solveTimer);
+	double solved_cost = computeCompCost(X,U); 
 
 	LOG_INFO("Optimized cost: %4.10f", cost);
 	LOG_INFO("Actual cost: %4.10f", computeCost(X, U));
-
-
+	LOG_INFO("Dist to Goal: %4.10f", GoalDist(X));
+	std::cout<<i<<" , "<<solvetime<<" , "<<solved_cost/initTrajCost<<" , "<<GoalDist(X)<<'\n'; 
+	}
 	cleanupStateMPCVars();
 
 	//double finalLQGMPcost = computeLQGMPcost(X, U);
 	//LOG_DEBUG("Final trajectory LQG-MP cost: %4.10f",finalLQGMPcost);
 
-	saveOptimizedTrajectory(U);
+	//saveOptimizedTrajectory(U);
 	//readOptimizedTrajectory(U);
 	
 	/*

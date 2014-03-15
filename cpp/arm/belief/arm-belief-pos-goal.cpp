@@ -2,7 +2,7 @@
 #include <iomanip>
 
 #include "util/matrix.h"
-//#include "util/Timer.h"
+#include "util/Timer.h"
 #include "util/logging.h"
 
 extern "C" {
@@ -635,12 +635,12 @@ int main(int argc, char* argv[])
 
 	setupBeliefVars(problem, output);
 
-	//util::Timer solveTimer;
-	//Timer_tic(&solveTimer);
+	util::Timer solveTimer;
+	Timer_tic(&solveTimer);
 
 	double cost = beliefPenaltyCollocation(B, U, problem, output, info);
 
-	//double solvetime = util::Timer_toc(&solveTimer);
+	double solvetime = util::Timer_toc(&solveTimer);
 
 	Matrix<B_DIM> bt;
 	vec(x0, SqrtSigma0, bt);
@@ -652,7 +652,7 @@ int main(int argc, char* argv[])
 	LOG_INFO("Optimized cost: %4.10f", cost);
 	LOG_INFO("Actual cost: %4.10f", computeCost(B,U));
 	//LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
-	//std::cout<<i<<" , "<<solvetime<<" , "<<cost/initTrajCost<<'\n'; 
+	std::cout<<i<<" , "<<solvetime<<" , "<<solved_cost/initTrajCost<<'\n'; 
 	}
 	cleanupBeliefMPCVars();
 	

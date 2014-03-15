@@ -2,7 +2,7 @@
 #include <iomanip>
 
 #include "util/matrix.h"
-//#include "util/Timer.h"
+#include "util/Timer.h"
 
 extern "C" {
 #include "statePenaltyMPC.h"
@@ -733,11 +733,11 @@ bool testInitializationFeasibility(const std::vector<Matrix<X_DIM> >& X, const s
 
 int main(int argc, char* argv[])
 {	ifs.open("random-start.txt",std::ifstream::in);
-	//for(int i=0; i<100; i++){
+	for(int i=0; i<100; i++){
 		initProblemParams(0);
 
 		LOG_INFO("init problem params");
-		std::cout<<~x0<<"\n";
+		//std::cout<<~x0<<"\n";
 		Matrix<U_DIM> uinit = (xGoal - x0) / (double)((T-1)*DT);
 		std::vector<Matrix<U_DIM> > U(T-1, uinit);
 
@@ -776,17 +776,18 @@ int main(int argc, char* argv[])
 		double cost;
 		Matrix<XU_DIM> G;
 
-		//util::Timer solveTimer;
-		//Timer_tic(&solveTimer);
+		util::Timer solveTimer;
+		Timer_tic(&solveTimer);
 
 		cost = statePenaltyCollocation(X, U, problem, output, info);
 
-		//double solvetime = util::Timer_toc(&solveTimer);
-
+		double solvetime = util::Timer_toc(&solveTimer);
+		double solved_cost = computeCost(X,U); 
 		LOG_INFO("Optimized cost: %4.10f", cost);
 		LOG_INFO("Actual cost: %4.10f", computeCost(X, U));
-		//LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
-	//}
+		LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
+		std::cout<<i<<" , "<<solvetime<<" , "<<solved_cost/initTrajCost<<'\n'; 
+	}
 	cleanupStateMPCVars();
 
 	//double finalLQGMPcost = computeLQGMPcost(X, U);

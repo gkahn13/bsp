@@ -15,6 +15,9 @@ statePenaltyMPC_FLOAT *A, *b, *e;
 
 #include "../arm.h"
 
+// uncomment the following to use finite differences for computing the gradient
+//#define FINITE_DIFFERENCE
+
 namespace cfg {
 const double improve_ratio_threshold = .1;
 const double min_approx_improve = 1e-3;
@@ -128,14 +131,6 @@ void casadiComputeCostGrad(const std::vector< Matrix<X_DIM> >& X, const std::vec
 	costgrad_arr[1] = G.getPtr();
 
 	evaluateCostGradWrap(casadi_input, costgrad_arr);
-
-	/*
-	double jac_cost = 0;
-	for(int i = 0; i < XU_DIM; ++i) {
-		jac_cost += G[i]*XU_arr[i];
-	}
-	LOG_DEBUG("jac cost: %4.10f",jac_cost);
-	*/
 }
 
 double computeCost(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matrix<U_DIM> >& U)
@@ -160,28 +155,34 @@ double computeCost(const std::vector< Matrix<X_DIM> >& X, const std::vector< Mat
 	return cost;
 }
 
-double computeMerit(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matrix<U_DIM> >& U, double penalty_coeff)
+double computeCostTruncated(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matrix<U_DIM> >& U, int t_start)
 {
-	double merit = 0;
+	double cost = 0;
 
-	/*
 	Matrix<B_DIM> b;
 	Matrix<X_DIM> x;
-	Matrix<X_DIM,X_DIM> SqrtSigma;
-	vec(x0, SqrtSigma0, b);
+	Matrix<X_DIM, X_DIM> SqrtSigma;
 	Matrix<G_DIM,X_DIM> J;
 
-	for(int t = 0; t < T-1; ++t) {
+	vec(X[0], SqrtSigma0, b);
+	for (int t = 0; t < t_start; ++t) {
+		b = beliefDynamics(b, U[t]);
+	}
+
+	for (int t = t_start; t < T-1; ++t) {
 		unVec(b, x, SqrtSigma);
 		linearizeg(x, J);
-
-		merit += alpha_belief*tr(J*SqrtSigma*SqrtSigma*~J) + alpha_control*tr(~U[t]*U[t]);
+		cost += alpha_belief*tr(J*SqrtSigma*SqrtSigma*~J) + alpha_control*tr(~U[t]*U[t]);
 		b = beliefDynamics(b, U[t]);
 	}
 	unVec(b, x, SqrtSigma);
-	linearizeg(x, J);
-	merit += alpha_final_belief*tr(J*SqrtSigma*SqrtSigma*~J);
-	*/
+	cost += alpha_final_belief*tr(SqrtSigma*SqrtSigma);
+	return cost;
+}
+
+double computeMerit(const std::vector< Matrix<X_DIM> >& X, const std::vector< Matrix<U_DIM> >& U, double penalty_coeff)
+{
+	double merit = 0;
 
 	merit = casadiComputeCost(X, U);
 
@@ -195,8 +196,56 @@ double computeMerit(const std::vector< Matrix<X_DIM> >& X, const std::vector< Ma
 	for(int i = 0; i < 2*G_DIM; ++i) {
 		merit += penalty_coeff*MAX(goalposviol[i],0);
 	}
-	
+
 	return merit;
+}
+
+void finiteDifferenceCostGrad(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >& U, double& cost, Matrix<XU_DIM>& G) {
+
+	cost = computeCost(X,U);
+
+	double cost_plus, cost_minus;
+	int index = 0;
+
+	for(int t = 0; t < T; ++t) {
+		for(int i = 0; i < X_DIM+U_DIM; ++i) {
+			if (i < X_DIM) {
+				double original = X[t][i];
+
+				X[t][i] += step;
+
+				cost_plus = computeCostTruncated(X,U,t);
+
+				X[t][i] = original;
+
+				X[t][i] -= step;
+				cost_minus = computeCostTruncated(X,U,t);
+
+				X[t][i] = original;
+
+			} else if (t < TIMESTEPS - 1){
+				double original = U[t][i-X_DIM];
+
+				U[t][i-X_DIM] += step;
+
+				cost_plus = computeCostTruncated(X,U,t);
+
+				U[t][i-X_DIM] = original;
+
+				U[t][i-X_DIM] -= step;
+
+				cost_minus = computeCostTruncated(X,U,t);
+
+				U[t][i-X_DIM] = original;
+
+			} else {
+				break; // no U at T-1
+			}
+
+			G[index++] = (cost_plus - cost_minus)/(2*step);
+		}
+	}
+
 }
 
 void setupStateVars(statePenaltyMPC_params& problem, statePenaltyMPC_output& output)
@@ -263,7 +312,7 @@ void cleanupStateMPCVars()
 	delete[] z;
 }
 
-// TODO: Check if all inputs are valid, Q, f, lb, ub, A, b at last time step
+
 bool isValidInputs()
 {
 
@@ -324,8 +373,6 @@ bool isValidInputs()
 	}
 	std::cout << "\n\n";
 
-//	int magic;
-//	std::cin >> magic;
 
 	return true;
 }
@@ -383,7 +430,11 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 		LOG_DEBUG("  merit: %4.10f", merit);
 
 		// Compute gradients
+#ifndef FINITE_DIFFERENCE
 		casadiComputeCostGrad(X, U, cost, G);
+#else
+		finiteDifferenceCostGrad(X, U, cost, G);
+#endif
 
 		// Problem linearization and definition
 		// fill in Q, f
@@ -587,7 +638,12 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 				Xeps *= cfg::trust_expand_ratio;
 				Ueps *= cfg::trust_expand_ratio;
 
+#ifndef FINITE_DIFFERENCE
 				casadiComputeCostGrad(Xopt, Uopt, cost, Gopt);
+#else
+				finiteDifferenceCostGrad(Xopt, Uopt, cost, Gopt);
+#endif
+
 
 				Matrix<XU_DIM> s, y;
 

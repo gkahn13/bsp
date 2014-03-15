@@ -16,7 +16,7 @@ statePenaltyMPC_FLOAT *A, *b, *e;
 #include "../arm.h"
 
 // uncomment the following to use finite differences for computing the gradient
-//#define FINITE_DIFFERENCE
+#define FINITE_DIFFERENCE
 
 namespace cfg {
 const double improve_ratio_threshold = .1;
@@ -200,7 +200,7 @@ double computeMerit(const std::vector< Matrix<X_DIM> >& X, const std::vector< Ma
 	return merit;
 }
 
-void finiteDifferenceCostGrad(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >& U, double& cost, Matrix<XU_DIM>& G) {
+void finiteDifferenceCostGrad(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<U_DIM> >& U, double& cost, Matrix<XU_DIM>& G, Matrix<XU_DIM,XU_DIM>& diag_hess) {
 
 	cost = computeCost(X,U);
 
@@ -242,7 +242,9 @@ void finiteDifferenceCostGrad(std::vector< Matrix<X_DIM> >& X, std::vector< Matr
 				break; // no U at T-1
 			}
 
-			G[index++] = (cost_plus - cost_minus)/(2*step);
+			G[index] = (cost_plus - cost_minus)/(2*step);
+			diag_hess[index] = (cost_plus + cost_minus - 2*cost)/(step*step);
+			index++;
 		}
 	}
 
@@ -433,7 +435,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 #ifndef FINITE_DIFFERENCE
 		casadiComputeCostGrad(X, U, cost, G);
 #else
-		finiteDifferenceCostGrad(X, U, cost, G);
+		finiteDifferenceCostGrad(X, U, cost, G, B);
 #endif
 
 		// Problem linearization and definition
@@ -640,10 +642,6 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 
 #ifndef FINITE_DIFFERENCE
 				casadiComputeCostGrad(Xopt, Uopt, cost, Gopt);
-#else
-				finiteDifferenceCostGrad(Xopt, Uopt, cost, Gopt);
-#endif
-
 
 				Matrix<XU_DIM> s, y;
 
@@ -689,6 +687,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 
 				// Do not update B
 				//B = identity<XU_DIM>();
+#endif
 
 				X = Xopt; U = Uopt;
 

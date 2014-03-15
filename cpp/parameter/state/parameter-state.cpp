@@ -11,7 +11,8 @@
 
 #include <Python.h>
 #include <boost/python.hpp>
-#include <boost/filesystem.hpp>
+
+#include <boost/timer.hpp>
 
 
 namespace py = boost::python;
@@ -784,7 +785,7 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			LOG_DEBUG("       exact_merit_improve: %1.6f", exact_merit_improve);
 			LOG_DEBUG("       merit_improve_ratio: %1.6f", merit_improve_ratio);
 
-			std::cout << "PAUSED INSIDE minimizeMeritFunction AFTER OPTIMIZATION" << std::endl;
+			//std::cout << "PAUSED INSIDE minimizeMeritFunction AFTER OPTIMIZATION" << std::endl;
 			//std::cin.ignore();
 			//int num;
 			//std::cin >> num;
@@ -951,6 +952,7 @@ double statePenaltyCollocation(std::vector< Matrix<X_DIM> >& X, std::vector< Mat
 
 int main(int argc, char* argv[])
 {
+	
 
 	// actual: 6.66, 6.66, 10.86, 13
 	double length1_est = .3,
@@ -1010,7 +1012,7 @@ int main(int argc, char* argv[])
 	Matrix<U_DIM> uinit;
 	uinit[0] = 0.0;
 	uinit[1] = 0.0;
-	
+
 	std::vector<Matrix<U_DIM> > U(T-1, uinit); 
 	std::vector<Matrix<X_DIM> > X(T);
 	std::vector<Matrix<B_DIM> > B(T);
@@ -1028,28 +1030,17 @@ int main(int argc, char* argv[])
 
 	vec(x0, SqrtSigma0, B[0]);
 	std::cout<<"HORIZON is "<<HORIZON<<'\n';
+
+
 	for(int h = 0; h < HORIZON; ++h) {
 		for (int t = 0; t < T-1; ++t) {
 			X[t] = B[t].subMatrix<X_DIM,1>(0,0);
 			B[t+1] = beliefDynamics(B[t], U[t]);
 		}
 		X[T-1] = B[T-1].subMatrix<X_DIM,1>(0,0);
-		//util::Timer solveTimer;
-		//util::Timer_tic(&solveTimer);
-		/*Matrix<(T-1)*(X_DIM+U_DIM)+X_DIM> grad = finiteGradTest( X,  U, SqrtSigma0);
-		int index=0; 
-		for (int t=0; t<T-1; t++){
-			std::cout<<"t "<<t<<"\n";
-			for (int j=0; j<X_DIM; j++){
-				std::cout<<grad[index++]<<" ";
-			}
-			std::cout<<"\n";
-			for (int j=0; j<U_DIM; j++){
-				std::cout<<grad[index++]<<" ";
-			}
-			std::cout<<"\n";
-		}
-		*/
+		
+		
+		
 		double cost = statePenaltyCollocation(X, U, problem, output, info);
 		
 	
@@ -1057,7 +1048,7 @@ int main(int argc, char* argv[])
 		//pythonDisplayTrajectory(U, SqrtSigma0, x0, xGoal);
 		//pythonPlotRobot(U, SqrtSigma0, x0, xGoal);
 
-		//double solvetime = util::Timer_toc(&solveTimer);
+		
 		//LOG_INFO("Optimized cost: %4.10f", cost);
 		//LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
 		
@@ -1067,14 +1058,12 @@ int main(int argc, char* argv[])
 		//std::cout << "control u: " << std::endl << ~U[0];
 
 		
-		LOG_INFO("Executing control step");
+	
 		HistoryU[h] = U[0];
 		HistoryB[h] = B[0];
 
 
-		std::cout<<h<<"\n";
-		std::cout<<U[0]<<"\n";
-
+	
 	
 		B[0] = executeControlStep(x_real, B[0], U[0]);
 		
@@ -1082,14 +1071,25 @@ int main(int argc, char* argv[])
 
 		unVec(B[0], x0, SqrtSigma0);
 		//std::cout << "x0 after control step" << std::endl << ~x0;
-
+		//#define SPEED_TEST
+		#ifdef SPEED_TEST
+		for(int t = 0; t < T-1; ++t) {
+			for(int l=0; l<U_DIM; l++){
+		
+				U[t][l] = 0;
+			}
+		}
+		#else
 		for(int t = 0; t < T-2; ++t) {
 		
 			U[t] = U[t+1];
 		}
+		#endif
 
 
 	}
+
+
 	pythonDisplayHistory(HistoryU,HistoryB, SqrtSigma0, x0, HORIZON);
 	cleanupBeliefMPCVars();
 

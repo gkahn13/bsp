@@ -91,13 +91,15 @@ $(OBJ_DIR)/arm-ilqg.o : $(ARM_ILQG_DIR)/arm-ilqg-pos-goal.cpp $(ARM_ILQG_DIR)/il
 	
 # make arm-state
 ARM_STATE_DIR = arm/state
-ARM_STATE_FILES = arm-state-cost arm-state-grad arm-state-pos-goal arm-state logging
+ARM_STATE_FILES = arm-state-cost arm-state-grad arm-statePenaltyMPC arm-state logging
 ARM_STATE_OBJS = $(ARM_STATE_FILES:%=$(OBJ_DIR)/%.o)
 
 #touch-arm-state:
 #	touch $(ARM_STATE_DIR)/arm-state-pos-goal.cpp
+arm-state-setup:
+	bash $(ARM_SETUP_FILE) state $(T)
 
-arm-state: | $(ARM_STATE_OBJS)
+arm-state: | arm-state-setup $(ARM_STATE_OBJS)
 	$(CXX) $(BFLAGS) $(ARM_STATE_OBJS) -o $(BIN_DIR)/arm-state $(BOOST_FLAGS) $(LINKER_FLAGS)
 
 $(OBJ_DIR)/arm-state-cost.o : $(ARM_STATE_DIR)/arm-state-cost.c
@@ -106,10 +108,36 @@ $(OBJ_DIR)/arm-state-cost.o : $(ARM_STATE_DIR)/arm-state-cost.c
 $(OBJ_DIR)/arm-state-grad.o : $(ARM_STATE_DIR)/arm-state-grad.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
 
-$(OBJ_DIR)/arm-state-pos-goal.o : $(ARM_STATE_DIR)/arm-state-pos-goal-MPC.c
+$(OBJ_DIR)/arm-statePenaltyMPC.o : $(ARM_STATE_DIR)/statePenaltyMPC.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
 	
 $(OBJ_DIR)/arm-state.o : $(ARM_STATE_DIR)/arm-state-pos-goal.cpp $(ARM_HEADERS)
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) -c -o $@ $<
+
+#make arm-control 
+ARM_CONTROL_DIR = arm/control
+# arm-statePenaltyMPC
+ARM_CONTROL_FILES = arm-control-cost arm-control-grad arm-control-pos-goal arm-control logging
+ARM_CONTROL_OBJS = $(ARM_CONTROL_FILES:%=$(OBJ_DIR)/%.o)
+
+#touch-arm-CONTROL:
+#	touch $(ARM_CONTROL_DIR)/arm-CONTROL-pos-goal.cpp
+arm-control-setup:
+	bash $(ARM_SETUP_FILE) control $(T)
+
+arm-control: | arm-control-setup $(ARM_CONTROL_OBJS)
+	$(CXX) $(BFLAGS) $(ARM_CONTROL_OBJS) -o $(BIN_DIR)/arm-control $(BOOST_FLAGS) $(LINKER_FLAGS)
+
+$(OBJ_DIR)/arm-control-cost.o : $(ARM_CONTROL_DIR)/arm-control-cost.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+
+$(OBJ_DIR)/arm-control-grad.o : $(ARM_CONTROL_DIR)/arm-control-grad.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+
+$(OBJ_DIR)/arm-control-pos-goal.o : $(ARM_CONTROL_DIR)/controlPenaltyMPC.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+	
+$(OBJ_DIR)/arm-control.o : $(ARM_CONTROL_DIR)/arm-control-pos-goal.cpp $(ARM_HEADERS)
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) -c -o $@ $<
 	
 
@@ -139,6 +167,30 @@ $(OBJ_DIR)/parameterBeliefPenaltyMPC.o : $(PARAM_BELIEF_DIR)/beliefPenaltyMPC.c
 $(OBJ_DIR)/parameter-belief.o : $(PARAM_BELIEF_DIR)/parameter-belief.cpp $(ARM_HEADERS)
 	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
 	
+
+# make parameter-controls
+PARAM_CONTROLS_DIR = parameter/controls
+PARAM_CONTROLS_FILES = parameter-controls logging parameter-controls-cost parameter-controls-grad controlsPenaltyMPC
+PARAM_CONTROLS_OBJS = $(PARAM_CONTROLS_FILES:%=$(OBJ_DIR)/%.o)
+
+parameter-controls-setup:
+	bash $(PARAM_SETUP_FILE) controls $(T)
+
+parameter-controls: | parameter-controls-setup $(PARAM_CONTROLS_OBJS)
+	$(CXX) $(BFLAGS) $(PARAM_CONTROLS_OBJS) -o $(BIN_DIR)/parameter-controls $(BOOST_FLAGS) $(PYTHON_FLAGS) $(LINKER_FLAGS)
+	
+$(OBJ_DIR)/parameter-controls-cost.o : $(PARAM_CONTROLS_DIR)/parameter-controls-cost.c
+	$(CC) $(C_FLAGS) -c -o $@ $^
+
+$(OBJ_DIR)/parameter-controls-grad.o : $(PARAM_CONTROLS_DIR)/parameter-controls-grad.c
+	$(CC) $(C_FLAGS) -c -o $@ $^
+
+$(OBJ_DIR)/controlsPenaltyMPC.o : $(PARAM_CONTROLS_DIR)/controlsPenaltyMPC.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+	
+$(OBJ_DIR)/parameter-controls.o : $(PARAM_CONTROLS_DIR)/parameter-controls.cpp $(ARM_HEADERS)
+	$(CXX) $(CPP_FLAGS) $(PYTHON_FLAGS) $(BFLAGS) -c -o $@ $<
+
 
 # make parameter-state
 PARAM_STATE_DIR = parameter/state

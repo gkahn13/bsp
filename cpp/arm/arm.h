@@ -7,6 +7,8 @@
 
 #include "util/logging.h"
 
+#include <iostream>
+
 #define TIMESTEPS 15
 #define DT 1
 #define X_DIM 6
@@ -55,12 +57,13 @@ SymmetricMatrix<X_DIM> Qint;
 SymmetricMatrix<X_DIM> QGoal;
 SymmetricMatrix<X_DIM> Sigma0;
 
-const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 1, alpha_goal_state = 1;
+const double alpha_belief = 10, alpha_final_belief = 10, alpha_control = 1, alpha_goal_state = 150;
 
 // callisto visualization stuff
 int cal_environment, cal_paths, cal_objects, cal_ellipse;
 int joint_group[6];
 float null_joint[6];
+std::ifstream ifs; 
 
 Matrix<X_DIM> dynfunc(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u, const Matrix<U_DIM>& q)
 {
@@ -241,17 +244,27 @@ Matrix<B_DIM> beliefDynamics(const Matrix<B_DIM>& b, const Matrix<U_DIM>& u) {
 	return g;
 }
 
-void initProblemParams()
+void initProblemParams(int iter)
 {
 	/*cam0[0] = -4;  cam0[1] = 11.5; cam0[2] = -23;
 	cam1[0] = 4;  cam1[1] = 11.5; cam1[2] = -23;*/
 
+	if(iter==0){
+		int temp = 0; 
+		
+	}
+	if(iter == 99){
+		ifs.close();
+	}
+
 	cam0[0] = -4;  cam0[1] = 30; cam0[2] = 0;
 	cam1[0] = 4;  cam1[1] = 30; cam1[2] = 0;
-
-	x0[0] = .5*M_PI; x0[1] = -1.5431281995798991; x0[2] = -0.047595544887998331;
-	x0[3] = 1.4423058659586809; x0[4] = 1.5334368368992011; x0[5] = -1.1431255223182604;
-
+	for(int i = 0; i<6; i++){
+		double temp =0; 
+		ifs>>temp;
+		
+		x0[i] = temp; 
+	}
 	SqrtSigma0 = identity<X_DIM>();
 
 	xGoal[0] = -1.4846950311433709; xGoal[1] = -2.2314918647565389; xGoal[2] = 1.4680882089972564;

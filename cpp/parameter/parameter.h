@@ -14,13 +14,21 @@
 #include <Python.h>
 //#include <pythonrun.h>
 #include <boost/python.hpp>
-#include <boost/filesystem.hpp>
+
+
+
+#ifdef LINUX
+	#define WORKING_DIR  "/home/laskeymd/Documents/bsp/cpp"
+#else 
+	#include <boost/filesystem.hpp>
+	#define WORKING_DIR boost::filesystem::current_path().normalize().string();
+#endif 
 
 namespace py = boost::python;
 
 // horizon is total lifetime of planning
 // timesteps is how far into future accounting for during MPC
-#define HORIZON 500
+#define HORIZON 300
 #define TIMESTEPS 15
 #define DT 0.1
 
@@ -37,6 +45,7 @@ namespace py = boost::python;
 #define Z_DIM 4
 #define Q_DIM 8
 #define R_DIM 4
+#define UT_DIM U_DIM*(T-1)
 
 #define S_DIM (((X_DIM+1)*X_DIM)/2)
 #define B_DIM (X_DIM+S_DIM)
@@ -384,13 +393,10 @@ Matrix<B_DIM> executeControlStep(Matrix<X_DIM>& x_t_real, const Matrix<B_DIM>& b
 	//std::cout<<"x_tp1"<<x_tp1<<"\n";
 	// correct the new state using Kalman gain and the observation
 
-	//std::cout << "Before update: " << std::endl;
-	//std::cout << ~x_tp1 << std::endl;
+	
 
 	Matrix<X_DIM> x_tp1_adj = x_tp1 + K*(z_tp1_real - obsfunc(x_tp1,r));
 
-	//std::cout << "After update: " << std::endl;
-	//std::cout<<"x_tp1: "<<~x_tp1_adj<<"\n";
 	//Matrix<X_DIM,X_DIM> W = ~(H*Sigma_tp1)*(((H*Sigma_tp1*~H) + N*R*~N) % (H*Sigma_tp1));
 	//Matrix<X_DIM,X_DIM> Sigma_tp1_adj = Sigma_tp1 - W;
 	Matrix<X_DIM,X_DIM> Sigma_tp1_adj = Sigma_tp1 - K*H*Sigma_tp1;
@@ -426,7 +432,7 @@ void pythonDisplayTrajectory(std::vector< Matrix<U_DIM> >& U, Matrix<X_DIM,X_DIM
 		}
 	}
 
-	std::string workingDir = boost::filesystem::current_path().normalize().string();
+	std::string workingDir = WORKING_DIR;
 
 	py::object main_module = py::import("__main__");
 	py::object main_namespace = main_module.attr("__dict__");
@@ -438,7 +444,6 @@ void pythonDisplayTrajectory(std::vector< Matrix<U_DIM> >& U, Matrix<X_DIM,X_DIM
 	plot_traj(Bvec, Uvec, B_DIM, X_DIM, U_DIM, T);
 
 }
-
 
 
 void pythonDisplayHistory(std::vector< Matrix<U_DIM> >& U,std::vector< Matrix<B_DIM> >& B, Matrix<X_DIM,X_DIM> SqrtSigma0, Matrix<X_DIM> x0, int H)
@@ -460,16 +465,68 @@ void pythonDisplayHistory(std::vector< Matrix<U_DIM> >& U,std::vector< Matrix<B_
 		}
 	}
 
-	std::string workingDir = boost::filesystem::current_path().normalize().string();
+
+	std::string workingDir = WORKING_DIR;
+
+	py::object main_module = py::import("__main__");
+	py::object main_namespace = main_module.attr("__dict__");
+	py::exec("import sys, os", main_namespace);
+	py::exec(py::str("sys.path.append('"+workingDir+"/parameter')"), main_namespace);
+
+	py::object plot_mod = py::import("plot_parameter");
+
+	py::object plot_traj = plot_mod.attr("plot_parameter_trajectory");
+
+	plot_traj(Bvec, Uvec, B_DIM, X_DIM, U_DIM, H);
+
+}
+
+
+void pythonPaperPlot(std::vector< Matrix<U_DIM> >& U0,std::vector< Matrix<B_DIM> >& B0, std::vector< Matrix<U_DIM> >& U1,std::vector< Matrix<B_DIM> >& B1, Matrix<X_DIM,X_DIM> SqrtSigma0, Matrix<X_DIM> x0, int H)
+{
+	
+	Py_Initialize();
+
+	py::list Bvec0;
+	for(int j=0; j < B_DIM; j++) {
+		for(int i=0; i < H; i++) {
+			Bvec0.append(B0[i][j]);
+		}
+	}
+
+	py::list Uvec0;
+	for(int j=0; j < U_DIM; j++) {
+		for(int i=0; i < H-1; i++) {
+			Uvec0.append(U0[i][j]);
+		}
+	}
+
+
+	py::list Bvec1;
+	for(int j=0; j < B_DIM; j++) {
+		for(int i=0; i < H; i++) {
+			Bvec1.append(B1[i][j]);
+		}
+	}
+
+	py::list Uvec1;
+	for(int j=0; j < U_DIM; j++) {
+		for(int i=0; i < H-1; i++) {
+			Uvec1.append(U1[i][j]);
+		}
+	}
+
+
+	std::string workingDir = WORKING_DIR;
 
 	py::object main_module = py::import("__main__");
 	py::object main_namespace = main_module.attr("__dict__");
 	py::exec("import sys, os", main_namespace);
 	py::exec(py::str("sys.path.append('"+workingDir+"/parameter')"), main_namespace);
 	py::object plot_mod = py::import("plot_parameter");
-	py::object plot_traj = plot_mod.attr("plot_parameter_trajectory");
+	py::object plot_paper = plot_mod.attr("plot_for_paper");
 
-	plot_traj(Bvec, Uvec, B_DIM, X_DIM, U_DIM, H);
+	plot_paper(Bvec0, Uvec0,Bvec1, Uvec1, B_DIM, X_DIM, U_DIM, H);
 
 }
 
@@ -495,8 +552,7 @@ void pythonPlotRobot(std::vector< Matrix<U_DIM> >& U, Matrix<X_DIM,X_DIM> SqrtSi
 			}
 		}
 
-		std::string workingDir = boost::filesystem::current_path().normalize().string();
-
+		std::string workingDir = WORKING_DIR;
 		py::object main_module = py::import("__main__");
 		py::object main_namespace = main_module.attr("__dict__");
 		py::exec("import sys, os", main_namespace);

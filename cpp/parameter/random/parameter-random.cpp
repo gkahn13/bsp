@@ -11,7 +11,7 @@
 
 #include <Python.h>
 #include <boost/python.hpp>
-#include <boost/filesystem.hpp>
+
 
 #include <boost/random.hpp>
 #include <boost/random/normal_distribution.hpp>
@@ -92,8 +92,8 @@ int main(int argc, char* argv[])
 	SqrtSigma0(7,7) = 0.5;
 	//Matrix<U_DIM> uinit = (xGoal.subMatrix<U_DIM,1>(0,0) - x0.subMatrix<U_DIM,1>(0,0))/(double)(T-1);
 	Matrix<U_DIM> uinit;
-	uinit[0] = 0;
-	uinit[1] = 0;
+	uinit[0] = -.07;
+	uinit[1] = .07;
 	
 	std::vector<Matrix<U_DIM> > U(T-1, uinit); 
 	std::vector<Matrix<B_DIM> > B(T);
@@ -107,7 +107,7 @@ int main(int argc, char* argv[])
 
 		for(int t = 0; t < T-1; ++t) {
 			for(int i = 0; i<U_DIM; i++){
-				U[t][i] = uRand(); 
+				U[t][i] = -U[t][i];
 			}
 		}
 

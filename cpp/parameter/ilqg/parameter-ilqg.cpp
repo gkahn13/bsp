@@ -8,7 +8,9 @@
 
 #include <Python.h>
 #include <boost/python.hpp>
-#include <boost/filesystem.hpp>
+
+#include <boost/random.hpp>
+#include <boost/random/normal_distribution.hpp>
 
 namespace py = boost::python;
 
@@ -17,18 +19,33 @@ SymmetricMatrix<U_DIM> Rint;
 SymmetricMatrix<X_DIM> Qint;
 SymmetricMatrix<X_DIM> QGoal, QGoalVariance, QintVariance;
 SymmetricMatrix<X_DIM> Sigma0;
+Matrix<X_DIM,X_DIM> SqrtSigma0;
+Matrix<X_DIM,X_DIM> SqrtTemp;
 
 Matrix<X_DIM> x0, xGoal;
 
+boost::mt19937 rng; 
+boost::uniform_real<> dist(-0.1, 0.1);
+
 inline Matrix<X_DIM> f(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u)
 {
-	return dynfunc(x, u);
+	return dynfunc(x, u,zeros<Q_DIM,1>());
 }
 
 // Observation model
 inline Matrix<Z_DIM> h(const Matrix<X_DIM>& x)
 {
-	return obsfunc(x);
+	return obsfunc(x,zeros<R_DIM,1>());
+}
+
+
+double uRand(){
+
+	
+  	boost::variate_generator<boost::mt19937&, 
+                           boost::uniform_real<> > random(rng, dist);
+	
+	return random();
 }
 
 // Jacobian df/dx(x,u)
@@ -76,24 +93,24 @@ inline Matrix<_zDim,_xDim> dhdx(Matrix<_zDim> (*h)(const Matrix<_xDim>&), const 
 inline SymmetricMatrix<X_DIM> varM(const Matrix<X_DIM>& x, const Matrix<U_DIM>& u)
 {
 	SymmetricMatrix<X_DIM> S = identity<X_DIM>();
-	S(0,0) = 0.25*0.001 + 0.0000000000001;
-	S(1,1) = 0.25*0.001 + 0.0000000000001;
-	S(2,2) = 1.0*0.001 + 0.0000000000001;
-	S(3,3) = 1.0*0.001 + 0.0000000000001;
-	S(4,4) = 0.0005;
-	S(5,5) = 0.0005;
-	S(6,6) = 0.0001;
-	S(7,7) = 0.0001;
+	S(0,0) = 0.01;
+	S(1,1) = 0.01;
+	S(2,2) = 0.01;
+	S(3,3) = 0.01;
+	S(4,4) = 1e-6;
+	S(5,5) = 1e-6;
+	S(6,6) = 1e-6;
+	S(7,7) = 1e-6;
 	return S;
 }
 
 inline SymmetricMatrix<Z_DIM> varN(const Matrix<X_DIM>& x)
 {
 	SymmetricMatrix<Z_DIM> S = identity<Z_DIM>();
-	S(0,0) = 0.0001;
-	S(1,1) = 0.0001;
-	S(2,2) = 0.00001;
-	S(3,3) = 0.00001;
+	S(0,0) = 1e-2;
+	S(1,1) = 1e-2;
+	S(2,2) = 1e-3;
+	S(3,3) = 1e-3;
 	return S;
 }
 
@@ -160,30 +177,33 @@ Matrix<X_DIM> SigmaDiag(const Matrix<X_DIM,X_DIM>& Sigma) {
 
 int main(int argc, char* argv[])
 {
-	double length1_est = .05,
-			length2_est = .05,
-			mass1_est = .105,
-			mass2_est = .089;
+	double length1_est = .3,
+			length2_est = .7,
+			mass1_est = .3,
+			mass2_est = .35;
 
 	// position, then velocity
-	x0[0] = -M_PI/2.0; x0[1] = -M_PI/2.0; x0[2] = 0; x0[3] = 0;
+	x0[0] = M_PI*0.5; x0[1] = M_PI*0.5; x0[2] = 0; x0[3] = 0;
 	// parameter start estimates (alphabetical, then numerical order)
 	x0[4] = 1/length1_est; x0[5] = 1/length2_est; x0[6] = 1/mass1_est; x0[7] = 1/mass2_est;
 
-	xGoal[0] = -M_PI/2.0; xGoal[1] = -M_PI/2.0; xGoal[2] = 0.0; xGoal[3] = 0.0;
-	xGoal[4] = 1/length1_est; xGoal[5] = 1/length2_est; xGoal[6] = 1/mass1_est; xGoal[7] = 1/mass2_est;
+
+	Matrix<X_DIM> x_real;
+	x_real[0] = M_PI*0.45; x_real[1] = M_PI*0.55; x_real[2] = -0.01; x_real[3] = 0.01;
+	x_real[4] = 1/dynamics::length1; x_real[5] = 1/dynamics::length2; x_real[6] = 1/dynamics::mass1; x_real[7] = 1/dynamics::mass2;
+
 
 
 	// init controls from start to goal -- straight line trajectory
 	// TODO: possibly switch to random controls
-	std::vector< Matrix<U_DIM> > uBar((T-1), (xGoal.subMatrix<U_DIM,1>(0,0) - x0.subMatrix<U_DIM,1>(0,0))/(double)(T-1));
+	std::vector< Matrix<U_DIM> > uBar((T-1), (x0.subMatrix<U_DIM,1>(0,0) - x0.subMatrix<U_DIM,1>(0,0))/(double)(T-1));
 
-	Rint = 1000.0*identity<U_DIM>();
+	Rint = 1e-3*identity<U_DIM>();
 
-	Qint(0,0) = 1.0;
-	Qint(1,1) = 1.0;
-	Qint(2,2) = 1.0;
-	Qint(3,3) = 1.0;
+	Qint(0,0) = 10.0;
+	Qint(1,1) = 10.0;
+	Qint(2,2) = 10.0;
+	Qint(3,3) = 10.0;
 	Qint(4,4) = 0.0;
 	Qint(5,5) = 0.0;
 	Qint(6,6) = 0.0;
@@ -193,15 +213,15 @@ int main(int argc, char* argv[])
 	QintVariance(1,1) = 0.0;
 	QintVariance(2,2) = 0.0;
 	QintVariance(3,3) = 0.0;
-	QintVariance(4,4) = 10000000.0;
-	QintVariance(5,5) = 10000000.0;
-	QintVariance(6,6) = 1000000.0;
-	QintVariance(7,7) = 1000000.0;
+	QintVariance(4,4) = 10.0;
+	QintVariance(5,5) = 10.0;
+	QintVariance(6,6) = 10.0;
+	QintVariance(7,7) = 10.0;
 
-	QGoal(0,0) = 1.0;
-	QGoal(1,1) = 1.0;
-	QGoal(2,2) = 1.0;
-	QGoal(3,3) = 1.0;
+	QGoal(0,0) = 0.0;
+	QGoal(1,1) = 0.0;
+	QGoal(2,2) = 0.0;
+	QGoal(3,3) = 0.0;
 	QGoal(4,4) = 0.0;
 	QGoal(5,5) = 0.0;
 	QGoal(6,6) = 0.0;
@@ -211,76 +231,132 @@ int main(int argc, char* argv[])
 	QGoalVariance(1,1) = 0.0;
 	QGoalVariance(2,2) = 0.0;
 	QGoalVariance(3,3) = 0.0;
-	QGoalVariance(4,4) = 10000000.0;
-	QGoalVariance(5,5) = 10000000.0;
-	QGoalVariance(6,6) = 1000000.0;
-	QGoalVariance(7,7) = 1000000.0;
+	QGoalVariance(4,4) = 0.0;
+	QGoalVariance(5,5) = 0.0;
+	QGoalVariance(6,6) = 0.0;
+	QGoalVariance(7,7) = 0.0;
 
 	std::vector< Matrix<U_DIM, X_DIM> > L;
 	std::vector< Matrix<X_DIM> > xBar;
 	std::vector< SymmetricMatrix<X_DIM> > SigmaBar;
 	
-	Sigma0(4,4) = 0.5;
-	Sigma0(5,5) = 0.5;
-	Sigma0(6,6) = 1.0;
-	Sigma0(7,7) = 1.0;
-
+	SqrtSigma0(0,0) = 0.1;
+	SqrtSigma0(1,1) = 0.1;
+	SqrtSigma0(2,2) = 0.05;
+	SqrtSigma0(3,3) = 0.05;
+	SqrtSigma0(4,4) = 0.5;
+	SqrtSigma0(5,5) = 0.5;
+	SqrtSigma0(6,6) = 0.5;
+	SqrtSigma0(7,7) = 0.5;
+	
+	for(int i=0; i < X_DIM; ++i) { Sigma0(i,i) = SqrtSigma0(i,i)*SqrtSigma0(i,i); } 
 	xBar.push_back(x0);
 	SigmaBar.push_back(Sigma0);
 
+	std::vector<Matrix<U_DIM> > HistoryU(HORIZON);
+	std::vector<Matrix<B_DIM> > HistoryB(HORIZON);
+
+	std::vector< Matrix<B_DIM> > Bpomdp(T);
+	std::vector< Matrix<B_DIM> > Bekf(T);
+	vec(xBar[0], sqrt(SigmaBar[0]), Bekf[0]);
 	std::vector< Matrix<B_DIM> > Binitial(T);
 	vec(x0, sqrt(Sigma0), Binitial[0]);
 	for (int t = 0; t < T - 1; ++t)
 	{
 		Binitial[t+1] = beliefDynamics(Binitial[t], uBar[t]);
 	}
-	double cost_initial = costfunc(Binitial, uBar);
 
-	std::cout << "solvePOMDP" << std::endl;
+	
 
-	solvePOMDP(linearizeDynamics, linearizeObservation, quadratizeFinalCost, quadratizeCost, xBar, SigmaBar, uBar, L);
 
-	std::cout << "POMDP solved" << std::endl;
+	for (int h=0; h<HORIZON; h++){
+		
+		double cost_initial = costfunc(Binitial, uBar);
+
+		//std::cout<<"STEP "<<h<<"\n"; 
+		solvePOMDP(linearizeDynamics, linearizeObservation, quadratizeFinalCost, quadratizeCost, xBar, SigmaBar, uBar, L);
+		
 
 	//for (size_t i = 0; i < xBar.size(); ++i) {
-	//	std::cout << ~(xBar[i]);
+	//	//std::cout << ~(xBar[i]);
 	//}
+		for(int t = 0; t < T; ++t) {
+			vec(xBar[t], sqrt(SigmaBar[t]), Bpomdp[t]);
+		}
 
-	std::vector< Matrix<B_DIM> > Bpomdp(T);
-	for(int t = 0; t < T; ++t) {
-		vec(xBar[t], sqrt(SigmaBar[t]), Bpomdp[t]);
+		
+		
+
+		
+		if(uBar[0][0]+uBar[0][1] < 1e-5){
+			for(int i = 0; i<U_DIM; i++){
+				uBar[0][i] = uRand(); 
+			}
+		}
+		HistoryU[h] = uBar[0];
+		HistoryB[h] = Bekf[0];
+		Bekf[0] = executeControlStep(x_real, Bekf[0], uBar[0]);
+	
+		//std::cout<<"U "<<~uBar[0]<<"\n";
+		//std::cout<<"X "<<~xBar[0]<<"\n";
+		for (int t = 0; t < T - 1; ++t)
+		{
+			Bekf[t+1] = beliefDynamics(Bekf[t], uBar[t]);
+		}
+
+
+
+		double cost_pomdp = costfunc(Bpomdp, uBar);
+		double cost_ekf = costfunc(Bekf, uBar);
+
+		//std::cout << "cost initial: " << cost_initial << std::endl;
+ 	
+		//std::cout << "cost pomdp: " << cost_pomdp << std::endl;	 	
+		//std::cout << "cost ekf: " << cost_ekf << std::endl;
+		//Update XBar, SigmaBar, uBar
+		xBar.clear(); 
+		SigmaBar.clear(); 
+
+		unVec(Bekf[0], x0, SqrtSigma0);
+
+		xBar.push_back(x0); 
+
+		for(int i=0; i < X_DIM; ++i) { Sigma0(i,i) = SqrtSigma0(i,i)*SqrtSigma0(i,i); } 
+
+		SigmaBar.push_back(Sigma0); 
+		//#define SPEED_TEST
+		#ifdef SPEED_TEST
+		for(int t = 0; t < T-2; ++t) {
+			uBar[t] = zeros<U_DIM,1>();
+		}
+		#else
+		for(int t = 0; t < T-2; ++t) {
+		
+			uBar[t] = uBar[t+1];
+		}
+		#endif
+
+
 	}
+	
 
-	std::vector< Matrix<B_DIM> > Bekf(T);
-	vec(xBar[0], sqrt(SigmaBar[0]), Bekf[0]);
-	for (int t = 0; t < T - 1; ++t)
-	{
-		Bekf[t+1] = beliefDynamics(Bekf[t], uBar[t]);
-	}
-
-	double cost_pomdp = costfunc(Bpomdp, uBar);
-	double cost_ekf = costfunc(Bekf, uBar);
-
-	std::cout << "cost initial: " << cost_initial << std::endl;
-	std::cout << "cost pomdp: " << cost_pomdp << std::endl;
-	std::cout << "cost ekf: " << cost_ekf << std::endl;
-
+	pythonDisplayHistory(HistoryU,HistoryB, SqrtSigma0, x0, HORIZON);
 	Matrix<X_DIM> xpomdp, xekf;
 	Matrix<X_DIM,X_DIM> SqrtSigmapomdp, SqrtSigmaekf;
 	for(int t = 0; t < T; ++t) {
 		unVec(Bpomdp[t], xpomdp, SqrtSigmapomdp);
 		unVec(Bekf[t], xekf, SqrtSigmaekf);
-		//std::cout << "t: " << t << " xpomdp" << std::endl;
-		//std::cout << ~xpomdp;
-		//std::cout << "t: " << t << " xekf" << std::endl;
-		//std::cout << ~xekf << std::endl;
-		std::cout << "t: " << t << " Sigmapomdp" << std::endl;
-		std::cout << ~SigmaDiag(SqrtSigmapomdp);
-		std::cout << "t: " << t << " Sigmaekf" << std::endl;
-		std::cout << ~SigmaDiag(SqrtSigmaekf) << std::endl << std::endl;
+		////std::cout << "t: " << t << " xpomdp" << std::endl;
+		////std::cout << ~xpomdp;
+		////std::cout << "t: " << t << " xekf" << std::endl;
+		////std::cout << ~xekf << std::endl;
+		//std::cout << "t: " << t << " Sigmapomdp" << std::endl;
+		//std::cout << ~SigmaDiag(SqrtSigmapomdp);
+		//std::cout << "t: " << t << " Sigmaekf" << std::endl;
+		//std::cout << ~SigmaDiag(SqrtSigmaekf) << std::endl << std::endl;
 	}
 
-#define CPP_PLOT
+
 #ifdef CPP_PLOT
 
 	Py_Initialize();

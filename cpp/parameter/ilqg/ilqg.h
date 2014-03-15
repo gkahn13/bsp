@@ -8,7 +8,7 @@
 
 #include <Python.h>
 #include <boost/python.hpp>
-#include <boost/filesystem.hpp>
+
 
 namespace py = boost::python;
 
@@ -211,7 +211,7 @@ inline void controlPolicy(void (*linearizeDynamics)(const Matrix<_xDim>&, const 
 	Matrix<1,_sDim> pT;
 	double q;
 
-	quadratizeCost(xBar, SigmaBar, uBar, q, Q, R, P, qT, rT, pT, COMPUTE_Q|COMPUTE_R|COMPUTE_P|COMPUTE_qT|COMPUTE_rT|COMPUTE_pT);
+	quadratizeCost(xBar, SigmaBar, uBar, q, Q, R, P, qT, rT, pT, COMPUTE_Q|COMPUTE_R|COMPUTE_P|COMPUTE_rT|COMPUTE_pT);
 
 	Matrix<_xDim, _xDim> SA = S*A;
 
@@ -249,7 +249,7 @@ inline void backwardIteration(void (*linearizeDynamics)(const Matrix<_xDim>&, co
 	Matrix<1,_sDim> tT;
 	double s;
 
-	quadratizeFinalCost(xBar.back(), SigmaBar.back(), s, S, sT, tT, COMPUTE_S|COMPUTE_sT|COMPUTE_tT);
+	quadratizeFinalCost(xBar.back(), SigmaBar.back(), s, S, sT, tT, COMPUTE_S|COMPUTE_tT);
 	gradient = 0.0;
 
 	for (int t = uBar.size() - 1; t != -1; --t) {
@@ -282,7 +282,7 @@ inline void expectedCost(void (*linearizeDynamics)(const Matrix<_xDim>&, const M
 	if (retcode) {
 		s = q + s; // + scalar(vecTh(S)*vectorize(WBar));
 	} else {
-		std::cout << "retcode in expectedCost is infinity!" << std::endl;
+		std::cout << "retcode in expectedCost is infinity!" << "\n";
 		s = infCost;
 	}
 
@@ -328,7 +328,7 @@ inline void integrateControlPolicy(void (*linearizeDynamics)(const Matrix<_xDim>
 
 	size_t pathLen = uBar.size();
 
-	int Umax = 1, Umin = -1;
+	double Umax = 0.1, Umin = -0.1;
 
 	xNext[0] = xBar[0];
 	SigmaNext[0] = SigmaBar0;
@@ -336,7 +336,12 @@ inline void integrateControlPolicy(void (*linearizeDynamics)(const Matrix<_xDim>
 		uNext[t] = eps*l[t] + L[t]*(xNext[t] - xBar[t]) + uBar[t];
 
 		for(size_t i = 0; i < _uDim; ++i) {
-			uNext[t][i] = ((Umax-Umin)/2)*std::tanh(uNext[t][i]) + ((Umax+Umin)/2);
+			if(uNext[t][i] < -0.1){
+				uNext[t][i] = -0.1;
+			}
+			else if(uNext[t][i] > 0.1){
+				uNext[t][i] = 0.1;
+			}
 		}
 
 		linearizeDynamics(xNext[t], uNext[t], xNext[t+1], A, B, M, COMPUTE_c|COMPUTE_A|COMPUTE_M);
@@ -392,8 +397,9 @@ inline void forwardIteration(void (*linearizeDynamics)(const Matrix<_xDim>&, con
 	// Compute expected cost for eps = 0 (is always lower than current bestCost)
 	bestCost = computeExpectedCost(linearizeDynamics, quadratizeFinalCost, quadratizeCost, L,
 		xBar, SigmaBar, uBar, WBar);
+	//std::cout<<"BEST COST "<<bestCost<<"\n";
 	bestEps = 0.0;
-
+	std::cout<<"EPS "<<eps<<"\n"; 
 	while (eps > 0.0 && (!middleFound || !rightFound)) {
 		// Compute cost at current eps
 		integrateControlPolicy(linearizeDynamics, linearizeObservation,
@@ -403,11 +409,12 @@ inline void forwardIteration(void (*linearizeDynamics)(const Matrix<_xDim>&, con
 		//std::cout << "#";
 
 		//for (size_t i = 0; i < xBar.size(); ++i) {
-		//	std::cout << "xBar: " << i << " " << xBar[i][0] << " " << xBar[i][1] << std::endl;
+		//	std::cout << "xBar: " << i << " " << xBar[i][0] << " " << xBar[i][1] << "\n";
 		//}
 
 		cost = computeExpectedCost(linearizeDynamics, quadratizeFinalCost, quadratizeCost, L, xNext, SigmaNext, uNext, WNext);
-
+			//std::cout<<"COST "<<cost<<"\n";
+			
 		if (cost < bestCost && abs(cost) < 1.0 / DBL_EPSILON) {
 			if (eps == 1.0) {
 				bestCost = cost;
@@ -437,7 +444,7 @@ inline void forwardIteration(void (*linearizeDynamics)(const Matrix<_xDim>&, con
 	if (eps == 0.0) {
 		return;
 	}
-	//std::cout << std::endl;
+	//std::cout << "\n";
 
 	// Approximate minimum by taking parabola through three points.
 	Matrix<3> costs; costs[0] = leftCost; costs[1] = bestCost; costs[2] = rightCost;
@@ -550,7 +557,7 @@ inline void solvePOMDP(void (*linearizeDynamics)(const Matrix<_xDim>&, const Mat
 
 	// compute expected cost 
 	double initialCost = computeExpectedCost(linearizeDynamics, quadratizeFinalCost, quadratizeCost, L, xBar, SigmaBar, uBar, WBar);
-	std::cout << "Cost to begin : " << initialCost << std::endl;
+	std::cout << "Cost to begin : " << initialCost << "\n";
 
 //#define PLOT
 #ifdef PLOT
@@ -560,7 +567,7 @@ inline void solvePOMDP(void (*linearizeDynamics)(const Matrix<_xDim>&, const Mat
 	size_t iter = 1;
 
 	// TODO: can't plan forever, needs MPC, so have max iterations
-	while(!terminate)
+	while(!terminate && iter<50)
 	{
 		backwardIteration(linearizeDynamics, linearizeObservation, quadratizeFinalCost, quadratizeCost, xBar, SigmaBar, uBar, L, l, gradient);
 		//double prevCost = bestCost;
@@ -575,7 +582,7 @@ inline void solvePOMDP(void (*linearizeDynamics)(const Matrix<_xDim>&, const Mat
 		terminate = (eps*eps*absl / absu < 1e-06);
 		//terminate = (abs((prevCost - bestCost) / bestCost) < 1e-06);
 
-		std::cout << "Iter: " << iter << " Grad: " << gradient << " RelErr: " << eps*eps*absl / absu << " Eps: " << eps << " Cost: " << bestCost << std::endl;
+		std::cout << "Iter: " << iter << " Grad: " << gradient << " RelErr: " << eps*eps*absl / absu << " Eps: " << eps << " Cost: " << bestCost << "\n";
 
 #ifdef PLOT
 			std::vector< Matrix<B_DIM> > B(T);

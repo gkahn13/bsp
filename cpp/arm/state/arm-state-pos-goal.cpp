@@ -5,7 +5,7 @@
 #include "util/Timer.h"
 
 extern "C" {
-#include "arm-state-pos-goal-MPC.h"
+#include "statePenaltyMPC.h"
 statePenaltyMPC_FLOAT **Q, **f, **lb, **ub, **z;
 statePenaltyMPC_FLOAT *A, *b, *e;
 #include "arm-state-casadi.h"
@@ -237,6 +237,21 @@ void setupStateVars(statePenaltyMPC_params& problem, statePenaltyMPC_output& out
 #define BOOST_PP_LOCAL_LIMITS (TIMESTEPS, TIMESTEPS)
 #include BOOST_PP_LOCAL_ITERATE()
 
+	for(int t=0; t < T-1; ++t) {
+		for(int i=0; i < (X_DIM+U_DIM); ++i) { Q[t][i] = INFTY; }
+		for(int i=0; i < (X_DIM+U_DIM); ++i) { f[t][i] = INFTY; }
+		for(int i=0; i < (X_DIM+U_DIM); ++i) { lb[t][i] = INFTY; }
+		for(int i=0; i < (X_DIM+U_DIM); ++i) { ub[t][i] = INFTY; }
+	}
+
+	for(int i=0; i < (X_DIM+2*G_DIM); ++i) { Q[T-1][i] = INFTY; }
+	for(int i=0; i < (X_DIM+2*G_DIM); ++i) { f[T-1][i] = INFTY; }
+	for(int i=0; i < (X_DIM+2*G_DIM); ++i) { lb[T-1][i] = INFTY; }
+	for(int i=0; i < (X_DIM); ++i) { ub[T-1][i] = INFTY; }
+
+	for(int i=0; i < ((2*G_DIM)*(X_DIM+2*G_DIM)); ++i) { A[i] = INFTY; }
+	for(int i=0; i < (2*G_DIM); ++i) { b[i] = INFTY; }
+
 }
 
 void cleanupStateMPCVars()
@@ -251,41 +266,66 @@ void cleanupStateMPCVars()
 // TODO: Check if all inputs are valid, Q, f, lb, ub, A, b at last time step
 bool isValidInputs()
 {
+
+	for(int t = 0; t < T-1; ++t) {
+		for(int i=0; i < (X_DIM+U_DIM); ++i) { if (Q[t][i] > INFTY/2) { return false; } }
+		for(int i=0; i < (X_DIM+U_DIM); ++i) { if (f[t][i] > INFTY/2) { return false; } }
+		for(int i=0; i < (X_DIM+U_DIM); ++i) { if (lb[t][i] > INFTY/2) { return false; } }
+		for(int i=0; i < (X_DIM+U_DIM); ++i) { if (ub[t][i] > INFTY/2) { return false; } }
+	}
+	for(int i=0; i < (X_DIM+2*G_DIM); ++i) { if (Q[T-1][i] > INFTY/2) { return false; } }
+	for(int i=0; i < (X_DIM+2*G_DIM); ++i) { if (f[T-1][i] > INFTY/2) { return false; } }
+	for(int i=0; i < (X_DIM+2*G_DIM); ++i) { if (lb[T-1][i] > INFTY/2) { return false; } }
+	for(int i=0; i < (X_DIM); ++i) { if (ub[T-1][i] > INFTY/2) { return false; } }
+
+	for(int i=0; i < ((2*G_DIM)*(X_DIM+2*G_DIM)); ++i) { if (A[i] > INFTY/2) { return false; } }
+	for(int i=0; i < (2*G_DIM); ++i) { if (b[i] > INFTY/2) { return false; } }
+
+
 	// check if Q, f, lb, ub, e are valid!
 	for(int t = 0; t < T-1; ++t)
 	{
 		//for(int i = 0; i < 144; ++i) {
 		//	std::cout << Q[t][i] << " ";
 		//}
-		for(int i = 0; i < 12; ++i) {
+		std::cout << "lb ";
+		for(int i = 0; i < (X_DIM+U_DIM); ++i) {
 			std::cout << lb[t][i] << " ";
 		}
 		std::cout << std::endl;
-		for(int i = 0; i < 12; ++i) {
+
+		std::cout << "ub ";
+		for(int i = 0; i < (X_DIM+U_DIM); ++i) {
 			std::cout << ub[t][i] << " ";
 		}
 		std::cout << "\n\n";
 	}
-	for(int i = 0; i < 12; ++i) {
+	std::cout << "lb ";
+	for(int i = 0; i < (X_DIM+2*G_DIM); ++i) {
 		std::cout << lb[T-1][i] << " ";
 	}
 	std::cout << std::endl;
-	for(int i = 0; i < 6; ++i) {
+
+	std::cout << "ub ";
+	for(int i = 0; i < (X_DIM); ++i) {
 		std::cout << ub[T-1][i] << " ";
 	}
 	std::cout << "\n\n";
 
-	for(int i = 0; i < 72; ++i) {
+	std::cout << "A ";
+	for(int i = 0; i < ((2*G_DIM)*(X_DIM+2*G_DIM)); ++i) {
 		std::cout << A[i] << " ";
 	}
 	std::cout << "\n\n";
-	for(int i = 0; i < 6; ++i) {
+
+	std::cout << "b ";
+	for(int i = 0; i < (2*G_DIM); ++i) {
 		std::cout << b[i] << "  ";
 	}
 	std::cout << "\n\n";
 
-	int magic;
-	std::cin >> magic;
+//	int magic;
+//	std::cin >> magic;
 
 	return true;
 }
@@ -366,7 +406,8 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 				QMat(i,i) = (val < 0) ? 0 : val;
 			}
 			
-			fillColMajor(Q[t], QMat);
+			for(int i=0; i < (X_DIM+U_DIM); ++i) { Q[t][i] = QMat(i,i); }
+			//fillColMajor(Q[t], QMat);
 
 			zbar.insert(0,0,xt);
 			zbar.insert(X_DIM,0,ut);
@@ -390,7 +431,8 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			QfMat(i,i) = (val < 0) ? 0 : val;
 		}
 
-		fillColMajor(Q[T-1], QfMat);
+		for(int i=0; i < (X_DIM+2*G_DIM); ++i) { Q[T-1][i] = QfMat(i,i); }
+		//fillColMajor(Q[T-1], QfMat);
 
 		for(int i = 0; i < X_DIM; ++i) {
 			hessian_constant += QfMat(i,i)*xT[i]*xT[i];
@@ -470,11 +512,13 @@ bool minimizeMeritFunction(std::vector< Matrix<X_DIM> >& X, std::vector< Matrix<
 			// xGoal upper bound
 			for(int i = 0; i < X_DIM; ++i) { ub[T-1][index++] = MIN(xMax[i], xT[i] + Xeps); }
 			
+
 			// Verify problem inputs
-			//if (!isValidInputs()) {
-			//	std::cout << "Inputs are not valid!" << std::endl;
-			//	exit(-1);
-			//}
+//			if (!isValidInputs()) {
+//				std::cout << "Inputs are not valid!" << std::endl;
+//				exit(-1);
+//			}
+
 
 			//std::cerr << "PAUSING INSIDE MINIMIZE MERIT FUNCTION FOR INPUT VERIFICATION" << std::endl;
 			//int num;
@@ -688,34 +732,34 @@ bool testInitializationFeasibility(const std::vector<Matrix<X_DIM> >& X, const s
 }
 
 int main(int argc, char* argv[])
-{
-	
-	initProblemParams();
+{	ifs.open("random-start.txt",std::ifstream::in);
+	for(int i=0; i<100; i++){
+		initProblemParams(0);
 
-	LOG_INFO("init problem params");
+		LOG_INFO("init problem params");
+		//std::cout<<~x0<<"\n";
+		Matrix<U_DIM> uinit = (xGoal - x0) / (double)((T-1)*DT);
+		std::vector<Matrix<U_DIM> > U(T-1, uinit);
 
-	Matrix<U_DIM> uinit = (xGoal - x0) / (double)((T-1)*DT);
-	std::vector<Matrix<U_DIM> > U(T-1, uinit);
+		std::vector<Matrix<X_DIM> > X(T);
+		X[0] = x0;
 
-	std::vector<Matrix<X_DIM> > X(T);
-	X[0] = x0;
-
-	for (size_t t = 0; t < T-1; ++t) {
-		X[t+1] = dynfunc(X[t], U[t], zeros<Q_DIM,1>());
+		for (size_t t = 0; t < T-1; ++t) {
+			X[t+1] = dynfunc(X[t], U[t], zeros<Q_DIM,1>());
 		//std::cout << ~X[t] << std::endl;
-	}
+		}
 
-	bool feasible = testInitializationFeasibility(X, U);
-	if (!feasible) {
-		LOG_ERROR("Infeasible trajectory initialization detected");
-		exit(-1);
-	}
+		bool feasible = testInitializationFeasibility(X, U);
+		if (!feasible) {
+			LOG_ERROR("Infeasible trajectory initialization detected");
+			exit(-1);
+		}
 
-	double initTrajCost = computeCost(X, U);
-	double casadiInitCost = casadiComputeCost(X, U);
+		double initTrajCost = computeCost(X, U);
+		double casadiInitCost = casadiComputeCost(X, U);
 
-	LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
-	LOG_INFO("Initial casadi cost: %4.10f", casadiInitCost);
+		LOG_INFO("Initial trajectory cost: %4.10f", initTrajCost);
+		LOG_INFO("Initial casadi cost: %4.10f", casadiInitCost);
 
 	//readTrajectoryFromFile("data\\trajectory.txt", X);
 
@@ -724,31 +768,32 @@ int main(int argc, char* argv[])
 
 	//displayStateTrajectory(X, U, false);
 
-	statePenaltyMPC_params problem;
-	statePenaltyMPC_output output;
-	statePenaltyMPC_info info;
+		statePenaltyMPC_params problem;
+		statePenaltyMPC_output output;
+		statePenaltyMPC_info info;
 
-	setupStateVars(problem, output);
-	double cost;
-	Matrix<XU_DIM> G;
+		setupStateVars(problem, output);
+		double cost;
+		Matrix<XU_DIM> G;
 
-	util::Timer solveTimer;
-	Timer_tic(&solveTimer);
+		util::Timer solveTimer;
+		Timer_tic(&solveTimer);
 
-	cost = statePenaltyCollocation(X, U, problem, output, info);
+		cost = statePenaltyCollocation(X, U, problem, output, info);
 
-	double solvetime = util::Timer_toc(&solveTimer);
-
-	LOG_INFO("Optimized cost: %4.10f", cost);
-	LOG_INFO("Actual cost: %4.10f", computeCost(X, U));
-	LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
-
+		double solvetime = util::Timer_toc(&solveTimer);
+		double solved_cost = computeCost(X,U); 
+		LOG_INFO("Optimized cost: %4.10f", cost);
+		LOG_INFO("Actual cost: %4.10f", computeCost(X, U));
+		LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
+		std::cout<<i<<" , "<<solvetime<<" , "<<solved_cost/initTrajCost<<'\n'; 
+	}
 	cleanupStateMPCVars();
 
 	//double finalLQGMPcost = computeLQGMPcost(X, U);
 	//LOG_DEBUG("Final trajectory LQG-MP cost: %4.10f",finalLQGMPcost);
 
-	saveOptimizedTrajectory(U);
+	//saveOptimizedTrajectory(U);
 	//readOptimizedTrajectory(U);
 	
 	/*
@@ -757,10 +802,6 @@ int main(int argc, char* argv[])
 		B[t+1] = beliefDynamics(B[t], U[t]);
 	}
 	*/
-	
-	LOG_INFO("Finished");
-	int k;
-	std::cin >> k;
 
 	return 0;
 }

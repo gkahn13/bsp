@@ -545,7 +545,7 @@ double beliefPenaltyCollocation(std::vector< Matrix<B_DIM> >& B, std::vector< Ma
 	
 	    success = success && (cntviol < cfg::cnt_tolerance);
 	    
-		LOG_DEBUG("Constraint violations: %2.10f",cntviol);
+		LOG_INFO("Constraint violations: %2.10f",cntviol);
 
 	    if (!success) {
 	        penalty_increases++;
@@ -590,9 +590,11 @@ bool testInitializationFeasibility(const std::vector<Matrix<B_DIM> >& B, const s
 }
 
 int main(int argc, char* argv[])
-{
-	
-	initProblemParams();
+{	ifs.open("random-start.txt",std::ifstream::in);
+
+	for(int i=0; i<100; i++){
+	initProblemParams(i);
+
 
 	LOG_INFO("init problem params");
 
@@ -646,15 +648,16 @@ int main(int argc, char* argv[])
 		bt = beliefDynamics(bt, U[t]);
 		B[t+1] = bt;//std::cout << ~B[t] << std::endl;
 	}
-
+	double solved_cost = computeCost(B,U); 
 	LOG_INFO("Optimized cost: %4.10f", cost);
 	LOG_INFO("Actual cost: %4.10f", computeCost(B,U));
-	LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
-	
+	//LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
+	std::cout<<i<<" , "<<solvetime<<" , "<<solved_cost/initTrajCost<<'\n'; 
+	}
 	cleanupBeliefMPCVars();
 	
-	double finalLQGMPcost = computeLQGMPcost(X, U);
-	LOG_DEBUG("Final trajectory LQG-MP cost: %4.10f",finalLQGMPcost);
+	//double finalLQGMPcost = computeLQGMPcost(X, U);
+	//LOG_DEBUG("Final trajectory LQG-MP cost: %4.10f",finalLQGMPcost);
 
 	//saveOptimizedTrajectory(U);
 	//readOptimizedTrajectory(U);
@@ -665,12 +668,12 @@ int main(int argc, char* argv[])
 		B[t+1] = beliefDynamics(B[t], U[t]);
 	}
 	*/
-
+	/*
 	X.clear();
 	for(int t = 0; t < T; ++t) {
 		X.push_back(B[t].subMatrix<X_DIM,1>(0,0));
 	}
-
+	*/
 	int k;
 	std::cin >> k;
 

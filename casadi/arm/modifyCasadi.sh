@@ -10,23 +10,23 @@ EXAMPLE_NAME=$3
 EXAMPLE_TYPE=$4
 
 # replace #include<math.h> with our own header file
-sed -i .bk "s/<math.h>/\"${EXAMPLE_NAME}-${EXAMPLE_TYPE}-casadi.h\"/" $SRC_C
+sed -i "s/<math.h>/\"${EXAMPLE_NAME}-${EXAMPLE_TYPE}-casadi.h\"/" $SRC_C
 
 # replace sparsity names so no conflicts between files
-sed -i .bk "s/s[0-9]/&${CASADI_TYPE}/" $SRC_C
+sed -i "s/s[0-9]/&${CASADI_TYPE}/" $SRC_C
 
 # delete these two functions
-sed -i .bk '/sq(d x)/d' $SRC_C
-sed -i .bk '/sign(d x)/d' $SRC_C
+sed -i '/sq(d x)/d' $SRC_C
+sed -i '/sign(d x)/d' $SRC_C
 
 # replace function names
-sed -i .bk "s/init/init${CASADI_TYPE}/" $SRC_C
-sed -i .bk "s/getSparsity/get${CASADI_TYPE}Sparsity/" $SRC_C
-sed -i .bk "s/evaluate/evaluate${CASADI_TYPE}/" $SRC_C
+sed -i "s/init/init${CASADI_TYPE}/" $SRC_C
+sed -i "s/getSparsity/get${CASADI_TYPE}Sparsity/" $SRC_C
+sed -i "s/evaluate/evaluate${CASADI_TYPE}/" $SRC_C
 
 # delete main at end
 START_TAIL_CUT=$(grep -n "stdio.h" $SRC_C | cut -f1 -d: | head -1)
-sed -i .bk ${START_TAIL_CUT}',$d' $SRC_C
+sed -i ${START_TAIL_CUT}',$d' $SRC_C
 
 
 rm -f *.bk

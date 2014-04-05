@@ -38,20 +38,12 @@ def plot_point_trajectory(B, U, waypoints, landmarks, max_range, alpha_obs, xDim
     landmarks = np.array(landmarks)
     landmarks = landmarks.reshape(2, numLandmarks)
     
-    extent = [-10,80,-25,30]
+    extent = [-10,80,-15,30]
     plt.axis(extent)
     #plt.axis('equal')
     
-    #smooth_trajectory(B, U, cDim, uDim, T, DT)
-    
     #plot_domain(landmarks, max_range, alpha_obs, extent)
-    plot_landmarks(B, landmarks, max_range, bDim, xDim, T)
-    
-    # plot mean of trajectory
-    plot_mean(B[0:3,:], U, DT, interp=True)
-    
-    plt.plot(landmarks[0,:], landmarks[1,:], ls='None', color='red', marker='x', markersize = 5.0)
-    plt.plot(waypoints[0,:], waypoints[1,:], ls='None', color='purple', marker='s', markersize=8.0)
+    #plot_landmarks(B, landmarks, max_range, bDim, xDim, T)
 
     Xt = ml.zeros([xDim,T])
 
@@ -65,6 +57,12 @@ def plot_point_trajectory(B, U, waypoints, landmarks, max_range, alpha_obs, xDim
     Sigma_T = SqrtSigma_T*SqrtSigma_T
 
     plot_cov(Xt[0:2,T-1], Sigma_T[0:2,0:2])
+    
+    # plot mean of trajectory
+    plot_mean(B[0:3,:], U, DT, interp=True)
+    
+    plt.plot(landmarks[0,:], landmarks[1,:], ls='None', color='red', marker='x', markersize = 10.0, mew=3.0)
+    plt.plot(waypoints[0,:], waypoints[1,:], ls='None', color='green', marker='s', markersize=8.0)
     
     plt.show(block=False)
     plt.pause(.05)
@@ -165,18 +163,18 @@ def plot_mean(X, U, DT, interp=False):
     if interp:
         Xsmooth = interpolate_polyline(X[0:2,:].T, 500).T
         
-        plt.plot(Xsmooth[0,:], Xsmooth[1,:], color='red')
-        plt.plot(X[0,:],X[1,:],ls='None',marker='s',markerfacecolor='yellow')
+        plt.plot(Xsmooth[0,:], Xsmooth[1,:], color='magenta')
+        plt.plot(X[0,:],X[1,:],ls='None',marker='s',markerfacecolor='blue')
     else:
-        plt.plot(X[0,:],X[1,:],color='red',marker='s',markerfacecolor='yellow')
+        plt.plot(X[0,:],X[1,:],color='red',marker='s',markerfacecolor='blue')
     
     
-    plt.plot(X[0,0],X[1,0],ls='None',marker='s',markersize=10.0)
-    plt.plot(X[0,-1],X[1,-1],ls='None',marker='s',markersize=10.0)
+    #plt.plot(X[0,0],X[1,0],ls='None',marker='s',markersize=10.0)
+    #plt.plot(X[0,-1],X[1,-1],ls='None',marker='s',markersize=10.0)
 
     
 
-def plot_cov(mu, sigma, plotType = 'y-', alpha=1):
+def plot_cov(mu, sigma, plotType = 'b-', alpha=1):
     mu = np.asarray(mu)
     sigma = np.asarray(sigma)
 

@@ -7,6 +7,7 @@ import numpy as np
 
 import matplotlib
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FuncFormatter
 
 attrs = ['sum_cov_trace','waypoint_distance_error','solve_time','initialization_time']
 
@@ -75,11 +76,11 @@ class File:
         if self.slam_type == 'slam-ilqg':
             return 'iLQG'
         if self.slam_type == 'slam-belief':
-            return 'Belief'
+            return 'Full Coll.'
         if self.slam_type == 'slam-state':
-            return 'State'
+            return 'Partial Coll.'
         if self.slam_type == 'slam-control':
-            return 'Control'
+            return 'Shooting'
         
         
             
@@ -201,7 +202,7 @@ def process_data():
     
     print('############ Absolute statistics #########')
 
-    for fg in [ilqgFG, beliefFG, stateFG, controlFG]:
+    for fg in [controlFG, stateFG, beliefFG, ilqgFG]:
     	time_abs_avgs, time_abs_sds = [], []
         dist_err_avgs, dist_err_sds = [], []
         for num_landmarks in landmarks:
@@ -222,7 +223,9 @@ def process_data():
                 print('Waypoint distance error: {0} +- {1} meters'.format(dist_err_avg, dist_err_sd))
                 print('')
         
-        time_abs_ax.errorbar(landmarks[:len(time_abs_avgs)], time_abs_avgs, yerr=time_abs_sds, label=str(fg))
+        (_, caps, errlines) = time_abs_ax.errorbar(landmarks[:len(time_abs_avgs)], time_abs_avgs, linewidth=3.0, yerr=time_abs_sds, elinewidth=1.0, capsize=6.0, label=str(fg))
+        #for errline in errlines:
+        #    errline.set_linestyle('dashed')
         dist_err_abs_ax.errorbar(landmarks[:len(dist_err_avgs)], dist_err_avgs, yerr=dist_err_sds, label=str(fg))
     print('\n')
 
@@ -237,13 +240,13 @@ def process_data():
     
     state_comp_times = []
     control_comp_times = []
-    for fg in [ilqgFG, beliefFG, stateFG, controlFG]:
+    for fg in [controlFG, stateFG, beliefFG, ilqgFG]:
         cost_comp_avgs, cost_comp_sds = [], []
         time_comp_avgs, time_comp_sds = [], []
         dist_err_comp_avgs, dist_err_comp_sds = [], []
         for num_landmarks in landmarks:
-            cost_comp_avg, cost_comp_sd = fg.compareCost(trajFG, num_landmarks)
-            time_comp_avg, time_comp_sd = fg.compareTime(trajFG, num_landmarks)
+            cost_comp_avg, cost_comp_sd = trajFG.compareCost(fg, num_landmarks) # fg.compareCost(trajFG, num_landmarks)
+            time_comp_avg, time_comp_sd = trajFG.compareTime(fg, num_landmarks) #fg.compareTime(trajFG, num_landmarks)
             dist_err_comp_avg, dist_err_comp_sd = fg.compareWaypointError(trajFG, num_landmarks)
             
             if cost_comp_avg is not None:
@@ -261,7 +264,9 @@ def process_data():
                 print('Waypoint error: {0} +- {1}'.format(dist_err_comp_avg, dist_err_comp_sd))
                 print('')
             
-        cost_ax.errorbar(landmarks[:len(cost_comp_avgs)], cost_comp_avgs, yerr=cost_comp_sds, elinewidth=2, label=str(fg))
+        (_, caps, errlines) = cost_ax.errorbar(landmarks[:len(cost_comp_avgs)], cost_comp_avgs, linewidth=3.0, yerr=cost_comp_sds, elinewidth=1.0, capsize=6.0, label=str(fg))
+        #for errline in errlines:
+        #    errline.set_linestyle('dashed')
         time_ax.errorbar(landmarks[:len(time_comp_avgs)], time_comp_avgs, yerr=time_comp_sds, label=fg.slam_type)
         dist_err_ax.errorbar(landmarks[:len(dist_err_comp_avgs)], dist_err_comp_avgs, yerr=dist_err_comp_sds, label=str(fg))
             
@@ -271,11 +276,11 @@ def process_data():
         ax.set_xlabel('Number of landmarks')
         
         handles, labels = ax.get_legend_handles_labels()
-        ax.legend(handles, labels)
+        ax.legend(handles, labels, loc='upper left')
     
     time_abs_ax.set_ylabel('Time (seconds)')
     dist_err_abs_ax.set_ylabel('Waypoint distance error (meters)')
-    cost_ax.set_ylabel('Cost factor')
+    cost_ax.set_ylabel('Improvement')
     time_ax.set_ylabel('Time factor')
     dist_err_ax.set_ylabel('Waypoint distance error versus trajectory')
     
@@ -284,6 +289,19 @@ def process_data():
     cost_ax.set_title('Cost factor versus trajectory')
     time_ax.set_title('Time factor of belief, state, and control versus trajectory')
     dist_err_ax.set_title('Waypoint distance factor of belief, state, and control versus trajectory')
+
+    def to_percent(y, position):
+        # Ignore the passed in position. This has the effect of scaling the default
+        # tick locations.
+        s = '%2.0f'%(100*y)
+
+        # The percent symbol needs escaping in latex
+        if matplotlib.rcParams['text.usetex'] == True:
+            return s + r'$\%$'
+        else:
+            return s + '%' 
+
+    cost_ax.yaxis.set_major_formatter(FuncFormatter(to_percent))
     
     plt.show(block=False)
     raw_input()

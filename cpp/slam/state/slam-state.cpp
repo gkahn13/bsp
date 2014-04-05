@@ -1003,7 +1003,7 @@ void planPath(std::vector<Matrix<P_DIM> > l, stateMPC_params& problem, stateMPC_
 	logDataToFile(f, B_total, totalSolveTime*1000, trajTime*1000, 0);
 
 
-	pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, false);
+	pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, true);
 }
 
 int main(int argc, char* argv[])

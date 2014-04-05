@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
 
 		logDataToFile(f, B_total, totalSolveTime*1000, 0, 0);
 
-		//pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, true);
+		pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, true);
 
 	}
 

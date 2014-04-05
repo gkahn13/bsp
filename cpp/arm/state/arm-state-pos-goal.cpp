@@ -16,7 +16,7 @@ statePenaltyMPC_FLOAT *A, *b, *e;
 #include "../arm.h"
 
 // uncomment the following to use finite differences for computing the gradient
-#define FINITE_DIFFERENCE
+//#define FINITE_DIFFERENCE
 
 namespace cfg {
 const double improve_ratio_threshold = .1;
@@ -841,7 +841,7 @@ int main(int argc, char* argv[])
 		LOG_INFO("Optimized cost: %4.10f", cost);
 		LOG_INFO("Actual cost: %4.10f", computeCost(X, U));
 		LOG_INFO("Solve time: %5.3f ms", solvetime*1000);
-		std::cout<<i<<" , "<<solvetime<<" , "<<solved_cost/initTrajCost<<'\n'; 
+		std::cout<<i<<" , "<<solvetime<<" , "<<solved_cost/initTrajCost<<'\n';
 	}
 	cleanupStateMPCVars();
 

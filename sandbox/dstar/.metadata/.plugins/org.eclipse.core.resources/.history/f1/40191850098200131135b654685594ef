@@ -1,0 +1,3 @@
+eclipse.preferences.version=1
+org.emonic.base.build.file=6dof.build
+org.emonic.base.build.mechanism=nant

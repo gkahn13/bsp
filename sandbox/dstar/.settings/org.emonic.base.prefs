@@ -1,0 +1,5 @@
+eclipse.preferences.version=1
+org.emonic.base.build.file=dstar.build
+org.emonic.base.build.mechanism=nant
+org.emonic.base.project.copyright=
+org.emonic.base.project.defaultNamespace=

@@ -1,0 +1,7 @@
+<?xml version='1.0'?>
+<project basedir='.' default='all' name='dstar'>
+  <property name='src' value='src'/>
+  <property name='build' value='bin'/>
+  <property name='nant.settings.currentframework' value='mono-2.0'/>
+  <target depends='' name='all'/>
+</project>

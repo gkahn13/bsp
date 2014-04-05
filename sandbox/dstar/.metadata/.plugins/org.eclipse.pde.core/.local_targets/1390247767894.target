@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<?pde version="3.6"?>
+
+<target name="Running Platform" sequenceNumber="4">
+<locations>
+<location configuration="/home/gkahn/.eclipse/org.eclipse.platform_3.7.0_155965261/configuration/" path="${eclipse_home}" type="Profile"/>
+</locations>
+<environment>
+<os>linux</os>
+<ws>gtk</ws>
+<arch>x86_64</arch>
+<nl>en_US</nl>
+</environment>
+<launcherArgs>
+<vmArgs>-Dorg.eclipse.equinox.p2.reconciler.dropins.directory=/usr/share/eclipse/dropins -Xms40m -Xmx384m</vmArgs>
+</launcherArgs>
+</target>

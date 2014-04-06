@@ -474,6 +474,25 @@ inline Matrix<dim> sampleGaussian(const Matrix<dim>& mean, const SymmetricMatrix
   return L * sample + mean;
 }
 
+/*!
+ *  @brief       Randomly samples from the multivariate Gaussian distribution with specified
+ *               mean and variance.
+ *  @tparam      dim     The dimension of the distribution.
+ *  @param       mean    The mean of the distribution.
+ *  @param       var     The variance (covariance matrix) of the distribution.
+ *  @param       N       Number of times to sample Gaussian
+ *  @returns     A random vector from the specified Gaussian distribution.
+ *  \ingroup globalfunc
+ */
+template <size_t dim>
+inline std::vector<Matrix<dim> > sampleGaussianN(const Matrix<dim>& mean, const SymmetricMatrix<dim>& var, int N) {
+  std::vector<Matrix<dim> > samples(N);
+  for(int n=0; n < N; ++n) {
+	  samples[n] = sampleGaussian(mean, var);
+  }
+  return samples;
+}
+
 #ifdef WIN32
 #include "glut.h"
 const double DEG2RAD = M_PI/180;

@@ -3,8 +3,11 @@
 *#
 cpp/bin/*
 cpp/build/*
-cpp/.project 
-cpp/.cproject
+*.project
+*.cproject
+*.pydevproject
+*.pydevproject.bak
+*.metadata
 @*
 forces/beliefMPC
 forces/stateMPC

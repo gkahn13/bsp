@@ -3,6 +3,8 @@
 *#
 cpp/bin/*
 cpp/build/*
+cpp/point-pf/bin/*
+cpp/point-pf/build/*
 *.project
 *.cproject
 *.pydevproject

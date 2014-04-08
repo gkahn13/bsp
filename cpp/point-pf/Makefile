@@ -17,7 +17,7 @@ CASADI_LIBS = -lcasadi -ldl
 # default to debug build
 BUILD := debug
 
-BFLAGS.debug = -g -Wall
+BFLAGS.debug = -g -Wall -Wno-sign-compare 
 BFLAGS.release = -O3
 BFLAGS := $(BFLAGS.$(BUILD))
 
@@ -45,10 +45,10 @@ TEST_POINT_PF_FILES = test-point-pf logging
 TEST_POINT_PF_OBJS = $(TEST_POINT_PF_FILES:%=$(OBJ_DIR)/%.o)
 
 test-point-pf: $(TEST_POINT_PF_OBJS)
-	$(CXX) $(BFLAGS) $(TEST_POINT_PF_OBJS) -o $(BIN_DIR)/test-point-pf $(PYTHON_FLAGS) $(BOOST_FLAGS) $(LINKER_FLAGS)
+	$(CXX) $(BFLAGS) $(TEST_POINT_PF_OBJS) -o $(BIN_DIR)/test-point-pf $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) $(LINKER_FLAGS) $(CASADI_LIBS)
 	
 $(OBJ_DIR)/test-point-pf.o : test-point-pf.cpp
-	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) -c -o $@ $^
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
 	
 
 ###### CLEAN ########

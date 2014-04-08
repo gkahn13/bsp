@@ -1,4 +1,5 @@
-#include <point-pf.h>
+#include "point-pf.h"
+#include "casadi/casadi-point-pf.h"
 
 #include <../util/matrix.h>
 #include <../util/utils.h>
@@ -8,18 +9,17 @@
 
 int main(int argc, char* argv[]) {
 	srand(time(0));
+	int M = 20; // number of particles
+	point_pf::initialize(M);
 
 	Matrix<X_DIM> x0, xGoal;
 	x0[0] = -3.5; x0[1] = 2;
 	xGoal[0] = -3.5; xGoal[1] = -2;
 
 	SymmetricMatrix<X_DIM> Sigma0 = .01*identity<X_DIM>();
-	Q = 1e2*identity<Q_DIM>();
-	R = 1e2*identity<R_DIM>(); // not sure
 
 	Matrix<U_DIM> u = (xGoal - x0) / (DT*(T-1));
 
-	int M = 20; // number of particles
 	std::vector<Matrix<X_DIM> > P0(M);
 	for(int m=0; m < M; ++m) {
 		P0[m] = sampleGaussian(x0, Sigma0);
@@ -34,7 +34,8 @@ int main(int argc, char* argv[]) {
 		dyn_noise = sampleGaussianN(zeros<Q_DIM,1>(), Q, M);
 		obs_noise = sampleGaussianN(zeros<R_DIM,1>(), R, M);
 		sampling_noise = (1/float(M))*(rand() / float(RAND_MAX));
-		P_t[t+1] = beliefDynamics(P_t[t], u, dyn_noise, obs_noise, sampling_noise);
+		//P_t[t+1] = point_pf::beliefDynamics(P_t[t], u, dyn_noise, obs_noise, sampling_noise);
+		P_t[t+1] = point_pf::casadiBeliefDynamics(P_t[t], u, dyn_noise, obs_noise, sampling_noise);
 	}
 
 	for(int t=0; t < T; ++t) {
@@ -44,5 +45,7 @@ int main(int argc, char* argv[]) {
 		}
 	}
 
-	pythonDisplayParticles(P_t);
+	point_pf::pythonDisplayParticles(P_t);
+
+	return 0;
 }

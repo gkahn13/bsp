@@ -19,6 +19,7 @@ namespace py = boost::python;
 namespace AD = CasADi;
 
 #define TIMESTEPS 3
+#define PARTICLES 5
 #define DT 1.0
 #define X_DIM 2
 #define U_DIM 2
@@ -27,6 +28,7 @@ namespace AD = CasADi;
 #define R_DIM 2
 
 const int T = TIMESTEPS;
+const int M = PARTICLES;
 
 SymmetricMatrix<Q_DIM> Q;
 SymmetricMatrix<R_DIM> R;
@@ -36,7 +38,7 @@ AD::SXFunction casadi_belief_dynamics_func;
 
 namespace point_pf {
 
-void initialize(int M) {
+void initialize() {
 	Q = 1e-2*identity<Q_DIM>();
 	R = 1e-2*identity<R_DIM>(); // not sure
 
@@ -79,7 +81,6 @@ float gaussLikelihood(const Matrix<Z_DIM>& v, const SymmetricMatrix<R_DIM>& S) {
 }
 
 std::vector<Matrix<X_DIM> > lowVarianceSampler(const std::vector<Matrix<X_DIM> >& P, const std::vector<float>& W, float r) {
-	int M = P.size();
 	std::vector<Matrix<X_DIM> > P_sampled(M);
 
 	float c = W[0];
@@ -102,7 +103,6 @@ std::vector<Matrix<X_DIM> > lowVarianceSampler(const std::vector<Matrix<X_DIM> >
 
 std::vector<Matrix<X_DIM> > beliefDynamics(const std::vector<Matrix<X_DIM> >& P_t, const Matrix<U_DIM>& u,
 											 const std::vector<Matrix<Q_DIM> >& dyn_noise, const std::vector<Matrix<R_DIM> >& obs_noise, float sampling_noise) {
-	int M = P_t.size();
 	std::vector<Matrix<X_DIM> > P_tp1_bar(M), P_tp1;
 	std::vector<float> W(M);
 
@@ -122,7 +122,6 @@ std::vector<Matrix<X_DIM> > beliefDynamics(const std::vector<Matrix<X_DIM> >& P_
 
 std::vector<Matrix<X_DIM> > casadiBeliefDynamics(const std::vector<Matrix<X_DIM> >& P_t, const Matrix<U_DIM>& u,
 													const std::vector<Matrix<Q_DIM> >& dyn_noise, const std::vector<Matrix<R_DIM> >& obs_noise, float sampling_noise) {
-	int M = P_t.size();
 	double P_t_u_arr[M*X_DIM+U_DIM];
 	double dyn_noise_arr[M*X_DIM];
 	double obs_noise_arr[M*X_DIM];
@@ -161,8 +160,6 @@ std::vector<Matrix<X_DIM> > casadiBeliefDynamics(const std::vector<Matrix<X_DIM>
 }
 
 void pythonDisplayParticles(std::vector<std::vector<Matrix<X_DIM> > >& particle_list) {
-	int M = particle_list[0].size();
-
 	py::list py_particle_list;
 	for(int t=0; t < particle_list.size(); ++t) {
 		for(int i=0; i < X_DIM; ++i) {

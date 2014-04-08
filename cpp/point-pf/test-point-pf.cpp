@@ -9,8 +9,7 @@
 
 int main(int argc, char* argv[]) {
 	srand(time(0));
-	int M = 20; // number of particles
-	point_pf::initialize(M);
+	point_pf::initialize();
 
 	Matrix<X_DIM> x0, xGoal;
 	x0[0] = -3.5; x0[1] = 2;

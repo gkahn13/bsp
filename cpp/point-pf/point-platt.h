@@ -14,7 +14,8 @@
 
 namespace py = boost::python;
 
-#define TIMESTEPS 3
+#define TIMESTEPS 15
+#define PARTICLES 5
 #define DT 1.0
 #define X_DIM 2
 #define U_DIM 2
@@ -23,11 +24,23 @@ namespace py = boost::python;
 #define R_DIM 2
 
 const int T = TIMESTEPS;
+const int M = PARTICLES;
+const int TOTAL_VARS = T*M*X_DIM + (T-1)*U_DIM;
 
 const double alpha_control = 1;
 
 SymmetricMatrix<Q_DIM> Q;
 SymmetricMatrix<R_DIM> R;
+
+std::vector<Matrix<X_DIM>> P0(M);
+Matrix<X_DIM> xGoal;
+Matrix<X_DIM> xMin, xMax;
+Matrix<U_DIM> uMin, uMax;
+
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
+
+const double step = 0.0078125*0.0078125;
 
 namespace point_platt {
 
@@ -66,6 +79,46 @@ float costfunc(const std::vector<std::vector<Matrix<X_DIM> > >& P, const std::ve
 	}
 
 	return cost;
+}
+
+Matrix<TOTAL_VARS> deriv_costfunc(const std::vector<std::vector<Matrix<X_DIM> > >& P, const std::vector<Matrix<U_DIM> >& U) {
+	Matrix<TOTAL_VARS> d;
+
+	float orig, cost_p, cost_l;
+	int index = 0;
+	for(int t=0; t < T; ++t) {
+		for(int m=0; m < M; ++m) {
+			for(int i=0; i < X_DIM; ++i) {
+				orig = P[t][m][i];
+
+				P[t][m][i] = orig + step;
+				cost_p = costfunc(P,U);
+
+				P[t][m][i] = orig - step;
+				cost_l = costfunc(P,U);
+
+				P[t][m][i] = orig;
+				d[index++] = (cost_p - cost_l)/(2*step);
+			}
+		}
+
+		if (t < T-1) {
+			for(int i=0; i < U_DIM; ++i) {
+				orig = U[t][i];
+
+				U[t][i] = orig + step;
+				cost_p = costfunc(P,U);
+
+				U[t][i] = orig - step;
+				cost_l = costfunc(P,U);
+
+				U[t][i] = orig;
+				d[index++] = (cost_p - cost_l)/(2*step);
+			}
+		}
+	}
+
+	return d;
 }
 
 }

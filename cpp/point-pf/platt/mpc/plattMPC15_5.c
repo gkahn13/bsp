@@ -1564,7 +1564,6 @@ plattMPC_FLOAT plattMPC_Yd00[55];
 plattMPC_FLOAT plattMPC_Ld00[55];
 plattMPC_FLOAT plattMPC_yy00[10];
 plattMPC_FLOAT plattMPC_bmy00[10];
-plattMPC_FLOAT plattMPC_c00[10] = {0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000};
 int plattMPC_lbIdx00[12] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11};
 plattMPC_FLOAT* plattMPC_llb00 = plattMPC_l + 0;
 plattMPC_FLOAT* plattMPC_slb00 = plattMPC_s + 0;
@@ -2297,7 +2296,7 @@ plattMPC_LA_DIAG_QUADFCN_12(params->H14, params->f14, plattMPC_z13, plattMPC_gra
 plattMPC_LA_DIAG_QUADFCN_10(params->H15, params->f15, plattMPC_z14, plattMPC_grad_cost14, &info->pobj);
 info->res_eq = 0;
 info->dgap = 0;
-plattMPC_LA_DIAGZERO_MVMSUB6_10(plattMPC_D00, plattMPC_z00, plattMPC_c00, plattMPC_v00, plattMPC_re00, &info->dgap, &info->res_eq);
+plattMPC_LA_DIAGZERO_MVMSUB6_10(plattMPC_D00, plattMPC_z00, params->c1, plattMPC_v00, plattMPC_re00, &info->dgap, &info->res_eq);
 plattMPC_LA_DENSE_DIAGZERO_MVMSUB3_10_12_12(plattMPC_C00, plattMPC_z00, plattMPC_D01, plattMPC_z01, plattMPC_c01, plattMPC_v01, plattMPC_re01, &info->dgap, &info->res_eq);
 plattMPC_LA_DENSE_DIAGZERO_MVMSUB3_10_12_12(plattMPC_C00, plattMPC_z01, plattMPC_D01, plattMPC_z02, plattMPC_c02, plattMPC_v02, plattMPC_re02, &info->dgap, &info->res_eq);
 plattMPC_LA_DENSE_DIAGZERO_MVMSUB3_10_12_12(plattMPC_C00, plattMPC_z02, plattMPC_D01, plattMPC_z03, plattMPC_c03, plattMPC_v03, plattMPC_re03, &info->dgap, &info->res_eq);

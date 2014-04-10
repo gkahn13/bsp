@@ -96,6 +96,9 @@ typedef struct plattMPC_params
     /* vector of size 12 */
     plattMPC_FLOAT ub1[12];
 
+    /* vector of size 10 */
+    plattMPC_FLOAT c1[10];
+
     /* diagonal matrix of size [12 x 12] (only the diagonal is stored) */
     plattMPC_FLOAT H2[12];
 

@@ -13,6 +13,9 @@ import IPython
 
 
 def plot_particles(particle_list, T, xDim, M):
+    plt.clf()
+    plt.cla()
+    
     P_t = process_particle_list(particle_list, T, xDim, M)
     
     plot_domain()

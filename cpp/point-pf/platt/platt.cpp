@@ -8,7 +8,7 @@
 
 extern "C" {
 #include "plattMPC.h"
-plattMPC_FLOAT **H, **f, **lb, **ub, **z;
+plattMPC_FLOAT **H, **f, **lb, **ub, **z, **c;
 }
 
 namespace cfg {
@@ -25,6 +25,7 @@ void setupMPCVars(plattMPC_params& problem, plattMPC_output& output) {
 	f = new plattMPC_FLOAT*[T];
 	lb = new plattMPC_FLOAT*[T];
 	ub = new plattMPC_FLOAT*[T];
+	c = new plattMPC_FLOAT*[1];
 
 	// output
 	z = new plattMPC_FLOAT*[T];
@@ -40,6 +41,8 @@ void setupMPCVars(plattMPC_params& problem, plattMPC_output& output) {
 #define BOOST_PP_LOCAL_LIMITS (1, TIMESTEPS)
 #include BOOST_PP_LOCAL_ITERATE()
 
+	c[0] = problem.c1;
+
 	for(int t=0; t < T-1; ++t) {
 		for(int i=0; i < M*X_DIM+U_DIM; ++i) { H[t][i] = INFTY; }
 		for(int i=0; i < M*X_DIM+U_DIM; ++i) { f[t][i] = INFTY; }
@@ -53,6 +56,7 @@ void setupMPCVars(plattMPC_params& problem, plattMPC_output& output) {
 	for(int i=0; i < M*X_DIM; ++i) { ub[T-1][i] = INFTY; }
 	for(int i=0; i < M*X_DIM; ++i) { z[T-1][i] = INFTY; }
 
+	for(int i=0; i < X_DIM; ++i) { c[0][i] = INFTY; }
 }
 
 void cleanupMPCVars() {
@@ -67,6 +71,13 @@ bool isValidInputs()
 {
 	for(int t = 0; t < T-1; ++t) {
 		std::cout << "\n\nt: " << t << "\n";
+
+		if (t == 0) {
+			std::cout << "\nc[0]:\n";
+			for(int i=0; i < (M*X_DIM); ++i) {
+				std::cout << c[0][i] << " ";
+			}
+		}
 
 		std::cout << "\nH[" << t << "]: ";
 		for(int i=0; i < (M*X_DIM+U_DIM); ++i) {
@@ -109,6 +120,7 @@ bool isValidInputs()
 	for(int i=0; i < (M*X_DIM); ++i) {
 		std::cout << ub[T-1][i] << " ";
 	}
+
 	std::cout << "\n";
 
 	for(int t = 0; t < T-1; ++t) {
@@ -121,6 +133,8 @@ bool isValidInputs()
 	for(int i=0; i < (M*X_DIM); ++i) { if (f[T-1][i] > INFTY/2) { return false; } }
 	for(int i=0; i < (M*X_DIM); ++i) { if (lb[T-1][i] > INFTY/2) { return false; } }
 	for(int i=0; i < (M*X_DIM); ++i) { if (ub[T-1][i] > INFTY/2) { return false; } }
+
+	for(int i=0; i < (M*X_DIM); ++i) { if (c[0][i] > INFTY/2) { return false; } }
 
 	return true;
 }
@@ -160,6 +174,7 @@ double plattCollocation(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vecto
 		if (solution_accepted) {
 			d = point_platt::deriv_costfunc(P, U);
 			diaghess = point_platt::diaghess_costfunc(P, U);
+			//diaghess.reset();
 			merit = point_platt::costfunc(P, U);
 
 			constant_cost = 0;
@@ -172,12 +187,12 @@ double plattCollocation(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vecto
 			for(int t=0; t < T-1; ++t) {
 				for(int i=0; i < M*X_DIM+U_DIM; ++i) {
 					double val = diaghess[index++];
-					H[t][i] = (val > 0) ? val : 0;
+					H[t][i] = (val < 0) ? 0 : val;
 				}
 			}
 			for(int i=0; i < M*X_DIM; ++i) {
 				double val = diaghess[index++];
-				H[T-1][i] = (val > 0) ? val : 0;
+				H[T-1][i] = (val < 0) ? 0 : val;
 			}
 
 			// compute gradient
@@ -191,6 +206,7 @@ double plattCollocation(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vecto
 					hessian_constant += H[t][i]*zbar[i]*zbar[i];
 					jac_constant -= d[index]*zbar[i];
 					f[t][i] = d[index] - H[t][i]*zbar[i];
+					//f[t][i] = (i < M*X_DIM) ? 0 : d[index];
 					index++;
 				}
 			}
@@ -206,6 +222,12 @@ double plattCollocation(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vecto
 				index++;
 			}
 
+			index = 0;
+			for(int m=0; m < M; ++m) {
+				for(int i=0; i < X_DIM; ++i) {
+					c[0][index++] = P[0][m][i];
+				}
+			}
 
 			constant_cost = 0.5*hessian_constant + jac_constant + merit;
 		}
@@ -270,8 +292,12 @@ double plattCollocation(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vecto
 			exit(-1);
 		}
 
+		for(int t=0; t < T-1; ++t) {
+			std::cout << ~Uopt[t];
+		}
 
-		exit(0);
+		point_pf::pythonDisplayParticles(Popt);
+		//exit(0);
 
 		model_merit = optcost + constant_cost; // need to add constant terms that were dropped
 
@@ -290,28 +316,31 @@ double plattCollocation(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vecto
 		LOG_DEBUG("exact_merit_improve: %f", exact_merit_improve);
 		LOG_DEBUG("merit_improve_ratio: %f", merit_improve_ratio);
 
-		if (approx_merit_improve < -1e-5) {
-			LOG_ERROR("Approximate merit function got worse: %f", approx_merit_improve);
-			LOG_ERROR("Failure!");
-			return INFTY;
-		} else if (approx_merit_improve < cfg::min_approx_improve) {
-			LOG_DEBUG("Converged: improvement small enough");
-			P = Popt; U = Uopt;
-			solution_accepted = true;
-			break;
-		} else if ((exact_merit_improve < 0) || (merit_improve_ratio < cfg::improve_ratio_threshold)) {
-			LOG_DEBUG("Shrinking trust region size to: %2.6f %2.6f", Xeps, Ueps);
-			Xeps *= cfg::trust_shrink_ratio;
-			Ueps *= cfg::trust_shrink_ratio;
-			solution_accepted = false;
-		} else {
-			LOG_DEBUG("Accepted, Increasing trust region size to:  %2.6f %2.6f", Xeps, Ueps);
-			// expand Xeps and Ueps
-			Xeps *= cfg::trust_expand_ratio;
-			Ueps *= cfg::trust_expand_ratio;
-			P = Popt; U = Uopt;
-			solution_accepted = true;
-		}
+		P = Popt; U = Uopt;
+		solution_accepted = true;
+
+//		if (approx_merit_improve < -1e-5) {
+//			LOG_ERROR("Approximate merit function got worse: %f", approx_merit_improve);
+//			LOG_ERROR("Failure!");
+//			return INFTY;
+//		} else if (approx_merit_improve < cfg::min_approx_improve) {
+//			LOG_DEBUG("Converged: improvement small enough");
+//			P = Popt; U = Uopt;
+//			solution_accepted = true;
+//			break;
+//		} else if ((exact_merit_improve < 0) || (merit_improve_ratio < cfg::improve_ratio_threshold)) {
+//			LOG_DEBUG("Shrinking trust region size to: %2.6f %2.6f", Xeps, Ueps);
+//			Xeps *= cfg::trust_shrink_ratio;
+//			Ueps *= cfg::trust_shrink_ratio;
+//			solution_accepted = false;
+//		} else {
+//			LOG_DEBUG("Accepted, Increasing trust region size to:  %2.6f %2.6f", Xeps, Ueps);
+//			// expand Xeps and Ueps
+//			Xeps *= cfg::trust_expand_ratio;
+//			Ueps *= cfg::trust_expand_ratio;
+//			P = Popt; U = Uopt;
+//			solution_accepted = true;
+//		}
 
 	}
 
@@ -345,6 +374,8 @@ int main(int argc, char* argv[]) {
 
 //	LOG_DEBUG("Initial particle trajectory");
 //	point_pf::pythonDisplayParticles(P);
+
+	LOG_DEBUG("Initial cost: %4.10f", point_platt::costfunc(P,U));
 
 	// initialize FORCES variables
 	plattMPC_params problem;

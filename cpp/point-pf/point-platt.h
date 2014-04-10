@@ -7,21 +7,27 @@ namespace point_platt {
 
 // assume P[t][0] is most likely particle
 float costfunc_noise(const std::vector<std::vector<Matrix<X_DIM> > >& P, const std::vector<Matrix<U_DIM> >& U,
-						const std::vector<Matrix<Q_DIM> >& dyn_noise, const std::vector<Matrix<R_DIM> >& obs_noise) {
+						const std::vector<Matrix<Q_DIM> >& dyn_noise, const std::vector<Matrix<R_DIM> >& obs_noise,
+						const std::vector<float> sampling_noise) {
 	float cost = 0;
 
 	// need:
 	// (T-1)*M dyn_noise
 	// M*T obs_noise
+	// T sampling_noise
 
 	// TODO: if no propagation, then all particle gradients = 0
 	std::vector<std::vector<Matrix<X_DIM> > > P_prop(T, std::vector<Matrix<X_DIM> >(M));
 	P_prop[0] = P[0];
 	for(int t=0; t < T-1; ++t) {
-		for(int m=0; m < M; ++m) {
-			//P_prop[t+1][m] = point_pf::dynfunc(P[t][m], U[t], zeros<Q_DIM,1>());
-			P_prop[t+1][m] = point_pf::dynfunc(P[t][m], U[t], dyn_noise[t*M+m]);
-		}
+		std::vector<Matrix<Q_DIM> > dyn_noise_t(dyn_noise.begin()+t*M, dyn_noise.begin()+(t+1)*M);
+		std::vector<Matrix<R_DIM> > obs_noise_t(obs_noise.begin()+t*M, obs_noise.begin()+(t+1)*M);
+		float sampling_noise_t = sampling_noise[t];
+		P_prop[t+1] = point_pf::beliefDynamics(P[t], U[t], dyn_noise_t, obs_noise_t, sampling_noise_t);
+//		for(int m=0; m < M; ++m) {
+//			//P_prop[t+1][m] = point_pf::dynfunc(P[t][m], U[t], zeros<Q_DIM,1>());
+//			P_prop[t+1][m] = point_pf::dynfunc(P[t][m], U[t], dyn_noise[t*M+m]);
+//		}
 	}
 
 	Matrix<X_DIM> P_t_mle, P_t_other;
@@ -51,19 +57,32 @@ float costfunc_noise(const std::vector<std::vector<Matrix<X_DIM> > >& P, const s
 float costfunc(const std::vector<std::vector<Matrix<X_DIM> > >& P, const std::vector<Matrix<U_DIM> >& U) {
 	std::vector<Matrix<Q_DIM> > dyn_noise((T-1)*M);
 	std::vector<Matrix<R_DIM> > obs_noise(T*M);
+	std::vector<float> sampling_noise(T);
 
-	return costfunc_noise(P, U, dyn_noise, obs_noise);
+	float cost = 0;
+	int max_iter = 100;
+	for(int iter=0; iter < max_iter; ++iter) {
+		dyn_noise = sampleGaussianN(zeros<Q_DIM,1>(), Q, (T-1)*M);
+		obs_noise = sampleGaussianN(zeros<R_DIM,1>(), R, T*M);
+		for(int t=0; t < T; ++t) { sampling_noise[t] = (1/float(M))*(rand() / float(RAND_MAX)); }
+		cost += (1/float(max_iter))*costfunc_noise(P, U, dyn_noise, obs_noise, sampling_noise);
+	}
+
+	return cost;
+	//return costfunc_noise(P, U, dyn_noise, obs_noise);
 }
 
 Matrix<TOTAL_VARS> deriv_costfunc(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vector<Matrix<U_DIM> >& U) {
 	Matrix<TOTAL_VARS> d_avg;
 
-	int max_iter = 10;
+	int max_iter = 100;
 	for(int iter=0; iter < max_iter; iter++) {
 		Matrix<TOTAL_VARS> d;
 
 		std::vector<Matrix<Q_DIM> > dyn_noise = sampleGaussianN(zeros<Q_DIM,1>(), Q, (T-1)*M);
 		std::vector<Matrix<R_DIM> > obs_noise = sampleGaussianN(zeros<R_DIM,1>(), R, T*M);
+		std::vector<float> sampling_noise(T);
+		for(int t=0; t < T; ++t) { sampling_noise[t] = (1/float(M))*(rand() / float(RAND_MAX)); }
 
 		float orig, cost_p, cost_l;
 		int index = 0;
@@ -73,10 +92,10 @@ Matrix<TOTAL_VARS> deriv_costfunc(std::vector<std::vector<Matrix<X_DIM> > >& P, 
 					orig = P[t][m][i];
 
 					P[t][m][i] = orig + step;
-					cost_p = costfunc_noise(P,U, dyn_noise, obs_noise);
+					cost_p = costfunc_noise(P,U, dyn_noise, obs_noise, sampling_noise);
 
 					P[t][m][i] = orig - step;
-					cost_l = costfunc_noise(P,U, dyn_noise, obs_noise);
+					cost_l = costfunc_noise(P,U, dyn_noise, obs_noise, sampling_noise);
 
 					P[t][m][i] = orig;
 					d[index++] = (cost_p - cost_l)/(2*step);
@@ -88,10 +107,10 @@ Matrix<TOTAL_VARS> deriv_costfunc(std::vector<std::vector<Matrix<X_DIM> > >& P, 
 					orig = U[t][i];
 
 					U[t][i] = orig + step;
-					cost_p = costfunc_noise(P,U, dyn_noise, obs_noise);
+					cost_p = costfunc_noise(P,U, dyn_noise, obs_noise, sampling_noise);
 
 					U[t][i] = orig - step;
-					cost_l = costfunc_noise(P,U, dyn_noise, obs_noise);
+					cost_l = costfunc_noise(P,U, dyn_noise, obs_noise, sampling_noise);
 
 					U[t][i] = orig;
 					d[index++] = (cost_p - cost_l)/(2*step);
@@ -108,26 +127,28 @@ Matrix<TOTAL_VARS> deriv_costfunc(std::vector<std::vector<Matrix<X_DIM> > >& P, 
 Matrix<TOTAL_VARS> diaghess_costfunc(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vector<Matrix<U_DIM> >& U) {
 	Matrix<TOTAL_VARS> diaghess_avg;
 
-	int max_iter = 1000;
+	int max_iter = 100;
 	for(int iter=0; iter < max_iter; iter++) {
 		Matrix<TOTAL_VARS> diaghess;
 
 		std::vector<Matrix<Q_DIM> > dyn_noise = sampleGaussianN(zeros<Q_DIM,1>(), Q, (T-1)*M);
 		std::vector<Matrix<R_DIM> > obs_noise = sampleGaussianN(zeros<R_DIM,1>(), R, T*M);
+		std::vector<float> sampling_noise(T);
+		for(int t=0; t < T; ++t) { sampling_noise[t] = (1/float(M))*(rand() / float(RAND_MAX)); }
 
 		float orig, cost_p, cost, cost_l;
 		int index = 0;
 		for(int t=0; t < T; ++t) {
 			for(int m=0; m < M; ++m) {
 				for(int i=0; i < X_DIM; ++i) {
-					cost = costfunc_noise(P, U, dyn_noise, obs_noise);
+					cost = costfunc_noise(P, U, dyn_noise, obs_noise, sampling_noise);
 					orig = P[t][m][i];
 
 					P[t][m][i] = orig + step;
-					cost_p = costfunc_noise(P, U, dyn_noise, obs_noise);
+					cost_p = costfunc_noise(P, U, dyn_noise, obs_noise, sampling_noise);
 
 					P[t][m][i] = orig - step;
-					cost_l = costfunc_noise(P,U, dyn_noise, obs_noise);
+					cost_l = costfunc_noise(P,U, dyn_noise, obs_noise, sampling_noise);
 
 					P[t][m][i] = orig;
 					diaghess[index++] = (cost_p - 2*cost + cost_l)/(step*step);
@@ -136,14 +157,14 @@ Matrix<TOTAL_VARS> diaghess_costfunc(std::vector<std::vector<Matrix<X_DIM> > >& 
 
 			if (t < T-1) {
 				for(int i=0; i < U_DIM; ++i) {
-					cost = costfunc_noise(P, U, dyn_noise, obs_noise);
+					cost = costfunc_noise(P, U, dyn_noise, obs_noise, sampling_noise);
 					orig = U[t][i];
 
 					U[t][i] = orig + step;
-					cost_p = costfunc_noise(P,U, dyn_noise, obs_noise);
+					cost_p = costfunc_noise(P,U, dyn_noise, obs_noise, sampling_noise);
 
 					U[t][i] = orig - step;
-					cost_l = costfunc_noise(P,U, dyn_noise, obs_noise);
+					cost_l = costfunc_noise(P,U, dyn_noise, obs_noise, sampling_noise);
 
 					U[t][i] = orig;
 					diaghess[index++] = (cost_p - 2*cost + cost_l)/(step*step);

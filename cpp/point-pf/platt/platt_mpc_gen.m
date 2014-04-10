@@ -45,9 +45,9 @@ stages(i).ineq.b.ubidx = 1:stages(i).dims.u; % upper bound acts on these indices
 params(end+1) = newParam(['ub',istr], i, 'ineq.b.ub'); % upper bound for this stage variable
 
 %params(end+1) = newParam(['C',istr], i, 'eq.C');
-%params(end+1) = newParam(['e',istr], i, 'eq.c');
+params(end+1) = newParam(['c',istr], i, 'eq.c');
 stages(i).eq.C = [eye(nx) repmat(eye(nu),nx/nu,1)];
-stages(i).eq.c = zeros(nx,1);
+%stages(i).eq.c = zeros(nx,1);
 stages(i).eq.D = [eye(nx), zeros(nx,nu)];
 
 for i = 2:N

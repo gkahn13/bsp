@@ -123,8 +123,9 @@ outputs(i) = newOutput(var,i,1:nx);
 % solver settings
 mpcname = 'plattMPC';
 codeoptions = getOptions(mpcname);
-codeoptions.printlevel = 0;
+codeoptions.printlevel = 2;
 codeoptions.timing=0;
+codeoptions.maxit=100;
 
 % generate code
 generateCode(stages,params,codeoptions,outputs);

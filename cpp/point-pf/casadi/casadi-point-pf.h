@@ -58,7 +58,7 @@ std::vector<AD::SXMatrix> lowVarianceSampler(const std::vector<AD::SXMatrix>& P,
 		AD::SXMatrix u = r + (m) * (1/float(M));
 		AD::SXMatrix diff = u(0,0) - c(0,0);
 		while (isOne(diff/fabs(diff))) {
-		//while(u(0,0).__gt__(c(0,0))))
+		//while(u(0,0) > c(0,0)) {
 			c += W[++i];
 		}
 		P_sampled[m] = P[i];

@@ -1,0 +1,36 @@
+<launch>
+  <!-- Estimation -->
+  <arg name="date" />
+  <group ns="laptop">
+    <node name="source_estimator" pkg="source_estimation" type="static_source" 
+          output="screen" >
+          <!-- launch-prefix="valgrind" > -->
+
+      <remap from="range_pose" to="/measurements"/>
+      <param name="save_every" value="1" />
+      <param name="range_cutoff" value="0.5"/>
+      <remap from="map_valid" to="/range_static_map" />
+
+      <param name="mot_model_type" value="rt_nomap" />
+      <param name="r_sd_vel" value="0.10" />
+      <param name="theta_sd_vel" value="0.15" />
+      <param name="max_travel_dist" value="0.4" />
+
+      <param name="nparticles" value="2000" />
+      <rosparam file="$(find source_estimation)/config/kld.yaml" 
+                command="load" />
+
+      <!-- <rosparam file="$(find source_estimation)/config/los_nlos_params.yaml" -->
+      <!--           command="load" /> -->
+      <rosparam file="$(find source_estimation)/config/hmm_params.yaml" command="load" />
+
+      <param name="logfile" value="/Users/bcharrow/hmm-expts/expt4/$(arg date).log" />
+
+      <param name="st_max_secs" value="1.0"/>
+      <param name="st_min_dist" value="0.5"/>
+      <param name="st_max_age" value="5.0"/>
+      <param name="init_range_sd" value="10.0" />
+      <param name="target_id" value="29" />
+    </node>
+  </group>
+</launch>

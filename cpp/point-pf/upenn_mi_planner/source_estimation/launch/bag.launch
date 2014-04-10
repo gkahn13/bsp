@@ -1,0 +1,29 @@
+<launch>
+  <arg name="bagfile" />
+  <arg name="target" />
+  <node name="static_source_bag" pkg="source_estimation" type="static_source_bag" output="screen"
+        args="$(arg bagfile)">
+    <remap from="range_pose" to="/measurements"/>
+    <param name="save_every" value="1" />
+    <param name="range_cutoff" value="0.5"/>
+    <remap from="map_valid" to="/range_static_map" />
+
+    <param name="mot_model_type" value="rt_nomap" />
+    <param name="r_sd_vel" value="0.1" />
+    <param name="theta_sd_vel" value="0.15" />
+    <param name="max_travel_dist" value="0.4" />
+
+    <rosparam file="$(find source_estimation)/config/hmm_params.yaml"
+              command="load" />
+    
+    <param name="nparticles" value="5000" />
+    <rosparam file="$(find source_estimation)/config/kld.yaml" command="load" />
+    
+    <param name="st_max_secs" value="1.0"/>
+    <param name="st_min_dist" value="0.5"/>
+    <param name="st_max_age" value="5.0"/>
+    <param name="init_range_sd" value="10.0" />
+
+    <param name="target_id" value="$(arg target)" />
+  </node>
+</launch>

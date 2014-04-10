@@ -1,0 +1,9 @@
+<launch>
+  <arg name="log" />
+  <rosparam file="$(find source_estimation)/config/mi_meas.yaml" command="load" />
+
+  <node name="log_mi" pkg="source_estimation" type="log_mi" output="screen"
+        args="$(arg log) 51:10:1000 -10 5 4 20 1.0">
+    <remap from="player_static_map" to="/range_static_map" />
+  </node>
+</launch>

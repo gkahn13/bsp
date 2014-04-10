@@ -1,0 +1,18 @@
+<stack>
+  <description brief="upenn_mi_planner">
+	This stack contains an implementation of algorithms in "Cooperative
+	Multi-Robot Estimation and Control for Radio Source Localization" by Ben
+	Charrow, Nathan Michael and Vijay Kumar.  Specifically, it has code for a
+	particle filter, LOS/NLOS classification of range measurements, and a
+	mutual information planner.
+
+	To actually move the robots, the code uses a ROS wrapper of the RVO library
+	which is available at https://github.com/bcharrow/rvo
+  </description>
+  <author>Maintained by Ben Charrow</author>
+  <license>MIT</license>  
+  <review status="unreviewed" notes=""/>
+  <url>http://www.seas.upenn.edu/~bcharrow/research/ChaMicKum2012.html</url>
+  <depend stack="ros" />
+  <depend stack="rvo" />
+</stack>

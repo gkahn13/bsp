@@ -1,0 +1,6 @@
+<launch>
+  <param name="whitelist_topics" value=""/>
+  <param name="whitelist_services" value="/nav_static_map,/range_static_map"/>
+  <param name="whitelist_params" value=""/>
+  <param name="blacklist_topics" value="/scarab26/stamped_pose,/scarab29/stamped_pose,/scarab32/stamped_pose,/visualization_msgs,/visualization_msgs_array,/goal,/initialpose" />
+</launch>

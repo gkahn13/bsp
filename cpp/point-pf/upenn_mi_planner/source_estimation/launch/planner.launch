@@ -1,0 +1,28 @@
+<launch>
+  <group ns="laptop">
+    <node name="planner" pkg="source_estimation" type="mi_planner" output="screen">
+      <remap from="/static_map" to="/nav_static_map" />
+
+      <param name="nbots" value="2"/>
+      <param name="robot0" value="/scarab26" />
+      <param name="robot1" value="/scarab32" />
+      <!-- <param name="robot2" value="/scarab33" /> -->
+      <!-- <param name="robot3" value="/scarab34" /> -->
+
+      <param name="min_sep" value="0.4"/>
+      <param name="min_wall_dist" value="0.3"/>
+
+      <param name="planner_type" value="skeleton"/>
+      <param name="filename" value="$(find source_estimation)/config/levine_towne_waypoints.txt" />
+      <param name="min_travel_dist" value="6.0" />
+      <param name="period" value="3.0" />
+      <param name="filter_frac" value="0.05" />
+      <param name="grid_res" value="0.25" />
+      <param name="short_dist_min" value="2.0" />
+      <param name="short_dist_max" value="4.0" />
+      <param name="merge_dist" value="1.0" />
+      <rosparam file="$(find source_estimation)/config/mi_meas.yaml" command="load" />
+      
+    </node>
+  </group>
+</launch>

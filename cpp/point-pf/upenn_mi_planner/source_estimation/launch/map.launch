@@ -1,0 +1,20 @@
+<launch>
+  <param name="whitelist_topics" value=""/>
+  <param name="whitelist_services" value="/nav_static_map,/range_static_map"/>
+  <param name="whitelist_params" value=""/>
+  <param name="blacklist_topics" value="/scarab26/stamped_pose,/scarab29/stamped_pose,/scarab32/stamped_pose,/visualization_msgs,/visualization_msgs_array,/goal,/initialpose" />
+
+  <node pkg="player_map" name="player_map_server_range" type="player_map_server" output="screen"
+        args="$(find source_estimation)/maps/levine_towne_range.yaml">
+    <remap from="/static_map" to="/range_static_map" />
+    <remap from="/map" to="/range_map" />
+    <param name="max_occ_dist" value="0.5" />
+  </node>
+
+  <node pkg="player_map" name="player_map_server_nav" type="player_map_server" output="screen"
+        args="$(find upenn_maps)/maps/levine_towne_nav.yaml">
+    <remap from="/static_map" to="/nav_static_map" />
+    <remap from="/map" to="/nav_map" />
+    <param name="max_occ_dist" value="0.5" />
+  </node>
+</launch>

@@ -1,0 +1,19 @@
+<package>
+  <description brief="timeit">
+
+     timeit
+
+  </description>
+  <author>Benjamin Charrow</author>
+  <license>MIT</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/timeit</url>
+  <depend package="roscpp"/>
+
+  <export>
+    <cpp cflags="-I${prefix}/include" lflags="-L${prefix}/lib -ltimeit" />
+  </export>
+  
+</package>
+
+

@@ -1,0 +1,40 @@
+<package>
+  <description brief="gmm">
+
+	C++ implementation of an approximation algorithm for calculating the
+	entropy of a Gaussian Mixutre model.  Code based on the paper:
+	@inproceedings{Huber2008On-entropy,
+        Author = {Marco F. Huber and Tim Bailey and Hugh Durrant-Whyte and Uwe D. Hanebeck},
+		Booktitle = {Multisensor Fusion and Integration for Intelligent Systems},
+		Organization = {IEEE},
+		Pages = {181--188},
+		Title = {On Entropy Approximation for Gaussian Mixture Random Vectors},
+		Year = {2008}}
+	
+	Errors in the paper:
+	1) In "Example 1 (Derivatives of a Gaussian)" The gradient of g(x) with
+	respect to x is missing a minus sign.  The phrase "employing
+	\partial/\partial\mu" just before this equation seems irrelevant as the
+	gradient is with respect to x and not the mean.  Similarly, the first term
+	in equation (6) should be -C^{-1} (x-mu) (grad(x))^T
+	
+	2) In section VI.A the equation "e = y - \tilde{y}" appears.  It should be
+	"e = x - \tilde{y}".
+
+  </description>
+  <author>Benjamin Charrow</author>
+  <license>MIT</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/gmm</url>
+  <depend package="roscpp"/>
+  <depend package="gsl"/>
+  <depend package="timeit"/>
+  <depend package="eigen"/>
+
+  <export>
+    <cpp cflags="-I${prefix}/include" lflags="-L${prefix}/lib -Wl,-rpath,${prefix}/lib  -lgsl -lgslcblas -lrosgsl -lm -lgmm"/>
+  </export>
+
+</package>
+
+

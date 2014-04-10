@@ -1,0 +1,17 @@
+<launch>
+  <arg name="name" />
+  <arg name="mac" />
+  <group ns="$(arg name)">
+    <node name="range_pose" pkg="nanotron" type="range_pose_node.py">
+      <param name="name" value="$(arg name)"/>
+      <remap from="range_pose" to="/measurements"/>
+    </node>
+
+    <node name="nanopan" pkg="nanotron" type="nanopan" output="screen">
+      <param name="mac" value="$(arg mac)" />
+      <param name="target" value="32" />
+      <param name="dests" value="26 27 32" />
+      <param name="period" value="100" />
+    </node>
+  </group>
+</launch>

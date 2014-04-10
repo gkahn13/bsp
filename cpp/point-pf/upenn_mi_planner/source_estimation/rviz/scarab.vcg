@@ -1,0 +1,113 @@
+Background\ ColorR=0
+Background\ ColorG=0
+Background\ ColorB=0
+Fixed\ Frame=/map
+Target\ Frame=<Fixed Frame>
+Axes.Enabled=1
+Axes.Length=1
+Axes.Radius=0.1
+Axes.Reference\ Frame=<Fixed Frame>
+Map.Alpha=0.7
+Map.Draw\ Behind=0
+Map.Enabled=1
+Map.Topic=/nav_map
+Marker.Enabled=1
+Marker.Marker\ Topic=/visualization_msgs
+Marker.map=1
+TF.All\ Enabled=1
+TF.Enabled=1
+TF.Frame\ Timeout=15
+TF.Marker\ Scale=1
+TF.Show\ Arrows=0
+TF.Show\ Axes=1
+TF.Show\ Names=1
+TF.Update\ Interval=0.05
+s26_pose.Alpha=1
+s26_pose.ColorR=0
+s26_pose.ColorG=0.1
+s26_pose.ColorB=1
+s26_pose.Enabled=1
+s26_pose.Head\ Length=0.3
+s26_pose.Head\ Radius=0.3
+s26_pose.Shaft\ Length=0.5
+s26_pose.Shaft\ Radius=0.1
+s26_pose.Shape=0
+s26_pose.Topic=/scarab26/pose_stamped
+s27_pose.Alpha=1
+s27_pose.ColorR=1
+s27_pose.ColorG=1
+s27_pose.ColorB=0
+s27_pose.Enabled=1
+s27_pose.Head\ Length=0.3
+s27_pose.Head\ Radius=0.3
+s27_pose.Shaft\ Length=0.5
+s27_pose.Shaft\ Radius=0.1
+s27_pose.Shape=0
+s27_pose.Topic=/scarab27/pose_stamped
+s29_pose.Alpha=1
+s29_pose.ColorR=1
+s29_pose.ColorG=0.1
+s29_pose.ColorB=1
+s29_pose.Enabled=1
+s29_pose.Head\ Length=0.3
+s29_pose.Head\ Radius=0.3
+s29_pose.Shaft\ Length=0.5
+s29_pose.Shaft\ Radius=0.1
+s29_pose.Shape=0
+s29_pose.Topic=/scarab29/pose_stamped
+s32_pose.Alpha=1
+s32_pose.ColorR=0
+s32_pose.ColorG=1
+s32_pose.ColorB=1
+s32_pose.Enabled=1
+s32_pose.Head\ Length=0.3
+s32_pose.Head\ Radius=0.3
+s32_pose.Shaft\ Length=0.5
+s32_pose.Shaft\ Radius=0.1
+s32_pose.Shape=0
+s32_pose.Topic=/scarab32/pose_stamped
+Tool\ 2D\ Nav\ GoalTopic=goal
+Tool\ 2D\ Pose\ EstimateTopic=initialpose
+Camera\ Type=rviz::XYOrbitViewController
+Camera\ Config=0.026 6.27358 39.9715 -1.14157 8.04203e-05 -4.05357
+Property\ Grid\ State=selection=;expanded=.Global Options,TF./map/map,TF./scarab26/wlaser/scarab26/wlaser,TF./scarab32/wlaser/scarab32/wlaser,TF./scarab29/wlaser/scarab29/wlaser,TF.Enabled.TF.Tree,TF./mapTree/map,TF./scarab26/wlaserTree/scarab26/wlaser,TF./scarab32/wlaserTree/scarab32/wlaser,TF./scarab29/wlaserTree/scarab29/wlaser,Marker.Enabled.Marker.Namespaces;scrollpos=0,5;splitterpos=133,266;ispageselected=1
+[Display0]
+Name=Map
+Package=rviz
+ClassName=rviz::MapDisplay
+[Display1]
+Name=TF
+Package=rviz
+ClassName=rviz::TFDisplay
+[Display2]
+Name=Axes
+Package=rviz
+ClassName=rviz::AxesDisplay
+[Display3]
+Name=s26_pose
+Package=rviz
+ClassName=rviz::PoseDisplay
+[Display4]
+Name=s27_pose
+Package=rviz
+ClassName=rviz::PoseDisplay
+[Display5]
+Name=s29_pose
+Package=rviz
+ClassName=rviz::PoseDisplay
+[Display6]
+Name=s32_pose
+Package=rviz
+ClassName=rviz::PoseDisplay
+[Display7]
+Name=Marker
+Package=rviz
+ClassName=rviz::MarkerDisplay
+[TF.]
+mapEnabled=1
+[TF./scarab26]
+wlaserEnabled=1
+[TF./scarab29]
+wlaserEnabled=1
+[TF./scarab32]
+wlaserEnabled=1

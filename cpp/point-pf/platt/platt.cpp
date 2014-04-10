@@ -1,4 +1,5 @@
 #include "../point-platt.h"
+#include "../point-pf.h"
 
 #include <vector>
 
@@ -65,15 +66,61 @@ void cleanupMPCVars() {
 bool isValidInputs()
 {
 	for(int t = 0; t < T-1; ++t) {
+		std::cout << "\n\nt: " << t << "\n";
+
+		std::cout << "\nH[" << t << "]: ";
+		for(int i=0; i < (M*X_DIM+U_DIM); ++i) {
+			std::cout << H[t][i] << " ";
+		}
+
+		std::cout << "\nf[" << t << "]: ";
+		for(int i=0; i < (M*X_DIM+U_DIM); ++i) {
+			std::cout << f[t][i] << " ";
+		}
+
+		std::cout << "\nlb[" << t << "]: ";
+		for(int i=0; i < (M*X_DIM+U_DIM); ++i) {
+			std::cout << lb[t][i] << " ";
+		}
+
+		std::cout << "\nub[" << t << "]: ";
+		for(int i=0; i < (M*X_DIM+U_DIM); ++i) {
+			std::cout << ub[t][i] << " ";
+		}
+	}
+	std::cout << "\n\nt: " << T-1 << "\n";
+
+	std::cout << "\nH[" << T-1 << "]: ";
+	for(int i=0; i < (M*X_DIM); ++i) {
+		std::cout << H[T-1][i] << " ";
+	}
+
+	std::cout << "\nf[" << T-1 << "]: ";
+	for(int i=0; i < (M*X_DIM); ++i) {
+		std::cout << f[T-1][i] << " ";
+	}
+
+	std::cout << "\nlb[" << T-1 << "]: ";
+	for(int i=0; i < (M*X_DIM); ++i) {
+		std::cout << lb[T-1][i] << " ";
+	}
+
+	std::cout << "\nub[" << T-1 << "]: ";
+	for(int i=0; i < (M*X_DIM); ++i) {
+		std::cout << ub[T-1][i] << " ";
+	}
+	std::cout << "\n";
+
+	for(int t = 0; t < T-1; ++t) {
 		for(int i=0; i < (M*X_DIM+U_DIM); ++i) { if (H[t][i] > INFTY/2) { return false; } }
 		for(int i=0; i < (M*X_DIM+U_DIM); ++i) { if (f[t][i] > INFTY/2) { return false; } }
 		for(int i=0; i < (M*X_DIM+U_DIM); ++i) { if (lb[t][i] > INFTY/2) { return false; } }
 		for(int i=0; i < (M*X_DIM+U_DIM); ++i) {if (ub[t][i] > INFTY/2) { return false; } }
 	}
-	for(int i=0; i < (M*X_DIM+U_DIM); ++i) { if (H[T-1][i] > INFTY/2) { return false; } }
-	for(int i=0; i < (M*X_DIM+U_DIM); ++i) { if (f[T-1][i] > INFTY/2) { return false; } }
-	for(int i=0; i < (M*X_DIM+U_DIM); ++i) { if (lb[T-1][i] > INFTY/2) { return false; } }
-	for(int i=0; i < (M*X_DIM+U_DIM); ++i) { if (ub[T-1][i] > INFTY/2) { return false; } }
+	for(int i=0; i < (M*X_DIM); ++i) { if (H[T-1][i] > INFTY/2) { return false; } }
+	for(int i=0; i < (M*X_DIM); ++i) { if (f[T-1][i] > INFTY/2) { return false; } }
+	for(int i=0; i < (M*X_DIM); ++i) { if (lb[T-1][i] > INFTY/2) { return false; } }
+	for(int i=0; i < (M*X_DIM); ++i) { if (ub[T-1][i] > INFTY/2) { return false; } }
 
 	return true;
 }
@@ -89,8 +136,8 @@ double plattCollocation(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vecto
 
 	double merit = 0;
 	double constant_cost, hessian_constant, jac_constant;
-	// costfunc derivative
-	Matrix<TOTAL_VARS> d;
+	// point_platt::costfunc derivative
+	Matrix<TOTAL_VARS> d, diaghess;
 
 	std::vector<std::vector<Matrix<X_DIM> > > Popt(T);
 	for(int t=0; t < T; ++t) {
@@ -101,7 +148,7 @@ double plattCollocation(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vecto
 	float optcost, model_merit, new_merit;
 	float approx_merit_improve, exact_merit_improve, merit_improve_ratio;
 
-	LOG_DEBUG("Initial trajectory cost: %4.10f", costfunc(P,U));
+	LOG_DEBUG("Initial trajectory cost: %4.10f", point_platt::costfunc(P,U));
 
 	int index = 0;
 	bool solution_accepted = true;
@@ -111,40 +158,54 @@ double plattCollocation(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vecto
 
 		// only compute gradient/hessian if P/U has been changed
 		if (solution_accepted) {
-			d = deriv_costfunc(P, U);
-			merit = costfunc(P, U);
+			d = point_platt::deriv_costfunc(P, U);
+			diaghess = point_platt::diaghess_costfunc(P, U);
+			merit = point_platt::costfunc(P, U);
 
 			constant_cost = 0;
 			hessian_constant = 0;
 			jac_constant = 0;
 
 			// compute Hessian first so we can force it to be PSD
-			// TODO: use BFGS to approximate. setting to 0 for now
+			// TODO: use finite differences or BFGS to approximate. (else set to 0)
+			index = 0;
 			for(int t=0; t < T-1; ++t) {
 				for(int i=0; i < M*X_DIM+U_DIM; ++i) {
-					H[t][i] = 0;
+					double val = diaghess[index++];
+					H[t][i] = (val > 0) ? val : 0;
 				}
 			}
 			for(int i=0; i < M*X_DIM; ++i) {
-				H[T-1][i] = 0;
+				double val = diaghess[index++];
+				H[T-1][i] = (val > 0) ? val : 0;
 			}
 
 			// compute gradient
-			for(int t=0; t < T; ++t) {
-				int stage_vars = (t < T-1) ? (M*X_DIM+U_DIM) : (M*X_DIM);
-
-				Matrix<stage_vars> zbar;
+			for(int t=0; t < T-1; ++t) {
+				Matrix<M*X_DIM+U_DIM> zbar;
 				for(int m=0; m < M; ++m) { zbar.insert(m*X_DIM, 0, P[t][m]); }
-				if (t < T-1) { zbar.insert(M*X_DIM, 0, U[t]); }
+				zbar.insert(M*X_DIM, 0, U[t]);
 
 				index = 0;
-				for(int i=0; i < stage_vars; ++i) {
+				for(int i=0; i < M*X_DIM+U_DIM; ++i) {
 					hessian_constant += H[t][i]*zbar[i]*zbar[i];
 					jac_constant -= d[index]*zbar[i];
 					f[t][i] = d[index] - H[t][i]*zbar[i];
 					index++;
 				}
 			}
+
+			Matrix<M*X_DIM> zbar;
+			for(int m=0; m < M; ++m) { zbar.insert(m*X_DIM, 0, P[T-1][m]); }
+
+			index = 0;
+			for(int i=0; i < M*X_DIM; ++i) {
+				hessian_constant += H[T-1][i]*zbar[i]*zbar[i];
+				jac_constant -= d[index]*zbar[i];
+				f[T-1][i] = d[index] - H[T-1][i]*zbar[i];
+				index++;
+			}
+
 
 			constant_cost = 0.5*hessian_constant + jac_constant + merit;
 		}
@@ -184,6 +245,8 @@ double plattCollocation(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vecto
 			exit(0);
 		}
 
+		//exit(0);
+
 		// call FORCES
 		int exitflag = plattMPC_solve(&problem, &output, &info);
 		if (exitflag == 1) {
@@ -207,9 +270,12 @@ double plattCollocation(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vecto
 			exit(-1);
 		}
 
+
+		exit(0);
+
 		model_merit = optcost + constant_cost; // need to add constant terms that were dropped
 
-		new_merit = costfunc(Popt, Uopt);
+		new_merit = point_platt::costfunc(Popt, Uopt);
 
 		LOG_DEBUG("merit: %f", merit);
 		LOG_DEBUG("model_merit: %f", model_merit);
@@ -250,7 +316,52 @@ double plattCollocation(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vecto
 	}
 
 
-	return 0;
+	return point_platt::costfunc(P, U);
 }
+
+int main(int argc, char* argv[]) {
+	//srand(time(0));
+	point_pf::initialize();
+
+	SymmetricMatrix<X_DIM> Sigma0 = .1*identity<X_DIM>();
+
+	std::vector<Matrix<X_DIM> > P0(M);
+	P0[0] = x0;
+	for(int m=1; m < M; ++m) {
+		P0[m] = sampleGaussian(x0, Sigma0);
+	}
+
+	std::vector<std::vector<Matrix<X_DIM>> > P(T, std::vector<Matrix<X_DIM> >(M));
+
+	Matrix<U_DIM> uinit = (xGoal - x0) / (DT*(T-1));
+	std::vector<Matrix<U_DIM> > U(T-1, uinit);
+
+	P[0] = P0;
+	for(int t=0; t < T-1; ++t) {
+		for(int m=0; m < M; ++m) {
+			P[t+1][m] = point_pf::dynfunc(P[t][m], U[t], zeros<Q_DIM,1>());
+		}
+	}
+
+//	LOG_DEBUG("Initial particle trajectory");
+//	point_pf::pythonDisplayParticles(P);
+
+	// initialize FORCES variables
+	plattMPC_params problem;
+	plattMPC_output output;
+	plattMPC_info info;
+
+	setupMPCVars(problem, output);
+
+	LOG_DEBUG("Calling plattCollocation");
+
+	double cost = plattCollocation(P, U, problem, output, info);
+
+	LOG_INFO("Cost: %4.10f", cost);
+
+
+	point_pf::pythonDisplayParticles(P);
+}
+
 
 

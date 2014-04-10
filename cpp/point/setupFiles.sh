@@ -32,7 +32,7 @@ if [ ! -f $MPC_C_FILE ] || [ ! -f $MPC_H_FILE ]; then
     echo "mpc files do not exist. generating with matlab..."
     cd $DIR
     if [ $POINT_TYPE = "belief" ]; then MATLAB_FILE_NAME="${POINT_TYPE}_penalty"
-    else MATLAB_FILE_NAME="{$POINT_TYPE}"; fi
+    else MATLAB_FILE_NAME="${POINT_TYPE}"; fi
     
     matlab -nodisplay -nosplash -nodesktop -r "point_${MATLAB_FILE_NAME}_mpc_gen(${TIMESTEPS}); exit"
     cd $POINT_DIR

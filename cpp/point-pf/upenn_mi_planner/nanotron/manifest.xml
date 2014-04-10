@@ -1,0 +1,16 @@
+<package>
+  <description brief="nanotron">
+
+	Code to interface with the nanoPAN 5375 DK available from Nanotron.
+
+	Unfortunately, I cannot publicly release this portion of the code as it
+	depends on code from Nanotron that is not FOSS.
+  </description>
+  <author>Benjamin Charrow</author>
+  <license>MIT</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/nanotron</url>
+  <depend package="rospy"/>
+  <depend package="roscpp"/>
+  <depend package="geometry_msgs"/>
+</package>

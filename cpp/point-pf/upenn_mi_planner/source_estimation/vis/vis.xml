@@ -1,0 +1,240 @@
+<?xml version="1.0"?>
+<vis>
+  <gui>
+    <size>1200 1200</size>
+    <name>Vis</name>
+    <menuOn>0</menuOn>
+    <frame>
+      <frameRate>30</frameRate>
+      <camera>
+        <name>cam2</name>
+        <position>-5 0 3</position>
+        <lookAt>0 0 2</lookAt>
+        <clipDist>0.1</clipDist>
+      </camera>
+      <size>800 600</size>
+    </frame>
+  </gui>
+
+  <plugin>
+    <id>light1</id>
+    <filename>Light.so</filename>
+    <position>0 0 100</position>
+    <diffuse>0.8 0.8 0.8</diffuse>
+    <specular>0.8 0.8 0.8</specular>
+  </plugin>
+
+  <plugin>
+    <id>floor1</id>
+    <filename>Plane.so</filename>
+    <segments>10</segments>
+    <range>50 50</range>
+    <material>Transparent/Gray</material>
+  </plugin>
+
+  <plugin>
+    <id>ambient</id>
+    <filename>Ambient.so</filename>
+    <color>1 1 1</color>
+  </plugin>
+
+  <plugin>
+    <id>axes</id>
+    <filename>Axes.so</filename>
+    <xColor>1 0 0 1</xColor>
+    <yColor>0 1 0 1</yColor>
+    <zColor>0 0 1 1</zColor>
+    <length>0.5 0.5 0.5</length>
+  </plugin>
+
+  <plugin>
+    <id>map</id>
+    <filename>PointCloud.so</filename>
+    <material>Transparent/Red</material>
+  </plugin>
+
+
+  <!--============================== Robots ===============================-->
+  <plugin>
+    <id>robot1</id>
+    <filename>Cylinder.so</filename>
+    <xyz>0 0 10000</xyz>
+    <rpy>0 0 0</rpy>
+    <material>Colors/Red</material>
+    <plugin>
+      <id>axes</id>
+      <filename>Axes.so</filename>
+      <xColor>1 0 0 1</xColor>
+      <yColor>0 1 0 1</yColor>
+      <zColor>0 0 1 1</zColor>
+      <length>0.5 0.5 0.5</length>
+    </plugin>
+    <plugin>
+      <id>laser</id>
+      <filename>Lidar2DVisual.so</filename>
+      <xyz>0.0 0.0 0.2</xyz>
+      <material>Transparent/Yellow</material>
+    </plugin>
+    <plugin>
+      <id>particlecloud</id>
+      <attach>false</attach>
+      <filename>PointCloud.so</filename>
+      <material>Transparent/Yellow</material>
+    </plugin>
+
+    <plugin>
+      <id>path</id>
+      <attach>false</attach>
+      <filename>LineCloud.so</filename>
+      <material>Colors/Green</material>
+      <thickness>0.01</thickness>
+    </plugin>
+
+  </plugin>
+
+  <plugin>
+    <id>robot2</id>
+    <filename>Cylinder.so</filename>
+    <xyz>0 0 10000</xyz>
+    <rpy>0 0 0</rpy>
+    <material>Colors/Red</material>
+    <plugin>
+      <id>axes</id>
+      <filename>Axes.so</filename>
+      <xColor>1 0 0 1</xColor>
+      <yColor>0 1 0 1</yColor>
+      <zColor>0 0 1 1</zColor>
+      <length>0.5 0.5 0.5</length>
+    </plugin>
+    <plugin>
+      <id>particlecloud</id>
+      <attach>false</attach>
+      <filename>PointCloud.so</filename>
+      <material>Transparent/Green</material>
+    </plugin>
+    <plugin>
+      <id>laser</id>
+      <filename>Lidar2DVisual.so</filename>
+      <xyz>0.0 0.0 0.2</xyz>
+      <material>Transparent/Yellow</material>
+    </plugin>
+
+    <plugin>
+      <id>path</id>
+      <attach>false</attach>
+      <filename>LineCloud.so</filename>
+      <material>Colors/Blue</material>
+      <thickness>0.01</thickness>
+    </plugin>
+
+  </plugin>
+
+  <plugin>
+    <id>robot3</id>
+    <filename>Cylinder.so</filename>
+    <xyz>0 0 10000</xyz>
+    <rpy>0 0 0</rpy>
+    <material>Colors/Red</material>
+    <plugin>
+      <id>axes</id>
+      <filename>Axes.so</filename>
+      <xColor>1 0 0 1</xColor>
+      <yColor>0 1 0 1</yColor>
+      <zColor>0 0 1 1</zColor>
+      <length>0.5 0.5 0.5</length>
+    </plugin>
+    <plugin>
+      <id>particlecloud</id>
+      <attach>false</attach>
+      <filename>PointCloud.so</filename>
+      <material>Transparent/Red</material>
+    </plugin>
+    <plugin>
+      <id>laser</id>
+      <filename>Lidar2DVisual.so</filename>
+      <xyz>0.0 0.0 0.2</xyz>
+      <material>Transparent/Yellow</material>
+    </plugin>
+    <plugin>
+      <id>path</id>
+      <attach>false</attach>
+      <filename>LineCloud.so</filename>
+      <material>Colors/Red</material>
+      <thickness>0.01</thickness>
+    </plugin>
+  </plugin>
+  <plugin>
+    <id>robot4</id>
+    <filename>Cylinder.so</filename>
+    <xyz>0 0 10000</xyz>
+    <rpy>0 0 0</rpy>
+    <material>Colors/Red</material>
+    <plugin>
+      <id>axes</id>
+      <filename>Axes.so</filename>
+      <xColor>1 0 0 1</xColor>
+      <yColor>0 1 0 1</yColor>
+      <zColor>0 0 1 1</zColor>
+      <length>0.5 0.5 0.5</length>
+    </plugin>
+    <plugin>
+      <id>particlecloud</id>
+      <attach>false</attach>
+      <filename>PointCloud.so</filename>
+      <material>Transparent/Red</material>
+    </plugin>
+    <plugin>
+      <id>laser</id>
+      <filename>Lidar2DVisual.so</filename>
+      <xyz>0.0 0.0 0.2</xyz>
+      <material>Transparent/Yellow</material>
+    </plugin>
+    <plugin>
+      <id>path</id>
+      <attach>false</attach>
+      <filename>LineCloud.so</filename>
+      <material>Colors/Red</material>
+      <thickness>0.01</thickness>
+    </plugin>
+  </plugin>  
+
+
+
+  <!--============================== Source ===============================-->
+  <plugin>
+    <id>source</id>
+    <filename>Cylinder.so</filename>
+    <xyz>0 0 0</xyz>
+    <rpy>0 0 0</rpy>
+    <material>Transparent/Blue</material>
+    <plugin>
+      <id>axes</id>
+      <filename>Axes.so</filename>
+      <xColor>1 0 0 1</xColor>
+      <yColor>0 1 0 1</yColor>
+      <zColor>0 0 1 1</zColor>
+      <length>0.5 0.5 0.5</length>
+    </plugin>
+    <plugin>
+      <id>laser</id>
+      <filename>Lidar2DVisual.so</filename>
+      <xyz>0.0 0.0 0.2</xyz>
+      <material>Transparent/Yellow</material>
+    </plugin>
+
+  </plugin>
+
+  <!--======================= LOS / NLOS Particles ========================-->
+  <plugin>
+    <id>los_particles</id>
+    <filename>PointCloud.so</filename>
+    <material>Transparent/Blue</material>
+  </plugin>
+  <plugin>
+    <id>nlos_particles</id>
+    <filename>PointCloud.so</filename>
+    <material>Transparent/Green</material>
+    <pointSize>0.25</pointSize>
+  </plugin>
+
+</vis>

@@ -24,8 +24,10 @@ BFLAGS := $(BFLAGS.$(BUILD))
 OBJ_DIR = build/$(BUILD)
 BIN_DIR = bin/$(BUILD)
 
-# default to 15 T
+# default TIMESTEPS
 T = 15
+# default PARTICLES
+M = 5
 
 ###### DIRECTORY CREATION ###########
 dir:
@@ -50,11 +52,33 @@ test-point-pf: $(TEST_POINT_PF_OBJS)
 $(OBJ_DIR)/test-point-pf.o : test-point-pf.cpp
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
 	
+#######  point-platt ########
+
+POINT_PLATT_FILES = platt-cpp plattMPC logging
+POINT_PLATT_OBJS = $(POINT_PLATT_FILES:%=$(OBJ_DIR)/%.o)
+
+platt-setup:
+	bash setupFiles.sh platt $(T) $(M)
+
+platt: platt-setup $(POINT_PLATT_OBJS) 
+	$(CXX) $(BFLAGS) $(POINT_PLATT_OBJS) -o $(BIN_DIR)/point-platt $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) $(LINKER_FLAGS) $(CASADI_LIBS)
+
+$(OBJ_DIR)/plattMPC.o : platt/plattMPC.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+
+$(OBJ_DIR)/platt-cpp.o : platt/platt.cpp
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
+
 
 ###### CLEAN ########
 
 clean:
-	rm -f build/debug/*.o
-	rm -f build/release/*.o
+	rm -f bin/debug/*
+	rm -f bin/release/*
+	rm -f build/debug/*
+	rm -f build/release/*
+	
+.PHONY:
+	platt-setup
 
 

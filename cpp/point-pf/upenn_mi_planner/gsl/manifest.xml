@@ -1,0 +1,19 @@
+<package>
+  <description brief="gsl">
+
+      A ROS wrapper for the GNU scientific library
+	  http://www.gnu.org/software/gsl/
+
+
+  </description>
+  <author>Benjamin Charrow</author>
+  <license>MIT</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/gsl</url>
+  <depend package="roscpp"/>
+
+  <export>
+    <cpp cflags="-I${prefix}/include -I/opt/local/include/gsl" lflags="-L${prefix}/lib -Wl,-rpath,${prefix}/lib -Wl,-lgsl -lgslcblas -lm  -lrosgsl"/>
+  </export>
+
+</package>

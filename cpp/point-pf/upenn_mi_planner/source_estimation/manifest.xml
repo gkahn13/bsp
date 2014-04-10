@@ -1,0 +1,27 @@
+<package>
+  <description brief="source_estimation">
+
+     source_estimation
+
+  </description>
+  <author>Benjamin Charrow</author>
+  <license>MIT</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/source_estimation</url>
+
+  <rosdep name="eigen"/>
+
+  <depend package="roscpp"/>
+  <depend package="nanotron"/>
+  <depend package="gmm"/>
+  <depend package="visualization_msgs"/>
+  <depend package="sensor_msgs"/>
+  <depend package="geometry_msgs"/>
+  <depend package="player_map"/>
+  <depend package="rvo_move"/>
+  <depend package="gsl"/>
+  <depend package="tf"/>
+  <depend package="timeit"/>
+</package>
+
+

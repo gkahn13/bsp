@@ -33,8 +33,8 @@ int main(int argc, char* argv[]) {
 		dyn_noise = sampleGaussianN(zeros<Q_DIM,1>(), Q, M);
 		obs_noise = sampleGaussianN(zeros<R_DIM,1>(), R, M);
 		sampling_noise = (1/float(M))*(rand() / float(RAND_MAX));
-		//P_t[t+1] = point_pf::beliefDynamics(P_t[t], u, dyn_noise, obs_noise, sampling_noise);
-		P_t[t+1] = point_pf::casadiBeliefDynamics(P_t[t], u, dyn_noise, obs_noise, sampling_noise);
+		P_t[t+1] = point_pf::beliefDynamics(P_t[t], u, dyn_noise, obs_noise, sampling_noise);
+		//P_t[t+1] = point_pf::casadiBeliefDynamics(P_t[t], u, dyn_noise, obs_noise, sampling_noise);
 	}
 
 	for(int t=0; t < T; ++t) {

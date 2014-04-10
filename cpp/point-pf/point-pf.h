@@ -18,7 +18,7 @@
 namespace py = boost::python;
 namespace AD = CasADi;
 
-#define TIMESTEPS 3
+#define TIMESTEPS 15
 #define PARTICLES 5
 #define DT 1.0
 #define X_DIM 2
@@ -29,9 +29,22 @@ namespace AD = CasADi;
 
 const int T = TIMESTEPS;
 const int M = PARTICLES;
+const int TOTAL_VARS = T*M*X_DIM + (T-1)*U_DIM;
 
 SymmetricMatrix<Q_DIM> Q;
 SymmetricMatrix<R_DIM> R;
+
+Matrix<X_DIM> x0, xGoal;
+Matrix<X_DIM> xMin, xMax;
+Matrix<U_DIM> uMin, uMax;
+
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
+
+const double step = 0.0078125*0.0078125;
+const double INFTY = 1e10;
+
+const double alpha_control = 0;
 
 #include "casadi/casadi-point-pf.h"
 AD::SXFunction casadi_belief_dynamics_func;
@@ -41,6 +54,14 @@ namespace point_pf {
 void initialize() {
 	Q = 1e-2*identity<Q_DIM>();
 	R = 1e-2*identity<R_DIM>(); // not sure
+
+	x0[0] = -3.5; x0[1] = 2;
+	xGoal[0] = -3.5; xGoal[1] = -2;
+
+	xMin[0] = -5; xMin[1] = -3;
+	xMax[0] = 5; xMax[1] = 3;
+	uMin[0] = -1; uMin[1] = -1;
+	uMax[0] = 1; uMax[1] = 1;
 
 	casadi_belief_dynamics_func = casadi_point_pf::casadiBeliefDynamicsFunc(M);
 }

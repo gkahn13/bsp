@@ -1,0 +1,91 @@
+<launch>
+  <node pkg="kinematic_sim" type="kinematic_sim" name="KinematicSim"
+        output="screen" respawn="false">
+    <param name="publish_freq" value="5"/>
+    <param name="num_agents" value="3"/>
+
+    <param name="agent0" value="scarab26"/>
+    <param name="agent1" value="scarab32"/>
+    <param name="agent2" value="scarab29"/>
+    <!-- <param name="agent3" value="scarab33"/> -->
+    <!-- <param name="agent4" value="scarab34"/> -->
+
+
+    <!-- <param name="initial0" value="20.2 6.6 1.57"/> -->
+    <param name="initial0" value="-3.3 4.5 0"/>
+    <param name="initial1" value="-4.6 4.6 1.57"/>
+    <param name="initial2" value="-4.5 15.4 1.57"/>
+
+    <!-- <param name="initial3" value="-3.0 28.0 1.57"/> -->
+    <!-- <param name="initial4" value="-4.0 28.0 0.0"/> -->
+
+    <remap from="/scarab29/cmd_vel" to="/scarab29/motor/cmd_vel" />
+    <remap from="/scarab29/odom" to="/scarab29/laser_odom/lodom" />
+    <remap from="/scarab26/cmd_vel" to="/scarab26/motor/cmd_vel" />
+    <remap from="/scarab26/odom" to="/scarab26/laser_odom/lodom" />
+    <remap from="/scarab32/cmd_vel" to="/scarab32/motor/cmd_vel" />
+    <remap from="/scarab32/odom" to="/scarab32/laser_odom/lodom" />
+  </node>
+
+  <!-- Simulate measurements -->
+  <node pkg="source_estimation" type="range_sim" name="range_sim" >
+    <param name="nbots" value="3" />
+    <param name="robot0" value="scarab26" />
+    <param name="robot1" value="scarab29" />
+    <param name="robot2" value="scarab32" />
+
+    <param name="id0" value="26" />
+    <param name="id1" value="29" />
+    <param name="id2" value="32" />
+    <!-- <param name="robot3" value="scarab33" /> -->
+    <!-- <param name="robot4" value="scarab34" /> -->
+    <remap from="map_valid" to="/range_static_map" />
+
+    <rosparam file="$(find source_estimation)/config/hmm_params.yaml" command="load" />
+
+    <param name="period" value="0.1" />
+  </node>
+
+  <!-- Control and measurement aggregation -->
+  <group ns="scarab26">
+    <node name="pose_stamped" pkg="scarab_rviz" type="posestamped_node.py" />
+    <node name="range_pose" pkg="nanotron" type="range_pose_node.py">
+      <param name="name" value="scarab26"/>
+      <remap from="range_pose" to="/measurements"/>
+    </node>
+    <node pkg="rvo_move" type="move_server" name="move_server" output="screen">
+      <rosparam file="$(find rvo_move)/config/scarab_move.yaml" command="load" />
+      <remap from="cmd_vel" to="motor/cmd_vel" />
+      <remap from="map" to="/nav_static_map" />
+      
+      <param name="nbots" value="2" />
+      <param name="id" value="0" />
+      <param name="robot0" value="/scarab26" />
+      <param name="robot1" value="/scarab32" />
+
+      <param name="obstacle_file" value="$(find source_estimation)/maps/polygons.txt" />
+    </node>
+  </group>
+
+  <!-- Control and measurement aggregation -->
+  <group ns="scarab32">
+    <node name="pose_stamped" pkg="scarab_rviz" type="posestamped_node.py" />
+    <node name="range_pose" pkg="nanotron" type="range_pose_node.py">
+      <param name="name" value="scarab32"/>
+      <remap from="range_pose" to="/measurements"/>
+    </node>
+    <node pkg="rvo_move" type="move_server" name="move_server" output="screen">
+      <rosparam file="$(find rvo_move)/config/scarab_move.yaml" command="load" />
+      <remap from="cmd_vel" to="motor/cmd_vel" />
+      <remap from="map" to="/nav_static_map" />
+      
+      <param name="nbots" value="2" />
+      <param name="id" value="1" />
+      <param name="robot0" value="/scarab26" />
+      <param name="robot1" value="/scarab32" />
+
+
+      <param name="obstacle_file" value="$(find source_estimation)/maps/polygons.txt" />
+    </node>
+  </group>
+</launch>

@@ -1,0 +1,19 @@
+# measurement_model: gaussian
+# gauss_mu0: 0
+# gauss_B: -0.4286
+# gauss_sigma2alpha: 3.0
+
+# Hand tuned paramters
+measurement_model: fading
+
+close_mu: -2
+close_var: 10.0
+
+los_mu0: 2.51
+los_mu: -0.06229
+los_sigma2: 7.0
+
+nlos_mu0: -0.259655
+nlos_mu: -0.453359
+nlos_sigma2: 14.0138
+

@@ -90,15 +90,15 @@ bool isValidInputs()
 			std::cout << f[t][i] << " ";
 		}
 
-		std::cout << "\nlb[" << t << "]: ";
-		for(int i=0; i < (M*X_DIM+U_DIM); ++i) {
-			std::cout << lb[t][i] << " ";
-		}
-
-		std::cout << "\nub[" << t << "]: ";
-		for(int i=0; i < (M*X_DIM+U_DIM); ++i) {
-			std::cout << ub[t][i] << " ";
-		}
+//		std::cout << "\nlb[" << t << "]: ";
+//		for(int i=0; i < (M*X_DIM+U_DIM); ++i) {
+//			std::cout << lb[t][i] << " ";
+//		}
+//
+//		std::cout << "\nub[" << t << "]: ";
+//		for(int i=0; i < (M*X_DIM+U_DIM); ++i) {
+//			std::cout << ub[t][i] << " ";
+//		}
 	}
 	std::cout << "\n\nt: " << T-1 << "\n";
 
@@ -112,15 +112,15 @@ bool isValidInputs()
 		std::cout << f[T-1][i] << " ";
 	}
 
-	std::cout << "\nlb[" << T-1 << "]: ";
-	for(int i=0; i < (M*X_DIM); ++i) {
-		std::cout << lb[T-1][i] << " ";
-	}
-
-	std::cout << "\nub[" << T-1 << "]: ";
-	for(int i=0; i < (M*X_DIM); ++i) {
-		std::cout << ub[T-1][i] << " ";
-	}
+//	std::cout << "\nlb[" << T-1 << "]: ";
+//	for(int i=0; i < (M*X_DIM); ++i) {
+//		std::cout << lb[T-1][i] << " ";
+//	}
+//
+//	std::cout << "\nub[" << T-1 << "]: ";
+//	for(int i=0; i < (M*X_DIM); ++i) {
+//		std::cout << ub[T-1][i] << " ";
+//	}
 
 	std::cout << "\n";
 
@@ -173,9 +173,12 @@ double plattCollocation(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vecto
 
 		// only compute gradient/hessian if P/U has been changed
 		if (solution_accepted) {
-			d = point_platt::deriv_costfunc(P, U);
-			diaghess = point_platt::diaghess_costfunc(P, U);
-			//diaghess.reset();
+			d = point_platt::casadi_grad_costfunc(P,U);
+			//d = point_platt::grad_costfunc(P, U);
+
+			//diaghess = point_platt::diaghess_costfunc(P, U);
+			//diaghess = point_platt::casadi_diaghess_costfunc(P,U);
+			diaghess.reset();
 			merit = point_platt::costfunc(P, U);
 
 			constant_cost = 0;
@@ -206,8 +209,8 @@ double plattCollocation(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vecto
 				for(int i=0; i < M*X_DIM+U_DIM; ++i) {
 					hessian_constant += H[t][i]*zbar[i]*zbar[i];
 					jac_constant -= d[index]*zbar[i];
-					//f[t][i] = d[index] - H[t][i]*zbar[i];
-					f[t][i] = (i < M*X_DIM) ? 0 : d[index];
+					f[t][i] = d[index] - H[t][i]*zbar[i];
+					//f[t][i] = (i < M*X_DIM) ? 0 : d[index] - H[t][i]*zbar[i];
 					index++;
 				}
 			}
@@ -219,7 +222,7 @@ double plattCollocation(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vecto
 			for(int i=0; i < M*X_DIM; ++i) {
 				hessian_constant += H[T-1][i]*zbar[i]*zbar[i];
 				jac_constant -= d[index]*zbar[i];
-				f[T-1][i] = 0;//d[index] - H[T-1][i]*zbar[i];
+				f[T-1][i] = d[index] - H[T-1][i]*zbar[i];
 				index++;
 			}
 
@@ -268,8 +271,6 @@ double plattCollocation(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vecto
 			exit(0);
 		}
 
-		//exit(0);
-
 		// call FORCES
 		int exitflag = plattMPC_solve(&problem, &output, &info);
 		if (exitflag == 1) {
@@ -297,8 +298,10 @@ double plattCollocation(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vecto
 			std::cout << ~Uopt[t];
 		}
 
-		point_pf::pythonDisplayParticles(Popt);
-		//exit(0);
+		if (it > 50) {
+			point_pf::pythonDisplayParticles(Popt);
+			//exit(0);
+		}
 
 		model_merit = optcost + constant_cost; // need to add constant terms that were dropped
 
@@ -373,13 +376,17 @@ int main(int argc, char* argv[]) {
 		}
 	}
 
-//	LOG_DEBUG("Initial particle trajectory");
+//	LOG_DEBUG("Display initial trajectory");
 //	point_pf::pythonDisplayParticles(P);
 
-	point_platt::casadi_costfunc(P,U);
+//	Matrix<TOTAL_VARS> g = point_platt::grad_costfunc(P,U);
+//	Matrix<TOTAL_VARS> casadi_g = point_platt::casadi_grad_costfunc(P,U);
+//
+//	for(int i=0; i < TOTAL_VARS; ++i) {
+//		std::cout << std::left << std::setw(15) << std::setprecision(6) << g[i] << std::setprecision(6) << casadi_g[i] << "\n";
+//	}
 //	LOG_DEBUG("Initial cost: %4.10f", point_platt::costfunc(P,U));
 //	LOG_DEBUG("Initial casadi cost: %4.10f", point_platt::casadi_costfunc(P,U));
-	exit(0);
 
 	// initialize FORCES variables
 	plattMPC_params problem;

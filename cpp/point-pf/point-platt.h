@@ -17,18 +17,12 @@ float costfunc_noise(const std::vector<std::vector<Matrix<X_DIM> > >& P, const s
 	// need:
 	// (T-1)*M dyn_noise
 	// M*T obs_noise
-	// T sampling_noise
 
 	// TODO: if no propagation, then all particle gradients = 0
 	std::vector<std::vector<Matrix<X_DIM> > > P_prop(T, std::vector<Matrix<X_DIM> >(M));
 	P_prop[0] = P[0];
 	for(int t=0; t < T-1; ++t) {
-//		std::vector<Matrix<Q_DIM> > dyn_noise_t(dyn_noise.begin()+t*M, dyn_noise.begin()+(t+1)*M);
-//		std::vector<Matrix<R_DIM> > obs_noise_t(obs_noise.begin()+t*M, obs_noise.begin()+(t+1)*M);
-//		float sampling_noise_t = sampling_noise[t];
-//		P_prop[t+1] = point_pf::beliefDynamics(P[t], U[t], dyn_noise_t, obs_noise_t, sampling_noise_t);
 		for(int m=0; m < M; ++m) {
-			//P_prop[t+1][m] = point_pf::dynfunc(P[t][m], U[t], zeros<Q_DIM,1>());
 			P_prop[t+1][m] = point_pf::dynfunc(P[t][m], U[t], dyn_noise[t*M+m]);
 		}
 	}
@@ -37,13 +31,11 @@ float costfunc_noise(const std::vector<std::vector<Matrix<X_DIM> > >& P, const s
 	Matrix<Z_DIM> h_t_mle, h_t_other;
 	Matrix<T*Z_DIM> h_diff;
 	for(int m=1; m < M; ++m) {
-		for(int t=0; t < 1; ++t) { // T
+		for(int t=0; t < T; ++t) {
 			P_t_mle = P_prop[t][0];
-			//h_t_mle = point_pf::obsfunc(P_t_mle, zeros<R_DIM,1>());
 			h_t_mle = point_pf::obsfunc(P_t_mle, obs_noise[t]);
 
 			P_t_other = P_prop[t][m];
-			//h_t_other = point_pf::obsfunc(P_t_other, zeros<R_DIM,1>());
 			h_t_other = point_pf::obsfunc(P_t_other, obs_noise[m*T+t]);
 			h_diff.insert(t*X_DIM, 0, h_t_mle - h_t_other);
 		}
@@ -77,57 +69,24 @@ float costfunc(const std::vector<std::vector<Matrix<X_DIM> > >& P, const std::ve
 
 float casadi_costfunc(const std::vector<std::vector<Matrix<X_DIM> > >& P, const std::vector<Matrix<U_DIM> >& U) {
 
-	double P_arr[T*M*X_DIM];
-	double U_arr[(T-1)*U_DIM];
+	double PU_arr[T*M*X_DIM+(T-1)*U_DIM];
 	double dyn_noise_arr[(T-1)*M*Q_DIM];
 	double obs_noise_arr[M*T*R_DIM];
 
-	int index = 0;
-	for(int t=0; t < T; ++t) {
-		for(int m=0; m < M; ++m) {
-			for(int i=0; i < X_DIM; ++i) {
-				P_arr[index++] = P[t][m][i];
-			}
-		}
-	}
-
-	index = 0;
-	for(int t=0; t < T-1; ++t) {
-		for(int i=0; i < U_DIM; ++i) {
-			U_arr[index++] = U[t][i];
-		}
-	}
-
 	std::vector<Matrix<Q_DIM> > dyn_noise = sampleGaussianN(zeros<Q_DIM,1>(), Q, (T-1)*M);
-	index = 0;
-	for(int t=0; t < T-1; ++t) {
-		for(int m=0; m < M; ++m) {
-			for(int i=0; i < Q_DIM; ++i) {
-				dyn_noise_arr[index++] = dyn_noise[t*M+m][i];
-			}
-		}
-	}
-
 	std::vector<Matrix<Q_DIM> > obs_noise = sampleGaussianN(zeros<Q_DIM,1>(), Q, T*M);
-	index = 0;
-	for(int m=0; m < M; ++m) {
-		for(int t=0; t < T; ++t) {
-			for(int i=0; i < R_DIM; ++i) {
-				obs_noise_arr[index++] = obs_noise[m*T+t][i];
-			}
-		}
-	}
+
+	casadi_platt::setup_casadi_vars(P, U, dyn_noise, obs_noise, PU_arr, dyn_noise_arr, obs_noise_arr);
 
 
 	double real_cost = costfunc_noise(P,U,dyn_noise,obs_noise,std::vector<float>(T));
 	std::cout << "Actual cost: " << real_cost << "\n";
 
-	AD::SXFunction func = casadi_platt::casadiCostfuncFunc();
+	AD::SXFunction func = casadi_platt::casadi_costfunc();
 
-	func.setInput(P_arr,0);
-	func.setInput(U_arr,1);
-	func.setInput(dyn_noise_arr,2);
-	func.setInput(obs_noise_arr,3);
+	func.setInput(PU_arr,0);
+	func.setInput(dyn_noise_arr,1);
+	func.setInput(obs_noise_arr,2);
 
 	func.evaluate();
 
@@ -139,12 +98,12 @@ float casadi_costfunc(const std::vector<std::vector<Matrix<X_DIM> > >& P, const 
 	return cost;
 }
 
-Matrix<TOTAL_VARS> deriv_costfunc(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vector<Matrix<U_DIM> >& U) {
-	Matrix<TOTAL_VARS> d_avg;
+Matrix<TOTAL_VARS> grad_costfunc(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vector<Matrix<U_DIM> >& U) {
+	Matrix<TOTAL_VARS> g_avg;
 
 	int max_iter = 100;
 	for(int iter=0; iter < max_iter; iter++) {
-		Matrix<TOTAL_VARS> d;
+		Matrix<TOTAL_VARS> g;
 
 		std::vector<Matrix<Q_DIM> > dyn_noise = sampleGaussianN(zeros<Q_DIM,1>(), Q, (T-1)*M);
 		std::vector<Matrix<R_DIM> > obs_noise = sampleGaussianN(zeros<R_DIM,1>(), R, T*M);
@@ -165,7 +124,7 @@ Matrix<TOTAL_VARS> deriv_costfunc(std::vector<std::vector<Matrix<X_DIM> > >& P, 
 					cost_l = costfunc_noise(P,U, dyn_noise, obs_noise, sampling_noise);
 
 					P[t][m][i] = orig;
-					d[index++] = (cost_p - cost_l)/(2*step);
+					g[index++] = (cost_p - cost_l)/(2*step);
 				}
 			}
 
@@ -180,15 +139,47 @@ Matrix<TOTAL_VARS> deriv_costfunc(std::vector<std::vector<Matrix<X_DIM> > >& P, 
 					cost_l = costfunc_noise(P,U, dyn_noise, obs_noise, sampling_noise);
 
 					U[t][i] = orig;
-					d[index++] = (cost_p - cost_l)/(2*step);
+					g[index++] = (cost_p - cost_l)/(2*step);
 				}
 			}
 		}
 
-		d_avg += (1/float(max_iter))*d;
+		g_avg += (1/float(max_iter))*g;
 	}
 
-	return d_avg;
+	return g_avg;
+}
+
+Matrix<TOTAL_VARS> casadi_grad_costfunc(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vector<Matrix<U_DIM> >& U) {
+	Matrix<TOTAL_VARS> g_avg, g;
+	double cost;
+
+	double PU_arr[T*M*X_DIM+(T-1)*U_DIM];
+	double dyn_noise_arr[(T-1)*M*Q_DIM];
+	double obs_noise_arr[M*T*R_DIM];
+
+	AD::SXFunction costgrad_func = casadi_platt::casadi_costgradfunc();
+
+	int max_iter = 1e3;
+	for(int iter=0; iter < max_iter; iter++) {
+		std::vector<Matrix<Q_DIM> > dyn_noise = sampleGaussianN(zeros<Q_DIM,1>(), Q, (T-1)*M);
+		std::vector<Matrix<Q_DIM> > obs_noise = sampleGaussianN(zeros<Q_DIM,1>(), Q, T*M);
+
+		casadi_platt::setup_casadi_vars(P, U, dyn_noise, obs_noise, PU_arr, dyn_noise_arr, obs_noise_arr);
+
+		costgrad_func.setInput(PU_arr,0);
+		costgrad_func.setInput(dyn_noise_arr,1);
+		costgrad_func.setInput(obs_noise_arr,2);
+
+		costgrad_func.evaluate();
+
+		costgrad_func.getOutput(&cost,0);
+		costgrad_func.getOutput(g.getPtr(),1);
+
+		g_avg += (1/float(max_iter))*g;
+	}
+
+	return g_avg;
 }
 
 Matrix<TOTAL_VARS> diaghess_costfunc(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vector<Matrix<U_DIM> >& U) {
@@ -244,6 +235,41 @@ Matrix<TOTAL_VARS> diaghess_costfunc(std::vector<std::vector<Matrix<X_DIM> > >& 
 
 	return diaghess_avg;
 }
+
+Matrix<TOTAL_VARS> casadi_diaghess_costfunc(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vector<Matrix<U_DIM> >& U) {
+	Matrix<TOTAL_VARS> diaghess_avg, diaghess;
+	double cost;
+
+	double PU_arr[T*M*X_DIM+(T-1)*U_DIM];
+	double dyn_noise_arr[(T-1)*M*Q_DIM];
+	double obs_noise_arr[M*T*R_DIM];
+
+	AD::SXFunction costdiaghess_func = casadi_platt::casadi_costdiaghessfunc();
+
+	int max_iter = 1e3;
+	for(int iter=0; iter < max_iter; iter++) {
+		std::vector<Matrix<Q_DIM> > dyn_noise = sampleGaussianN(zeros<Q_DIM,1>(), Q, (T-1)*M);
+		std::vector<Matrix<Q_DIM> > obs_noise = sampleGaussianN(zeros<Q_DIM,1>(), Q, T*M);
+
+		casadi_platt::setup_casadi_vars(P, U, dyn_noise, obs_noise, PU_arr, dyn_noise_arr, obs_noise_arr);
+
+		costdiaghess_func.setInput(PU_arr,0);
+		costdiaghess_func.setInput(dyn_noise_arr,1);
+		costdiaghess_func.setInput(obs_noise_arr,2);
+
+		costdiaghess_func.evaluate();
+
+		costdiaghess_func.getOutput(&cost,0);
+		costdiaghess_func.getOutput(diaghess.getPtr(),1);
+
+		diaghess_avg += (1/float(max_iter))*diaghess;
+	}
+
+	std::cout << "diaghess_avg\n" << diaghess_avg;
+
+	return diaghess_avg;
+}
+
 
 }
 

@@ -5,6 +5,7 @@
 
 #include "../../util/matrix.h"
 #include "../../util/Timer.h"
+#include "../../util/logging.h"
 
 extern "C" {
 #include "plattMPC.h"
@@ -205,8 +206,8 @@ double plattCollocation(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vecto
 				for(int i=0; i < M*X_DIM+U_DIM; ++i) {
 					hessian_constant += H[t][i]*zbar[i]*zbar[i];
 					jac_constant -= d[index]*zbar[i];
-					f[t][i] = d[index] - H[t][i]*zbar[i];
-					//f[t][i] = (i < M*X_DIM) ? 0 : d[index];
+					//f[t][i] = d[index] - H[t][i]*zbar[i];
+					f[t][i] = (i < M*X_DIM) ? 0 : d[index];
 					index++;
 				}
 			}
@@ -218,7 +219,7 @@ double plattCollocation(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vecto
 			for(int i=0; i < M*X_DIM; ++i) {
 				hessian_constant += H[T-1][i]*zbar[i]*zbar[i];
 				jac_constant -= d[index]*zbar[i];
-				f[T-1][i] = d[index] - H[T-1][i]*zbar[i];
+				f[T-1][i] = 0;//d[index] - H[T-1][i]*zbar[i];
 				index++;
 			}
 
@@ -375,7 +376,10 @@ int main(int argc, char* argv[]) {
 //	LOG_DEBUG("Initial particle trajectory");
 //	point_pf::pythonDisplayParticles(P);
 
-	LOG_DEBUG("Initial cost: %4.10f", point_platt::costfunc(P,U));
+	point_platt::casadi_costfunc(P,U);
+//	LOG_DEBUG("Initial cost: %4.10f", point_platt::costfunc(P,U));
+//	LOG_DEBUG("Initial casadi cost: %4.10f", point_platt::casadi_costfunc(P,U));
+	exit(0);
 
 	// initialize FORCES variables
 	plattMPC_params problem;

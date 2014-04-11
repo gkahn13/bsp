@@ -21,8 +21,8 @@ AD::SXMatrix dynfunc(const AD::SXMatrix& x_t, const AD::SXMatrix& u_t, const AD:
 {
 	AD::SXMatrix x_tp1(X_DIM,1);
 
-	x_tp1(0) = x_t(0) + u_t(0)*DT + Q(0,0)*q_t(0);
-	x_tp1(1) = x_t(1) + u_t(1)*DT + Q(1,1)*q_t(1);
+	x_tp1(0) = x_t(0) + u_t(0)*DT + .01*q_t(0);
+	x_tp1(1) = x_t(1) + u_t(1)*DT + .01*q_t(1);
 
   	return x_tp1;
 }
@@ -32,7 +32,7 @@ AD::SXMatrix obsfunc(const AD::SXMatrix& x_t, const AD::SXMatrix& r_t)
 	AD::SXMatrix z(Z_DIM,1);
 
 	z(0) = x_t(0) + sqrt(0.5*0.5*x_t(0)*x_t(0) + 1e-6)*r_t(0);
-	z(1) = x_t(1) + sqrt(0.5*0.5*x_t(1)*x_t(1) + 1e-6)*r_t(1);
+	z(1) = x_t(1) + sqrt(0.5*0.5*x_t(0)*x_t(0) + 1e-6)*r_t(1);
 
   	return z;
 }

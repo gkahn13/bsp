@@ -52,6 +52,18 @@ test-point-pf: $(TEST_POINT_PF_OBJS)
 $(OBJ_DIR)/test-point-pf.o : test-point-pf.cpp
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
 	
+####### test-point-entropy #######
+
+TEST_POINT_ENTROPY_FILES = test-point-entropy logging
+TEST_POINT_ENTROPY_OBJS = $(TEST_POINT_ENTROPY_FILES:%=$(OBJ_DIR)/%.o)
+
+test-point-entropy: $(TEST_POINT_ENTROPY_OBJS)
+	$(CXX) $(BFLAGS) $(TEST_POINT_ENTROPY_OBJS) -o $(BIN_DIR)/test-point-pf $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) $(LINKER_FLAGS) $(CASADI_LIBS)
+	
+$(OBJ_DIR)/test-point-entropy.o : test-point-entropy.cpp
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
+	
+	
 #######  point-platt ########
 
 POINT_PLATT_FILES = platt-cpp plattMPC logging

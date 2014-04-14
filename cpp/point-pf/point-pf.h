@@ -79,23 +79,24 @@ Matrix<Z_DIM> obsfunc(const Matrix<X_DIM>& x, const Matrix<R_DIM>& r)
 	return z;
 }
 
-float gaussLikelihood(const Matrix<Z_DIM>& v, const SymmetricMatrix<R_DIM>& S) {
-	Matrix<R_DIM,R_DIM> Sf;
+template <int _vDim, int _sDim>
+float gaussLikelihood(const Matrix<_vDim>& v, const SymmetricMatrix<_sDim>& S) {
+	Matrix<_sDim,_sDim> Sf;
 	chol(S, Sf);
-	Matrix<R_DIM,1> M = (!Sf)*v;
+	Matrix<_sDim,1> M = (!Sf)*v;
 
-	Matrix<R_DIM> E_exp;
+	Matrix<_sDim> E_exp;
 	float E_exp_sum = 0;
 	E_exp_sum = exp(-0.5*tr(~M*M));
-//	for(int i=0; i < R_DIM; ++i) {
-//		Matrix<R_DIM> M_col = M.subMatrix<R_DIM,1>(0,0);
+//	for(int i=0; i < _sDim; ++i) {
+//		Matrix<_sDim> M_col = M.subMatrix<_sDim,1>(0,0);
 //		E_exp[i] = exp(-0.5 * tr(~M_col*M_col));
 //		E_exp_sum += E_exp[i];
 //	}
 
 	float Sf_diag_prod = 1;
-	for(int i=0; i < R_DIM; ++i) { Sf_diag_prod *= Sf(i,i); }
-	float C = pow(2*M_PI, Z_DIM/2)*Sf_diag_prod;
+	for(int i=0; i < _sDim; ++i) { Sf_diag_prod *= Sf(i,i); }
+	float C = pow(2*M_PI, _vDim/2)*Sf_diag_prod;
 
 	float w = E_exp_sum / C;
 	return w;
@@ -131,7 +132,7 @@ std::vector<Matrix<X_DIM> > beliefDynamics(const std::vector<Matrix<X_DIM> >& P_
 	for(int m=0; m < M; ++m) {
 		P_tp1_bar[m] = dynfunc(P_t[m], u, dyn_noise[m]);
 		Matrix<Z_DIM> e = obsfunc(P_tp1_bar[m], obs_noise[m]) - obsfunc(P_tp1_bar[m], zeros<R_DIM,1>());
-		W[m] = gaussLikelihood(e, R);
+		W[m] = gaussLikelihood<Z_DIM, R_DIM>(e, R);
 		W_sum += W[m];
 	}
 	for(int m=0; m < M; ++m) { W[m] = W[m] / W_sum; }

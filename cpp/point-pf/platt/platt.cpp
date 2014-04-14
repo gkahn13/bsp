@@ -173,8 +173,8 @@ double plattCollocation(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vecto
 
 		// only compute gradient/hessian if P/U has been changed
 		if (solution_accepted) {
-			d = point_platt::casadi_grad_costfunc(P,U);
-			//d = point_platt::grad_costfunc(P, U);
+			//d = point_platt::casadi_grad_costfunc(P,U);
+			d = point_platt::grad_costfunc(P, U);
 
 			//diaghess = point_platt::diaghess_costfunc(P, U);
 			//diaghess = point_platt::casadi_diaghess_costfunc(P,U);
@@ -270,6 +270,8 @@ double plattCollocation(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vecto
 			LOG_ERROR("Inputs are not valid!");
 			exit(0);
 		}
+
+		exit(0);
 
 		// call FORCES
 		int exitflag = plattMPC_solve(&problem, &output, &info);
@@ -385,8 +387,9 @@ int main(int argc, char* argv[]) {
 //	for(int i=0; i < TOTAL_VARS; ++i) {
 //		std::cout << std::left << std::setw(15) << std::setprecision(6) << g[i] << std::setprecision(6) << casadi_g[i] << "\n";
 //	}
-//	LOG_DEBUG("Initial cost: %4.10f", point_platt::costfunc(P,U));
+	LOG_DEBUG("Initial cost: %4.10f", point_platt::costfunc(P,U));
 //	LOG_DEBUG("Initial casadi cost: %4.10f", point_platt::casadi_costfunc(P,U));
+	exit(0);
 
 	// initialize FORCES variables
 	plattMPC_params problem;

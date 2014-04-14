@@ -8,6 +8,16 @@ namespace AD = CasADi;
 
 namespace point_platt {
 
+Matrix<T*Z_DIM> observation_sequence(const std::vector<std::vector<Matrix<X_DIM>> >& P, const int particle, const std::vector<Matrix<R_DIM> >& obs_noise) {
+	Matrix<T*Z_DIM> observations;
+
+	for(int t=0; t < T; ++t) {
+		observations.insert(t*Z_DIM, 0, point_pf::obsfunc(P[t][particle], obs_noise[particle*T+t]));
+	}
+
+	return observations;
+}
+
 // assume P[t][0] is most likely particle
 float costfunc_noise(const std::vector<std::vector<Matrix<X_DIM> > >& P, const std::vector<Matrix<U_DIM> >& U,
 						const std::vector<Matrix<Q_DIM> >& dyn_noise, const std::vector<Matrix<R_DIM> >& obs_noise,
@@ -30,15 +40,18 @@ float costfunc_noise(const std::vector<std::vector<Matrix<X_DIM> > >& P, const s
 	Matrix<X_DIM> P_t_mle, P_t_other;
 	Matrix<Z_DIM> h_t_mle, h_t_other;
 	Matrix<T*Z_DIM> h_diff;
+	Matrix<T*Z_DIM> P_0_obs_seq = observation_sequence(P_prop, 0, obs_noise);
 	for(int m=1; m < M; ++m) {
-		for(int t=0; t < T; ++t) {
-			P_t_mle = P_prop[t][0];
-			h_t_mle = point_pf::obsfunc(P_t_mle, obs_noise[t]);
-
-			P_t_other = P_prop[t][m];
-			h_t_other = point_pf::obsfunc(P_t_other, obs_noise[m*T+t]);
-			h_diff.insert(t*X_DIM, 0, h_t_mle - h_t_other);
-		}
+		Matrix<T*Z_DIM> P_m_obs_seq = observation_sequence(P_prop, m, obs_noise);
+		h_diff = P_m_obs_seq - P_0_obs_seq;
+//		for(int t=0; t < T; ++t) {
+//			P_t_mle = P_prop[t][0];
+//			h_t_mle = point_pf::obsfunc(P_t_mle, obs_noise[t]);
+//
+//			P_t_other = P_prop[t][m];
+//			h_t_other = point_pf::obsfunc(P_t_other, obs_noise[m*T+t]);
+//			h_diff.insert(t*X_DIM, 0, h_t_mle - h_t_other);
+//		}
 		cost += (1/float(M))*exp(-tr(~h_diff*h_diff));
 	}
 

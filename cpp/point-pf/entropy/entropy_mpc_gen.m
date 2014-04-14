@@ -1,4 +1,4 @@
-function platt_mpc_gen(timesteps, particles)
+function entropy_mpc_gen(timesteps, particles)
 
 % FORCES - Fast interior point code generation for multistage problems.
 % Copyright (C) 2011-12 Alexander Domahidi [domahidi@control.ee.ethz.ch],
@@ -121,7 +121,7 @@ var = sprintf('z%d',i);
 outputs(i) = newOutput(var,i,1:nx);
 
 % solver settings
-mpcname = 'plattMPC';
+mpcname = 'entropyMPC';
 codeoptions = getOptions(mpcname);
 codeoptions.printlevel = 0;
 codeoptions.timing=0;

@@ -59,7 +59,7 @@ float costfunc_noise(const std::vector<std::vector<Matrix<X_DIM> > >& P, const s
 		cost += alpha_control*tr(~U[t]*U[t]);
 	}
 
-	return cost;
+	return -cost;
 }
 
 float costfunc(const std::vector<std::vector<Matrix<X_DIM> > >& P, const std::vector<Matrix<U_DIM> >& U) {

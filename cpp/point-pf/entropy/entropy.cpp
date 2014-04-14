@@ -1,4 +1,4 @@
-#include "../point-platt.h"
+#include "../point-entropy.h"
 #include "../point-pf.h"
 
 #include <vector>
@@ -8,28 +8,28 @@
 #include "../../util/logging.h"
 
 extern "C" {
-#include "plattMPC.h"
-plattMPC_FLOAT **H, **f, **lb, **ub, **z, **c;
+#include "entropyMPC.h"
+entropyMPC_FLOAT **H, **f, **lb, **ub, **z, **c;
 }
 
 namespace cfg {
 const double improve_ratio_threshold = .1;
-const double min_approx_improve = 1e-4;
+const double min_approx_improve = 1e-2;
 const double min_trust_box_size = 1e-2;
 const double trust_shrink_ratio = .1;
 const double trust_expand_ratio = 1.2;
 }
 
-void setupMPCVars(plattMPC_params& problem, plattMPC_output& output) {
+void setupMPCVars(entropyMPC_params& problem, entropyMPC_output& output) {
 	// inputs
-	H = new plattMPC_FLOAT*[T];
-	f = new plattMPC_FLOAT*[T];
-	lb = new plattMPC_FLOAT*[T];
-	ub = new plattMPC_FLOAT*[T];
-	c = new plattMPC_FLOAT*[1];
+	H = new entropyMPC_FLOAT*[T];
+	f = new entropyMPC_FLOAT*[T];
+	lb = new entropyMPC_FLOAT*[T];
+	ub = new entropyMPC_FLOAT*[T];
+	c = new entropyMPC_FLOAT*[1];
 
 	// output
-	z = new plattMPC_FLOAT*[T];
+	z = new entropyMPC_FLOAT*[T];
 
 #define SET_VARS(n)    \
 		H[ BOOST_PP_SUB(n,1) ] = problem.H##n ;  \
@@ -140,8 +140,8 @@ bool isValidInputs()
 	return true;
 }
 
-double plattCollocation(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vector<Matrix<U_DIM> >& U,
-		plattMPC_params& problem, plattMPC_output& output, plattMPC_info& info) {
+double entropyCollocation(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vector<Matrix<U_DIM> >& U,
+		entropyMPC_params& problem, entropyMPC_output& output, entropyMPC_info& info) {
 
 	int max_iter = 100;
 	double Xeps = .1;
@@ -163,7 +163,7 @@ double plattCollocation(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vecto
 	float optcost, model_merit, new_merit;
 	float approx_merit_improve, exact_merit_improve, merit_improve_ratio;
 
-	LOG_DEBUG("Initial trajectory cost: %4.10f", point_platt::costfunc(P,U));
+	LOG_DEBUG("Initial trajectory cost: %4.10f", point_entropy::differential_entropy(P, U));
 
 	int index = 0;
 	bool solution_accepted = true;
@@ -173,13 +173,11 @@ double plattCollocation(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vecto
 
 		// only compute gradient/hessian if P/U has been changed
 		if (solution_accepted) {
-			d = point_platt::casadi_grad_costfunc(P,U);
-			//d = point_platt::grad_costfunc(P, U);
+			d = point_entropy::grad_differential_entropy(P, U);
 
-			//diaghess = point_platt::diaghess_costfunc(P, U);
-			//diaghess = point_platt::casadi_diaghess_costfunc(P,U);
+			//diaghess = point_entropy::diaghess_differential_entropy(P, U);
 			diaghess.reset();
-			merit = point_platt::costfunc(P, U);
+			merit = point_entropy::differential_entropy(P, U);
 
 			constant_cost = 0;
 			hessian_constant = 0;
@@ -272,7 +270,7 @@ double plattCollocation(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vecto
 
 
 		// call FORCES
-		int exitflag = plattMPC_solve(&problem, &output, &info);
+		int exitflag = entropyMPC_solve(&problem, &output, &info);
 		if (exitflag == 1) {
 			optcost = info.pobj;
 			for(int t=0; t < T; ++t) {
@@ -294,13 +292,9 @@ double plattCollocation(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vecto
 			exit(-1);
 		}
 
-		for(int t=0; t < T-1; ++t) {
-			std::cout << ~Uopt[t];
-		}
-
 		model_merit = optcost + constant_cost; // need to add constant terms that were dropped
 
-		new_merit = point_platt::costfunc(Popt, Uopt);
+		new_merit = point_entropy::differential_entropy(Popt, Uopt);
 
 		LOG_DEBUG("merit: %f", merit);
 		LOG_DEBUG("model_merit: %f", model_merit);
@@ -317,7 +311,6 @@ double plattCollocation(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vecto
 
 //		P = Popt; U = Uopt;
 //		solution_accepted = true;
-
 
 		if (approx_merit_improve < -1e-5) {
 			LOG_ERROR("Approximate merit function got worse: %f", approx_merit_improve);
@@ -347,7 +340,7 @@ double plattCollocation(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vecto
 	}
 
 
-	return point_platt::costfunc(P, U);
+	return point_entropy::differential_entropy(P, U);
 }
 
 int main(int argc, char* argv[]) {
@@ -377,28 +370,20 @@ int main(int argc, char* argv[]) {
 //	LOG_DEBUG("Display initial trajectory");
 //	point_pf::pythonDisplayParticles(P);
 
-//	Matrix<TOTAL_VARS> g = point_platt::grad_costfunc(P,U);
-//	Matrix<TOTAL_VARS> casadi_g = point_platt::casadi_grad_costfunc(P,U);
-//
-//	for(int i=0; i < TOTAL_VARS; ++i) {
-//		std::cout << std::left << std::setw(15) << std::setprecision(6) << g[i] << std::setprecision(6) << casadi_g[i] << "\n";
-//	}
-//	LOG_DEBUG("Initial cost: %4.10f", point_platt::costfunc(P,U));
-//	LOG_DEBUG("Initial casadi cost: %4.10f", point_platt::casadi_costfunc(P,U));
+//	LOG_DEBUG("Initial cost: %4.10f", point_entropy::differential_entropy(P,U));
 
 	// initialize FORCES variables
-	plattMPC_params problem;
-	plattMPC_output output;
-	plattMPC_info info;
+	entropyMPC_params problem;
+	entropyMPC_output output;
+	entropyMPC_info info;
 
 	setupMPCVars(problem, output);
 
-	LOG_DEBUG("Calling plattCollocation");
+	LOG_DEBUG("Calling entropyCollocation");
 
-	double cost = plattCollocation(P, U, problem, output, info);
+	double cost = entropyCollocation(P, U, problem, output, info);
 
 	LOG_INFO("Cost: %4.10f", cost);
-
 
 	point_pf::pythonDisplayParticles(P);
 }

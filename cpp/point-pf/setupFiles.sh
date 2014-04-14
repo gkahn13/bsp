@@ -2,7 +2,7 @@
 
 # Arguments:
 # 1: point-pf folder
-#        platt
+#        platt entropy
 # 2: timesteps
 # 3: particles
 

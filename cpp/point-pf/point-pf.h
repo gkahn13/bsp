@@ -44,7 +44,9 @@ Matrix<U_DIM> uMin, uMax;
 const double step = 0.0078125*0.0078125;
 const double INFTY = 1e10;
 
-const double alpha_control = 0;
+// .001 for platt
+// .1 for entropy
+const double alpha_control = .001;
 
 #include "casadi/casadi-point-pf.h"
 AD::SXFunction casadi_belief_dynamics_func;

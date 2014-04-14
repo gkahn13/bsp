@@ -45,10 +45,10 @@ AD::SXMatrix costfunc_noise(const std::vector<std::vector<AD::SXMatrix> >& P, co
 	}
 
 	for(int t=0; t < T-1; ++t) {
-		cost += alpha_control*mul(trans(U[t]),U[t]);
+		cost += -alpha_control*mul(trans(U[t]),U[t]);
 	}
 
-	return cost;
+	return -cost;
 }
 
 AD::SXMatrix costfunc(const AD::SXMatrix& PU_vec,

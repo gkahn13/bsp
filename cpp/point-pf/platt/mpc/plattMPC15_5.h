@@ -28,7 +28,7 @@ typedef double plattMPC_FLOAT;
 /* SOLVER SETTINGS ------------------------------------------------------*/
 /* print level */
 #ifndef plattMPC_SET_PRINTLEVEL
-#define plattMPC_SET_PRINTLEVEL    (2)
+#define plattMPC_SET_PRINTLEVEL    (0)
 #endif
 
 /* timing */
@@ -40,7 +40,7 @@ typedef double plattMPC_FLOAT;
 /* #define PRINTNUMERICALWARNINGS */
 
 /* maximum number of iterations  */
-#define plattMPC_SET_MAXIT         (100)	
+#define plattMPC_SET_MAXIT         (50)	
 
 /* scaling factor of line search (affine direction) */
 #define plattMPC_SET_LS_SCALE_AFF  (0.9)      

@@ -64,7 +64,7 @@ $(OBJ_DIR)/test-point-entropy.o : test-point-entropy.cpp
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
 	
 	
-#######  point-platt ########
+#######  platt ########
 
 POINT_PLATT_FILES = platt-cpp plattMPC logging
 POINT_PLATT_OBJS = $(POINT_PLATT_FILES:%=$(OBJ_DIR)/%.o)
@@ -73,12 +73,29 @@ platt-setup:
 	bash setupFiles.sh platt $(T) $(M)
 
 platt: platt-setup $(POINT_PLATT_OBJS) 
-	$(CXX) $(BFLAGS) $(POINT_PLATT_OBJS) -o $(BIN_DIR)/point-platt $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) $(LINKER_FLAGS) $(CASADI_LIBS)
+	$(CXX) $(BFLAGS) $(POINT_PLATT_OBJS) -o $(BIN_DIR)/platt $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) $(LINKER_FLAGS) $(CASADI_LIBS)
 
 $(OBJ_DIR)/plattMPC.o : platt/plattMPC.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
 
 $(OBJ_DIR)/platt-cpp.o : platt/platt.cpp
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
+
+#######  entropy ########
+
+POINT_ENTROPY_FILES = entropy-cpp entropyMPC logging
+POINT_ENTROPY_OBJS = $(POINT_ENTROPY_FILES:%=$(OBJ_DIR)/%.o)
+
+entropy-setup:
+	bash setupFiles.sh entropy $(T) $(M)
+
+entropy: entropy-setup $(POINT_ENTROPY_OBJS) 
+	$(CXX) $(BFLAGS) $(POINT_ENTROPY_OBJS) -o $(BIN_DIR)/entropy $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) $(LINKER_FLAGS) $(CASADI_LIBS)
+
+$(OBJ_DIR)/entropyMPC.o : entropy/entropyMPC.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+
+$(OBJ_DIR)/entropy-cpp.o : entropy/entropy.cpp
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
 
 

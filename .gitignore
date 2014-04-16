@@ -5,6 +5,8 @@ cpp/bin/*
 cpp/build/*
 cpp/point-pf/bin/*
 cpp/point-pf/build/*
+cpp/point-explore/bin/*
+cpp/point-explore/build/*
 *.project
 *.cproject
 *.pydevproject

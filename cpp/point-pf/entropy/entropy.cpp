@@ -335,7 +335,7 @@ double entropyCollocation(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vec
 			solution_accepted = true;
 		}
 
-//		point_pf::pythonDisplayParticles(P);
+		point_pf::pythonDisplayParticles(P);
 
 	}
 

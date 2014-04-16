@@ -342,7 +342,7 @@ double plattCollocation(std::vector<std::vector<Matrix<X_DIM> > >& P, std::vecto
 			solution_accepted = true;
 		}
 
-//		point_pf::pythonDisplayParticles(P);
+		point_pf::pythonDisplayParticles(P);
 
 	}
 

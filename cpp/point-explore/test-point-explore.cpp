@@ -25,7 +25,7 @@ void test_update() {
 	}
 
 	std::cout << "Initial map\n";
-	point_explore::pythonDisplayStateAndParticles(x0, P0, target);
+	point_explore::pythonDisplayStatesAndParticles(std::vector<Matrix<X_DIM> >(1,x0), P0, target);
 
 	Matrix<U_DIM> uinit;
 	uinit[0] = .25; uinit[1] = .25;
@@ -37,14 +37,11 @@ void test_update() {
 	X[0] = x0;
 	for(int t=0; t < T-1; ++t) {
 		point_explore::updateStateAndParticles(X[t], P[t], U[t], X[t+1], P[t+1]);
-		point_explore::pythonDisplayStateAndParticles(X[t+1], P[t+1], target);
+		point_explore::pythonDisplayStatesAndParticles(std::vector<Matrix<X_DIM> >(1,X[t+1]), P[t+1], target);
 	}
 
 }
 
-float uniform(float low, float high) {
-	return (high - low)*(rand() / float(RAND_MAX)) + low;
-}
 
 void test_entropy() {
 //	srand(time(0));
@@ -59,7 +56,7 @@ void test_entropy() {
 
 	std::vector<Matrix<X_DIM> > P(M);
 	for(int m=0; m < M; ++m) {
-		if (m < M/4) {
+		if (m < 0) {
 			P[m][0] = uniform(.9, 1.1);
 			P[m][1] = uniform(-.1, .1);
 		} else {
@@ -69,7 +66,7 @@ void test_entropy() {
 	}
 
 	Matrix<U_DIM> uinit;
-	uinit[0] = 0; uinit[1] = 0.1;
+	uinit[0] = 0.1; uinit[1] = 0;
 	std::vector<Matrix<U_DIM> > U(T-1, uinit);
 
 	std::vector<Matrix<X_DIM> > X(T);
@@ -78,10 +75,29 @@ void test_entropy() {
 		X[t+1] = point_explore::dynfunc(X[t], U[t]);
 	}
 
-	float entropy = point_explore::greg_entropy(X, U, P);
+	float entropy = point_explore::differential_entropy(X, U, P);
+	Matrix<TOTAL_VARS> grad_entropy = point_explore::grad_differential_entropy(X, U, P);
+
+	int index = 0;
+	for(int t=0; t < T; ++t) {
+		std::cout << "\nt: " << t << "\n";
+		std::cout << "x: ";
+		for(int i=0; i < X_DIM; ++i) {
+			std::cout << grad_entropy[index++] << " ";
+		}
+
+
+		if (t < T-1) {
+			std::cout << "\nu: ";
+			for(int i=0; i < U_DIM; ++i) {
+				std::cout << grad_entropy[index++] << " ";
+			}
+		}
+		std::cout << "\n";
+	}
 
 	std::cout << "entropy: " << entropy << "\n\n";
-	point_explore::pythonDisplayStateAndParticles(x0, P, target);
+	point_explore::pythonDisplayStatesAndParticles(std::vector<Matrix<X_DIM> >(1,x0), P, target);
 }
 
 int main(int argc, char* argv[]) {

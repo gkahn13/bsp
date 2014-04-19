@@ -15,7 +15,7 @@
 namespace py = boost::python;
 
 #define TIMESTEPS 10
-#define PARTICLES 20
+#define PARTICLES 100
 #define DT 1.0
 #define X_DIM 2
 #define U_DIM 2
@@ -31,6 +31,7 @@ SymmetricMatrix<R_DIM> R;
 
 Matrix<X_DIM> x0;
 Matrix<X_DIM> xMin, xMax;
+Matrix<U_DIM> uMin, uMax;
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
@@ -38,18 +39,36 @@ Matrix<X_DIM> xMin, xMax;
 const double step = 0.0078125*0.0078125;
 const double INFTY = 1e10;
 
-const double alpha = 100;
+const double alpha = 2.5; // 2.5
 const double max_range = 0.25;
 
-const double alpha_control = 0;
+const double alpha_control_norm = 0; // 1e-5
+const double alpha_control_smooth = 0; // 1e-4
 
 Matrix<X_DIM> target;
+
+inline float uniform(float low, float high) {
+	return (high - low)*(rand() / float(RAND_MAX)) + low;
+}
 
 namespace point_explore {
 
 template<int _dim>
 float dist(const Matrix<_dim>& a, const Matrix<_dim>& b) {
 	return sqrt(tr(~(a-b)*(a-b)));
+}
+
+void initialize() {
+	R = 1e-2*identity<R_DIM>();
+
+	x0[0] = 0; x0[1] = 0;
+
+	xMin[0] = 0; xMin[1] = 0;
+	xMax[0] = 5; xMax[1] = 5;
+	uMin[0] = -5; uMin[1] = -5;
+	uMax[0] = 5; uMax[1] = 5;
+
+	target[0] = 3; target[1] = 3;
 }
 
 // notice zero noise influence
@@ -122,7 +141,7 @@ void updateStateAndParticles(const Matrix<X_DIM>& x_t, const std::vector<Matrix<
 }
 
 
-float greg_entropy(const std::vector<Matrix<X_DIM> >& X, const std::vector<Matrix<U_DIM> >& U,
+float differential_entropy(const std::vector<Matrix<X_DIM> >& X, const std::vector<Matrix<U_DIM> >& U,
 					 const std::vector<Matrix<X_DIM> >& P) {
 	float entropy = 0;
 
@@ -165,136 +184,113 @@ float greg_entropy(const std::vector<Matrix<X_DIM> >& X, const std::vector<Matri
 		}
 		entropy_t += log(sum_cross_time_weights);
 
-		std::cout << "entropy " << t << ": " << entropy_t << "\n";
-		std::cout << "X_prop: " << ~X_prop[t] << "\n";
+//		std::cout << "entropy " << t << ": " << entropy_t << "\n";
+//		std::cout << "X_prop: " << ~X_prop[t] << "\n";
 		entropy += entropy_t;
 
+	}
+
+	for(int t=0; t < T-2; ++t) {
+		entropy += alpha_control_smooth*tr(~(U[t+1]-U[t])*(U[t+1]-U[t]));
+	}
+
+	for(int t=0; t < T-1; ++t) {
+		entropy += alpha_control_norm*tr(~U[t]*U[t]);
 	}
 
 	return entropy;
 }
 
-
-// obs_noise (T-1)*M
-float differential_entropy_noise(const std::vector<Matrix<X_DIM> >& X, const std::vector<Matrix<U_DIM> >& U,
-									 const std::vector<Matrix<X_DIM> >& P, const std::vector<Matrix<R_DIM> >& obs_noise) {
-	float entropy = 0;
-
-	std::vector<Matrix<X_DIM>> X_prop(T);
-	std::vector<std::vector<Matrix<Z_DIM> > > H(T, std::vector<Matrix<Z_DIM> >(M));
-	std::vector<std::vector<Matrix<Z_DIM> > > H_mle(T, std::vector<Matrix<Z_DIM> >(M));
-	for(int t=0; t < T-1; ++t) {
-		X_prop[t+1] = dynfunc(X[t], U[t]);
-		for(int m=0; m < M; ++m) {
-			H[t+1][m] = obsfunc(X_prop[t+1], P[m], obs_noise[t*M+m]);
-			H_mle[t+1][m] = obsfunc(X_prop[t+1], P[m], zeros<R_DIM,1>());
-		}
-	}
-
-	std::vector<std::vector<float> > W(T, std::vector<float>(M,1/float(M)));
-	for(int t=1; t < T; ++t) {
-		// gauss likelihood of each particle at P[t]
-		// set W[t]
-		float W_sum = 0;
-		for(int m=0; m < M; ++m) {
-			W[t][m] = gaussLikelihood<Z_DIM, Z_DIM>(H[t][m] - H_mle[t][m], R);
-			W_sum += W[t][m];
-		}
-		for(int m=0; m < M; ++m) { W[t][m] = W[t][m] / W_sum; }
-
-
-		// use skoglar version
-		float entropy_t = 0;
-		for(int m=0; m < M; ++m) {
-			entropy_t += -W[t][m]*log(W[t][m]);
-		}
-
-		// simplifies because zero particle dynamics
-		for(int m=0; m < M; ++m) {
-			entropy_t += -W[t][m]*log(W[t-1][m]);
-		}
-
-		float sum_cross_time_weights = 0;
-		for(int m=0; m < M; ++m) {
-			sum_cross_time_weights += W[t-1][m]*W[t][m];
-		}
-		entropy_t += log(sum_cross_time_weights);
-
-		entropy += entropy_t;
-	}
-
-	for(int t=0; t < T-1; ++t) {
-		entropy -= alpha_control*tr(~U[t]*U[t]);
-	}
-
-	return -entropy;
-}
-
-float differential_entropy(const std::vector<Matrix<X_DIM> >& X, const std::vector<Matrix<U_DIM> >& U,
-							  const std::vector<Matrix<X_DIM> >& P) {
-	float avg_entropy = 0;
-	int max_iter = 100;
-	for(int iter=0; iter < max_iter; ++iter) {
-		std::vector<Matrix<R_DIM> > obs_noise = sampleGaussianN(zeros<R_DIM,1>(), R, (T-1)*M);
-		float entropy = point_explore::differential_entropy_noise(X, U, P, obs_noise);
-		avg_entropy += (1/float(max_iter))*entropy;
-	}
-	return avg_entropy;
-}
-
 Matrix<TOTAL_VARS> grad_differential_entropy(std::vector<Matrix<X_DIM> >& X, std::vector<Matrix<U_DIM> >& U,
 												const std::vector<Matrix<X_DIM> >& P) {
-	Matrix<TOTAL_VARS> g_avg;
+	Matrix<TOTAL_VARS> g;
 
-	int max_iter = 20;
-	for(int iter=0; iter < max_iter; iter++) {
-		Matrix<TOTAL_VARS> g;
+	float orig, entropy_p, entropy_l;
+	int index = 0;
+	for(int t=0; t < T; ++t) {
+		for(int i=0; i < X_DIM; ++i) {
+			orig = X[t][i];
 
-		std::vector<Matrix<R_DIM> > obs_noise = sampleGaussianN(zeros<R_DIM,1>(), R, T*M);
+			X[t][i] = orig + step;
+			entropy_p = differential_entropy(X, U, P);
 
-		float orig, entropy_p, entropy_l;
-		int index = 0;
-		for(int t=0; t < T; ++t) {
-			for(int i=0; i < X_DIM; ++i) {
-				orig = X[t][i];
+			X[t][i] = orig - step;
+			entropy_l = differential_entropy(X, U, P);
 
-				X[t][i] = orig + step;
-				entropy_p = differential_entropy_noise(X, U, P, obs_noise);
+			X[t][i] = orig;
+			g[index++] = (entropy_p - entropy_l)/(2*step);
+		}
 
-				X[t][i] = orig - step;
-				entropy_l = differential_entropy_noise(X, U, P, obs_noise);
+		if (t < T-1) {
+			for(int i=0; i < U_DIM; ++i) {
+				orig = U[t][i];
 
-				X[t][i] = orig;
+				U[t][i] = orig + step;
+				entropy_p = differential_entropy(X, U, P);
+
+				U[t][i] = orig - step;
+				entropy_l = differential_entropy(X, U, P);
+
+				U[t][i] = orig;
 				g[index++] = (entropy_p - entropy_l)/(2*step);
 			}
-
-			if (t < T-1) {
-				for(int i=0; i < U_DIM; ++i) {
-					orig = U[t][i];
-
-					U[t][i] = orig + step;
-					entropy_p = differential_entropy_noise(X, U, P, obs_noise);
-
-					U[t][i] = orig - step;
-					entropy_l = differential_entropy_noise(X, U, P, obs_noise);
-
-					U[t][i] = orig;
-					g[index++] = (entropy_p - entropy_l)/(2*step);
-				}
-			}
-
-			g_avg += (1/float(max_iter))*g;
 		}
+
 	}
 
-	return g_avg;
+	return g;
 }
 
-void pythonDisplayStateAndParticles(const Matrix<X_DIM>& x, const std::vector<Matrix<X_DIM> >& P, const Matrix<X_DIM>& targ) {
+Matrix<TOTAL_VARS> diaghess_differential_entropy(std::vector<Matrix<X_DIM> >& X, std::vector<Matrix<U_DIM> >& U,
+												const std::vector<Matrix<X_DIM> >& P) {
+	Matrix<TOTAL_VARS> g;
+
+	float initial_entropy = differential_entropy(X, U, P);
+	float orig, entropy_p, entropy_l;
+	int index = 0;
+	for(int t=0; t < T; ++t) {
+		for(int i=0; i < X_DIM; ++i) {
+			orig = X[t][i];
+
+			X[t][i] = orig + step;
+			entropy_p = differential_entropy(X, U, P);
+
+			X[t][i] = orig - step;
+			entropy_l = differential_entropy(X, U, P);
+
+			X[t][i] = orig;
+			g[index++] = (entropy_p - 2*initial_entropy + entropy_l)/(step*step);
+		}
+
+		if (t < T-1) {
+			for(int i=0; i < U_DIM; ++i) {
+				orig = U[t][i];
+
+				U[t][i] = orig + step;
+				entropy_p = differential_entropy(X, U, P);
+
+				U[t][i] = orig - step;
+				entropy_l = differential_entropy(X, U, P);
+
+				U[t][i] = orig;
+				g[index++] = (entropy_p - 2*initial_entropy + entropy_l)/(step*step);
+			}
+		}
+
+	}
+
+	return g;
+}
+
+
+
+void pythonDisplayStatesAndParticles(const std::vector<Matrix<X_DIM>>& X, const std::vector<Matrix<X_DIM> >& P, const Matrix<X_DIM>& targ) {
 	py::list x_list, targ_list;
-	for(int i=0; i < X_DIM; ++i) {
-		x_list.append(x[i]);
-		targ_list.append(targ[i]);
+	for(int t=0; t < X.size(); ++t) {
+		for(int i=0; i < X_DIM; ++i) {
+			x_list.append(X[t][i]);
+			targ_list.append(targ[i]);
+		}
 	}
 
 	py::list particles_list;

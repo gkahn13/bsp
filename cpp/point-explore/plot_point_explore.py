@@ -21,7 +21,10 @@ def plot_state_and_particles(x, particles, target, xDim, M):
     P_t = np.matrix(particles)
     P_t = np.reshape(P_t, (xDim,M))
     
-    plt.plot(x[0],x[1], color='red', marker='o', markersize=10, mew=2)
+    x0s = [x[i] for i in xrange(len(x)) if i % 2 == 0]
+    x1s = [x[i] for i in xrange(len(x)) if i % 2 == 1]
+    
+    plt.plot(x0s,x1s, color='red', marker='o', markersize=10, mew=2)
     plt.plot(P_t[0,:], P_t[1,:], color='blue', marker='x', markersize=5, mew=1)
     plt.plot(target[0], target[1], color='green', marker='^', markersize=10, mew=2.5)
         

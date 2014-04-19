@@ -25,9 +25,7 @@ OBJ_DIR = build/$(BUILD)
 BIN_DIR = bin/$(BUILD)
 
 # default TIMESTEPS
-T = 15
-# default PARTICLES
-M = 5
+T = 10
 
 ###### DIRECTORY CREATION ###########
 dir:
@@ -41,7 +39,7 @@ dir:
 $(OBJ_DIR)/logging.o : ../util/logging.cpp
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) -c -o $@ $^
 	
-####### test-point-pf #######
+####### test-point-explore #######
 
 TEST_POINT_EXPLORE_FILES = test-point-explore logging
 TEST_POINT_EXPLORE_OBJS = $(TEST_POINT_EXPLORE_FILES:%=$(OBJ_DIR)/%.o)
@@ -52,6 +50,24 @@ test-point-explore: $(TEST_POINT_EXPLORE_OBJS)
 $(OBJ_DIR)/test-point-explore.o : test-point-explore.cpp
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) -c -o $@ $^
 	
+
+#######  explore ########
+
+POINT_EXPLORE_FILES = explore-cpp exploreMPC logging
+POINT_EXPLORE_OBJS = $(POINT_EXPLORE_FILES:%=$(OBJ_DIR)/%.o)
+
+explore-setup:
+	bash setupFiles.sh explore $(T)
+
+explore: explore-setup $(POINT_EXPLORE_OBJS) 
+	$(CXX) $(BFLAGS) $(POINT_EXPLORE_OBJS) -o $(BIN_DIR)/explore $(PYTHON_FLAGS) $(BOOST_FLAGS) $(LINKER_FLAGS)
+
+$(OBJ_DIR)/exploreMPC.o : explore/exploreMPC.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+
+$(OBJ_DIR)/explore-cpp.o : explore/explore.cpp
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) -c -o $@ $^
+
 
 ###### CLEAN ########
 

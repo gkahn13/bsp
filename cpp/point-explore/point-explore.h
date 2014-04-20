@@ -15,7 +15,7 @@
 namespace py = boost::python;
 
 #define TIMESTEPS 10
-#define PARTICLES 100
+#define PARTICLES 50
 #define DT 1.0
 #define X_DIM 2
 #define U_DIM 2
@@ -47,6 +47,10 @@ const double alpha_control_smooth = 0; // 1e-4
 
 Matrix<X_DIM> target;
 
+#include "casadi/casadi-point-explore.h"
+namespace AD = CasADi;
+AD::SXFunction casadi_differential_entropy_func;
+
 inline float uniform(float low, float high) {
 	return (high - low)*(rand() / float(RAND_MAX)) + low;
 }
@@ -69,6 +73,8 @@ void initialize() {
 	uMax[0] = 5; uMax[1] = 5;
 
 	target[0] = 3; target[1] = 3;
+
+	casadi_differential_entropy_func = casadi_point_explore::casadi_differential_entropy_func();
 }
 
 // notice zero noise influence
@@ -199,6 +205,42 @@ float differential_entropy(const std::vector<Matrix<X_DIM> >& X, const std::vect
 	}
 
 	return entropy;
+}
+
+double casadi_differential_entropy(const std::vector<Matrix<X_DIM> >& X, const std::vector<Matrix<U_DIM> >& U,
+					 const std::vector<Matrix<X_DIM> >& P) {
+	double XU_arr[T*X_DIM+(T-1)*U_DIM];
+	double P_arr[T*M*X_DIM];
+
+	int index = 0;
+	for(int t=0; t < T; ++t) {
+		for(int i=0; i < X_DIM; ++i) {
+			XU_arr[index++] = X[t][i];
+		}
+
+		if (t < T-1) {
+			for(int i=0; i < U_DIM; ++i) {
+				XU_arr[index++] = U[t][i];
+			}
+		}
+	}
+
+	index = 0;
+	for(int m=0; m < M; ++m) {
+		for(int i=0; i < X_DIM; ++i) {
+			P_arr[index++] = P[m][i];
+		}
+	}
+
+	casadi_differential_entropy_func.setInput(XU_arr,0);
+	casadi_differential_entropy_func.setInput(P_arr,1);
+
+	casadi_differential_entropy_func.evaluate();
+
+	double cost = 0;
+	casadi_differential_entropy_func.getOutput(&cost,0);
+
+	return cost;
 }
 
 Matrix<TOTAL_VARS> grad_differential_entropy(std::vector<Matrix<X_DIM> >& X, std::vector<Matrix<U_DIM> >& U,

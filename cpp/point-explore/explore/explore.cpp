@@ -293,7 +293,7 @@ double exploreCollocation(std::vector<Matrix<X_DIM> >& X, std::vector<Matrix<U_D
 //		std::cout << "Displaying FORCES\n";
 //		point_explore::pythonDisplayStatesAndParticles(Xopt, P, target);
 
-//		P = Popt; U = Uopt;
+//		X = Xopt; U = Uopt;
 //		solution_accepted = true;
 
 		if (approx_merit_improve < -1e-5) {
@@ -327,24 +327,26 @@ double exploreCollocation(std::vector<Matrix<X_DIM> >& X, std::vector<Matrix<U_D
 	return point_explore::differential_entropy(X, U, P);
 }
 
+
 int main(int argc, char* argv[]) {
 	//srand(time(0));
 	point_explore::initialize();
+	target[0] = 4; target[1] = 1.5;
 
 	std::vector<Matrix<X_DIM> > P(M);
-	for(int m=0; m < M; ++m) {
-		if (m > M/2) {
-			P[m][0] = uniform(1, 2);
-			P[m][1] = uniform(3, 5);
-		} else {
-			P[m][0] = uniform(3, 5);
-			P[m][1] = uniform(1, 2);
-		}
-	}
 //	for(int m=0; m < M; ++m) {
-//		P[m][0] = uniform(xMin[0], xMax[0]);
-//		P[m][1] = uniform(xMin[1], xMax[1]);
+//		if (m > M/2) {
+//			P[m][0] = uniform(1, 2);
+//			P[m][1] = uniform(3, 5);
+//		} else {
+//			P[m][0] = uniform(3, 5);
+//			P[m][1] = uniform(1, 2);
+//		}
 //	}
+	for(int m=0; m < M; ++m) {
+		P[m][0] = uniform(xMin[0], xMax[0]);
+		P[m][1] = uniform(xMin[1], xMax[1]);
+	}
 
 	Matrix<U_DIM> uinit = (xMax - x0) / (DT*(T-1));
 	std::vector<Matrix<U_DIM> > U(T-1, uinit);
@@ -360,11 +362,16 @@ int main(int argc, char* argv[]) {
 		X[t+1] = point_explore::dynfunc(X[t], U[t]);
 	}
 
+	double init_cost = point_explore::differential_entropy(X,U,P);
+	LOG_DEBUG("Initial cost: %4.10f", init_cost);
+
+	double casadi_cost = point_explore::casadi_differential_entropy(X,U,P);
+	LOG_DEBUG("Casadi cost: %4.10f", casadi_cost);
+	exit(0);
+
 	LOG_DEBUG("Display initial trajectory");
 	point_explore::pythonDisplayStatesAndParticles(X, P, target);
 
-	double init_cost = point_explore::differential_entropy(X,U,P);
-	LOG_DEBUG("Initial cost: %4.10f", init_cost);
 
 	// initialize FORCES variables
 	exploreMPC_params problem;
@@ -373,14 +380,50 @@ int main(int argc, char* argv[]) {
 
 	setupMPCVars(problem, output);
 
-	LOG_DEBUG("Calling exploreCollocation");
+	while(true) {
 
-	double cost = exploreCollocation(X, U, P, problem, output, info);
+		LOG_DEBUG("Calling exploreCollocation");
 
-	LOG_INFO("Initial cost: %4.10f", init_cost);
-	LOG_INFO("Cost: %4.10f", cost);
+		double cost = exploreCollocation(X, U, P, problem, output, info);
 
-	point_explore::pythonDisplayStatesAndParticles(X,P,target);
+		LOG_INFO("Initial cost: %4.10f", init_cost);
+		LOG_INFO("Cost: %4.10f", cost);
+
+		LOG_DEBUG("Optimized path");
+		point_explore::pythonDisplayStatesAndParticles(X,P,target);
+
+		Matrix<X_DIM> x = X[0], x_tp1;
+		std::vector<Matrix<X_DIM> > P_tp1;
+		int num_execute = 2;
+		for(int t=0; t < num_execute; ++t) {
+			point_explore::updateStateAndParticles(x, P, U[t], x_tp1, P_tp1);
+			P = P_tp1;
+			x = x_tp1;
+		}
+
+		P = P_tp1;
+
+		Matrix<X_DIM> avg_particle = zeros<X_DIM,1>();
+		for(int m=0; m < M; ++m) { avg_particle += (1/float(M))*P[m]; }
+
+		uinit = (avg_particle - x_tp1) / (DT*(T-1));
+		X[0] = x_tp1;
+		for(int t=0; t < T-1; ++t) {
+			U[t] = uinit;
+			X[t+1] = point_explore::dynfunc(X[t], U[t]);
+		}
+
+//		X[0] = x_tp1;
+//		for(int t=0; t < T-2; ++t) {
+//			U[t] = U[t+1];
+//			X[t+1] = point_explore::dynfunc(X[t], U[t]);
+//		}
+//		X[T-1] = point_explore::dynfunc(X[T-2], U[T-1]);
+
+		LOG_DEBUG("Particle update step");
+		point_explore::pythonDisplayStatesAndParticles(X,P,target);
+
+	}
 }
 
 

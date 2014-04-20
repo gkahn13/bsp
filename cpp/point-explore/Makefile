@@ -60,13 +60,13 @@ explore-setup:
 	bash setupFiles.sh explore $(T)
 
 explore: explore-setup $(POINT_EXPLORE_OBJS) 
-	$(CXX) $(BFLAGS) $(POINT_EXPLORE_OBJS) -o $(BIN_DIR)/explore $(PYTHON_FLAGS) $(BOOST_FLAGS) $(LINKER_FLAGS)
+	$(CXX) $(BFLAGS) $(POINT_EXPLORE_OBJS) -o $(BIN_DIR)/explore $(PYTHON_FLAGS) $(BOOST_FLAGS) $(LINKER_FLAGS) $(CASADI_FLAGS) $(CASADI_LIBS)
 
 $(OBJ_DIR)/exploreMPC.o : explore/exploreMPC.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
 
 $(OBJ_DIR)/explore-cpp.o : explore/explore.cpp
-	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) -c -o $@ $^
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
 
 
 ###### CLEAN ########

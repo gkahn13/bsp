@@ -15,7 +15,7 @@
 namespace py = boost::python;
 
 #define TIMESTEPS 10
-#define PARTICLES 200
+#define PARTICLES 300
 #define DT 1.0
 #define X_DIM 2
 #define U_DIM 2
@@ -39,11 +39,11 @@ Matrix<U_DIM> uMin, uMax;
 const double step = 0.0078125*0.0078125;
 const double INFTY = 1e10;
 
-const double alpha = 2.5; // 2.5
+const double alpha = 2.5;
 const double max_range = 0.25;
 
 const double alpha_control_norm = 0; // 1e-5
-const double alpha_control_smooth = 1e-2; // 1e-4
+const double alpha_control_smooth = 1e-2; // 1e-2
 
 Matrix<X_DIM> target;
 
@@ -182,10 +182,10 @@ float differential_entropy(const std::vector<Matrix<X_DIM> >& X, const std::vect
 			entropy_t += -W[t][m]*log(W[t][m]);
 		}
 
-//		// simplifies because zero particle dynamics
-//		for(int m=0; m < M; ++m) {
-//			entropy_t += -W[t][m]*log(W[t-1][m]);
-//		}
+		// simplifies because zero particle dynamics
+		for(int m=0; m < M; ++m) {
+			entropy_t += -W[t][m]*log(W[t-1][m]);
+		}
 
 		float sum_cross_time_weights = 0;
 		for(int m=0; m < M; ++m) {
@@ -193,8 +193,6 @@ float differential_entropy(const std::vector<Matrix<X_DIM> >& X, const std::vect
 		}
 		entropy_t += log(sum_cross_time_weights);
 
-//		std::cout << "entropy " << t << ": " << entropy_t << "\n";
-//		std::cout << "X_prop: " << ~X_prop[t] << "\n";
 		entropy += entropy_t;
 
 	}

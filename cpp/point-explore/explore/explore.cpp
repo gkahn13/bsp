@@ -334,40 +334,40 @@ double exploreCollocation(std::vector<Matrix<X_DIM> >& X, std::vector<Matrix<U_D
 // assume x0 is set before this
 void initialize_trajectory(std::vector<Matrix<X_DIM> >& X, std::vector<Matrix<U_DIM> >& U, const std::vector<Matrix<X_DIM> >& P) {
 
-//	// go to average of particles
-//	Matrix<X_DIM> avg_particle = zeros<X_DIM,1>();
-//	for(int m=0; m < M; ++m) { avg_particle += (1/float(M))*P[m]; }
+	// go to average of particles
+	Matrix<X_DIM> avg_particle = zeros<X_DIM,1>();
+	for(int m=0; m < M; ++m) { avg_particle += (1/float(M))*P[m]; }
+
+	Matrix<U_DIM >uinit = (avg_particle - x0) / (DT*(T-1));
+
+//	// go to furthest heaviest particle
+//	double eps = 1e-2;
+//	std::vector<int> num_particles_nearby(M, 0);
+//	int max_num_particles_nearby = -INFTY;
+//	for(int m=0; m < M; ++m) {
+//		for(int n=0; n < M; ++n) {
+//			double d = dist<X_DIM>(P[m],P[n]);
+//			if (d < eps) {
+//				num_particles_nearby[m]++;
+//			}
+//		}
+//		max_num_particles_nearby = MAX(max_num_particles_nearby, num_particles_nearby[m]);
+//	}
 //
-//	Matrix<U_DIM >uinit = (avg_particle - x0) / (DT*(T-1));
-
-	// go to furthest heaviest particle
-	double eps = 1e-2;
-	std::vector<int> num_particles_nearby(M, 0);
-	int max_num_particles_nearby = -INFTY;
-	for(int m=0; m < M; ++m) {
-		for(int n=0; n < M; ++n) {
-			double d = dist<X_DIM>(P[m],P[n]);
-			if (d < eps) {
-				num_particles_nearby[m]++;
-			}
-		}
-		max_num_particles_nearby = MAX(max_num_particles_nearby, num_particles_nearby[m]);
-	}
-
-	Matrix<X_DIM> furthest_heaviest_particle;
-	double furthest = -INFTY;
-
-	for(int m=0; m < M; ++m) {
-		if (num_particles_nearby[m] == max_num_particles_nearby) {
-			double d = dist<X_DIM>(P[m], x0);
-			if (d > furthest) {
-				furthest = d;
-				furthest_heaviest_particle = P[m];
-			}
-		}
-	}
-
-	Matrix<U_DIM> uinit = (furthest_heaviest_particle - x0) / (DT*(T-1));
+//	Matrix<X_DIM> furthest_heaviest_particle;
+//	double furthest = -INFTY;
+//
+//	for(int m=0; m < M; ++m) {
+//		if (num_particles_nearby[m] == max_num_particles_nearby) {
+//			double d = dist<X_DIM>(P[m], x0);
+//			if (d > furthest) {
+//				furthest = d;
+//				furthest_heaviest_particle = P[m];
+//			}
+//		}
+//	}
+//
+//	Matrix<U_DIM> uinit = (furthest_heaviest_particle - x0) / (DT*(T-1));
 
 	for(int i=0; i < U_DIM; ++i) {
 		uinit[i] = (uinit[i] > uMax[i]) ? uMax[i] : uinit[i];
@@ -452,7 +452,7 @@ int main(int argc, char* argv[]) {
 
 		Matrix<X_DIM> x = X[0], x_tp1;
 		std::vector<Matrix<X_DIM> > P_tp1;
-		int num_execute = 8;
+		int num_execute = 4;
 		for(int t=0; t < num_execute; ++t) {
 			point_explore::updateStateAndParticles(x, P, U[t], x_tp1, P_tp1);
 			P = P_tp1;

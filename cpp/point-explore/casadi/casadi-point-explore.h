@@ -75,10 +75,10 @@ AD::SXMatrix differential_entropy(const std::vector<AD::SXMatrix>& X, const std:
 			entropy_t += -W[t][m]*log(W[t][m]);
 		}
 
-		//		// simplifies because zero particle dynamics
-		//		for(int m=0; m < M; ++m) {
-		//			entropy_t += -W[t][m]*log(W[t-1][m]);
-		//		}
+		// simplifies because zero particle dynamics
+		for(int m=0; m < M; ++m) {
+			entropy_t += -W[t][m]*log(W[t-1][m]);
+		}
 
 		AD::SXMatrix sum_cross_time_weights(1,1);
 		for(int m=0; m < M; ++m) {

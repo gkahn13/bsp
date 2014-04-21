@@ -90,9 +90,9 @@ AD::SXMatrix differential_entropy(const std::vector<AD::SXMatrix>& X, const std:
 
 	}
 
-//	for(int t=0; t < T-2; ++t) {
-//		entropy += alpha_control_smooth*tr(~(U[t+1]-U[t])*(U[t+1]-U[t]));
-//	}
+	for(int t=0; t < T-2; ++t) {
+		entropy += alpha_control_smooth*(mul(trans(U[t+1]-U[t]),(U[t+1]-U[t])));
+	}
 //
 //	for(int t=0; t < T-1; ++t) {
 //		entropy += alpha_control_norm*tr(~U[t]*U[t]);
@@ -139,6 +139,29 @@ AD::SXMatrix differential_entropy_wrapper(const AD::SXMatrix& XU_vec, const AD::
 	return differential_entropy(X, U, P, Sf_inv_casadi, C_casadi);
 }
 
+void setup_casadi_vars(const std::vector<Matrix<X_DIM> >& X, const std::vector<Matrix<U_DIM> >& U,
+					 const std::vector<Matrix<X_DIM> >& P, double* XU_arr, double* P_arr) {
+	int index = 0;
+	for(int t=0; t < T; ++t) {
+		for(int i=0; i < X_DIM; ++i) {
+			XU_arr[index++] = X[t][i];
+		}
+
+		if (t < T-1) {
+			for(int i=0; i < U_DIM; ++i) {
+				XU_arr[index++] = U[t][i];
+			}
+		}
+	}
+
+	index = 0;
+	for(int m=0; m < M; ++m) {
+		for(int i=0; i < X_DIM; ++i) {
+			P_arr[index++] = P[m][i];
+		}
+	}
+}
+
 AD::SXFunction casadi_differential_entropy_func() {
 	AD::SXMatrix XU_vec = AD::ssym("XU_vec", T*X_DIM + (T-1)*U_DIM);
 	AD::SXMatrix P_vec = AD::ssym("P_vec", T*M*X_DIM);
@@ -153,6 +176,27 @@ AD::SXFunction casadi_differential_entropy_func() {
 	entropy_fcn.init();
 
 	return entropy_fcn;
+}
+
+AD::SXFunction casadi_differential_entropy_gradfunc() {
+	AD::SXMatrix XU_vec = AD::ssym("XU_vec", T*X_DIM + (T-1)*U_DIM);
+	AD::SXMatrix P_vec = AD::ssym("P_vec", T*M*X_DIM);
+
+	AD::SXMatrix entropy = differential_entropy_wrapper(XU_vec, P_vec);
+
+	AD::SXMatrix grad_entropy = gradient(entropy,XU_vec);
+
+	// Create functions
+	std::vector<AD::SXMatrix> inp;
+	inp.push_back(XU_vec);
+	inp.push_back(P_vec);
+
+	std::vector<AD::SXMatrix> out;
+	out.push_back(grad_entropy);
+	AD::SXFunction grad_entropy_fcn(inp,out);
+	grad_entropy_fcn.init();
+
+	return grad_entropy_fcn;
 }
 
 

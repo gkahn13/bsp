@@ -35,6 +35,40 @@ AD::SXMatrix obsfunc(const AD::SXMatrix& x, const AD::SXMatrix& t)
   	return z;
 }
 
+
+AD::SXMatrix gaussLikelihoodOther(const AD::SXMatrix& v) {
+	Matrix<R_DIM,R_DIM> Sf, Sf_inv;
+	chol(R, Sf);
+	Sf_inv = !Sf;
+
+	float Sf_diag_prod = 1;
+	for(int i=0; i < R_DIM; ++i) { Sf_diag_prod *= Sf(i,i); }
+	float C = pow(2*M_PI, Z_DIM/2)*Sf_diag_prod;
+
+	AD::SXMatrix Sf_inv_casadi(R_DIM,R_DIM);
+	for(int i=0; i < R_DIM; ++i) {
+		for(int j=0; j < R_DIM; ++j) {
+			Sf_inv_casadi(i,j) = Sf_inv(i,j);
+		}
+	}
+
+//	int rows = Sf_inv.numRows();
+//	int cols = Sf_inv.numColumns();
+//	AD::SXMatrix M(rows,1);
+//	for(int i=0; i < rows; ++i) {
+//		for(int j=0; j < cols; ++j) {
+//			M(i,0) += Sf_inv(i,j)*v(j,0);
+//		}
+//	}
+
+	AD::SXMatrix M = mul(Sf_inv_casadi, v);
+
+	AD::SXMatrix E_exp_sum = exp(-0.5*trace(mul(trans(M),M)));
+//	AD::SXMatrix w = E_exp_sum / C;
+	AD::SXMatrix w = E_exp_sum; // no need to normalize here because normalized later on anyways
+	return w;
+}
+
 AD::SXMatrix gaussLikelihood(const AD::SXMatrix& v, const AD::SXMatrix& Sf_inv, const AD::SXMatrix& C) {
 	AD::SXMatrix M = mul(Sf_inv, v);
 
@@ -63,7 +97,9 @@ AD::SXMatrix differential_entropy(const std::vector<AD::SXMatrix>& X, const std:
 		AD::SXMatrix W_sum(1,1);
 		for(int m=0; m < M; ++m) {
 			for(int n=0; n < M; ++n) {
-				W[t][m] += gaussLikelihood(H[t][m] - H[t][n], Sf_inv, C);
+//				W[t][m] += gaussLikelihood(H[t][m] - H[t][n], Sf_inv, C);
+				W[t][m] += gaussLikelihoodOther(H[t][m] - H[t][n]);
+//				W[t][m] += exp(-mul(trans(H[t][m]-H[t][n]), H[t][m]-H[t][n]));
 			}
 			W_sum += W[t][m];
 		}
@@ -197,6 +233,29 @@ AD::SXFunction casadi_differential_entropy_gradfunc() {
 	grad_entropy_fcn.init();
 
 	return grad_entropy_fcn;
+}
+
+AD::SXFunction casadi_differential_entropy_diaghessfunc() {
+	AD::SXMatrix XU_vec = AD::ssym("XU_vec", T*X_DIM + (T-1)*U_DIM);
+	AD::SXMatrix P_vec = AD::ssym("P_vec", T*M*X_DIM);
+
+	AD::SXMatrix entropy = differential_entropy_wrapper(XU_vec, P_vec);
+
+	AD::SXMatrix hess_entropy = hessian(entropy,XU_vec);
+
+	AD::SXMatrix diaghess_entropy = diag(diag(hess_entropy));
+
+	// Create functions
+	std::vector<AD::SXMatrix> inp;
+	inp.push_back(XU_vec);
+	inp.push_back(P_vec);
+
+	std::vector<AD::SXMatrix> out;
+	out.push_back(diaghess_entropy);
+	AD::SXFunction diaghess_entropy_fcn(inp,out);
+	diaghess_entropy_fcn.init();
+
+	return diaghess_entropy_fcn;
 }
 
 

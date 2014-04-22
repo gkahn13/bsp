@@ -172,6 +172,7 @@ double exploreCollocation(std::vector<Matrix<X_DIM> >& X, std::vector<Matrix<U_D
 			d = point_explore::casadi_grad_differential_entropy(X, U, P);
 
 //			diaghess = point_explore::diaghess_differential_entropy(X, U, P);
+//			diaghess = point_explore::casadi_diaghess_differential_entropy(X,U,P);
 			diaghess.reset();
 //			merit = point_explore::differential_entropy(X, U, P);
 			merit = point_explore::casadi_differential_entropy(X, U, P);
@@ -389,22 +390,23 @@ int main(int argc, char* argv[]) {
 	point_explore::initialize();
 	LOG_DEBUG("Finished initializing");
 
-	target[0] = 4; target[1] = 1.5;
+//	target[0] = 4; target[1] = 1.5;
+	target[0] = 1.5; target[1] = 4;
 
 	std::vector<Matrix<X_DIM> > P(M);
-//	for(int m=0; m < M; ++m) {
-//		if (m > M/2) {
-//			P[m][0] = uniform(1, 2);
-//			P[m][1] = uniform(3, 5);
-//		} else {
-//			P[m][0] = uniform(3, 5);
-//			P[m][1] = uniform(1, 2);
-//		}
-//	}
 	for(int m=0; m < M; ++m) {
-		P[m][0] = uniform(xMin[0], xMax[0]);
-		P[m][1] = uniform(xMin[1], xMax[1]);
+		if (m < M/10) {
+			P[m][0] = uniform(1, 2);
+			P[m][1] = uniform(3, 5);
+		} else {
+			P[m][0] = uniform(3, 5);
+			P[m][1] = uniform(1, 2);
+		}
 	}
+//	for(int m=0; m < M; ++m) {
+//		P[m][0] = uniform(xMin[0], xMax[0]);
+//		P[m][1] = uniform(xMin[1], xMax[1]);
+//	}
 
 	std::vector<Matrix<U_DIM> > U(T-1);
 	std::vector<Matrix<X_DIM> > X(T);

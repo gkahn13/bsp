@@ -69,6 +69,18 @@ $(OBJ_DIR)/explore-cpp.o : explore/explore.cpp
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
 
 
+##### test-casadi-point-explore
+
+TEST_CASADI_POINT_EXPLORE_FILES = test-casadi-point-explore logging
+TEST_CASADI_POINT_EXPLORE_OBJS = $(TEST_CASADI_POINT_EXPLORE_FILES:%=$(OBJ_DIR)/%.o)
+
+test-casadi-point-explore: $(TEST_CASADI_POINT_EXPLORE_OBJS) 
+	$(CXX) $(BFLAGS) $(TEST_CASADI_POINT_EXPLORE_OBJS) -o $(BIN_DIR)/test-casadi-point-explore $(PYTHON_FLAGS) $(BOOST_FLAGS) $(LINKER_FLAGS) $(CASADI_FLAGS) $(CASADI_LIBS)
+
+$(OBJ_DIR)/test-casadi-point-explore.o : casadi/test-casadi-point-explore.cpp
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
+	
+	
 ###### CLEAN ########
 
 clean:

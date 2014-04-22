@@ -27,8 +27,11 @@ int main(int argc, char* argv[]) {
 		X[t+1] = point_explore::dynfunc(X[t], U[t]);
 	}
 
-	double entropy = point_explore::casadi_differential_entropy(X,U,P);
+	double entropy = point_explore::differential_entropy(X,U,P);
 	std::cout << "entropy: " << entropy << "\n";
+
+	double casadi_entropy = point_explore::casadi_differential_entropy(X,U,P);
+	std::cout << "casadi entropy: " << casadi_entropy << "\n";
 
 	casadi_differential_entropy_func.generateCode("casadi/casadi_de_func.c");
 	casadi_grad_differential_entropy_func.generateCode("casadi/casadi_grad_de_func.c");

@@ -93,7 +93,6 @@ AD::SXMatrix differential_entropy(const std::vector<AD::SXMatrix>& X, const std:
 		X_prop[t+1] = dynfunc(X[t], U[t]);
 		for(int m=0; m < M; ++m) {
 			H[t+1][m] = obsfunc(X_prop[t+1], P[m]);
-//			H[t+1][m] = mul(Sf_inv_casadi, obsfunc(X_prop[t+1], P[m]));
 		}
 	}
 

@@ -149,7 +149,6 @@ double exploreCollocation(std::vector<Matrix<X_DIM> >& X, std::vector<Matrix<U_D
 
 	double merit = 0;
 	double constant_cost, hessian_constant, jac_constant;
-	// point_platt::costfunc derivative
 	Matrix<TOTAL_VARS> d, diaghess;
 
 	std::vector<Matrix<X_DIM> > Xopt(T);
@@ -157,7 +156,6 @@ double exploreCollocation(std::vector<Matrix<X_DIM> >& X, std::vector<Matrix<U_D
 	float optcost, model_merit, new_merit;
 	float approx_merit_improve, exact_merit_improve, merit_improve_ratio;
 
-//	LOG_DEBUG("Initial trajectory cost: %4.10f", point_explore::differential_entropy(X, U, P));
 	LOG_DEBUG("Initial trajectory cost: %4.10f", point_explore::casadi_differential_entropy(X, U, P));
 
 	int index = 0;
@@ -168,13 +166,10 @@ double exploreCollocation(std::vector<Matrix<X_DIM> >& X, std::vector<Matrix<U_D
 
 		// only compute gradient/hessian if P/U has been changed
 		if (solution_accepted) {
-//			d = point_explore::grad_differential_entropy(X, U, P);
 			d = point_explore::casadi_grad_differential_entropy(X, U, P);
 
-//			diaghess = point_explore::diaghess_differential_entropy(X, U, P);
 //			diaghess = point_explore::casadi_diaghess_differential_entropy(X,U,P);
 			diaghess.reset();
-//			merit = point_explore::differential_entropy(X, U, P);
 			merit = point_explore::casadi_differential_entropy(X, U, P);
 
 			constant_cost = 0;
@@ -206,7 +201,6 @@ double exploreCollocation(std::vector<Matrix<X_DIM> >& X, std::vector<Matrix<U_D
 					hessian_constant += H[t][i]*zbar[i]*zbar[i];
 					jac_constant -= d[index]*zbar[i];
 					f[t][i] = d[index] - H[t][i]*zbar[i];
-					//f[t][i] = (i < M*X_DIM) ? 0 : d[index] - H[t][i]*zbar[i];
 					index++;
 				}
 			}
@@ -279,7 +273,6 @@ double exploreCollocation(std::vector<Matrix<X_DIM> >& X, std::vector<Matrix<U_D
 
 		model_merit = optcost + constant_cost; // need to add constant terms that were dropped
 
-//		new_merit = point_explore::differential_entropy(Xopt, Uopt, P);
 		new_merit = point_explore::casadi_differential_entropy(Xopt, Uopt, P);
 
 		LOG_DEBUG("merit: %f", merit);
@@ -294,12 +287,6 @@ double exploreCollocation(std::vector<Matrix<X_DIM> >& X, std::vector<Matrix<U_D
 		LOG_DEBUG("approx_merit_improve: %f", approx_merit_improve);
 		LOG_DEBUG("exact_merit_improve: %f", exact_merit_improve);
 		LOG_DEBUG("merit_improve_ratio: %f", merit_improve_ratio);
-
-//		std::cout << "Displaying FORCES\n";
-//		point_explore::pythonDisplayStatesAndParticles(Xopt, P, target);
-
-//		X = Xopt; U = Uopt;
-//		solution_accepted = true;
 
 		if (approx_merit_improve < -1e-5) {
 			LOG_ERROR("Approximate merit function got worse: %f", approx_merit_improve);
@@ -324,11 +311,9 @@ double exploreCollocation(std::vector<Matrix<X_DIM> >& X, std::vector<Matrix<U_D
 			solution_accepted = true;
 		}
 
-//		point_explore::pythonDisplayStatesAndParticles(X, P, target);
 
 	}
 
-//	return point_explore::differential_entropy(X, U, P);
 	return point_explore::casadi_differential_entropy(X, U, P);
 }
 
@@ -413,21 +398,11 @@ int main(int argc, char* argv[]) {
 
 	initialize_trajectory(X, U, P);
 
-	double init_cost;
-//	double init_cost = point_explore::differential_entropy(X,U,P);
-//	LOG_DEBUG("Initial cost: %4.10f", init_cost);
+	double init_cost = point_explore::differential_entropy(X,U,P);
+	LOG_DEBUG("Initial cost: %4.10f", init_cost);
 
 	double casadi_cost = point_explore::casadi_differential_entropy(X,U,P);
 	LOG_DEBUG("Casadi cost: %4.10f", casadi_cost);
-
-//	Matrix<TOTAL_VARS> grad = point_explore::grad_differential_entropy(X,U,P);
-	Matrix<TOTAL_VARS> casadi_grad = point_explore::casadi_grad_differential_entropy(X,U,P);
-
-//	for(int i=0; i < TOTAL_VARS; ++i) {
-//		std::cout << grad[i] << "\t" << casadi_grad[i] << "\n";
-//	}
-//
-//	LOG_DEBUG("Grad norm difference: %4.10f",tr(~(grad-casadi_grad)*(grad-casadi_grad)));
 
 	LOG_DEBUG("Display initial trajectory");
 	point_explore::pythonDisplayStatesAndParticles(X, P, target);
@@ -439,15 +414,20 @@ int main(int argc, char* argv[]) {
 	exploreMPC_info info;
 
 	setupMPCVars(problem, output);
-
+	util::Timer forces_timer;
 	while(true) {
+
+		init_cost = point_explore::casadi_differential_entropy(X,U,P);
 
 		LOG_DEBUG("Calling exploreCollocation");
 
+		util::Timer_tic(&forces_timer);
 		double cost = exploreCollocation(X, U, P, problem, output, info);
+		double forces_time = util::Timer_toc(&forces_timer);
 
 		LOG_INFO("Initial cost: %4.10f", init_cost);
 		LOG_INFO("Cost: %4.10f", cost);
+		LOG_INFO("Time: %4.10f ms", forces_time*1000);
 
 		LOG_DEBUG("Optimized path");
 		point_explore::pythonDisplayStatesAndParticles(X,P,target);

@@ -44,19 +44,19 @@ void setupMPCVars(exploreMPC_params& problem, exploreMPC_output& output) {
 	c[0] = problem.c1;
 
 	for(int t=0; t < T-1; ++t) {
-		for(int i=0; i < X_DIM+U_DIM; ++i) { H[t][i] = INFTY; }
-		for(int i=0; i < X_DIM+U_DIM; ++i) { f[t][i] = INFTY; }
-		for(int i=0; i < X_DIM+U_DIM; ++i) { lb[t][i] = INFTY; }
-		for(int i=0; i < X_DIM+U_DIM; ++i) { ub[t][i] = INFTY; }
-		for(int i=0; i < X_DIM+U_DIM; ++i) { z[t][i] = INFTY; }
+		for(int i=0; i < N*(X_DIM+U_DIM); ++i) { H[t][i] = INFTY; }
+		for(int i=0; i < N*(X_DIM+U_DIM); ++i) { f[t][i] = INFTY; }
+		for(int i=0; i < N*(X_DIM+U_DIM); ++i) { lb[t][i] = INFTY; }
+		for(int i=0; i < N*(X_DIM+U_DIM); ++i) { ub[t][i] = INFTY; }
+		for(int i=0; i < N*(X_DIM+U_DIM); ++i) { z[t][i] = INFTY; }
 	}
-	for(int i=0; i < X_DIM; ++i) { H[T-1][i] = INFTY; }
-	for(int i=0; i < X_DIM; ++i) { f[T-1][i] = INFTY; }
-	for(int i=0; i < X_DIM; ++i) { lb[T-1][i] = INFTY; }
-	for(int i=0; i < X_DIM; ++i) { ub[T-1][i] = INFTY; }
-	for(int i=0; i < X_DIM; ++i) { z[T-1][i] = INFTY; }
+	for(int i=0; i < N*X_DIM; ++i) { H[T-1][i] = INFTY; }
+	for(int i=0; i < N*X_DIM; ++i) { f[T-1][i] = INFTY; }
+	for(int i=0; i < N*X_DIM; ++i) { lb[T-1][i] = INFTY; }
+	for(int i=0; i < N*X_DIM; ++i) { ub[T-1][i] = INFTY; }
+	for(int i=0; i < N*X_DIM; ++i) { z[T-1][i] = INFTY; }
 
-	for(int i=0; i < X_DIM; ++i) { c[0][i] = INFTY; }
+	for(int i=0; i < N*X_DIM; ++i) { c[0][i] = INFTY; }
 }
 
 void cleanupMPCVars() {
@@ -75,72 +75,72 @@ bool isValidInputs()
 
 		if (t == 0) {
 			std::cout << "\nc[0]:\n";
-			for(int i=0; i < (X_DIM); ++i) {
+			for(int i=0; i < (N*X_DIM); ++i) {
 				std::cout << c[0][i] << " ";
 			}
 		}
 
 		std::cout << "\nH[" << t << "]: ";
-		for(int i=0; i < (X_DIM+U_DIM); ++i) {
+		for(int i=0; i < N*(X_DIM+U_DIM); ++i) {
 			std::cout << H[t][i] << " ";
 		}
 
 		std::cout << "\nf[" << t << "]: ";
-		for(int i=0; i < (X_DIM+U_DIM); ++i) {
+		for(int i=0; i < N*(X_DIM+U_DIM); ++i) {
 			std::cout << f[t][i] << " ";
 		}
 
 		std::cout << "\nlb[" << t << "]: ";
-		for(int i=0; i < (X_DIM+U_DIM); ++i) {
+		for(int i=0; i < N*(X_DIM+U_DIM); ++i) {
 			std::cout << lb[t][i] << " ";
 		}
 
 		std::cout << "\nub[" << t << "]: ";
-		for(int i=0; i < (X_DIM+U_DIM); ++i) {
+		for(int i=0; i < N*(X_DIM+U_DIM); ++i) {
 			std::cout << ub[t][i] << " ";
 		}
 	}
 	std::cout << "\n\nt: " << T-1 << "\n";
 
 	std::cout << "\nH[" << T-1 << "]: ";
-	for(int i=0; i < (X_DIM); ++i) {
+	for(int i=0; i < (N*X_DIM); ++i) {
 		std::cout << H[T-1][i] << " ";
 	}
 
 	std::cout << "\nf[" << T-1 << "]: ";
-	for(int i=0; i < (X_DIM); ++i) {
+	for(int i=0; i < (N*X_DIM); ++i) {
 		std::cout << f[T-1][i] << " ";
 	}
 
 	std::cout << "\nlb[" << T-1 << "]: ";
-	for(int i=0; i < (X_DIM); ++i) {
+	for(int i=0; i < (N*X_DIM); ++i) {
 		std::cout << lb[T-1][i] << " ";
 	}
 
 	std::cout << "\nub[" << T-1 << "]: ";
-	for(int i=0; i < (X_DIM); ++i) {
+	for(int i=0; i < (N*X_DIM); ++i) {
 		std::cout << ub[T-1][i] << " ";
 	}
 
 	std::cout << "\n";
 
 	for(int t = 0; t < T-1; ++t) {
-		for(int i=0; i < (X_DIM+U_DIM); ++i) { if (H[t][i] > INFTY/2) { return false; } }
-		for(int i=0; i < (X_DIM+U_DIM); ++i) { if (f[t][i] > INFTY/2) { return false; } }
-		for(int i=0; i < (X_DIM+U_DIM); ++i) { if (lb[t][i] > INFTY/2) { return false; } }
-		for(int i=0; i < (X_DIM+U_DIM); ++i) {if (ub[t][i] > INFTY/2) { return false; } }
+		for(int i=0; i < N*(X_DIM+U_DIM); ++i) { if (H[t][i] > INFTY/2) { return false; } }
+		for(int i=0; i < N*(X_DIM+U_DIM); ++i) { if (f[t][i] > INFTY/2) { return false; } }
+		for(int i=0; i < N*(X_DIM+U_DIM); ++i) { if (lb[t][i] > INFTY/2) { return false; } }
+		for(int i=0; i < N*(X_DIM+U_DIM); ++i) {if (ub[t][i] > INFTY/2) { return false; } }
 	}
-	for(int i=0; i < (X_DIM); ++i) { if (H[T-1][i] > INFTY/2) { return false; } }
-	for(int i=0; i < (X_DIM); ++i) { if (f[T-1][i] > INFTY/2) { return false; } }
-	for(int i=0; i < (X_DIM); ++i) { if (lb[T-1][i] > INFTY/2) { return false; } }
-	for(int i=0; i < (X_DIM); ++i) { if (ub[T-1][i] > INFTY/2) { return false; } }
+	for(int i=0; i < N*(X_DIM); ++i) { if (H[T-1][i] > INFTY/2) { return false; } }
+	for(int i=0; i < N*(X_DIM); ++i) { if (f[T-1][i] > INFTY/2) { return false; } }
+	for(int i=0; i < N*(X_DIM); ++i) { if (lb[T-1][i] > INFTY/2) { return false; } }
+	for(int i=0; i < N*(X_DIM); ++i) { if (ub[T-1][i] > INFTY/2) { return false; } }
 
-	for(int i=0; i < (X_DIM); ++i) { if (c[0][i] > INFTY/2) { return false; } }
+	for(int i=0; i < N*(X_DIM); ++i) { if (c[0][i] > INFTY/2) { return false; } }
 
 	return true;
 }
 
-double exploreCollocation(std::vector<Matrix<X_DIM> >& X, std::vector<Matrix<U_DIM> >& U, std::vector<Matrix<X_DIM> >& P,
+double exploreCollocation(std::vector<Matrix<N*X_DIM> >& X, std::vector<Matrix<N*U_DIM> >& U, std::vector<Matrix<X_DIM> >& P,
 		exploreMPC_params& problem, exploreMPC_output& output, exploreMPC_info& info) {
 
 	int max_iter = 100;
@@ -151,8 +151,8 @@ double exploreCollocation(std::vector<Matrix<X_DIM> >& X, std::vector<Matrix<U_D
 	double constant_cost, hessian_constant, jac_constant;
 	Matrix<TOTAL_VARS> d, diaghess;
 
-	std::vector<Matrix<X_DIM> > Xopt(T);
-	std::vector<Matrix<U_DIM> > Uopt(T-1);
+	std::vector<Matrix<N*X_DIM> > Xopt(T);
+	std::vector<Matrix<N*U_DIM> > Uopt(T-1);
 	float optcost, model_merit, new_merit;
 	float approx_merit_improve, exact_merit_improve, merit_improve_ratio;
 
@@ -180,12 +180,12 @@ double exploreCollocation(std::vector<Matrix<X_DIM> >& X, std::vector<Matrix<U_D
 			// TODO: use finite differences or BFGS to approximate. (else set to 0)
 			index = 0;
 			for(int t=0; t < T-1; ++t) {
-				for(int i=0; i < X_DIM+U_DIM; ++i) {
+				for(int i=0; i < N*(X_DIM+U_DIM); ++i) {
 					double val = diaghess[index++];
 					H[t][i] = (val < 0) ? 0 : val;
 				}
 			}
-			for(int i=0; i < X_DIM; ++i) {
+			for(int i=0; i < N*X_DIM; ++i) {
 				double val = diaghess[index++];
 				H[T-1][i] = (val < 0) ? 0 : val;
 			}
@@ -193,11 +193,11 @@ double exploreCollocation(std::vector<Matrix<X_DIM> >& X, std::vector<Matrix<U_D
 			// compute gradient
 			index = 0;
 			for(int t=0; t < T-1; ++t) {
-				Matrix<X_DIM+U_DIM> zbar;
+				Matrix<N*(X_DIM+U_DIM)> zbar;
 				zbar.insert(0, 0, X[t]);
-				zbar.insert(X_DIM, 0, U[t]);
+				zbar.insert(N*X_DIM, 0, U[t]);
 
-				for(int i=0; i < X_DIM+U_DIM; ++i) {
+				for(int i=0; i < N*(X_DIM+U_DIM); ++i) {
 					hessian_constant += H[t][i]*zbar[i]*zbar[i];
 					jac_constant -= d[index]*zbar[i];
 					f[t][i] = d[index] - H[t][i]*zbar[i];
@@ -205,17 +205,17 @@ double exploreCollocation(std::vector<Matrix<X_DIM> >& X, std::vector<Matrix<U_D
 				}
 			}
 
-			Matrix<X_DIM> zbar;
+			Matrix<N*X_DIM> zbar;
 			zbar.insert(0, 0, X[T]);
 
-			for(int i=0; i < X_DIM; ++i) {
+			for(int i=0; i < N*X_DIM; ++i) {
 				hessian_constant += H[T-1][i]*zbar[i]*zbar[i];
 				jac_constant -= d[index]*zbar[i];
 				f[T-1][i] = d[index] - H[T-1][i]*zbar[i];
 				index++;
 			}
 
-			for(int i=0; i < X_DIM; ++i) {
+			for(int i=0; i < N*X_DIM; ++i) {
 				c[0][i] = X[0][i];
 			}
 
@@ -227,18 +227,22 @@ double exploreCollocation(std::vector<Matrix<X_DIM> >& X, std::vector<Matrix<U_D
 		for(int t=0; t < T; ++t) {
 			// set each particle lower/upper bound
 			index = 0;
-			for(int i=0; i < X_DIM; ++i) {
-				lb[t][index] = MAX(xMin[i], X[t][i] - Xeps);
-				ub[t][index] = MIN(xMax[i], X[t][i] + Xeps);
-				index++;
+			for(int n=0; n < N; ++n) {
+				for(int i=0; i < X_DIM; ++i) {
+					lb[t][index] = MAX(xMin[i], X[t][n*X_DIM+i] - Xeps);
+					ub[t][index] = MIN(xMax[i], X[t][n*X_DIM+i] + Xeps);
+					index++;
+				}
 			}
 
 			if (t < T-1) {
 				// set each input lower/upper bound
-				for(int i=0; i < U_DIM; ++i) {
-					lb[t][index] = MAX(uMin[i], U[t][i] - Ueps);
-					ub[t][index] = MIN(uMax[i], U[t][i] + Ueps);
-					index++;
+				for(int n=0; n < N; ++n) {
+					for(int i=0; i < U_DIM; ++i) {
+						lb[t][index] = MAX(uMin[i], U[t][n*X_DIM+i] - Ueps);
+						ub[t][index] = MIN(uMax[i], U[t][n*X_DIM+i] + Ueps);
+						index++;
+					}
 				}
 			}
 		}
@@ -256,12 +260,12 @@ double exploreCollocation(std::vector<Matrix<X_DIM> >& X, std::vector<Matrix<U_D
 			optcost = info.pobj;
 			for(int t=0; t < T; ++t) {
 				index = 0;
-				for(int i=0; i < X_DIM; ++i) {
+				for(int i=0; i < N*X_DIM; ++i) {
 					Xopt[t][i] = z[t][index++];
 				}
 
 				if (t < T-1) {
-					for(int i=0; i < U_DIM; ++i) {
+					for(int i=0; i < N*U_DIM; ++i) {
 						Uopt[t][i] = z[t][index++];
 					}
 				}
@@ -318,13 +322,17 @@ double exploreCollocation(std::vector<Matrix<X_DIM> >& X, std::vector<Matrix<U_D
 }
 
 // assume x0 is set before this
-void initialize_trajectory(std::vector<Matrix<X_DIM> >& X, std::vector<Matrix<U_DIM> >& U, const std::vector<Matrix<X_DIM> >& P) {
+void initialize_trajectory(std::vector<Matrix<N*X_DIM> >& X, std::vector<Matrix<N*U_DIM> >& U, const std::vector<Matrix<X_DIM> >& P) {
 
 	// go to average of particles
 	Matrix<X_DIM> avg_particle = zeros<X_DIM,1>();
 	for(int m=0; m < M; ++m) { avg_particle += (1/float(M))*P[m]; }
+	Matrix<N*X_DIM> avg_particle_rep;
+	for(int n=0; n < N; ++n) {
+		avg_particle_rep.insert(n*X_DIM, 0, avg_particle);
+	}
 
-	Matrix<U_DIM >uinit = (avg_particle - x0) / (DT*(T-1));
+	Matrix<N*U_DIM >uinit = (avg_particle_rep - x0) / (DT*(T-1));
 
 //	// go to furthest heaviest particle
 //	double eps = 1e-2;
@@ -355,9 +363,11 @@ void initialize_trajectory(std::vector<Matrix<X_DIM> >& X, std::vector<Matrix<U_
 //
 //	Matrix<U_DIM> uinit = (furthest_heaviest_particle - x0) / (DT*(T-1));
 
-	for(int i=0; i < U_DIM; ++i) {
-		uinit[i] = (uinit[i] > uMax[i]) ? uMax[i] : uinit[i];
-		uinit[i] = (uinit[i] < uMin[i]) ? uMin[i] : uinit[i];
+	for(int n=0; n < N; ++n) {
+		for(int i=0; i < U_DIM; ++i) {
+			uinit[n*U_DIM+i] = (uinit[n*U_DIM+i] > uMax[i]) ? uMax[i] : uinit[n*U_DIM+i];
+			uinit[n*U_DIM+i] = (uinit[n*U_DIM+i] < uMin[i]) ? uMin[i] : uinit[n*U_DIM+i];
+		}
 	}
 
 	X[0] = x0;
@@ -370,22 +380,24 @@ void initialize_trajectory(std::vector<Matrix<X_DIM> >& X, std::vector<Matrix<U_
 }
 
 int main(int argc, char* argv[]) {
-	srand(time(0));
+//	srand(time(0));
 	LOG_DEBUG("Initializing...");
 	point_explore::initialize();
 	LOG_DEBUG("Finished initializing");
 
-//	target[0] = 4; target[1] = 1.5;
-	target[0] = 1.5; target[1] = 4;
+	x0[0] = 0; x0[1] = 0;
+	x0[2] = 5; x0[3] = 0;
+
+	target[0] = 3.5; target[1] = 4;
 
 	std::vector<Matrix<X_DIM> > P(M);
 	for(int m=0; m < M; ++m) {
-		if (m < M/10) {
+		if (m < M/2) {
 			P[m][0] = uniform(1, 2);
-			P[m][1] = uniform(3, 5);
+			P[m][1] = uniform(3, 4);
 		} else {
-			P[m][0] = uniform(3, 5);
-			P[m][1] = uniform(1, 2);
+			P[m][0] = uniform(3, 4);
+			P[m][1] = uniform(3, 4);
 		}
 	}
 //	for(int m=0; m < M; ++m) {
@@ -393,10 +405,11 @@ int main(int argc, char* argv[]) {
 //		P[m][1] = uniform(xMin[1], xMax[1]);
 //	}
 
-	std::vector<Matrix<U_DIM> > U(T-1);
-	std::vector<Matrix<X_DIM> > X(T);
+	std::vector<Matrix<N*U_DIM> > U(T-1);
+	std::vector<Matrix<N*X_DIM> > X(T);
 
 	initialize_trajectory(X, U, P);
+
 
 	double init_cost = point_explore::differential_entropy(X,U,P);
 	LOG_DEBUG("Initial cost: %4.10f", init_cost);
@@ -406,7 +419,6 @@ int main(int argc, char* argv[]) {
 
 	LOG_DEBUG("Display initial trajectory");
 	point_explore::pythonDisplayStatesAndParticles(X, P, target);
-
 
 	// initialize FORCES variables
 	exploreMPC_params problem;
@@ -432,9 +444,9 @@ int main(int argc, char* argv[]) {
 		LOG_DEBUG("Optimized path");
 		point_explore::pythonDisplayStatesAndParticles(X,P,target);
 
-		Matrix<X_DIM> x = X[0], x_tp1;
+		Matrix<N*X_DIM> x = X[0], x_tp1;
 		std::vector<Matrix<X_DIM> > P_tp1;
-		int num_execute = 4;
+		int num_execute = 1;
 		for(int t=0; t < num_execute; ++t) {
 			point_explore::updateStateAndParticles(x, P, U[t], x_tp1, P_tp1);
 			P = P_tp1;

@@ -17,37 +17,39 @@ AD::SXMatrix dist(AD::SXMatrix a, AD::SXMatrix b) {
 
 AD::SXMatrix dynfunc(const AD::SXMatrix& x_t, const AD::SXMatrix& u_t)
 {
-	AD::SXMatrix x_tp1(X_DIM,1);
+	AD::SXMatrix x_tp1(N*X_DIM,1);
 
-	x_tp1(0) = x_t(0) + u_t(0)*DT;
-	x_tp1(1) = x_t(1) + u_t(1)*DT;
+	x_tp1 = x_t + u_t*DT;
 
   	return x_tp1;
 }
 
 AD::SXMatrix obsfunc(const AD::SXMatrix& x, const AD::SXMatrix& t)
 {
-	AD::SXMatrix z(Z_DIM,1);
+	AD::SXMatrix z(N*Z_DIM,1);
 
-	AD::SXMatrix d = dist(x, t);
-	z(0) = 1.0/(1.0+exp(-alpha*(max_range-d)));
+	for(int n=0; n < N; ++n) {
+		AD::SXMatrix x_n = x(AD::Slice(n*X_DIM,(n+1)*X_DIM));
+		AD::SXMatrix d = dist(x_n, t);
+		z(n) = 1.0/(1.0+exp(-alpha*(max_range-d)));
+	}
 
   	return z;
 }
 
 
 AD::SXMatrix gaussLikelihood(const AD::SXMatrix& v) {
-	Matrix<R_DIM,R_DIM> Sf, Sf_inv;
+	Matrix<N*R_DIM,N*R_DIM> Sf, Sf_inv;
 	chol(R, Sf);
 	Sf_inv = !Sf;
 
 //	float Sf_diag_prod = 1;
-//	for(int i=0; i < R_DIM; ++i) { Sf_diag_prod *= Sf(i,i); }
-//	float C = pow(2*M_PI, Z_DIM/2)*Sf_diag_prod;
+//	for(int i=0; i < N*R_DIM; ++i) { Sf_diag_prod *= Sf(i,i); }
+//	float C = pow(2*M_PI, (N*Z_DIM)/2)*Sf_diag_prod;
 
-	AD::SXMatrix Sf_inv_casadi(R_DIM,R_DIM);
-	for(int i=0; i < R_DIM; ++i) {
-		for(int j=0; j < R_DIM; ++j) {
+	AD::SXMatrix Sf_inv_casadi(N*R_DIM,N*R_DIM);
+	for(int i=0; i < N*R_DIM; ++i) {
+		for(int j=0; j < N*R_DIM; ++j) {
 			Sf_inv_casadi(i,j) = Sf_inv(i,j);
 		}
 	}
@@ -70,20 +72,6 @@ AD::SXMatrix gaussLikelihood(const AD::SXMatrix& v) {
 
 AD::SXMatrix differential_entropy(const std::vector<AD::SXMatrix>& X, const std::vector<AD::SXMatrix>& U,
 									const std::vector<AD::SXMatrix>& P) {
-	Matrix<R_DIM,R_DIM> Sf, Sf_inv;
-	chol(R, Sf);
-	Sf_inv = !Sf;
-
-	float Sf_diag_prod = 1;
-	for(int i=0; i < R_DIM; ++i) { Sf_diag_prod *= Sf(i,i); }
-
-	AD::SXMatrix Sf_inv_casadi(R_DIM,R_DIM);
-	for(int i=0; i < R_DIM; ++i) {
-		for(int j=0; j < R_DIM; ++j) {
-			Sf_inv_casadi(i,j) = Sf_inv(i,j);
-		}
-	}
-
 	AD::SXMatrix entropy(1,1);
 
 	std::vector<AD::SXMatrix> X_prop(T);
@@ -113,9 +101,8 @@ AD::SXMatrix differential_entropy(const std::vector<AD::SXMatrix>& X, const std:
 
 	for(int t=1; t < T; ++t) {
 		for(int m=0; m < M; ++m) {
-			for(int n=m; n < M; ++n) {
-				GL_H[t][m][n] = gaussLikelihood(H[t][m] - H[t][n]);
-//				GL_H[t][m][n] = -0.5*mul(H[t][m]-H[t][n],H[t][m]-H[t][n]);
+			for(int p=m; p < M; ++p) {
+				GL_H[t][m][p] = gaussLikelihood(H[t][m] - H[t][p]);
 			}
 		}
 	}
@@ -126,9 +113,9 @@ AD::SXMatrix differential_entropy(const std::vector<AD::SXMatrix>& X, const std:
 
 		AD::SXMatrix W_sum(1,1);
 		for(int m=0; m < M; ++m) {
-			for(int n=0; n < M; ++n) {
-				int a = MIN(m,n);
-				int b = MAX(m,n);
+			for(int p=0; p < M; ++p) {
+				int a = MIN(m,p);
+				int b = MAX(m,p);
 				W[t][m] += GL_H[t][a][b];
 			}
 			W_sum += W[t][m];
@@ -158,10 +145,10 @@ AD::SXMatrix differential_entropy(const std::vector<AD::SXMatrix>& X, const std:
 	for(int t=0; t < T-2; ++t) {
 		entropy += alpha_control_smooth*(mul(trans(U[t+1]-U[t]),(U[t+1]-U[t])));
 	}
-//
-//	for(int t=0; t < T-1; ++t) {
-//		entropy += alpha_control_norm*tr(~U[t]*U[t]);
-//	}
+
+	for(int t=0; t < T-1; ++t) {
+		entropy += alpha_control_norm*mul(trans(U[t]),U[t]);
+	}
 
 	return entropy;
 }
@@ -170,11 +157,11 @@ AD::SXMatrix differential_entropy_wrapper(const AD::SXMatrix& XU_vec, const AD::
 	std::vector<AD::SXMatrix> X(T), U(T-1), P(M);
 	int index = 0;
 	for(int t=0; t < T; ++t) {
-		X[t] = XU_vec(AD::Slice(index,index+X_DIM));
-		index += X_DIM;
+		X[t] = XU_vec(AD::Slice(index,index+N*X_DIM));
+		index += N*X_DIM;
 		if (t < T-1) {
-			U[t] = XU_vec(AD::Slice(index,index+U_DIM));
-			index += U_DIM;
+			U[t] = XU_vec(AD::Slice(index,index+N*U_DIM));
+			index += N*U_DIM;
 		}
 	}
 
@@ -187,16 +174,16 @@ AD::SXMatrix differential_entropy_wrapper(const AD::SXMatrix& XU_vec, const AD::
 	return differential_entropy(X, U, P);
 }
 
-void setup_casadi_vars(const std::vector<Matrix<X_DIM> >& X, const std::vector<Matrix<U_DIM> >& U,
+void setup_casadi_vars(const std::vector<Matrix<N*X_DIM> >& X, const std::vector<Matrix<N*U_DIM> >& U,
 					 const std::vector<Matrix<X_DIM> >& P, double* XU_arr, double* P_arr) {
 	int index = 0;
 	for(int t=0; t < T; ++t) {
-		for(int i=0; i < X_DIM; ++i) {
+		for(int i=0; i < N*X_DIM; ++i) {
 			XU_arr[index++] = X[t][i];
 		}
 
 		if (t < T-1) {
-			for(int i=0; i < U_DIM; ++i) {
+			for(int i=0; i < N*U_DIM; ++i) {
 				XU_arr[index++] = U[t][i];
 			}
 		}
@@ -211,7 +198,7 @@ void setup_casadi_vars(const std::vector<Matrix<X_DIM> >& X, const std::vector<M
 }
 
 AD::SXFunction casadi_differential_entropy_func() {
-	AD::SXMatrix XU_vec = AD::ssym("XU_vec", T*X_DIM + (T-1)*U_DIM);
+	AD::SXMatrix XU_vec = AD::ssym("XU_vec", T*N*X_DIM + (T-1)*N*U_DIM);
 	AD::SXMatrix P_vec = AD::ssym("P_vec", T*M*X_DIM);
 
 	AD::SXMatrix entropy = differential_entropy_wrapper(XU_vec, P_vec);
@@ -227,7 +214,7 @@ AD::SXFunction casadi_differential_entropy_func() {
 }
 
 AD::SXFunction casadi_differential_entropy_gradfunc() {
-	AD::SXMatrix XU_vec = AD::ssym("XU_vec", T*X_DIM + (T-1)*U_DIM);
+	AD::SXMatrix XU_vec = AD::ssym("XU_vec", T*N*X_DIM + (T-1)*N*U_DIM);
 	AD::SXMatrix P_vec = AD::ssym("P_vec", T*M*X_DIM);
 
 	AD::SXMatrix entropy = differential_entropy_wrapper(XU_vec, P_vec);
@@ -248,7 +235,7 @@ AD::SXFunction casadi_differential_entropy_gradfunc() {
 }
 
 AD::SXFunction casadi_differential_entropy_diaghessfunc() {
-	AD::SXMatrix XU_vec = AD::ssym("XU_vec", T*X_DIM + (T-1)*U_DIM);
+	AD::SXMatrix XU_vec = AD::ssym("XU_vec", T*N*X_DIM + (T-1)*N*U_DIM);
 	AD::SXMatrix P_vec = AD::ssym("P_vec", T*M*X_DIM);
 
 	AD::SXMatrix entropy = differential_entropy_wrapper(XU_vec, P_vec);

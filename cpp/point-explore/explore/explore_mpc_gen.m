@@ -15,8 +15,9 @@ disp(strcat(rootDir,'bsp/forces'));
 
 % problem setup
 N = timesteps - 1;
-nx = 2;
-nu = 2;
+n = 2; % number of robots
+nx = 2*n;
+nu = 2*n;
 stages = MultistageProblem(N+1);
 
 % first stage

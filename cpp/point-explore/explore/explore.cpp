@@ -390,14 +390,15 @@ int main(int argc, char* argv[]) {
 
 	target[0] = 3.5; target[1] = 4;
 
-	std::vector<Matrix<X_DIM> > P(M);
-	for(int m=0; m < M; ++m) {
-		if (m < M/2) {
-			P[m][0] = uniform(1, 2);
-			P[m][1] = uniform(3, 4);
+	const int M_FULL = 1000;
+	std::vector<Matrix<X_DIM> > P_full(M_FULL);
+	for(int m=0; m < M_FULL; ++m) {
+		if (m < M_FULL/2) {
+			P_full[m][0] = uniform(1, 2);
+			P_full[m][1] = uniform(3, 4);
 		} else {
-			P[m][0] = uniform(3, 4);
-			P[m][1] = uniform(3, 4);
+			P_full[m][0] = uniform(3, 4);
+			P_full[m][1] = uniform(3, 4);
 		}
 	}
 //	for(int m=0; m < M; ++m) {
@@ -405,11 +406,14 @@ int main(int argc, char* argv[]) {
 //		P[m][1] = uniform(xMin[1], xMax[1]);
 //	}
 
+
 	std::vector<Matrix<N*U_DIM> > U(T-1);
 	std::vector<Matrix<N*X_DIM> > X(T);
 
-	initialize_trajectory(X, U, P);
+	initialize_trajectory(X, U, P_full);
 
+	std::vector<Matrix<X_DIM> > P(M);
+	subsample(P_full, P);
 
 	double init_cost = point_explore::differential_entropy(X,U,P);
 	LOG_DEBUG("Initial cost: %4.10f", init_cost);
@@ -418,7 +422,7 @@ int main(int argc, char* argv[]) {
 	LOG_DEBUG("Casadi cost: %4.10f", casadi_cost);
 
 	LOG_DEBUG("Display initial trajectory");
-	point_explore::pythonDisplayStatesAndParticles(X, P, target);
+	point_explore::pythonDisplayStatesAndParticles(X, P_full, target);
 
 	// initialize FORCES variables
 	exploreMPC_params problem;
@@ -429,6 +433,7 @@ int main(int argc, char* argv[]) {
 	util::Timer forces_timer;
 	while(true) {
 
+		subsample(P_full, P);
 		init_cost = point_explore::casadi_differential_entropy(X,U,P);
 
 		LOG_DEBUG("Calling exploreCollocation");
@@ -445,21 +450,19 @@ int main(int argc, char* argv[]) {
 		point_explore::pythonDisplayStatesAndParticles(X,P,target);
 
 		Matrix<N*X_DIM> x = X[0], x_tp1;
-		std::vector<Matrix<X_DIM> > P_tp1;
+		std::vector<Matrix<X_DIM> > P_full_tp1;
 		int num_execute = 1;
 		for(int t=0; t < num_execute; ++t) {
-			point_explore::updateStateAndParticles(x, P, U[t], x_tp1, P_tp1);
-			P = P_tp1;
+			point_explore::updateStateAndParticles(x, P_full, U[t], x_tp1, P_full_tp1);
+			P_full = P_full_tp1;
 			x = x_tp1;
 		}
 
-		P = P_tp1;
-
 		x0 = x_tp1;
-		initialize_trajectory(X, U, P);
+		initialize_trajectory(X, U, P_full);
 
 		LOG_DEBUG("Particle update step");
-		point_explore::pythonDisplayStatesAndParticles(X,P,target);
+		point_explore::pythonDisplayStatesAndParticles(X,P_full,target);
 
 	}
 }

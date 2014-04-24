@@ -322,46 +322,54 @@ double exploreCollocation(std::vector<Matrix<N*X_DIM> >& X, std::vector<Matrix<N
 }
 
 // assume x0 is set before this
-void initialize_trajectory(std::vector<Matrix<N*X_DIM> >& X, std::vector<Matrix<N*U_DIM> >& U, const std::vector<Matrix<X_DIM> >& P) {
+void initialize_trajectory(std::vector<Matrix<N*X_DIM> >& X, std::vector<Matrix<N*U_DIM> >& U, const std::vector<Matrix<X_DIM> >& P, int type) {
 
-	// go to average of particles
-	Matrix<X_DIM> avg_particle = zeros<X_DIM,1>();
-	for(int m=0; m < M; ++m) { avg_particle += (1/float(M))*P[m]; }
-	Matrix<N*X_DIM> avg_particle_rep;
-	for(int n=0; n < N; ++n) {
-		avg_particle_rep.insert(n*X_DIM, 0, avg_particle);
+	Matrix<N*U_DIM> uinit;
+
+	if (type == 0) {
+		// go to average of particles
+		Matrix<X_DIM> avg_particle = zeros<X_DIM,1>();
+		for(int m=0; m < M; ++m) { avg_particle += (1/float(M))*P[m]; }
+		Matrix<N*X_DIM> avg_particle_rep;
+		for(int n=0; n < N; ++n) {
+			avg_particle_rep.insert(n*X_DIM, 0, avg_particle);
+		}
+
+		uinit = (avg_particle_rep - x0) / (DT*(T-1));
 	}
+	else if (type == 1) {
+		// go to furthest heaviest particle
+		double eps = 1e-2;
+		std::vector<int> num_particles_nearby(M, 0);
+		int max_num_particles_nearby = -INFTY;
+		for(int m=0; m < M; ++m) {
+			for(int n=0; n < M; ++n) {
+				double d = dist<X_DIM>(P[m],P[n]);
+				if (d < eps) {
+					num_particles_nearby[m]++;
+				}
+			}
+			max_num_particles_nearby = MAX(max_num_particles_nearby, num_particles_nearby[m]);
+		}
 
-	Matrix<N*U_DIM >uinit = (avg_particle_rep - x0) / (DT*(T-1));
+		Matrix<X_DIM> furthest_heaviest_particle;
+		double furthest = -INFTY;
 
-//	// go to furthest heaviest particle
-//	double eps = 1e-2;
-//	std::vector<int> num_particles_nearby(M, 0);
-//	int max_num_particles_nearby = -INFTY;
-//	for(int m=0; m < M; ++m) {
-//		for(int n=0; n < M; ++n) {
-//			double d = dist<X_DIM>(P[m],P[n]);
-//			if (d < eps) {
-//				num_particles_nearby[m]++;
-//			}
-//		}
-//		max_num_particles_nearby = MAX(max_num_particles_nearby, num_particles_nearby[m]);
-//	}
-//
-//	Matrix<X_DIM> furthest_heaviest_particle;
-//	double furthest = -INFTY;
-//
-//	for(int m=0; m < M; ++m) {
-//		if (num_particles_nearby[m] == max_num_particles_nearby) {
-//			double d = dist<X_DIM>(P[m], x0);
-//			if (d > furthest) {
-//				furthest = d;
-//				furthest_heaviest_particle = P[m];
-//			}
-//		}
-//	}
-//
-//	Matrix<U_DIM> uinit = (furthest_heaviest_particle - x0) / (DT*(T-1));
+		for(int m=0; m < M; ++m) {
+			if (num_particles_nearby[m] == max_num_particles_nearby) {
+				double d = dist<X_DIM>(P[m], x0);
+				if (d > furthest) {
+					furthest = d;
+					furthest_heaviest_particle = P[m];
+				}
+			}
+		}
+
+		uinit = (furthest_heaviest_particle - x0) / (DT*(T-1));
+	} else {
+		// zero initialization
+		uinit.reset();
+	}
 
 	for(int n=0; n < N; ++n) {
 		for(int i=0; i < U_DIM; ++i) {
@@ -386,31 +394,32 @@ int main(int argc, char* argv[]) {
 	LOG_DEBUG("Finished initializing");
 
 	x0[0] = 0; x0[1] = 0;
-	x0[2] = 5; x0[3] = 0;
+//	x0[2] = 5; x0[3] = 0;
 
 	target[0] = 3.5; target[1] = 4;
 
 	const int M_FULL = 1000;
 	std::vector<Matrix<X_DIM> > P_full(M_FULL);
-	for(int m=0; m < M_FULL; ++m) {
-		if (m < M_FULL/2) {
-			P_full[m][0] = uniform(1, 2);
-			P_full[m][1] = uniform(3, 4);
-		} else {
-			P_full[m][0] = uniform(3, 4);
-			P_full[m][1] = uniform(3, 4);
-		}
-	}
-//	for(int m=0; m < M; ++m) {
-//		P[m][0] = uniform(xMin[0], xMax[0]);
-//		P[m][1] = uniform(xMin[1], xMax[1]);
+//	for(int m=0; m < M_FULL; ++m) {
+//		if (m < M_FULL/2) {
+//			P_full[m][0] = uniform(1, 2);
+//			P_full[m][1] = uniform(3, 4);
+//		} else {
+//			P_full[m][0] = uniform(3, 4);
+//			P_full[m][1] = uniform(3, 4);
+//		}
 //	}
+	for(int m=0; m < M_FULL; ++m) {
+		P_full[m][0] = uniform(xMin[0], xMax[0]);
+		P_full[m][1] = uniform(xMin[1], xMax[1]);
+	}
 
 
 	std::vector<Matrix<N*U_DIM> > U(T-1);
 	std::vector<Matrix<N*X_DIM> > X(T);
 
-	initialize_trajectory(X, U, P_full);
+	int init_type = -1;
+	initialize_trajectory(X, U, P_full, init_type);
 
 	std::vector<Matrix<X_DIM> > P(M);
 	subsample(P_full, P);
@@ -459,7 +468,7 @@ int main(int argc, char* argv[]) {
 		}
 
 		x0 = x_tp1;
-		initialize_trajectory(X, U, P_full);
+		initialize_trajectory(X, U, P_full, init_type);
 
 		LOG_DEBUG("Particle update step");
 		point_explore::pythonDisplayStatesAndParticles(X,P_full,target);

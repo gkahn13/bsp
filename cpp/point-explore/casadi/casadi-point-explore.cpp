@@ -22,14 +22,26 @@ AD::SXMatrix dynfunc(const AD::SXMatrix& x_t, const AD::SXMatrix& u_t)
   	return x_tp1;
 }
 
+//AD::SXMatrix obsfunc(const AD::SXMatrix& x, const AD::SXMatrix& t)
+//{
+//	AD::SXMatrix z(N*Z_DIM,1);
+//
+//	for(int n=0; n < N; ++n) {
+//		AD::SXMatrix x_n = x(AD::Slice(n*X_DIM,(n+1)*X_DIM));
+//		AD::SXMatrix d = dist(x_n, t);
+//		z(n) = 1.0/(1.0+exp(-alpha*(max_range-d)));
+//	}
+//
+//  	return z;
+//}
+
 AD::SXMatrix obsfunc(const AD::SXMatrix& x, const AD::SXMatrix& t)
 {
 	AD::SXMatrix z(N*Z_DIM,1);
 
 	for(int n=0; n < N; ++n) {
 		AD::SXMatrix x_n = x(AD::Slice(n*X_DIM,(n+1)*X_DIM));
-		AD::SXMatrix d = dist(x_n, t);
-		z(n) = 1.0/(1.0+exp(-alpha*(max_range-d)));
+		z(n) = atan((x_n(1)-t(1))/(x_n(0)-t(0)));
 	}
 
   	return z;
@@ -122,6 +134,16 @@ AD::SXMatrix differential_entropy(const std::vector<AD::SXMatrix>& X, const std:
 
 	for(int t=0; t < T-1; ++t) {
 		entropy += alpha_control_norm*mul(trans(U[t]),U[t]);
+	}
+
+	for(int t=1; t < T; ++t) {
+		for(int n=0; n < N; ++n) {
+			AD::SXMatrix x_t_n = X_prop[t](AD::Slice(n*X_DIM,(n+1)*X_DIM));
+			for(int n_other=0; n_other < N; n_other++) {
+				AD::SXMatrix x_t_n_other = X_prop[t](AD::Slice(n_other*X_DIM,(n_other+1)*X_DIM));
+				entropy += alpha_separation*mul(trans(x_t_n-x_t_n_other), x_t_n-x_t_n_other);
+			}
+		}
 	}
 
 	return entropy;

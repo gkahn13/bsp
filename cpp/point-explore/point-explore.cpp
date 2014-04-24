@@ -16,7 +16,7 @@ AD::SXFunction casadi_diaghess_differential_entropy_func;
 namespace point_explore {
 
 void initialize() {
-	R = 1e-2*identity<N*R_DIM>();
+	R = 1e-4*identity<N*R_DIM>(); // 1e-2
 
 	for(int i=0; i < N*X_DIM; ++i) {
 		x0[i] = 0;
@@ -41,7 +41,7 @@ Matrix<N*X_DIM> dynfunc(const Matrix<N*X_DIM>& x, const Matrix<N*U_DIM>& u) {
 	return xNew;
 }
 
-Matrix<N*Z_DIM> obsfunc(const Matrix<N*X_DIM>& x, const Matrix<X_DIM>& t, const Matrix<N*R_DIM>& r) {
+Matrix<N*Z_DIM> obsfunc_dist(const Matrix<N*X_DIM>& x, const Matrix<X_DIM>& t, const Matrix<N*R_DIM>& r) {
 	Matrix<N*Z_DIM> z;
 	for(int n=0; n < N; ++n) {
 		Matrix<X_DIM> x_n = x.subMatrix<X_DIM,1>(n*X_DIM,0);
@@ -49,6 +49,21 @@ Matrix<N*Z_DIM> obsfunc(const Matrix<N*X_DIM>& x, const Matrix<X_DIM>& t, const 
 	}
 	return z;
 }
+
+Matrix<N*Z_DIM> obsfunc_angle(const Matrix<N*X_DIM>& x, const Matrix<X_DIM>& t, const Matrix<N*R_DIM>& r) {
+	Matrix<N*Z_DIM> z;
+	for(int n=0; n < N; ++n) {
+		Matrix<X_DIM> x_n = x.subMatrix<X_DIM,1>(n*X_DIM,0);
+		z[n] = atan((x_n[1]-t[1])/(x_n[0]-t[0])) + r[0];
+	}
+	return z;
+}
+
+Matrix<N*Z_DIM> obsfunc(const Matrix<N*X_DIM>& x, const Matrix<X_DIM>& t, const Matrix<N*R_DIM>& r) {
+//	return obsfunc_dist(x, t, r);
+	return obsfunc_angle(x, t, r);
+}
+
 
 template <int _vDim, int _sDim>
 double gaussLikelihood(const Matrix<_vDim>& v, const SymmetricMatrix<_sDim>& S) {

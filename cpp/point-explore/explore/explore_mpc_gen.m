@@ -1,4 +1,5 @@
-function explore_mpc_gen(timesteps)
+function explore_mpc_gen(timesteps, n)
+% n -- number of agents
 
 % FORCES - Fast interior point code generation for multistage problems.
 % Copyright (C) 2011-12 Alexander Domahidi [domahidi@control.ee.ethz.ch],
@@ -15,7 +16,6 @@ disp(strcat(rootDir,'bsp/forces'));
 
 % problem setup
 N = timesteps - 1;
-n = 2; % number of robots
 nx = 2*n;
 nu = 2*n;
 stages = MultistageProblem(N+1);
@@ -134,8 +134,8 @@ generateCode(stages,params,codeoptions,outputs);
 disp('Unzipping into mpc...');
 outdir = 'mpc/';
 system(['mkdir -p ',outdir]);
-header_file = [mpcname,num2str(timesteps),'.h'];
-src_file = [mpcname,num2str(timesteps),'.c'];
+header_file = [mpcname,num2str(timesteps),'_',num2str(n),'.h'];
+src_file = [mpcname,num2str(timesteps),'_',num2str(n),'.c'];
 system(['unzip -p ',mpcname,'.zip include/',mpcname,'.h > ',outdir,header_file]);
 system(['unzip -p ',mpcname,'.zip src/',mpcname,'.c > ',outdir,src_file]);
 system(['rm -rf ',mpcname,'.zip @CodeGen']);

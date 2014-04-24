@@ -21,7 +21,7 @@ namespace py = boost::python;
 
 #define TIMESTEPS 10
 #define PARTICLES 100
-#define ROBOTS 2 // number of robots
+#define AGENTS 1
 #define DT 1.0 // Note: if you change this, must change the FORCES matlab file
 #define X_DIM 2
 #define U_DIM 2
@@ -34,7 +34,7 @@ namespace py = boost::python;
 
 const int T = TIMESTEPS;
 const int M = PARTICLES;
-const int N = ROBOTS;
+const int N = AGENTS;
 const int TOTAL_VARS = T*N*X_DIM + (T-1)*N*U_DIM;
 
 const double step = 0.0078125*0.0078125;
@@ -45,6 +45,7 @@ const double max_range = 0.25;
 
 const double alpha_control_norm = 0; // 1e-2
 const double alpha_control_smooth = 0; // 1e-2
+const double alpha_separation = 0; // 1e-3
 
 
 

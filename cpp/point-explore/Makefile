@@ -26,6 +26,10 @@ BIN_DIR = bin/$(BUILD)
 
 # default TIMESTEPS
 T = 10
+# default PARTICLES
+M = 100
+# default AGENTS
+N = 1
 
 ###### DIRECTORY CREATION ###########
 dir:
@@ -49,7 +53,7 @@ $(OBJ_DIR)/casadi-point-explore.o : casadi/casadi-point-explore.cpp
 	
 ####### test-point-explore #######
 
-TEST_POINT_EXPLORE_FILES = test-point-explore point-explore logging
+TEST_POINT_EXPLORE_FILES = test-point-explore point-explore casadi-point-explore logging
 TEST_POINT_EXPLORE_OBJS = $(TEST_POINT_EXPLORE_FILES:%=$(OBJ_DIR)/%.o)
 
 test-point-explore: $(TEST_POINT_EXPLORE_OBJS)
@@ -65,7 +69,7 @@ POINT_EXPLORE_FILES = explore-cpp exploreMPC casadi-point-explore point-explore 
 POINT_EXPLORE_OBJS = $(POINT_EXPLORE_FILES:%=$(OBJ_DIR)/%.o)
 
 explore-setup:
-	bash setupFiles.sh explore $(T)
+	bash setupFiles.sh explore $(T) $(M) $(N)
 
 explore: explore-setup $(POINT_EXPLORE_OBJS) 
 	$(CXX) $(BFLAGS) $(POINT_EXPLORE_OBJS) -o $(BIN_DIR)/explore $(PYTHON_FLAGS) $(BOOST_FLAGS) $(LINKER_FLAGS) $(CASADI_FLAGS) $(CASADI_LIBS)

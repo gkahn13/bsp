@@ -6,20 +6,26 @@
 
 #include <iostream>
 
+#include <armadillo>
+
+using namespace arma;
+
 void test_update() {
 	srand(time(0));
 
-	R = .01*identity<N*R_DIM>();
+	R = .005*identity<N*R_DIM>();
 
 	xMin[0] = 0; xMin[1] = 0;
 	xMax[0] = 5; xMax[1] = 5;
 
 	x0[0] = 0; x0[1] = 0;
-	x0[2] = 4; x0[3] = 0;
+//	x0[2] = 4; x0[3] = 0;
 	target[0] = 3; target[1] = 3;
 
-	std::vector<Matrix<X_DIM> > P0(M);
-	for(int m=0; m < M; ++m) {
+	const int M_FULL = 1000;
+
+	std::vector<Matrix<X_DIM> > P0(M_FULL);
+	for(int m=0; m < M_FULL; ++m) {
 		for(int i=0; i < X_DIM; ++i) {
 			P0[m][i] = (xMax[i] - xMin[i])*(rand() / float(RAND_MAX)) + xMin[i];
 		}
@@ -30,7 +36,7 @@ void test_update() {
 
 	Matrix<N*U_DIM> uinit;
 	uinit[0] = .3; uinit[1] = .3;
-	uinit[2] = 0; uinit[3] = .3;
+//	uinit[2] = 0; uinit[3] = .3;
 	std::vector<Matrix<N*U_DIM> > U(T-1, uinit);
 
 	std::vector<std::vector<Matrix<X_DIM>> > P(T);
@@ -106,7 +112,6 @@ void test_entropy() {
 }
 
 int main(int argc, char* argv[]) {
-//	test_update();
-	test_entropy();
-	return 0;
+	test_update();
+//	test_entropy();
 }

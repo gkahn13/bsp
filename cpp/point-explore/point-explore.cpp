@@ -16,14 +16,16 @@ AD::SXFunction casadi_diaghess_differential_entropy_func;
 namespace point_explore {
 
 void initialize() {
-	R = 1e-4*identity<N*R_DIM>(); // 1e-2
+	// 1e-2 for distance
+	// 1e-3 for angle
+	R = 1e-2*identity<N*R_DIM>();
 
 	for(int i=0; i < N*X_DIM; ++i) {
 		x0[i] = 0;
 	}
 
-	xMin[0] = 0; xMin[1] = 0;
-	xMax[0] = 5; xMax[1] = 5;
+	xMin[0] = -1; xMin[1] = -1;
+	xMax[0] = 6; xMax[1] = 6;
 	uMin[0] = -.25; uMin[1] = -.25;
 	uMax[0] = .25; uMax[1] = .25;
 

@@ -16,7 +16,7 @@ def plot_state_and_particles(x, particles, target, xDim, M, N):
     plt.clf()
     plt.cla()
     
-    plt.axis([-0.5, 5.5, -0.5, 5.5])
+    plt.axis([-1, 6, -1, 6])
     
     P_t = np.matrix(particles)
     P_t = np.reshape(P_t, (xDim,M))

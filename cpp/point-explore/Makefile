@@ -29,7 +29,7 @@ T = 10
 # default PARTICLES
 M = 100
 # default AGENTS
-N = 1
+N = 2
 
 ###### DIRECTORY CREATION ###########
 dir:

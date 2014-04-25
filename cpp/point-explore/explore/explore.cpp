@@ -338,34 +338,34 @@ void initialize_trajectory(std::vector<Matrix<N*X_DIM> >& X, std::vector<Matrix<
 		uinit = (avg_particle_rep - x0) / (DT*(T-1));
 	}
 	else if (type == 1) {
-		// go to furthest heaviest particle
-		double eps = 1e-2;
-		std::vector<int> num_particles_nearby(M, 0);
-		int max_num_particles_nearby = -INFTY;
-		for(int m=0; m < M; ++m) {
-			for(int n=0; n < M; ++n) {
-				double d = dist<X_DIM>(P[m],P[n]);
-				if (d < eps) {
-					num_particles_nearby[m]++;
-				}
-			}
-			max_num_particles_nearby = MAX(max_num_particles_nearby, num_particles_nearby[m]);
-		}
-
-		Matrix<X_DIM> furthest_heaviest_particle;
-		double furthest = -INFTY;
-
-		for(int m=0; m < M; ++m) {
-			if (num_particles_nearby[m] == max_num_particles_nearby) {
-				double d = dist<X_DIM>(P[m], x0);
-				if (d > furthest) {
-					furthest = d;
-					furthest_heaviest_particle = P[m];
-				}
-			}
-		}
-
-		uinit = (furthest_heaviest_particle - x0) / (DT*(T-1));
+//		// go to furthest heaviest particle
+//		double eps = 1e-2;
+//		std::vector<int> num_particles_nearby(M, 0);
+//		int max_num_particles_nearby = -INFTY;
+//		for(int m=0; m < M; ++m) {
+//			for(int n=0; n < M; ++n) {
+//				double d = dist<X_DIM>(P[m],P[n]);
+//				if (d < eps) {
+//					num_particles_nearby[m]++;
+//				}
+//			}
+//			max_num_particles_nearby = MAX(max_num_particles_nearby, num_particles_nearby[m]);
+//		}
+//
+//		Matrix<X_DIM> furthest_heaviest_particle;
+//		double furthest = -INFTY;
+//
+//		for(int m=0; m < M; ++m) {
+//			if (num_particles_nearby[m] == max_num_particles_nearby) {
+//				double d = dist<X_DIM>(P[m], x0);
+//				if (d > furthest) {
+//					furthest = d;
+//					furthest_heaviest_particle = P[m];
+//				}
+//			}
+//		}
+//
+//		uinit = (furthest_heaviest_particle - x0) / (DT*(T-1));
 	} else {
 		// zero initialization
 		uinit.reset();
@@ -394,9 +394,9 @@ int main(int argc, char* argv[]) {
 	LOG_DEBUG("Finished initializing");
 
 	x0[0] = 0; x0[1] = 0;
-//	x0[2] = 5; x0[3] = 0;
+	x0[2] = .5; x0[3] = 0;
 
-	target[0] = 3.5; target[1] = 4;
+	target[0] = 2.5; target[1] = 2.5;
 
 	const int M_FULL = 1000;
 	std::vector<Matrix<X_DIM> > P_full(M_FULL);
@@ -410,8 +410,8 @@ int main(int argc, char* argv[]) {
 //		}
 //	}
 	for(int m=0; m < M_FULL; ++m) {
-		P_full[m][0] = uniform(xMin[0], xMax[0]);
-		P_full[m][1] = uniform(xMin[1], xMax[1]);
+		P_full[m][0] = uniform(0, 5);
+		P_full[m][1] = uniform(0, 5);
 	}
 
 

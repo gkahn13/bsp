@@ -5,7 +5,7 @@ OS := linux
 
 LINKER_FLAGS.mac = -lm
 LINKER_FLAGS.linux = -lrt
-LINKER_FLAGS = $(LINKER_FLAGS.$(OS))
+LINKER_FLAGS = $(LINKER_FLAGS.$(OS)) -larmadillo
 
 C_FLAGS = -std=gnu99
 CPP_FLAGS = -std=c++0x -fpermissive -I.
@@ -53,7 +53,7 @@ $(OBJ_DIR)/casadi-point-explore.o : casadi/casadi-point-explore.cpp
 	
 ####### test-point-explore #######
 
-TEST_POINT_EXPLORE_FILES = test-point-explore point-explore casadi-point-explore logging
+TEST_POINT_EXPLORE_FILES = test-point-explore point-explore-system point-explore casadi-point-explore logging
 TEST_POINT_EXPLORE_OBJS = $(TEST_POINT_EXPLORE_FILES:%=$(OBJ_DIR)/%.o)
 
 test-point-explore: $(TEST_POINT_EXPLORE_OBJS)
@@ -62,6 +62,8 @@ test-point-explore: $(TEST_POINT_EXPLORE_OBJS)
 $(OBJ_DIR)/test-point-explore.o : test-point-explore.cpp
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
 	
+$(OBJ_DIR)/point-explore-system.o : point-explore-system.cpp
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
 
 #######  explore ########
 
@@ -92,7 +94,7 @@ test-casadi-point-explore: $(TEST_CASADI_POINT_EXPLORE_OBJS)
 $(OBJ_DIR)/test-casadi-point-explore.o : casadi/test-casadi-point-explore.cpp
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
 	
-	
+
 ###### CLEAN ########
 
 clean:

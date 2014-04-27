@@ -56,7 +56,7 @@ Matrix<N*Z_DIM> obsfunc_angle(const Matrix<N*X_DIM>& x, const Matrix<X_DIM>& t, 
 	Matrix<N*Z_DIM> z;
 	for(int n=0; n < N; ++n) {
 		Matrix<X_DIM> x_n = x.subMatrix<X_DIM,1>(n*X_DIM,0);
-		z[n] = atan((x_n[1]-t[1])/(x_n[0]-t[0])) + r[0];
+		z[n] = atan((x_n[1]-t[1])/(x_n[0]-t[0])) + r[n];
 	}
 	return z;
 }
@@ -147,7 +147,7 @@ double differential_entropy(const std::vector<Matrix<N*X_DIM> >& X, const std::v
 		double W_sum = 0;
 		for(int m=0; m < M; ++m) {
 			for(int p=0; p < M; ++p) {
-				W[t][m] += gaussLikelihood<N*Z_DIM, N*Z_DIM>(H[t][m] - H[t][p], R);
+				W[t][m] += gaussLikelihood<N*Z_DIM, N*Z_DIM>(H[t][m] - H[t][p], R); // TODO: look into
 			}
 			W_sum += W[t][m];
 		}

@@ -21,7 +21,7 @@ void test_update() {
 	target << 3 << endr << 3;
 
 	ObsType obs_type = ObsType::angle;
-	CostType cost_type = CostType::entropy;
+	CostType cost_type = CostType::platt;
 	bool use_casadi = true;
 
 	LOG_DEBUG("Initializing...");

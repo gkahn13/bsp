@@ -41,10 +41,12 @@ private:
 
 	AD::SXMatrix cost_entropy(const std::vector<AD::SXMatrix>& X, const std::vector<AD::SXMatrix>& U,
 										const std::vector<AD::SXMatrix>& P);
-	AD::SXMatrix cost_entropy_wrapper(const AD::SXMatrix& XU_vec, const AD::SXMatrix& P_vec);
+	AD::SXMatrix cost_platt(const std::vector<AD::SXMatrix>& X, const std::vector<AD::SXMatrix>& U,
+									const std::vector<AD::SXMatrix>& P);
 
-	AD::SXFunction casadi_cost_entropy_func();
-	AD::SXFunction casadi_cost_entropy_grad_func();
+	AD::SXMatrix cost_wrapper(const AD::SXMatrix& XU_vec, const AD::SXMatrix& P_vec);
+	AD::SXFunction casadi_cost_func();
+	AD::SXFunction casadi_cost_grad_func();
 
 	void setup_casadi_vars(const std::vector<mat>& X, const std::vector<mat>& U,
 			const mat& P, double* XU_arr, double* P_arr);

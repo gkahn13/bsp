@@ -21,7 +21,7 @@ using namespace arma;
 
 #define TIMESTEPS 10
 #define PARTICLES 100
-#define AGENTS 2
+#define AGENTS 1
 #define DT 1.0 // Note: if you change this, must change the FORCES matlab file
 #define X_DIM 2
 #define U_DIM 2
@@ -118,12 +118,7 @@ private:
 	mat low_variance_sampler(const mat& P, const mat& W, double r);
 
 	double cost_entropy(const std::vector<mat>& X, const std::vector<mat>& U, const mat& P);
-	double casadi_cost_entropy(const std::vector<mat>& X, const std::vector<mat>& U, const mat& P);
-	mat casadi_cost_entropy_grad(const std::vector<mat>& X, const std::vector<mat>& U, const mat& P);
-
 	double cost_platt(const std::vector<mat>& X, const std::vector<mat>& U, const mat& P);
-	double casadi_cost_platt(const std::vector<mat>& X, const std::vector<mat>& U, const mat& P);
-	mat casadi_cost_platt_grad(const std::vector<mat>& X, const std::vector<mat>& U, const mat& P);
 };
 
 #endif

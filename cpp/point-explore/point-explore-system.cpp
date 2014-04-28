@@ -17,7 +17,7 @@ PointExploreSystem::PointExploreSystem() {
 	xMax *= 6;
 	uMin *= -.25;
 	uMax *= .25;
-	mat R = 1e-1*eye<mat>(N*R_DIM, N*R_DIM);
+	mat R = 1e-2*eye<mat>(N*R_DIM, N*R_DIM);
 
 	this->init(target, obs_type, cost_type, use_casadi, xMin, xMax, uMin, uMax, R);
 }
@@ -30,7 +30,7 @@ PointExploreSystem::PointExploreSystem(mat& target, const ObsType obs_type, cons
 	xMax *= 6;
 	uMin *= -.25;
 	uMax *= .25;
-	mat R = 1e-1*eye<mat>(N*R_DIM, N*R_DIM);
+	mat R = 1e-2*eye<mat>(N*R_DIM, N*R_DIM);
 
 	this->init(target, obs_type, cost_type, use_casadi, xMin, xMax, uMin, uMax, R);
 }
@@ -115,8 +115,7 @@ void PointExploreSystem::update_state_and_particles(const mat& x_t, const mat& P
 
 double PointExploreSystem::cost(const std::vector<mat>& X, const std::vector<mat>& U, const mat& P) {
 	if (this->use_casadi) {
-		double casadi_cost = this->casadi_sys->casadi_cost(X, U, P);
-//		LOG_DEBUG("Casadi cost: %4.10f", casadi_cost);
+		return this->casadi_sys->casadi_cost(X, U, P);
 	}
 
 	double cost;
@@ -131,8 +130,6 @@ double PointExploreSystem::cost(const std::vector<mat>& X, const std::vector<mat
 		cost += Constants::alpha_control_norm*norm(U[t], 2);
 	}
 	cost += Constants::alpha_control_norm*norm(U[T-2], 2);
-
-//	LOG_DEBUG("Actual cost: %4.10f", cost);
 
 	return cost;
 }
@@ -279,7 +276,30 @@ double PointExploreSystem::cost_entropy(const std::vector<mat>& X, const std::ve
 }
 
 double PointExploreSystem::cost_platt(const std::vector<mat>& X, const std::vector<mat>& U, const mat& P) {
-	return 0;
+	int T = X.size();
+	int M = P.n_cols;
+
+	std::vector<mat> X_prop(T, zeros<mat>(N*X_DIM,1));
+	X_prop[0] = X[0];
+	for(int t=0; t < T-1; ++t) {
+		X_prop[t+1] = this->dynfunc(X[t], U[t]);
+	}
+
+	std::vector<mat> H(M, zeros<mat>(T*(N*Z_DIM),1));
+	mat r(N*Z_DIM, 1, fill::zeros);
+	for(int m=0; m < M; ++m) {
+		for(int t=0; t < T; ++t) {
+			H[m].rows(t*(N*Z_DIM), (t+1)*(N*Z_DIM)-1) = this->obsfunc(X_prop[t], P.col(m), r);
+		}
+	}
+
+	double platt = 0;
+	for(int m=1; m < M; ++m) {
+		mat diff = H[m] - H[0];
+		platt += (1/float(M-1))*exp(-accu(diff % diff));
+	}
+
+	return platt;
 }
 
 void PointExploreSystem::display_states_and_particles(const std::vector<mat>& X, const mat& P) {
@@ -329,15 +349,3 @@ void PointExploreSystem::display_states_and_particles(const std::vector<mat>& X,
 
 }
 
-
-//mat subsample(mat& P, int size);
-//
-//
-//
-//double differential_entropy(const mat& X, const mat& U, const mat& P);
-//double casadi_differential_entropy(const mat& X, const mat& U, const mat& P);
-//mat casadi_differential_entropy_grad(const mat& X, const mat& U, const mat& P);
-//
-//double cost_platt(const mat& X, const mat& U, const mat& P);
-//double casadi_cost_platt(const mat& X, const mat& U, const mat& P);
-//mat casadi_cost_platt_grad(const mat& X, const mat& U, const mat& P);

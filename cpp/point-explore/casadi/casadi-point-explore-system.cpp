@@ -21,12 +21,8 @@ void CasadiPointExploreSystem::init(const ObsType obs_type, const CostType cost_
 	this->cost_type = cost_type;
 	this->R = R;
 
-	if(this->cost_type == CostType::entropy) {
-		this->cost_func = this->casadi_cost_entropy_func();
-		this->cost_grad_func = this->casadi_cost_entropy_grad_func();
-	} else {
-		// TODO: platt
-	}
+	this->cost_func = this->casadi_cost_func();
+	this->cost_grad_func = this->casadi_cost_grad_func();
 }
 
 
@@ -216,7 +212,36 @@ AD::SXMatrix CasadiPointExploreSystem::cost_entropy(const std::vector<AD::SXMatr
 	return entropy;
 }
 
-AD::SXMatrix CasadiPointExploreSystem::cost_entropy_wrapper(const AD::SXMatrix& XU_vec, const AD::SXMatrix& P_vec) {
+
+AD::SXMatrix CasadiPointExploreSystem::cost_platt(const std::vector<AD::SXMatrix>& X, const std::vector<AD::SXMatrix>& U,
+		const std::vector<AD::SXMatrix>& P) {
+	std::vector<AD::SXMatrix> X_prop(T);
+	X_prop[0] = X[0];
+	for(int t=0; t < T-1; ++t) {
+		X_prop[t+1] = this->dynfunc(X[t], U[t]);
+	}
+
+	std::vector<AD::SXMatrix> H(M, AD::SXMatrix(T*(N*Z_DIM),1));
+	for(int m=0; m < M; ++m) {
+		int index = 0;
+		for(int t=0; t < T; ++t) {
+			AD::SXMatrix Hm = this->obsfunc(X_prop[t], P[m]);
+			for(int i=0; i < N*Z_DIM; ++i) {
+				H[m](index++,0) = Hm(i,0);
+			}
+		}
+	}
+
+	AD::SXMatrix platt(1,1);
+	for(int m=1; m < M; ++m) {
+		AD::SXMatrix diff = H[m] - H[0];
+		platt(0,0) += (1/float(M-1))*exp(-mul(trans(diff), diff));
+	}
+
+	return platt;
+}
+
+AD::SXMatrix CasadiPointExploreSystem::cost_wrapper(const AD::SXMatrix& XU_vec, const AD::SXMatrix& P_vec) {
 	std::vector<AD::SXMatrix> X(T), U(T-1), P(M);
 	int index = 0;
 	for(int t=0; t < T; ++t) {
@@ -234,33 +259,35 @@ AD::SXMatrix CasadiPointExploreSystem::cost_entropy_wrapper(const AD::SXMatrix& 
 		index += X_DIM;
 	}
 
-	return this->cost_entropy(X, U, P);
+	if (this->cost_type == CostType::entropy) {
+		return this->cost_entropy(X, U, P);
+	} else {
+		return this->cost_platt(X, U, P);
+	}
 }
-
-
-AD::SXFunction CasadiPointExploreSystem::casadi_cost_entropy_func() {
+AD::SXFunction CasadiPointExploreSystem::casadi_cost_func() {
 	AD::SXMatrix XU_vec = AD::ssym("XU_vec", T*N*X_DIM + (T-1)*N*U_DIM);
 	AD::SXMatrix P_vec = AD::ssym("P_vec", T*M*X_DIM);
 
-	AD::SXMatrix entropy = this->cost_entropy_wrapper(XU_vec, P_vec);
+	AD::SXMatrix cost = this->cost_wrapper(XU_vec, P_vec);
 
 	std::vector<AD::SXMatrix> inp;
 	inp.push_back(XU_vec);
 	inp.push_back(P_vec);
 
-	AD::SXFunction entropy_fcn(inp, entropy);
-	entropy_fcn.init();
+	AD::SXFunction cost_fcn(inp, cost);
+	cost_fcn.init();
 
-	return entropy_fcn;
+	return cost_fcn;
 }
 
-AD::SXFunction CasadiPointExploreSystem::casadi_cost_entropy_grad_func() {
+AD::SXFunction CasadiPointExploreSystem::casadi_cost_grad_func() {
 	AD::SXMatrix XU_vec = AD::ssym("XU_vec", T*N*X_DIM + (T-1)*N*U_DIM);
 	AD::SXMatrix P_vec = AD::ssym("P_vec", T*M*X_DIM);
 
-	AD::SXMatrix entropy = this->cost_entropy_wrapper(XU_vec, P_vec);
+	AD::SXMatrix cost = this->cost_wrapper(XU_vec, P_vec);
 
-	AD::SXMatrix grad_entropy = gradient(entropy,XU_vec);
+	AD::SXMatrix grad_cost = gradient(cost, XU_vec);
 
 	// Create functions
 	std::vector<AD::SXMatrix> inp;
@@ -268,12 +295,13 @@ AD::SXFunction CasadiPointExploreSystem::casadi_cost_entropy_grad_func() {
 	inp.push_back(P_vec);
 
 	std::vector<AD::SXMatrix> out;
-	out.push_back(grad_entropy);
-	AD::SXFunction grad_entropy_fcn(inp,out);
-	grad_entropy_fcn.init();
+	out.push_back(grad_cost);
+	AD::SXFunction grad_cost_fcn(inp,out);
+	grad_cost_fcn.init();
 
-	return grad_entropy_fcn;
+	return grad_cost_fcn;
 }
+
 
 void CasadiPointExploreSystem::setup_casadi_vars(const std::vector<mat>& X, const std::vector<mat>& U,
 			const mat& P, double* XU_arr, double* P_arr) {

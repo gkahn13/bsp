@@ -12,6 +12,8 @@ extern "C" {
 exploreMPC_FLOAT **H, **f, **lb, **ub, **z, **c;
 }
 
+mat::fixed<N*X_DIM, 1> x0;
+
 namespace cfg {
 const double improve_ratio_threshold = .1;
 const double min_approx_improve = 1e-4;
@@ -141,7 +143,7 @@ bool isValidInputs()
 	return true;
 }
 
-double exploreCollocation(std::vector<Matrix<N*X_DIM> >& X, std::vector<Matrix<N*U_DIM> >& U, std::vector<Matrix<X_DIM> >& P,
+double exploreCollocation(std::vector<mat>& X, std::vector<mat>& U, mat& P, PointExploreSystem& sys,
 		exploreMPC_params& problem, exploreMPC_output& output, exploreMPC_info& info) {
 
 	int max_iter = 100;
@@ -150,14 +152,14 @@ double exploreCollocation(std::vector<Matrix<N*X_DIM> >& X, std::vector<Matrix<N
 
 	double merit = 0;
 	double constant_cost, hessian_constant, jac_constant;
-	Matrix<TOTAL_VARS> d, diaghess;
+	mat d(TOTAL_VARS, 1, fill::zeros), diaghess(TOTAL_VARS, 1, fill::zeros);
 
-	std::vector<Matrix<N*X_DIM> > Xopt(T);
-	std::vector<Matrix<N*U_DIM> > Uopt(T-1);
-	float optcost, model_merit, new_merit;
-	float approx_merit_improve, exact_merit_improve, merit_improve_ratio;
+	std::vector<mat> Xopt(T, zeros<mat>(N*X_DIM, 1));
+	std::vector<mat> Uopt(T-1, zeros<mat>(N*U_DIM, 1));
+	double optcost, model_merit, new_merit;
+	double approx_merit_improve, exact_merit_improve, merit_improve_ratio;
 
-	LOG_DEBUG("Initial trajectory cost: %4.10f", point_explore::casadi_differential_entropy(X, U, P));
+	LOG_DEBUG("Initial trajectory cost: %4.10f", sys.cost(X, U, P));
 
 	int index = 0;
 	bool solution_accepted = true;
@@ -167,11 +169,11 @@ double exploreCollocation(std::vector<Matrix<N*X_DIM> >& X, std::vector<Matrix<N
 
 		// only compute gradient/hessian if P/U has been changed
 		if (solution_accepted) {
-			d = point_explore::casadi_grad_differential_entropy(X, U, P);
+			d = sys.cost_grad(X, U, P);
 
 //			diaghess = point_explore::casadi_diaghess_differential_entropy(X,U,P);
-			diaghess.reset();
-			merit = point_explore::casadi_differential_entropy(X, U, P);
+			diaghess.zeros();
+			merit = sys.cost(X, U, P);
 
 			constant_cost = 0;
 			hessian_constant = 0;
@@ -182,47 +184,51 @@ double exploreCollocation(std::vector<Matrix<N*X_DIM> >& X, std::vector<Matrix<N
 			index = 0;
 			for(int t=0; t < T-1; ++t) {
 				for(int i=0; i < N*(X_DIM+U_DIM); ++i) {
-					double val = diaghess[index++];
+					double val = diaghess(index++);
 					H[t][i] = (val < 0) ? 0 : val;
 				}
 			}
 			for(int i=0; i < N*X_DIM; ++i) {
-				double val = diaghess[index++];
+				double val = diaghess(index++);
 				H[T-1][i] = (val < 0) ? 0 : val;
 			}
 
 			// compute gradient
 			index = 0;
 			for(int t=0; t < T-1; ++t) {
-				Matrix<N*(X_DIM+U_DIM)> zbar;
-				zbar.insert(0, 0, X[t]);
-				zbar.insert(N*X_DIM, 0, U[t]);
+				mat::fixed<N*(X_DIM+U_DIM), 1> zbar;
+				zbar.rows(0, N*X_DIM-1) = X[t];
+				zbar.rows(N*X_DIM, N*(X_DIM+U_DIM)-1) = U[t];
 
 				for(int i=0; i < N*(X_DIM+U_DIM); ++i) {
-					hessian_constant += H[t][i]*zbar[i]*zbar[i];
-					jac_constant -= d[index]*zbar[i];
-					f[t][i] = d[index] - H[t][i]*zbar[i];
+					hessian_constant += H[t][i]*zbar(i)*zbar(i);
+					jac_constant -= d[index]*zbar(i);
+					f[t][i] = d[index] - H[t][i]*zbar(i);
 					index++;
 				}
 			}
 
-			Matrix<N*X_DIM> zbar;
-			zbar.insert(0, 0, X[T]);
+			mat zbar = X[T-1];
 
 			for(int i=0; i < N*X_DIM; ++i) {
-				hessian_constant += H[T-1][i]*zbar[i]*zbar[i];
-				jac_constant -= d[index]*zbar[i];
-				f[T-1][i] = d[index] - H[T-1][i]*zbar[i];
+				hessian_constant += H[T-1][i]*zbar(i)*zbar(i);
+				jac_constant -= d[index]*zbar(i);
+				f[T-1][i] = d[index] - H[T-1][i]*zbar(i);
 				index++;
 			}
 
 			for(int i=0; i < N*X_DIM; ++i) {
-				c[0][i] = X[0][i];
+				c[0][i] = X[0](i);
 			}
 
 			constant_cost = 0.5*hessian_constant + jac_constant + merit;
 		}
 
+
+		mat xMin = sys.get_xMin();
+		mat xMax = sys.get_xMax();
+		mat uMin = sys.get_uMin();
+		mat uMax = sys.get_uMax();
 
 		// set trust region bounds based on current trust region size
 		for(int t=0; t < T; ++t) {
@@ -230,8 +236,8 @@ double exploreCollocation(std::vector<Matrix<N*X_DIM> >& X, std::vector<Matrix<N
 			index = 0;
 			for(int n=0; n < N; ++n) {
 				for(int i=0; i < X_DIM; ++i) {
-					lb[t][index] = MAX(xMin[i], X[t][n*X_DIM+i] - Xeps);
-					ub[t][index] = MIN(xMax[i], X[t][n*X_DIM+i] + Xeps);
+					lb[t][index] = MAX(xMin(i), X[t](n*X_DIM+i) - Xeps);
+					ub[t][index] = MIN(xMax(i), X[t](n*X_DIM+i) + Xeps);
 					index++;
 				}
 			}
@@ -240,8 +246,8 @@ double exploreCollocation(std::vector<Matrix<N*X_DIM> >& X, std::vector<Matrix<N
 				// set each input lower/upper bound
 				for(int n=0; n < N; ++n) {
 					for(int i=0; i < U_DIM; ++i) {
-						lb[t][index] = MAX(uMin[i], U[t][n*X_DIM+i] - Ueps);
-						ub[t][index] = MIN(uMax[i], U[t][n*X_DIM+i] + Ueps);
+						lb[t][index] = MAX(uMin(i), U[t](n*X_DIM+i) - Ueps);
+						ub[t][index] = MIN(uMax(i), U[t](n*X_DIM+i) + Ueps);
 						index++;
 					}
 				}
@@ -262,12 +268,12 @@ double exploreCollocation(std::vector<Matrix<N*X_DIM> >& X, std::vector<Matrix<N
 			for(int t=0; t < T; ++t) {
 				index = 0;
 				for(int i=0; i < N*X_DIM; ++i) {
-					Xopt[t][i] = z[t][index++];
+					Xopt[t](i) = z[t][index++];
 				}
 
 				if (t < T-1) {
 					for(int i=0; i < N*U_DIM; ++i) {
-						Uopt[t][i] = z[t][index++];
+						Uopt[t](i) = z[t][index++];
 					}
 				}
 			}
@@ -278,7 +284,7 @@ double exploreCollocation(std::vector<Matrix<N*X_DIM> >& X, std::vector<Matrix<N
 
 		model_merit = optcost + constant_cost; // need to add constant terms that were dropped
 
-		new_merit = point_explore::casadi_differential_entropy(Xopt, Uopt, P);
+		new_merit = sys.cost(Xopt, Uopt, P);
 
 		LOG_DEBUG("merit: %f", merit);
 		LOG_DEBUG("model_merit: %f", model_merit);
@@ -319,26 +325,25 @@ double exploreCollocation(std::vector<Matrix<N*X_DIM> >& X, std::vector<Matrix<N
 
 	}
 
-	return point_explore::casadi_differential_entropy(X, U, P);
+	return sys.cost(X, U, P);
 }
 
+enum class InitType { average, zero };
 // assume x0 is set before this
-void initialize_trajectory(std::vector<Matrix<N*X_DIM> >& X, std::vector<Matrix<N*U_DIM> >& U, const std::vector<Matrix<X_DIM> >& P, int type) {
+void initialize_trajectory(std::vector<mat>& X, std::vector<mat>& U, const mat& P, InitType init_type, PointExploreSystem& sys) {
+	int M = P.n_cols;
 
-	Matrix<N*U_DIM> uinit;
+	mat uinit(N*U_DIM, 1, fill::zeros);
 
-	if (type == 0) {
+	if (init_type == InitType::average) {
 		// go to average of particles
-		Matrix<X_DIM> avg_particle = zeros<X_DIM,1>();
-		for(int m=0; m < M; ++m) { avg_particle += (1/float(M))*P[m]; }
-		Matrix<N*X_DIM> avg_particle_rep;
-		for(int n=0; n < N; ++n) {
-			avg_particle_rep.insert(n*X_DIM, 0, avg_particle);
-		}
+		mat avg_particle(N*X_DIM, 1, fill::zeros);
+		for(int m=0; m < M; ++m) { avg_particle += (1/float(M))*P.col(m); }
+		mat avg_particle_rep = repmat(avg_particle, N, 1);
 
 		uinit = (avg_particle_rep - x0) / (DT*(T-1));
 	}
-	else if (type == 1) {
+//	else if (type == 1) {
 //		// go to furthest heaviest particle
 //		double eps = 1e-2;
 //		std::vector<int> num_particles_nearby(M, 0);
@@ -367,40 +372,48 @@ void initialize_trajectory(std::vector<Matrix<N*X_DIM> >& X, std::vector<Matrix<
 //		}
 //
 //		uinit = (furthest_heaviest_particle - x0) / (DT*(T-1));
-	} else {
+	else if (init_type == InitType::zero) {
 		// zero initialization
-		uinit.reset();
+		uinit = zeros<mat>(N*U_DIM, 1);
 	}
+
+	mat uMin = sys.get_uMin();
+	mat uMax = sys.get_uMax();
 
 	for(int n=0; n < N; ++n) {
 		for(int i=0; i < U_DIM; ++i) {
-			uinit[n*U_DIM+i] = (uinit[n*U_DIM+i] > uMax[i]) ? uMax[i] : uinit[n*U_DIM+i];
-			uinit[n*U_DIM+i] = (uinit[n*U_DIM+i] < uMin[i]) ? uMin[i] : uinit[n*U_DIM+i];
+			uinit(n*U_DIM+i) = (uinit(n*U_DIM+i) > uMax(i)) ? uMax(i) : uinit(n*U_DIM+i);
+			uinit(n*U_DIM+i) = (uinit(n*U_DIM+i) < uMin(i)) ? uMin(i) : uinit(n*U_DIM+i);
 		}
 	}
 
 	X[0] = x0;
 	for(int t=0; t < T-1; ++t) {
 		U[t] = uinit;
-		X[t+1] = point_explore::dynfunc(X[t], U[t]);
+		X[t+1] = sys.dynfunc(X[t], U[t]);
 	}
-
 
 }
 
 int main(int argc, char* argv[]) {
 //	srand(time(0));
+
+	mat target(X_DIM, 1, fill::zeros);
+//	target << 2.5 << endr << 2.5;
+	target << 4 << endr << 1;
+
+	ObsType obs_type = ObsType::angle;
+	CostType cost_type = CostType::entropy;
+	bool use_casadi = true;
+
 	LOG_DEBUG("Initializing...");
-	point_explore::initialize();
-	LOG_DEBUG("Finished initializing");
+	PointExploreSystem sys = PointExploreSystem(target, obs_type, cost_type, use_casadi);
+	LOG_DEBUG("System initialized");
 
-	x0[0] = 0; x0[1] = 0;
-	x0[2] = .5; x0[3] = 0;
-
-	target[0] = 2.5; target[1] = 2.5;
+	x0 << 0 << endr << 0;// << endr << .5 << endr << 0;
 
 	const int M_FULL = 1000;
-	std::vector<Matrix<X_DIM> > P_full(M_FULL);
+	mat P_full(X_DIM, M_FULL, fill::zeros);
 //	for(int m=0; m < M_FULL; ++m) {
 //		if (m < M_FULL/2) {
 //			P_full[m][0] = uniform(1, 2);
@@ -411,28 +424,25 @@ int main(int argc, char* argv[]) {
 //		}
 //	}
 	for(int m=0; m < M_FULL; ++m) {
-		P_full[m][0] = uniform(0, 5);
-		P_full[m][1] = uniform(0, 5);
+		for(int i=0; i < X_DIM; ++i) {
+			P_full(i, m) = uniform(0, 5);
+		}
 	}
 
 
-	std::vector<Matrix<N*U_DIM> > U(T-1);
-	std::vector<Matrix<N*X_DIM> > X(T);
+	std::vector<mat> U(T-1);
+	std::vector<mat> X(T);
 
-	int init_type = -1;
-	initialize_trajectory(X, U, P_full, init_type);
+	InitType init_type = InitType::zero;
+	initialize_trajectory(X, U, P_full, init_type, sys);
 
-	std::vector<Matrix<X_DIM> > P(M);
-	subsample(P_full, P);
+	mat P = subsample(P_full, M);
 
-	double init_cost = point_explore::differential_entropy(X,U,P);
+	double init_cost = sys.cost(X,U,P);
 	LOG_DEBUG("Initial cost: %4.10f", init_cost);
 
-	double casadi_cost = point_explore::casadi_differential_entropy(X,U,P);
-	LOG_DEBUG("Casadi cost: %4.10f", casadi_cost);
-
 	LOG_DEBUG("Display initial trajectory");
-	point_explore::pythonDisplayStatesAndParticles(X, P_full, target);
+	sys.display_states_and_particles(X, P_full);
 
 	// initialize FORCES variables
 	exploreMPC_params problem;
@@ -443,13 +453,13 @@ int main(int argc, char* argv[]) {
 	util::Timer forces_timer;
 	while(true) {
 
-		subsample(P_full, P);
-		init_cost = point_explore::casadi_differential_entropy(X,U,P);
+		P = subsample(P_full, M);
+		init_cost = sys.cost(X,U,P);
 
 		LOG_DEBUG("Calling exploreCollocation");
 
 		util::Timer_tic(&forces_timer);
-		double cost = exploreCollocation(X, U, P, problem, output, info);
+		double cost = exploreCollocation(X, U, P, sys, problem, output, info);
 		double forces_time = util::Timer_toc(&forces_timer);
 
 		LOG_INFO("Initial cost: %4.10f", init_cost);
@@ -457,22 +467,22 @@ int main(int argc, char* argv[]) {
 		LOG_INFO("Time: %4.10f ms", forces_time*1000);
 
 		LOG_DEBUG("Optimized path");
-		point_explore::pythonDisplayStatesAndParticles(X,P,target);
+		sys.display_states_and_particles(X, P);
 
-		Matrix<N*X_DIM> x = X[0], x_tp1;
-		std::vector<Matrix<X_DIM> > P_full_tp1;
+		mat x = X[0], x_tp1(N*X_DIM, 1, fill::zeros);
+		mat P_full_tp1(X_DIM, M_FULL, fill::zeros);
 		int num_execute = 1;
 		for(int t=0; t < num_execute; ++t) {
-			point_explore::updateStateAndParticles(x, P_full, U[t], x_tp1, P_full_tp1);
+			sys.update_state_and_particles(x, P_full, U[t], x_tp1, P_full_tp1);
 			P_full = P_full_tp1;
 			x = x_tp1;
 		}
 
 		x0 = x_tp1;
-		initialize_trajectory(X, U, P_full, init_type);
+		initialize_trajectory(X, U, P_full, init_type, sys);
 
 		LOG_DEBUG("Particle update step");
-		point_explore::pythonDisplayStatesAndParticles(X,P_full,target);
+		sys.display_states_and_particles(X, P_full);
 
 	}
 }

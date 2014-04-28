@@ -1,7 +1,7 @@
 #ifndef __CASADI_POINT_EXPLORE_H__
 #define __CASADI_POINT_EXPLORE_H__
 
-#include "../point-explore.h"
+#include "../point-explore-system.h"
 
 #include <symbolic/casadi.hpp>
 #include <symbolic/stl_vector_tools.hpp>
@@ -24,8 +24,8 @@ AD::SXMatrix differential_entropy(const std::vector<AD::SXMatrix>& X, const std:
 
 AD::SXMatrix differential_entropy_wrapper(const AD::SXMatrix& XU_vec, const AD::SXMatrix& P_vec);
 
-void setup_casadi_vars(const std::vector<Matrix<N*X_DIM> >& X, const std::vector<Matrix<N*U_DIM> >& U,
-					 const std::vector<Matrix<X_DIM> >& P, double* XU_arr, double* P_arr);
+//void setup_casadi_vars(const std::vector<Matrix<N*X_DIM> >& X, const std::vector<Matrix<N*U_DIM> >& U,
+//					 const std::vector<Matrix<X_DIM> >& P, double* XU_arr, double* P_arr);
 
 AD::SXFunction casadi_differential_entropy_func();
 

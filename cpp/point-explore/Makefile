@@ -53,7 +53,7 @@ $(OBJ_DIR)/casadi-point-explore.o : casadi/casadi-point-explore.cpp
 	
 ####### test-point-explore #######
 
-TEST_POINT_EXPLORE_FILES = test-point-explore point-explore-system point-explore casadi-point-explore logging
+TEST_POINT_EXPLORE_FILES = test-point-explore point-explore-system casadi-point-explore-system logging
 TEST_POINT_EXPLORE_OBJS = $(TEST_POINT_EXPLORE_FILES:%=$(OBJ_DIR)/%.o)
 
 test-point-explore: $(TEST_POINT_EXPLORE_OBJS)
@@ -64,6 +64,10 @@ $(OBJ_DIR)/test-point-explore.o : test-point-explore.cpp
 	
 $(OBJ_DIR)/point-explore-system.o : point-explore-system.cpp
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
+
+$(OBJ_DIR)/casadi-point-explore-system.o : casadi/casadi-point-explore-system.cpp
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
+
 
 #######  explore ########
 

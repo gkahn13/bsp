@@ -10,6 +10,7 @@
 
 #include <boost/python.hpp>
 #include <boost/filesystem.hpp>
+namespace py = boost::python;
 
 #include <symbolic/casadi.hpp>
 #include <symbolic/stl_vector_tools.hpp>
@@ -19,7 +20,7 @@
 using namespace arma;
 
 #define TIMESTEPS 10
-#define PARTICLES 100
+#define PARTICLES 500
 #define AGENTS 2
 #define DT 1.0 // Note: if you change this, must change the FORCES matlab file
 #define X_DIM 2
@@ -27,6 +28,9 @@ using namespace arma;
 #define Z_DIM 1
 #define Q_DIM 2
 #define R_DIM 1
+
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
 
 const int T = TIMESTEPS;
 const int M = PARTICLES;
@@ -45,19 +49,6 @@ namespace Constants {
 	const double alpha_separation = 0; // 1e-3
 }
 
-extern mat::fixed<N*R_DIM,N*R_DIM> R;
-
-extern mat::fixed<N*X_DIM,1> x0;
-extern mat::fixed<X_DIM,1> xMin, xMax;
-extern mat::fixed<U_DIM,1> uMin, uMax;
-
-extern mat::fixed<X_DIM,1> target;
-
-//#include "casadi/casadi-point-explore.h"
-//namespace AD = CasADi;
-//extern AD::SXFunction casadi_differential_entropy_func;
-//extern AD::SXFunction casadi_grad_differential_entropy_func;
-//extern AD::SXFunction casadi_diaghess_differential_entropy_func;
 
 inline double uniform(double low, double high) {
 	return (high - low)*(rand() / double(RAND_MAX)) + low;
@@ -72,26 +63,25 @@ inline mat sample_gaussian(mat mean, mat covariance) {
 	return sample;
 }
 
+enum class ObsType { distance, angle};
+enum class CostType { entropy, platt};
+
+#include "casadi/casadi-point-explore-system.h"
+namespace AD = CasADi;
 
 class PointExploreSystem {
 public:
-	enum ObsType { distance, angle};
-	enum CostType { entropy, platt};
-
 	PointExploreSystem();
 	PointExploreSystem(mat& target, const ObsType obs_type, const CostType cost_type, bool use_casadi);
 	PointExploreSystem(mat& target, const ObsType obs_type, const CostType cost_type, bool use_casadi,
-						mat& xMin, mat& xMax, mat& uMin, mat& uMax);
-
-	void init(mat& target, const ObsType obs_type, const CostType cost_type, bool use_casadi,
-				mat& xMin, mat& xMax, mat& uMin, mat& uMax);
+						mat& xMin, mat& xMax, mat& uMin, mat& uMax, mat& R);
 
 	mat dynfunc(const mat& x, const mat& u);
 	mat obsfunc(const mat& x, const mat& t, const mat& r);
 
 	void update_state_and_particles(const mat& x_t, const mat& P_t, const mat& u_t, mat& x_tp1, mat& P_tp1);
-	double cost_func(const std::vector<mat>& X, const std::vector<mat>& U, const mat& P);
-	mat cost_func_grad(const std::vector<mat>& X, const std::vector<mat>& U, const mat& P);
+	double cost(const std::vector<mat>& X, const std::vector<mat>& U, const mat& P);
+	mat cost_grad(std::vector<mat>& X, std::vector<mat>& U, const mat& P);
 
 	void display_states_and_particles(const std::vector<mat>& X, const mat& P);
 
@@ -109,7 +99,13 @@ private:
 	CostType cost_type;
 	bool use_casadi;
 
+	mat R;
 	mat xMin, xMax, uMin, uMax;
+
+	CasadiPointExploreSystem* casadi_sys;
+
+	void init(mat& target, const ObsType obs_type, const CostType cost_type, bool use_casadi,
+			mat& xMin, mat& xMax, mat& uMin, mat& uMax, mat& R);
 
 	mat obsfunc_dist(const mat& x, const mat& t, const mat& r);
 	mat obsfunc_angle(const mat& x, const mat& t, const mat& r);

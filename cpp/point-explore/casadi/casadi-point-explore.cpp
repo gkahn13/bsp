@@ -1,5 +1,5 @@
 #include "casadi-point-explore.h"
-#include "../point-explore.h"
+#include "../point-explore-system.h"
 
 #include <symbolic/casadi.hpp>
 #include <symbolic/stl_vector_tools.hpp>
@@ -8,6 +8,8 @@
 namespace AD = CasADi;
 
 namespace casadi_point_explore {
+
+mat::fixed<N*R_DIM,N*R_DIM> R;
 
 AD::SXMatrix dist(AD::SXMatrix a, AD::SXMatrix b) {
 	return sqrt(trace(mul(trans(a-b),(a-b))));
@@ -49,9 +51,8 @@ AD::SXMatrix obsfunc(const AD::SXMatrix& x, const AD::SXMatrix& t)
 
 
 AD::SXMatrix gaussLikelihood(const AD::SXMatrix& v) {
-	Matrix<N*R_DIM,N*R_DIM> Sf, Sf_inv;
-	chol(R, Sf);
-	Sf_inv = !Sf;
+	mat Sf = chol(R);
+	mat Sf_inv = inv(Sf);
 
 //	float Sf_diag_prod = 1;
 //	for(int i=0; i < N*R_DIM; ++i) { Sf_diag_prod *= Sf(i,i); }
@@ -129,11 +130,11 @@ AD::SXMatrix differential_entropy(const std::vector<AD::SXMatrix>& X, const std:
 	}
 
 	for(int t=0; t < T-2; ++t) {
-		entropy += alpha_control_smooth*(mul(trans(U[t+1]-U[t]),(U[t+1]-U[t])));
+		entropy += Constants::alpha_control_smooth*(mul(trans(U[t+1]-U[t]),(U[t+1]-U[t])));
 	}
 
 	for(int t=0; t < T-1; ++t) {
-		entropy += alpha_control_norm*mul(trans(U[t]),U[t]);
+		entropy += Constants::alpha_control_norm*mul(trans(U[t]),U[t]);
 	}
 
 	for(int t=1; t < T; ++t) {
@@ -141,7 +142,7 @@ AD::SXMatrix differential_entropy(const std::vector<AD::SXMatrix>& X, const std:
 			AD::SXMatrix x_t_n = X_prop[t](AD::Slice(n*X_DIM,(n+1)*X_DIM));
 			for(int n_other=0; n_other < N; n_other++) {
 				AD::SXMatrix x_t_n_other = X_prop[t](AD::Slice(n_other*X_DIM,(n_other+1)*X_DIM));
-				entropy += alpha_separation*mul(trans(x_t_n-x_t_n_other), x_t_n-x_t_n_other);
+				entropy += Constants::alpha_separation*mul(trans(x_t_n-x_t_n_other), x_t_n-x_t_n_other);
 			}
 		}
 	}
@@ -170,28 +171,28 @@ AD::SXMatrix differential_entropy_wrapper(const AD::SXMatrix& XU_vec, const AD::
 	return differential_entropy(X, U, P);
 }
 
-void setup_casadi_vars(const std::vector<Matrix<N*X_DIM> >& X, const std::vector<Matrix<N*U_DIM> >& U,
-					 const std::vector<Matrix<X_DIM> >& P, double* XU_arr, double* P_arr) {
-	int index = 0;
-	for(int t=0; t < T; ++t) {
-		for(int i=0; i < N*X_DIM; ++i) {
-			XU_arr[index++] = X[t][i];
-		}
-
-		if (t < T-1) {
-			for(int i=0; i < N*U_DIM; ++i) {
-				XU_arr[index++] = U[t][i];
-			}
-		}
-	}
-
-	index = 0;
-	for(int m=0; m < M; ++m) {
-		for(int i=0; i < X_DIM; ++i) {
-			P_arr[index++] = P[m][i];
-		}
-	}
-}
+//void setup_casadi_vars(const std::vector<Matrix<N*X_DIM> >& X, const std::vector<Matrix<N*U_DIM> >& U,
+//					 const std::vector<Matrix<X_DIM> >& P, double* XU_arr, double* P_arr) {
+//	int index = 0;
+//	for(int t=0; t < T; ++t) {
+//		for(int i=0; i < N*X_DIM; ++i) {
+//			XU_arr[index++] = X[t][i];
+//		}
+//
+//		if (t < T-1) {
+//			for(int i=0; i < N*U_DIM; ++i) {
+//				XU_arr[index++] = U[t][i];
+//			}
+//		}
+//	}
+//
+//	index = 0;
+//	for(int m=0; m < M; ++m) {
+//		for(int i=0; i < X_DIM; ++i) {
+//			P_arr[index++] = P[m][i];
+//		}
+//	}
+//}
 
 AD::SXFunction casadi_differential_entropy_func() {
 	AD::SXMatrix XU_vec = AD::ssym("XU_vec", T*N*X_DIM + (T-1)*N*U_DIM);

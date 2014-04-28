@@ -11,45 +11,53 @@
 
 using namespace arma;
 
-//void test_update() {
-//	srand(time(0));
-//
-//	R = .005*identity<N*R_DIM>();
-//
-//	xMin[0] = 0; xMin[1] = 0;
-//	xMax[0] = 5; xMax[1] = 5;
-//
-//	x0[0] = 0; x0[1] = 0;
-////	x0[2] = 4; x0[3] = 0;
-//	target[0] = 3; target[1] = 3;
-//
-//	const int M_FULL = 1000;
-//
-//	std::vector<Matrix<X_DIM> > P0(M_FULL);
-//	for(int m=0; m < M_FULL; ++m) {
-//		for(int i=0; i < X_DIM; ++i) {
-//			P0[m][i] = (xMax[i] - xMin[i])*(rand() / float(RAND_MAX)) + xMin[i];
-//		}
-//	}
-//
-//	std::cout << "Initial map\n";
-//	point_explore::pythonDisplayStatesAndParticles(std::vector<Matrix<N*X_DIM> >(1,x0), P0, target);
-//
-//	Matrix<N*U_DIM> uinit;
-//	uinit[0] = .3; uinit[1] = .3;
-////	uinit[2] = 0; uinit[3] = .3;
-//	std::vector<Matrix<N*U_DIM> > U(T-1, uinit);
-//
-//	std::vector<std::vector<Matrix<X_DIM>> > P(T);
-//	P[0] = P0;
-//	std::vector<Matrix<N*X_DIM> > X(T);
-//	X[0] = x0;
-//	for(int t=0; t < T-1; ++t) {
-//		point_explore::updateStateAndParticles(X[t], P[t], U[t], X[t+1], P[t+1]);
-//		point_explore::pythonDisplayStatesAndParticles(std::vector<Matrix<N*X_DIM> >(1,X[t+1]), P[t+1], target);
-//	}
-//
-//}
+void test_update() {
+	srand(time(0));
+
+	mat x0(N*X_DIM, 1, fill::zeros);
+	x0 << 0 << endr << 0 << endr << .5 << endr << 0;
+
+	mat target(X_DIM, 1);
+	target << 3 << endr << 3;
+
+	ObsType obs_type = ObsType::distance;
+	CostType cost_type = CostType::entropy;
+	bool use_casadi = false;
+
+	PointExploreSystem sys = PointExploreSystem(target, obs_type, cost_type, use_casadi);
+
+	mat xMin = sys.get_xMin();
+	mat xMax = sys.get_xMax();
+
+	const int M_FULL = 1000;
+
+	mat P0(X_DIM, M_FULL);
+	for(int m=0; m < M_FULL; ++m) {
+		for(int i=0; i < X_DIM; ++i) {
+			P0(i,m) = uniform(xMin(i), xMax(i));
+		}
+	}
+
+	std::vector<mat> P(T, zeros<mat>(X_DIM, M_FULL));
+	P[0] = P0;
+	std::vector<mat> X(T, zeros<mat>(N*X_DIM,1));
+	X[0] = x0;
+
+	std::cout << "Initial map\n";
+	sys.display_states_and_particles(std::vector<mat>(1, X[0]), P[0]);
+
+	mat uinit(N*U_DIM, 1, fill::zeros);
+	//uinit << 0 << endr << .5 << endr << .5 << endr << 0;
+	uinit << .3 << endr << .3 << endr << .3 << endr << .3;
+	std::vector<mat> U(T-1, uinit);
+
+	for(int t=0; t < T-1; ++t) {
+		LOG_DEBUG("t: %d",t);
+		sys.update_state_and_particles(X[t], P[t], U[t], X[t+1], P[t+1]);
+		sys.display_states_and_particles(std::vector<mat>(1,X[t+1]), P[t+1]);
+	}
+
+}
 //
 //
 //void test_entropy() {
@@ -123,7 +131,10 @@ void test_system() {
 }
 
 int main(int argc, char* argv[]) {
-//	test_update();
+//	mat R = 1e-2*eye<mat>(N*R_DIM, N*R_DIM);
+//	mat c = chol(R);
+//	c.print();
+	test_update();
 //	test_entropy();
-	test_system();
+//	test_system();
 }

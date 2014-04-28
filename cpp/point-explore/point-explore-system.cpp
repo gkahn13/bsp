@@ -6,8 +6,8 @@
 
 PointExploreSystem::PointExploreSystem() {
 	mat::fixed <X_DIM,1> target(fill::zeros);
-	PointExploreSystem::ObsType obs_type = PointExploreSystem::ObsType::angle;
-	PointExploreSystem::CostType cost_type = PointExploreSystem::CostType::entropy;
+	ObsType obs_type = ObsType::angle;
+	CostType cost_type = CostType::entropy;
 	bool use_casadi = false;
 
 	mat::fixed <X_DIM,1> xMin(fill::ones), xMax(fill::ones);
@@ -17,8 +17,9 @@ PointExploreSystem::PointExploreSystem() {
 	xMax *= 6;
 	uMin *= -.25;
 	uMax *= .25;
+	mat R = 1e-1*eye<mat>(N*R_DIM, N*R_DIM);
 
-	this->init(target, obs_type, cost_type, use_casadi, xMin, xMax, uMin, uMax);
+	this->init(target, obs_type, cost_type, use_casadi, xMin, xMax, uMin, uMax, R);
 }
 
 PointExploreSystem::PointExploreSystem(mat& target, const ObsType obs_type, const CostType cost_type, bool use_casadi) {
@@ -29,17 +30,18 @@ PointExploreSystem::PointExploreSystem(mat& target, const ObsType obs_type, cons
 	xMax *= 6;
 	uMin *= -.25;
 	uMax *= .25;
+	mat R = 1e-1*eye<mat>(N*R_DIM, N*R_DIM);
 
-	this->init(target, obs_type, cost_type, use_casadi, xMin, xMax, uMin, uMax);
+	this->init(target, obs_type, cost_type, use_casadi, xMin, xMax, uMin, uMax, R);
 }
 
 PointExploreSystem::PointExploreSystem(mat& target, const ObsType obs_type, const CostType cost_type, bool use_casadi,
-											mat& xMin, mat& xMax, mat& uMin, mat& uMax) {
-	this->init(target, obs_type, cost_type, use_casadi, xMin, xMax, uMin, uMax);
+											mat& xMin, mat& xMax, mat& uMin, mat& uMax, mat& R) {
+	this->init(target, obs_type, cost_type, use_casadi, xMin, xMax, uMin, uMax, R);
 }
 
 void PointExploreSystem::init(mat& target, const ObsType obs_type, const CostType cost_type, bool use_casadi,
-							  mat& xMin, mat& xMax, mat& uMin, mat& uMax) {
+							  mat& xMin, mat& xMax, mat& uMin, mat& uMax, mat& R) {
 	this->target = target;
 	this->obs_type = obs_type;
 	this->cost_type = cost_type;
@@ -48,6 +50,11 @@ void PointExploreSystem::init(mat& target, const ObsType obs_type, const CostTyp
 	this->xMax = xMax;
 	this->uMin = uMin;
 	this->uMax = uMax;
+	this->R = R;
+
+	if (this->use_casadi) {
+		this->casadi_sys = new CasadiPointExploreSystem(this->obs_type, this->cost_type, this->R);
+	}
 }
 
 /**
@@ -71,7 +78,7 @@ mat PointExploreSystem::dynfunc(const mat& x, const mat& u) {
  * r -- N*R_DIM by 1
  */
 mat PointExploreSystem::obsfunc(const mat& x, const mat& t, const mat& r) {
-	if (this->obs_type == PointExploreSystem::ObsType::angle) {
+	if (this->obs_type == ObsType::angle) {
 		return this->obsfunc_angle(x, t, r);
 	} else {
 		return this->obsfunc_dist(x, t, r);
@@ -90,7 +97,7 @@ void PointExploreSystem::update_state_and_particles(const mat& x_t, const mat& P
 	x_tp1 = this->dynfunc(x_t, u_t);
 
 	// receive noisy measurement
-	mat z_tp1 = this->obsfunc(x_tp1, this->target, sample_gaussian(zeros<mat>(N*R_DIM,1), R));
+	mat z_tp1 = this->obsfunc(x_tp1, this->target, sample_gaussian(zeros<mat>(N*R_DIM,1), .01*this->R));
 
 	mat W(M, 1, fill::zeros);
 	mat r(N*R_DIM, 1, fill::zeros);
@@ -98,7 +105,7 @@ void PointExploreSystem::update_state_and_particles(const mat& x_t, const mat& P
 	for(int m=0; m < M; ++m) {
 		mat z_particle = this->obsfunc(x_tp1, P_t.col(m), r);
 		mat e = z_particle - z_tp1;
-		W(m) = this->gauss_likelihood(e, R);
+		W(m) = this->gauss_likelihood(e, this->R);
 	}
 	W = W / accu(W);
 
@@ -106,24 +113,69 @@ void PointExploreSystem::update_state_and_particles(const mat& x_t, const mat& P
 	P_tp1 = this->low_variance_sampler(P_t, W, sampling_noise);
 }
 
-double PointExploreSystem::cost_func(const std::vector<mat>& X, const std::vector<mat>& U, const mat& P) {
+double PointExploreSystem::cost(const std::vector<mat>& X, const std::vector<mat>& U, const mat& P) {
+	if (this->use_casadi) {
+		return this->casadi_sys->casadi_cost(X, U, P);
+	}
+
 	double cost;
-	if (this->cost_type == PointExploreSystem::CostType::entropy) {
+	if (this->cost_type == CostType::entropy) {
 		cost = this->cost_entropy(X, U, P);
 	} else {
 		cost = this->cost_platt(X, U, P);
 	}
 
 	for(int t=0; t < T-2; ++t) {
-		cost += alpha_control_smooth*norm(U[t+1] - U[t], 2);
-		cost += alpha_control_norm*norm(U[t], 2);
+		cost += Constants::alpha_control_smooth*norm(U[t+1] - U[t], 2);
+		cost += Constants::alpha_control_norm*norm(U[t], 2);
 	}
-	cost += alpha_control_norm*norm(U[T-2], 2);
+	cost += Constants::alpha_control_norm*norm(U[T-2], 2);
 
 	return cost;
 }
 
-//mat cost_func_grad(const mat& X, const mat& U, const mat& P);
+mat PointExploreSystem::cost_grad(std::vector<mat>& X, std::vector<mat>& U, const mat& P) {
+	if (this->use_casadi) {
+		return this->casadi_sys->casadi_cost_grad(X, U, P);
+	}
+
+	mat g(TOTAL_VARS, 1, fill::zeros);
+
+	double orig, entropy_p, entropy_l;
+	int index = 0;
+	for(int t=0; t < T; ++t) {
+		for(int i=0; i < N*X_DIM; ++i) {
+			orig = X[t](i);
+
+			X[t](i) = orig + step;
+			entropy_p = this->cost(X, U, P);
+
+			X[t](i) = orig - step;
+			entropy_l = this->cost(X, U, P);
+
+			X[t][i] = orig;
+			g(index++) = (entropy_p - entropy_l)/(2*step);
+		}
+
+		if (t < T-1) {
+			for(int i=0; i < N*U_DIM; ++i) {
+				orig = U[t](i);
+
+				U[t](i) = orig + step;
+				entropy_p = this->cost(X, U, P);
+
+				U[t](i) = orig - step;
+				entropy_l = this->cost(X, U, P);
+
+				U[t][i] = orig;
+				g(index++) = (entropy_p - entropy_l)/(2*step);
+			}
+		}
+
+	}
+
+	return g;
+}
 
 /**
  *
@@ -142,8 +194,9 @@ mat PointExploreSystem::obsfunc_angle(const mat& x, const mat& t, const mat& r) 
 
 mat PointExploreSystem::obsfunc_dist(const mat& x, const mat& t, const mat& r) {
 	mat z(N*Z_DIM, 1, fill::zeros);
+	mat::fixed<X_DIM, 1> x_n;
 	for(int n=0; n < N; ++n) {
-		mat x_n = x.rows(n*X_DIM, (n+1)*X_DIM-1);
+		x_n = x.rows(n*X_DIM, (n+1)*X_DIM-1);
 		z(n) = 1.0/(1.0 + exp(-Constants::alpha*(Constants::max_range - norm(x_n-t,2)))) + r(n);
 	}
 	return z;
@@ -206,7 +259,7 @@ double PointExploreSystem::cost_entropy(const std::vector<mat>& X, const std::ve
 		for(int m=0; m < M; ++m) {
 			for(int p=0; p < M; ++p) {
 				mat diff = H[t].col(m) - H[t].col(p);
-				W[t](m) += this->gauss_likelihood(diff, R);
+				W[t](m) += this->gauss_likelihood(diff, this->R);
 			}
 		}
 		W[t] = W[t] / accu(W[t]);
@@ -223,6 +276,53 @@ double PointExploreSystem::cost_entropy(const std::vector<mat>& X, const std::ve
 
 double PointExploreSystem::cost_platt(const std::vector<mat>& X, const std::vector<mat>& U, const mat& P) {
 	return 0;
+}
+
+void PointExploreSystem::display_states_and_particles(const std::vector<mat>& X, const mat& P) {
+	int M = P.n_cols; // in case use high-res particle set
+
+	py::list x_list;
+	for(int i=0; i < N*X_DIM; ++i) {
+		for(int t=0; t < X.size(); ++t) {
+			x_list.append(X[t](i));
+		}
+	}
+
+	py::list targ_list;
+	for(int i=0; i < this->target.n_rows; ++i) {
+		targ_list.append(this->target(i));
+	}
+
+	py::list particles_list;
+	for(int i=0; i < X_DIM; ++i) {
+		for(int m=0; m < M; ++m) {
+			particles_list.append(P(i,m));
+		}
+	}
+
+	std::string workingDir = boost::filesystem::current_path().normalize().string();
+
+	try
+	{
+		Py_Initialize();
+		py::object main_module = py::import("__main__");
+		py::object main_namespace = main_module.attr("__dict__");
+		py::exec("import sys, os", main_namespace);
+		py::exec(py::str("sys.path.append('"+workingDir+"/slam')"), main_namespace);
+		py::object plot_module = py::import("plot_point_explore");
+		py::object plot_state_and_particles = plot_module.attr("plot_state_and_particles");
+
+		plot_state_and_particles(x_list, particles_list, targ_list, X_DIM, M, N);
+
+		LOG_INFO("Press enter to continue");
+		py::exec("raw_input()",main_namespace);
+	}
+	catch(py::error_already_set const &)
+	{
+		PyErr_Print();
+	}
+
+
 }
 
 //double casadi_differential_entropy(const mat& X, const mat& U, const mat& P);

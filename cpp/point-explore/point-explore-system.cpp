@@ -115,7 +115,8 @@ void PointExploreSystem::update_state_and_particles(const mat& x_t, const mat& P
 
 double PointExploreSystem::cost(const std::vector<mat>& X, const std::vector<mat>& U, const mat& P) {
 	if (this->use_casadi) {
-		return this->casadi_sys->casadi_cost(X, U, P);
+		double casadi_cost = this->casadi_sys->casadi_cost(X, U, P);
+//		LOG_DEBUG("Casadi cost: %4.10f", casadi_cost);
 	}
 
 	double cost;
@@ -130,6 +131,8 @@ double PointExploreSystem::cost(const std::vector<mat>& X, const std::vector<mat
 		cost += Constants::alpha_control_norm*norm(U[t], 2);
 	}
 	cost += Constants::alpha_control_norm*norm(U[T-2], 2);
+
+//	LOG_DEBUG("Actual cost: %4.10f", cost);
 
 	return cost;
 }
@@ -177,6 +180,7 @@ mat PointExploreSystem::cost_grad(std::vector<mat>& X, std::vector<mat>& U, cons
 	return g;
 }
 
+
 /**
  *
  * Private methods
@@ -207,10 +211,10 @@ mat PointExploreSystem::obsfunc_dist(const mat& x, const mat& t, const mat& r) {
  */
 double PointExploreSystem::gauss_likelihood(const mat& v, const mat& S) {
 	mat Sf = chol(S);
-	mat M = solve(S, v);
+	mat M = solve(Sf, v);
 
 	double E = -0.5*accu(M % M);
-	double C = pow(2*M_PI, v.n_rows) * prod(diagvec(Sf));
+	double C = pow(2*M_PI, S.n_cols/2) * prod(diagvec(Sf));
 	double w = exp(E) / C;
 
 	return w;
@@ -325,13 +329,7 @@ void PointExploreSystem::display_states_and_particles(const std::vector<mat>& X,
 
 }
 
-//double casadi_differential_entropy(const mat& X, const mat& U, const mat& P);
-//mat casadi_differential_entropy_grad(const mat& X, const mat& U, const mat& P);
 
-
-//
-//void display_states_and_particles(const mat& X, const mat& P);
-//
 //mat subsample(mat& P, int size);
 //
 //

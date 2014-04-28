@@ -20,7 +20,7 @@ namespace py = boost::python;
 using namespace arma;
 
 #define TIMESTEPS 10
-#define PARTICLES 500
+#define PARTICLES 100
 #define AGENTS 2
 #define DT 1.0 // Note: if you change this, must change the FORCES matlab file
 #define X_DIM 2
@@ -63,6 +63,12 @@ inline mat sample_gaussian(mat mean, mat covariance) {
 	return sample;
 }
 
+inline mat subsample(mat& P, int size) {
+	mat P_shuffled = shuffle(P, 1);
+	mat P_subsampled = P_shuffled.cols(0, size-1);
+	return P_subsampled;
+}
+
 enum class ObsType { distance, angle};
 enum class CostType { entropy, platt};
 
@@ -84,8 +90,6 @@ public:
 	mat cost_grad(std::vector<mat>& X, std::vector<mat>& U, const mat& P);
 
 	void display_states_and_particles(const std::vector<mat>& X, const mat& P);
-
-	mat subsample(mat& P, int size);
 
 	mat get_target() { return this->target; }
 	mat get_xMin() { return this->xMin; }

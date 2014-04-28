@@ -8,7 +8,7 @@
  */
 
 CasadiPointExploreSystem::CasadiPointExploreSystem() {
-	R = 1e-2*eye<mat>(N*R_DIM, N*R_DIM);
+	R = 0*eye<mat>(N*R_DIM, N*R_DIM);
 	this->init(ObsType::angle, CostType::entropy, R);
 }
 
@@ -59,13 +59,13 @@ mat CasadiPointExploreSystem::casadi_cost_grad(const std::vector<mat>& X, const 
 
 	this->setup_casadi_vars(X, U, P, XU_arr, P_arr);
 
-	this->cost_func.setInput(XU_arr, 0);
-	this->cost_func.setInput(P_arr, 1);
+	this->cost_grad_func.setInput(XU_arr, 0);
+	this->cost_grad_func.setInput(P_arr, 1);
 
-	this->cost_func.evaluate();
+	this->cost_grad_func.evaluate();
 
 	mat grad(TOTAL_VARS, 1, fill::zeros);
-	this->cost_func.getOutput(grad.colptr(0), 0);
+	this->cost_grad_func.getOutput(grad.colptr(0), 0);
 
 	return grad;
 }
@@ -121,9 +121,7 @@ AD::SXMatrix CasadiPointExploreSystem::gauss_likelihood(const AD::SXMatrix& v) {
 	mat Sf = chol(this->R);
 	mat Sf_inv = inv(Sf);
 
-//	float Sf_diag_prod = 1;
-//	for(int i=0; i < N*R_DIM; ++i) { Sf_diag_prod *= Sf(i,i); }
-//	float C = pow(2*M_PI, (N*Z_DIM)/2)*Sf_diag_prod;
+	float C = pow(2*M_PI, this->R.n_cols/2)*prod(diagvec(Sf));
 
 	AD::SXMatrix Sf_inv_casadi(N*R_DIM,N*R_DIM);
 	for(int i=0; i < N*R_DIM; ++i) {
@@ -135,7 +133,8 @@ AD::SXMatrix CasadiPointExploreSystem::gauss_likelihood(const AD::SXMatrix& v) {
 	AD::SXMatrix M = mul(Sf_inv_casadi, v);
 
 	AD::SXMatrix E_exp_sum = exp(-0.5*mul(trans(M),M));
-	AD::SXMatrix w = E_exp_sum; // / C; // no need to normalize here because normalized later on anyways
+	AD::SXMatrix w = E_exp_sum / C; // no need to normalize here because normalized later on anyways
+
 	return w;
 }
 

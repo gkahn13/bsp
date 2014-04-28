@@ -38,10 +38,10 @@ CPP_PARTICLES_DEF="#define PARTICLES"
 CPP_AGENTS_DEF="#define AGENTS"
 
 echo "replacing TIMESTEPS definition with new TIMESTEPS for point-explore.h"
-sed -i "s/^${CPP_TIMESTEPS_DEF}.*/${CPP_TIMESTEPS_DEF} ${TIMESTEPS}/" point-explore.h
+sed -i "s/^${CPP_TIMESTEPS_DEF}.*/${CPP_TIMESTEPS_DEF} ${TIMESTEPS}/" point-explore-system.h
 
 echo "replacing PARTICLES definition with new PARTICLES for point-explore.h"
-sed -i "s/^${CPP_PARTICLES_DEF}.*/${CPP_PARTICLES_DEF} ${PARTICLES}/" point-explore.h
+sed -i "s/^${CPP_PARTICLES_DEF}.*/${CPP_PARTICLES_DEF} ${PARTICLES}/" point-explore-system.h
 
 echo "replacing AGENTS definition with new AGENTS for point-explore.h"
-sed -i "s/^${CPP_AGENTS_DEF}.*/${CPP_AGENTS_DEF} ${AGENTS}/" point-explore.h
+sed -i "s/^${CPP_AGENTS_DEF}.*/${CPP_AGENTS_DEF} ${AGENTS}/" point-explore-system.h

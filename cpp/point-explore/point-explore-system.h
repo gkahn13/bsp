@@ -10,7 +10,10 @@
 
 #include <boost/python.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/program_options.hpp>
 namespace py = boost::python;
+namespace po = boost::program_options;
+
 
 #include <symbolic/casadi.hpp>
 #include <symbolic/stl_vector_tools.hpp>
@@ -69,8 +72,40 @@ inline mat subsample(mat& P, int size) {
 	return P_subsampled;
 }
 
-enum class ObsType { distance, angle};
+enum class ObsType { angle, distance};
 enum class CostType { entropy, platt};
+
+typedef std::vector<ObsType> ObsTypeList;
+inline std::istream& operator>>(std::istream& in, ObsType& obs_type)
+{
+    std::string token;
+    in >> token;
+    if (token == "angle") {
+        obs_type = ObsType::angle;
+    } else if (token == "distance") {
+        obs_type = ObsType::distance;
+    } else {
+    	throw po::validation_error(po::validation_error::invalid_option_value);
+    }
+
+    return in;
+}
+
+typedef std::vector<CostType> CostTypeList;
+inline std::istream& operator>>(std::istream& in, CostType& cost_type)
+{
+    std::string token;
+    in >> token;
+    if (token == "entropy") {
+        cost_type = CostType::entropy;
+    } else if (token == "platt") {
+        cost_type = CostType::platt;
+    } else {
+    	throw po::validation_error(po::validation_error::invalid_option_value);
+    }
+
+    return in;
+}
 
 #include "casadi/casadi-point-explore-system.h"
 namespace AD = CasADi;

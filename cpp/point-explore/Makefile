@@ -10,7 +10,7 @@ LINKER_FLAGS = $(LINKER_FLAGS.$(OS)) -larmadillo
 C_FLAGS = -std=gnu99
 CPP_FLAGS = -std=c++0x -fpermissive -I.
 PYTHON_FLAGS = -I/usr/include/python2.7 -lpython2.7
-BOOST_FLAGS = -lboost_python -lboost_filesystem -lboost_system
+BOOST_FLAGS = -lboost_python -lboost_filesystem -lboost_system -lboost_program_options
 CASADI_FLAGS = -I$(CASADIPATH) -L$(CASADIPATH)/build/lib
 CASADI_LIBS = -lcasadi -ldl
 

@@ -1,9 +1,8 @@
-//#include "../point-explore.h"
 #include "../point-explore-system.h"
 
+#include <iostream>
 #include <vector>
 
-//#include "../../util/matrix.h"
 #include "../../util/Timer.h"
 #include "../../util/logging.h"
 
@@ -395,16 +394,57 @@ void initialize_trajectory(std::vector<mat>& X, std::vector<mat>& U, const mat& 
 
 }
 
-int main(int argc, char* argv[]) {
-//	srand(time(0));
+void parse_explore(int argc, char* argv[], ObsType& obs_type, CostType& cost_type, bool& use_casadi) {
+	ObsTypeList obs_list;
+	CostTypeList cost_list;
 
-	mat target(X_DIM, 1, fill::zeros);
-//	target << 2.5 << endr << 2.5;
-	target << 4 << endr << 1;
+	// Declare the supported options.
+	po::options_description desc("Allowed options");
+	desc.add_options()
+		    				("help", "produce help message")
+		    				("obs", po::value<ObsTypeList>(&obs_list)->multitoken(), "Observation type <angle> or <distance> (default is <angle>)")
+		    				("cost", po::value<CostTypeList>(&cost_list)->multitoken(), "Cost type <entropy> or <platt> (default is <entropy>)")
+		    				("casadi", po::value<bool>(&use_casadi), "Use CasADi or not")
+		    				;
+
+	try {
+		po::variables_map vm;
+		po::store(po::parse_command_line(argc, argv, desc), vm);
+		po::notify(vm);
+
+		if (vm.count("help")) {
+			cout << desc << "\n";
+			return;
+		}
+
+		if (vm.count("obs")) {
+			obs_type = obs_list[0];
+		}
+
+		if (vm.count("cost")) {
+			cost_type = cost_list[0];
+		}
+
+	} catch (std::exception &e) {
+		std::cerr << "error: " << e.what() << "\n";
+		exit(0);
+	}
+
+}
+
+
+int main(int argc, char* argv[]) {
+	srand(time(0));
 
 	ObsType obs_type = ObsType::angle;
 	CostType cost_type = CostType::entropy;
 	bool use_casadi = true;
+
+	parse_explore(argc, argv, obs_type, cost_type, use_casadi);
+
+	mat target(X_DIM, 1, fill::zeros);
+//	target << 2.5 << endr << 2.5;
+	target << 4 << endr << 1;
 
 	LOG_DEBUG("Initializing...");
 	PointExploreSystem sys = PointExploreSystem(target, obs_type, cost_type, use_casadi);

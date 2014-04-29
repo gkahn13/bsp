@@ -332,7 +332,7 @@ void PointExploreSystem::display_states_and_particles(const std::vector<mat>& X,
 		py::object main_module = py::import("__main__");
 		py::object main_namespace = main_module.attr("__dict__");
 		py::exec("import sys, os", main_namespace);
-		py::exec(py::str("sys.path.append('"+workingDir+"/slam')"), main_namespace);
+		py::exec(py::str("sys.path.append('"+workingDir+"')"), main_namespace);
 		py::object plot_module = py::import("plot_point_explore");
 		py::object plot_state_and_particles = plot_module.attr("plot_state_and_particles");
 

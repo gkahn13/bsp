@@ -1,8 +1,5 @@
-//#include "point-explore.h"
-#include "point-explore-system.h"
+#include "../point-explore-system.h"
 
-//#include <../util/matrix.h>
-//#include <../util/utils.h>
 #include <../util/logging.h>
 
 #include <iostream>

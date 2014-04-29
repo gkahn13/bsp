@@ -394,6 +394,19 @@ void initialize_trajectory(std::vector<mat>& X, std::vector<mat>& U, const mat& 
 
 }
 
+bool found(const mat& P) {
+	int M = P.n_cols;
+
+	double max_spread = -INFTY;
+	for(int m=0; m < M; ++m) {
+		for(int p=m; p < M; ++p) {
+			max_spread = MAX(max_spread, norm(P.col(m) - P.col(p), 2));
+		}
+	}
+
+	return (max_spread < 1);
+}
+
 void parse_explore(int argc, char* argv[], ObsType& obs_type, CostType& cost_type, bool& use_casadi) {
 	ObsTypeList obs_list;
 	CostTypeList cost_list;
@@ -414,7 +427,7 @@ void parse_explore(int argc, char* argv[], ObsType& obs_type, CostType& cost_typ
 
 		if (vm.count("help")) {
 			cout << desc << "\n";
-			return;
+			exit(0);
 		}
 
 		if (vm.count("obs")) {
@@ -491,23 +504,22 @@ int main(int argc, char* argv[]) {
 
 	setupMPCVars(problem, output);
 	util::Timer forces_timer;
+	std::vector<mat> X_actual(1, x0);
 	while(true) {
 
 		P = subsample(P_full, M);
 		init_cost = sys.cost(X,U,P);
 
-		LOG_DEBUG("Calling exploreCollocation");
-
 		util::Timer_tic(&forces_timer);
 		double cost = exploreCollocation(X, U, P, sys, problem, output, info);
 		double forces_time = util::Timer_toc(&forces_timer);
 
-		LOG_INFO("Initial cost: %4.10f", init_cost);
-		LOG_INFO("Cost: %4.10f", cost);
-		LOG_INFO("Time: %4.10f ms", forces_time*1000);
+		LOG_DEBUG("Initial cost: %4.10f", init_cost);
+		LOG_DEBUG("Cost: %4.10f", cost);
+		LOG_DEBUG("Time: %4.10f ms", forces_time*1000);
 
-		LOG_DEBUG("Optimized path");
-		sys.display_states_and_particles(X, P);
+//		LOG_DEBUG("Optimized path");
+//		sys.display_states_and_particles(X, P);
 
 		mat x = X[0], x_tp1(N*X_DIM, 1, fill::zeros);
 		mat P_full_tp1(X_DIM, M_FULL, fill::zeros);
@@ -516,15 +528,23 @@ int main(int argc, char* argv[]) {
 			sys.update_state_and_particles(x, P_full, U[t], x_tp1, P_full_tp1);
 			P_full = P_full_tp1;
 			x = x_tp1;
+
+			X_actual.push_back(x);
+		}
+
+		if (found(P_full)) {
+			break;
 		}
 
 		x0 = x_tp1;
 		initialize_trajectory(X, U, P_full, init_type, sys);
 
-		LOG_DEBUG("Particle update step");
-		sys.display_states_and_particles(X, P_full);
-
+//		LOG_DEBUG("Particle update step");
+//		sys.display_states_and_particles(X, P_full);
 	}
+
+	LOG_DEBUG("Found the landmark");
+	sys.display_states_and_particles(X_actual, P_full);
 }
 
 

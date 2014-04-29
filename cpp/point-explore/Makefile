@@ -68,9 +68,19 @@ TEST_POINT_EXPLORE_OBJS = $(TEST_POINT_EXPLORE_FILES:%=$(OBJ_DIR)/%.o)
 test-point-explore: $(TEST_POINT_EXPLORE_OBJS)
 	$(CXX) $(BFLAGS) $(TEST_POINT_EXPLORE_OBJS) -o $(BIN_DIR)/test-point-explore $(PYTHON_FLAGS) $(BOOST_FLAGS) $(LINKER_FLAGS) $(CASADI_FLAGS) $(CASADI_LIBS) 
 	
-$(OBJ_DIR)/test-point-explore.o : test-point-explore.cpp
+$(OBJ_DIR)/test-point-explore.o : tests/test-point-explore.cpp
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
 	
+####### test-entropy #######
+
+TEST_ENTROPY_FILES = test-entropy logging
+TEST_ENTROPY_OBJS = $(TEST_ENTROPY_FILES:%=$(OBJ_DIR)/%.o)
+
+test-entropy: $(TEST_ENTROPY_OBJS)
+	$(CXX) $(BFLAGS) $(TEST_ENTROPY_OBJS) -o $(BIN_DIR)/test-entropy $(PYTHON_FLAGS) $(BOOST_FLAGS) $(LINKER_FLAGS) $(CASADI_FLAGS) $(CASADI_LIBS) 
+	
+$(OBJ_DIR)/test-entropy.o : tests/test-entropy.cpp
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
 
 #######  explore ########
 

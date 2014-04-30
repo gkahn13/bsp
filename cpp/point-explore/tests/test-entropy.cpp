@@ -1,3 +1,5 @@
+#include "kdpee/kdpee/kdpee.h"
+
 #include <../util/logging.h>
 
 #include <Python.h>
@@ -13,7 +15,7 @@ namespace py = boost::python;
 using namespace arma;
 
 #define TIMESTEPS 50
-#define PARTICLES 1000
+#define PARTICLES 100
 
 #define X_DIM 2
 #define U_DIM 2
@@ -118,10 +120,13 @@ double particle_entropy(const mat& P) {
 
 	mat W_tm1 = (1/float(M))*ones<mat>(M, 1);
 	mat W(M, 1, fill::zeros);
+	mat U_inv = inv(chol(R));
+	mat I = eye<mat>(R_DIM,R_DIM);
 	for(int m=0; m < M; ++m) {
 		for(int p=0; p < M; ++p) {
 			mat diff = H.col(m) - H.col(p);
-			W(m) += gauss_likelihood(diff, R);
+//			W(m) += gauss_likelihood(U_inv*diff,I);;
+			W(m) += gauss_likelihood(diff, 2*R + I);
 		}
 	}
 	W = W / accu(W);
@@ -139,14 +144,47 @@ double particle_entropy(const mat& P) {
 	for(int m=0; m < M; ++m) {
 		double weighted_dyn_prob = 0;
 		for(int p=0; p < M; ++p) {
-			weighted_dyn_prob += W(m)*dyn_prob(m, p);
+			weighted_dyn_prob += W_tm1(m)*dyn_prob(m, p);
 		}
 		entropy += -W(m)*log(weighted_dyn_prob);
 	}
+//	entropy += accu(-W % log(W_tm1)); // zero dynamics approximation
 
 	entropy += log(accu(W_tm1 % W));
 
 	return entropy;
+}
+
+floatval particle_entropy_kdpee(const mat& P) {
+	const int d = P.n_rows;
+	const int n = P.n_cols;
+
+	floatval **dimrefs = new floatval*[d];
+	for(int i=0; i < d; ++i) {
+		dimrefs[i] = new floatval[n];
+		for(int j=0; j < n; ++j) {
+			dimrefs[i][j] = P(i,j);
+		}
+	}
+
+	floatval *mins = new floatval[d];
+	floatval *maxs = new floatval[d];
+
+	for(int i=0; i < d; ++i) {
+		mat row = P.row(i);
+		mins[i] = row.min();
+		maxs[i] = row.max();
+	}
+
+	floatval zcut = 1.96;
+
+	int *keys = new int[n];
+	for(int i=0; i < n; ++i) {
+		keys[i] = i+1;
+	}
+
+	floatval entropy_kdpee = kdpee(dimrefs, n, d, mins, maxs, zcut, keys);
+	return entropy_kdpee;
 }
 
 void plot(const mat& mu, const mat& sigma, const mat& P) {
@@ -206,7 +244,8 @@ void test_entropy() {
 	R = 1*eye<mat>(R_DIM, R_DIM); // 1e-1
 
 	int max_iter = 10;
-	mat mean_err(1, 1, fill::zeros), std_err(1, 1, fill::zeros);
+	mat mean_err_entropy(1, 1, fill::zeros), std_err_entropy(1, 1, fill::zeros);
+	mat mean_err_kdpee(1, 1, fill::zeros), std_err_kdpee(1, 1, fill::zeros);
 	for(int iter=0; iter < max_iter; ++iter) {
 		std::cout << "iter: " << iter << "\n";
 		mat x0(X_DIM, 1, fill::zeros);
@@ -223,13 +262,16 @@ void test_entropy() {
 		mat x_tp1(X_DIM, 1, fill::zeros), sigma_tp1(X_DIM, X_DIM, fill::zeros);
 		mat P_tp1(X_DIM, M, fill::zeros);
 
-		mat k_entropys(T, 1, fill::zeros), p_entropys(T, 1, fill::zeros);
+		mat k_entropys(T, 1, fill::zeros), p_entropys(T, 1, fill::zeros), kdpee_entropys(T, 1, fill::zeros);
 
 		k_entropys(0) = 0.5*log(pow(2*M_PI*exp(1), X_DIM) * det(sigma0));
 //		std::cout << "sigma0 entropy: " << k_entropys(0) << "\n";
 
 		p_entropys(0) = particle_entropy(P0);
 //		std::cout << "P0 entropy: " << p_entropys(0) << "\n";
+
+//		kdpee_entropys(0) = particle_entropy_kdpee(P0);
+//		std::cout << "kdpee0 entropy: " << kdpee_entropys(0) << "\n";
 
 		for(int t=1; t < T; ++t) {
 //			std::cout << "\nt: " << t << "\n";
@@ -254,27 +296,30 @@ void test_entropy() {
 			}
 			particle_update(P_tp1_p, z_tp1, P_tp1);
 			p_entropys(t) = particle_entropy(P_tp1);
-
 //			std::cout << "particle entropy: " << p_entropys(t) << "\n";
+
+//			kdpee_entropys(t) = particle_entropy_kdpee(P_tp1);
+//			std::cout << "kdpee entropy: " << kdpee_entropys(t) << "\n";
+
 			P_t = P_tp1;
 
 			//		plot(x_t, sigma_t, P_t);
 		}
 
-		mat percent_diff = 100*abs((k_entropys - p_entropys)/p_entropys);
-//		std::cout.precision(3);
-//		percent_diff.raw_print(std::cout, "percent_diff: ");
+		mat percent_diff_entropy = 100*abs((k_entropys - p_entropys)/p_entropys);
+		mean_err_entropy += (1/double(max_iter))*mean(percent_diff_entropy);
+		std_err_entropy += (1/double(max_iter))*stddev(percent_diff_entropy);
 
-//		std::cout << "max percent difference: " << percent_diff.max() << "\n";
-//		std::cout << "average percent difference: " << mean(percent_diff) << "\n";
-//		std::cout << "std dev percent difference: " << stddev(percent_diff) << "\n";
-
-		mean_err += (1/double(max_iter))*mean(percent_diff);
-		std_err += (1/double(max_iter))*stddev(percent_diff);
+//		mat percent_diff_kdpee = 100*abs((k_entropys - kdpee_entropys)/kdpee_entropys);
+//		mean_err_kdpee += (1/double(max_iter))*mean(percent_diff_kdpee);
+//		std_err_kdpee+= (1/double(max_iter))*stddev(percent_diff_kdpee);
 	}
 
-	std::cout << "total mean rel err: " << mean_err(0) << "\n";
-	std::cout << "total std rel err: " << std_err(0) << "\n";
+	std::cout << "\nparticle total mean rel err: " << mean_err_entropy(0) << "\n";
+	std::cout << "particle total std rel err: " << std_err_entropy(0) << "\n\n";
+
+//	std::cout << "kdpee total mean rel err: " << mean_err_kdpee(0) << "\n";
+//	std::cout << "kdpee total std rel err: " << std_err_kdpee(0) << "\n\n";
 }
 
 int main(int argc, char* argv[]) {

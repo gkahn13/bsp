@@ -23,7 +23,7 @@ namespace po = boost::program_options;
 using namespace arma;
 
 #define TIMESTEPS 10
-#define PARTICLES 100
+#define PARTICLES 1000
 #define AGENTS 1
 #define DT 1.0 // Note: if you change this, must change the FORCES matlab file
 #define X_DIM 2

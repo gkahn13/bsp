@@ -38,7 +38,7 @@ dir:
 	mkdir -p bin/debug
 	mkdir -p bin/release
 
-###### UTIL ############
+###### util ############
 
 $(OBJ_DIR)/logging.o : ../util/logging.cpp
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) -c -o $@ $^
@@ -58,6 +58,12 @@ $(OBJ_DIR)/point-explore-system.o : point-explore-system.cpp
 
 $(OBJ_DIR)/casadi-point-explore-system.o : casadi/casadi-point-explore-system.cpp
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
+	
+##### kdpee ##############
+
+$(OBJ_DIR)/kdpee.o : kdpee/src/kdpee.c
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) -c -o $@ $^
+	
 
 	
 ####### test-point-explore #######
@@ -73,7 +79,7 @@ $(OBJ_DIR)/test-point-explore.o : tests/test-point-explore.cpp
 	
 ####### test-entropy #######
 
-TEST_ENTROPY_FILES = test-entropy logging
+TEST_ENTROPY_FILES = test-entropy kdpee logging
 TEST_ENTROPY_OBJS = $(TEST_ENTROPY_FILES:%=$(OBJ_DIR)/%.o)
 
 test-entropy: $(TEST_ENTROPY_OBJS)

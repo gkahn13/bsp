@@ -12,7 +12,6 @@ namespace po = boost::program_options;
 #define TIMESTEPS 10
 #define BOXES 1
 #define DT 1.0 // Note: if you change this, must change the FORCES matlab file
-#define B_DIM 4
 #define X_DIM 2
 #define U_DIM 2
 #define Z_DIM 1
@@ -41,25 +40,41 @@ int main(int argc, char* argv[]) {
 	ObsType obs_type = ObsType::distance;
 	CostType cost_type = CostType::entropy;
 	bool use_casadi = true;
-	M = 10;
+	M = 1000;
 
-	mat boxes(B_DIM, 1, fill::zeros);
-	boxes << 0 << endr << 0 << endr << 1 << endr << 2;
+	mat box_centers(N*X_DIM, 1, fill::zeros);
+	mat box_dims(N*X_DIM, 1, fill::zeros);
+	box_centers << -0.5 << endr << -.25;
+	box_dims << .5 << endr << 1;
 
 	LOG_DEBUG("Initializing...");
-	BoxesSystem sys = BoxesSystem(boxes, obs_type, cost_type, use_casadi,
-			T, M, N, DT, B_DIM, X_DIM, U_DIM, Z_DIM, Q_DIM, R_DIM);
+	BoxesSystem sys = BoxesSystem(box_centers, box_dims, obs_type, cost_type, use_casadi,
+			T, M, N, DT, X_DIM, U_DIM, Z_DIM, Q_DIM, R_DIM);
 	LOG_DEBUG("System initialized");
 
 
-	mat P(X_DIM, M, fill::zeros);
+	mat P0(X_DIM, M, fill::zeros);
 	for(int m=0; m < M; ++m) {
-		for(int i=0; i < X_DIM; ++i) {
-			P(i, m) = uniform(-1, 1);
-		}
+		P0(0, m) = uniform(-2, 0.5);
+		P0(1, m) = uniform(-2, 2);
 	}
 
+	x0 << 1.5 << endr << 1.5;
 	std::vector<mat> X(T, zeros<mat>(X_DIM, 1));
 
-	sys.display_states_and_particles(X, P);
+	mat u(U_DIM, 1, fill::zeros);
+	u(0) = 0;
+	u(1) = -.2;
+
+	std::vector<mat> P(T, zeros<mat>(N*X_DIM, M));
+
+	X[0] = x0;
+	P[0] = P0;
+	for(int t=0; t < T-1; ++t) {
+//		X[t+1] = sys.dynfunc(X[t], u);
+		sys.update_state_and_particles(X[t], P[t], u, X[t+1], P[t+1]);
+
+		sys.display_states_and_particles(std::vector<mat>(1, X[t]), P[t]);
+	}
+
 }

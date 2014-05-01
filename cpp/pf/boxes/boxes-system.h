@@ -48,9 +48,9 @@ inline std::istream& operator>>(std::istream& in, CostType& cost_type)
 class BoxesSystem : public virtual System {
 public:
 	BoxesSystem();
-	BoxesSystem(mat& boxes, const ObsType obs_type, const CostType cost_type, bool use_casadi);
-	BoxesSystem(mat& boxes, const ObsType obs_type, const CostType cost_type, bool use_casadi,
-			int T, int M, int N, double DT, int B_DIM, int X_DIM, int U_DIM, int Z_DIM, int Q_DIM, int R_DIM);
+	BoxesSystem(mat& box_centers, mat& box_dims, const ObsType obs_type, const CostType cost_type, bool use_casadi);
+	BoxesSystem(mat& boxes, mat& box_dims, const ObsType obs_type, const CostType cost_type, bool use_casadi,
+			int T, int M, int N, double DT, int X_DIM, int U_DIM, int Z_DIM, int Q_DIM, int R_DIM);
 
 	mat dynfunc(const mat& x, const mat& u);
 	mat obsfunc(const mat& x, const mat& b, const mat& r);
@@ -60,19 +60,19 @@ public:
 
 	void display_states_and_particles(const std::vector<mat>& X, const mat& P);
 
-	mat get_boxes() { return this->boxes; }
+	mat get_box_centers() { return this->box_centers; }
+	mat get_box_dims() { return this->box_dims; }
 
 protected:
-	int B_DIM;
 	int N;
 
 	// boxes are stacked vertically, going <x, y, width, height>
-	mat boxes;
+	mat box_centers, box_dims;
 	ObsType obs_type;
 	CostType cost_type;
 
-	void init_dims(int T=10, int M=100, int N=1, double DT=1.0, int B_DIM=4, int X_DIM=2, int U_DIM=2, int Z_DIM=1, int Q_DIM=2, int R_DIM=1);
-	void init(mat& boxes, const ObsType obs_type, const CostType cost_type, bool use_casadi,
+	void init_dims(int T=10, int M=100, int N=1, double DT=1.0, int X_DIM=2, int U_DIM=2, int Z_DIM=1, int Q_DIM=2, int R_DIM=1);
+	void init(mat& box_centers, mat& box_dims, const ObsType obs_type, const CostType cost_type, bool use_casadi,
 			mat& xMin, mat& xMax, mat& uMin, mat& uMax, mat& R);
 
 };

@@ -1,10 +1,10 @@
-#ifndef __CASADI_POINT_EXPLORE_SYSTEM_H__
-#define __CASADI_POINT_EXPLORE_SYSTEM_H__
+#ifndef __CASADI_EXPLORE_SYSTEM_H__
+#define __CASADI_EXPLORE_SYSTEM_H__
 
 #include "../casadi-system.h"
 
-class CasadiPointExploreSystem;
-#include "point-explore-system.h"
+class CasadiExploreSystem;
+#include "explore-system.h"
 
 #include <symbolic/casadi.hpp>
 #include <symbolic/stl_vector_tools.hpp>
@@ -15,13 +15,13 @@ namespace AD = CasADi;
 #include <armadillo>
 using namespace arma;
 
-class CasadiPointExploreSystem : public virtual CasadiSystem {
+class CasadiExploreSystem : public virtual CasadiSystem {
 public:
-	CasadiPointExploreSystem();
-	CasadiPointExploreSystem(const ObsType obs_type, const CostType cost_type, mat& R);
-	CasadiPointExploreSystem(const ObsType obs_type, const CostType cost_type, mat& R,
+	CasadiExploreSystem();
+	CasadiExploreSystem(const ObsType obs_type, const CostType cost_type, mat& R);
+	CasadiExploreSystem(const ObsType obs_type, const CostType cost_type, mat& R,
 								int T, int M, int N, double DT, int X_DIM, int U_DIM, int Z_DIM, int Q_DIM, int R_DIM);
-	~CasadiPointExploreSystem() { };
+	~CasadiExploreSystem() { };
 
 protected:
 	int N;

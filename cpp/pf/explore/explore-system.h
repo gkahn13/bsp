@@ -1,5 +1,5 @@
-#ifndef __POINT_EXPLORE_SYSTEM_H__
-#define __POINT_EXPLORE_SYSTEM_H__
+#ifndef __EXPLORE_SYSTEM_H__
+#define __EXPLORE_SYSTEM_H__
 
 #include "../system.h"
 
@@ -50,13 +50,13 @@ inline std::istream& operator>>(std::istream& in, CostType& cost_type)
     return in;
 }
 
-#include "casadi-point-explore-system.h"
+#include "casadi-explore-system.h"
 
-class PointExploreSystem : public virtual System {
+class ExploreSystem : public virtual System {
 public:
-	PointExploreSystem();
-	PointExploreSystem(mat& target, const ObsType obs_type, const CostType cost_type, bool use_casadi);
-	PointExploreSystem(mat& target, const ObsType obs_type, const CostType cost_type, bool use_casadi,
+	ExploreSystem();
+	ExploreSystem(mat& target, const ObsType obs_type, const CostType cost_type, bool use_casadi);
+	ExploreSystem(mat& target, const ObsType obs_type, const CostType cost_type, bool use_casadi,
 			int T, int M, int N, double DT, int X_DIM, int U_DIM, int Z_DIM, int Q_DIM, int R_DIM);
 
 	mat dynfunc(const mat& x, const mat& u);

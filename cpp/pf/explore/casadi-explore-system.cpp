@@ -1,4 +1,4 @@
-#include "casadi-point-explore-system.h"
+#include "casadi-explore-system.h"
 
 /**
  *
@@ -6,24 +6,24 @@
  *
  */
 
-CasadiPointExploreSystem::CasadiPointExploreSystem() {
+CasadiExploreSystem::CasadiExploreSystem() {
 	this->init_dims();
 	mat R = 0*eye<mat>(N*R_DIM, N*R_DIM);
 	this->init(ObsType::angle, CostType::entropy, R);
 }
 
-CasadiPointExploreSystem::CasadiPointExploreSystem(const ObsType obs_type, const CostType cost_type, mat& R) {
+CasadiExploreSystem::CasadiExploreSystem(const ObsType obs_type, const CostType cost_type, mat& R) {
 	this->init_dims();
 	this->init(obs_type, cost_type, R);
 }
 
-CasadiPointExploreSystem::CasadiPointExploreSystem(const ObsType obs_type, const CostType cost_type, mat& R,
+CasadiExploreSystem::CasadiExploreSystem(const ObsType obs_type, const CostType cost_type, mat& R,
 								int T, int M, int N, double DT, int X_DIM, int U_DIM, int Z_DIM, int Q_DIM, int R_DIM) {
 	this->init_dims(T, M, N, DT, X_DIM, U_DIM, Z_DIM, Q_DIM, R_DIM);
 	this->init(obs_type, cost_type, R);
 }
 
-void CasadiPointExploreSystem::init_dims(int T, int M, int N, double DT, int X_DIM, int U_DIM, int Z_DIM, int Q_DIM, int R_DIM) {
+void CasadiExploreSystem::init_dims(int T, int M, int N, double DT, int X_DIM, int U_DIM, int Z_DIM, int Q_DIM, int R_DIM) {
 	this->T = T;
 	this->M = M;
 	this->N = N;
@@ -37,7 +37,7 @@ void CasadiPointExploreSystem::init_dims(int T, int M, int N, double DT, int X_D
 	this->TOTAL_VARS = T*N*X_DIM + (T-1)*N*U_DIM;
 }
 
-void CasadiPointExploreSystem::init(const ObsType obs_type, const CostType cost_type, mat& R) {
+void CasadiExploreSystem::init(const ObsType obs_type, const CostType cost_type, mat& R) {
 	this->obs_type = obs_type;
 	this->cost_type = cost_type;
 	this->R = R;
@@ -52,7 +52,7 @@ void CasadiPointExploreSystem::init(const ObsType obs_type, const CostType cost_
  */
 
 
-AD::SXMatrix CasadiPointExploreSystem::dynfunc(const AD::SXMatrix& x_t, const AD::SXMatrix& u_t) {
+AD::SXMatrix CasadiExploreSystem::dynfunc(const AD::SXMatrix& x_t, const AD::SXMatrix& u_t) {
 	AD::SXMatrix x_tp1(N*X_DIM,1);
 
 	x_tp1 = x_t + u_t*DT;
@@ -60,7 +60,7 @@ AD::SXMatrix CasadiPointExploreSystem::dynfunc(const AD::SXMatrix& x_t, const AD
 	return x_tp1;
 }
 
-AD::SXMatrix CasadiPointExploreSystem::obsfunc(const AD::SXMatrix& x, const AD::SXMatrix& t) {
+AD::SXMatrix CasadiExploreSystem::obsfunc(const AD::SXMatrix& x, const AD::SXMatrix& t) {
 	if (this->obs_type == ObsType::angle) {
 		return this->obsfunc_angle(x, t);
 	} else {
@@ -68,7 +68,7 @@ AD::SXMatrix CasadiPointExploreSystem::obsfunc(const AD::SXMatrix& x, const AD::
 	}
 }
 
-AD::SXMatrix CasadiPointExploreSystem::obsfunc_dist(const AD::SXMatrix& x, const AD::SXMatrix& t) {
+AD::SXMatrix CasadiExploreSystem::obsfunc_dist(const AD::SXMatrix& x, const AD::SXMatrix& t) {
 	AD::SXMatrix z(Z_DIM,1);
 
 	for(int n=0; n < N; ++n) {
@@ -80,7 +80,7 @@ AD::SXMatrix CasadiPointExploreSystem::obsfunc_dist(const AD::SXMatrix& x, const
 	return z;
 }
 
-AD::SXMatrix CasadiPointExploreSystem::obsfunc_angle(const AD::SXMatrix& x, const AD::SXMatrix& t) {
+AD::SXMatrix CasadiExploreSystem::obsfunc_angle(const AD::SXMatrix& x, const AD::SXMatrix& t) {
 	AD::SXMatrix z(Z_DIM,1);
 
 	for(int n=0; n < N; ++n) {
@@ -91,7 +91,7 @@ AD::SXMatrix CasadiPointExploreSystem::obsfunc_angle(const AD::SXMatrix& x, cons
 	return z;
 }
 
-AD::SXMatrix CasadiPointExploreSystem::cost_wrapper(const AD::SXMatrix& XU_vec, const AD::SXMatrix& P_vec) {
+AD::SXMatrix CasadiExploreSystem::cost_wrapper(const AD::SXMatrix& XU_vec, const AD::SXMatrix& P_vec) {
 	std::vector<AD::SXMatrix> X(T), U(T-1), P(M);
 	int index = 0;
 	for(int t=0; t < T; ++t) {

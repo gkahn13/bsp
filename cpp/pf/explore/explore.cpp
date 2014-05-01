@@ -1,4 +1,4 @@
-#include "point-explore-system.h"
+#include "explore-system.h"
 
 #include <iostream>
 #include <vector>
@@ -160,7 +160,7 @@ bool isValidInputs()
 	return true;
 }
 
-double exploreCollocation(std::vector<mat>& X, std::vector<mat>& U, mat& P, PointExploreSystem& sys,
+double exploreCollocation(std::vector<mat>& X, std::vector<mat>& U, mat& P, ExploreSystem& sys,
 		exploreMPC_params& problem, exploreMPC_output& output, exploreMPC_info& info) {
 
 	int max_iter = 100;
@@ -347,7 +347,7 @@ double exploreCollocation(std::vector<mat>& X, std::vector<mat>& U, mat& P, Poin
 
 enum class InitType { average, zero };
 // assume x0 is set before this
-void initialize_trajectory(std::vector<mat>& X, std::vector<mat>& U, const mat& P, InitType init_type, PointExploreSystem& sys) {
+void initialize_trajectory(std::vector<mat>& X, std::vector<mat>& U, const mat& P, InitType init_type, ExploreSystem& sys) {
 	int M = P.n_cols;
 
 	mat uinit(N*U_DIM, 1, fill::zeros);
@@ -480,7 +480,7 @@ int main(int argc, char* argv[]) {
 	target << 4 << endr << 1;
 
 	LOG_DEBUG("Initializing...");
-	PointExploreSystem sys = PointExploreSystem(target, obs_type, cost_type, use_casadi,
+	ExploreSystem sys = ExploreSystem(target, obs_type, cost_type, use_casadi,
 			T, M, N, DT, X_DIM, U_DIM, Z_DIM, Q_DIM, R_DIM);
 	LOG_DEBUG("System initialized");
 

@@ -1,10 +1,10 @@
-#include "point-explore-system.h"
+#include "explore-system.h"
 
 /**
  * Constructors and initializers
  */
 
-PointExploreSystem::PointExploreSystem() {
+ExploreSystem::ExploreSystem() {
 	this->init_dims();
 
 	mat target(X_DIM, 1, fill::zeros);
@@ -24,7 +24,7 @@ PointExploreSystem::PointExploreSystem() {
 	this->init(target, obs_type, cost_type, use_casadi, xMin, xMax, uMin, uMax, R);
 }
 
-PointExploreSystem::PointExploreSystem(mat& target, const ObsType obs_type, const CostType cost_type, bool use_casadi) {
+ExploreSystem::ExploreSystem(mat& target, const ObsType obs_type, const CostType cost_type, bool use_casadi) {
 	this->init_dims();
 
 	mat xMin(X_DIM, 1, fill::ones), xMax(X_DIM, 1, fill::ones);
@@ -39,7 +39,7 @@ PointExploreSystem::PointExploreSystem(mat& target, const ObsType obs_type, cons
 	this->init(target, obs_type, cost_type, use_casadi, xMin, xMax, uMin, uMax, R);
 }
 
-PointExploreSystem::PointExploreSystem(mat& target, const ObsType obs_type, const CostType cost_type, bool use_casadi,
+ExploreSystem::ExploreSystem(mat& target, const ObsType obs_type, const CostType cost_type, bool use_casadi,
 								int T, int M, int N, double DT, int X_DIM, int U_DIM, int Z_DIM, int Q_DIM, int R_DIM) {
 	this->init_dims(T, M, N, DT, X_DIM, U_DIM, Z_DIM, Q_DIM, R_DIM);
 
@@ -56,7 +56,7 @@ PointExploreSystem::PointExploreSystem(mat& target, const ObsType obs_type, cons
 }
 
 
-void PointExploreSystem::init_dims(int T, int M, int N, double DT, int X_DIM, int U_DIM, int Z_DIM, int Q_DIM, int R_DIM) {
+void ExploreSystem::init_dims(int T, int M, int N, double DT, int X_DIM, int U_DIM, int Z_DIM, int Q_DIM, int R_DIM) {
 	this->T = T;
 	this->M = M;
 	this->N = N;
@@ -70,7 +70,7 @@ void PointExploreSystem::init_dims(int T, int M, int N, double DT, int X_DIM, in
 	this->TOTAL_VARS = T*N*X_DIM + (T-1)*N*U_DIM;
 }
 
-void PointExploreSystem::init(mat& target, const ObsType obs_type, const CostType cost_type, bool use_casadi,
+void ExploreSystem::init(mat& target, const ObsType obs_type, const CostType cost_type, bool use_casadi,
 							  mat& xMin, mat& xMax, mat& uMin, mat& uMax, mat& R) {
 	this->target = target;
 	this->obs_type = obs_type;
@@ -83,7 +83,7 @@ void PointExploreSystem::init(mat& target, const ObsType obs_type, const CostTyp
 	this->R = R;
 
 	if (this->use_casadi) {
-		this->casadi_sys = new CasadiPointExploreSystem(this->obs_type, this->cost_type, this->R,
+		this->casadi_sys = new CasadiExploreSystem(this->obs_type, this->cost_type, this->R,
 				T, M, N, DT, X_DIM, U_DIM, Z_DIM/N, Q_DIM, R_DIM);
 	}
 }
@@ -94,12 +94,12 @@ void PointExploreSystem::init(mat& target, const ObsType obs_type, const CostTyp
  *
  */
 
-mat PointExploreSystem::dynfunc(const mat& x, const mat& u) {
+mat ExploreSystem::dynfunc(const mat& x, const mat& u) {
 	mat x_new = x + DT*u;
 	return x_new;
 }
 
-mat PointExploreSystem::obsfunc(const mat& x, const mat& t, const mat& r) {
+mat ExploreSystem::obsfunc(const mat& x, const mat& t, const mat& r) {
 	if (this->obs_type == ObsType::angle) {
 		return this->obsfunc_angle(x, t, r);
 	} else {
@@ -107,7 +107,7 @@ mat PointExploreSystem::obsfunc(const mat& x, const mat& t, const mat& r) {
 	}
 }
 
-void PointExploreSystem::update_state_and_particles(const mat& x_t, const mat& P_t, const mat& u_t, mat& x_tp1, mat& P_tp1) {
+void ExploreSystem::update_state_and_particles(const mat& x_t, const mat& P_t, const mat& u_t, mat& x_tp1, mat& P_tp1) {
 	int M = P_t.n_cols;
 	x_tp1 = this->dynfunc(x_t, u_t);
 
@@ -128,7 +128,7 @@ void PointExploreSystem::update_state_and_particles(const mat& x_t, const mat& P
 	P_tp1 = this->low_variance_sampler(P_t, W, sampling_noise);
 }
 
-double PointExploreSystem::cost(const std::vector<mat>& X, const std::vector<mat>& U, const mat& P) {
+double ExploreSystem::cost(const std::vector<mat>& X, const std::vector<mat>& U, const mat& P) {
 	if (this->use_casadi) {
 		return this->casadi_sys->casadi_cost(X, U, P);
 	}
@@ -156,7 +156,7 @@ double PointExploreSystem::cost(const std::vector<mat>& X, const std::vector<mat
  *
  */
 
-mat PointExploreSystem::obsfunc_angle(const mat& x, const mat& t, const mat& r) {
+mat ExploreSystem::obsfunc_angle(const mat& x, const mat& t, const mat& r) {
 	mat z(Z_DIM, 1, fill::zeros);
 	for(int n=0; n < N; ++n) {
 		mat x_n = x.rows(n*X_DIM, (n+1)*X_DIM-1);
@@ -165,7 +165,7 @@ mat PointExploreSystem::obsfunc_angle(const mat& x, const mat& t, const mat& r) 
 	return z;
 }
 
-mat PointExploreSystem::obsfunc_dist(const mat& x, const mat& t, const mat& r) {
+mat ExploreSystem::obsfunc_dist(const mat& x, const mat& t, const mat& r) {
 	mat z(Z_DIM, 1, fill::zeros);
 	mat x_n(X_DIM, 1);
 	for(int n=0; n < N; ++n) {
@@ -175,7 +175,7 @@ mat PointExploreSystem::obsfunc_dist(const mat& x, const mat& t, const mat& r) {
 	return z;
 }
 
-void PointExploreSystem::display_states_and_particles(const std::vector<mat>& X, const mat& P) {
+void ExploreSystem::display_states_and_particles(const std::vector<mat>& X, const mat& P) {
 	int M = P.n_cols; // in case use high-res particle set
 
 	py::list x_list;

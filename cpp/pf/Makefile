@@ -82,25 +82,24 @@ $(OBJ_DIR)/test-entropy.o : tests/test-entropy.cpp
 
 #######  explore ########
 
-POINT_EXPLORE_FILES = explore-cpp exploreMPC system casadi-system casadi-point-explore-system point-explore-system logging
-POINT_EXPLORE_OBJS = $(POINT_EXPLORE_FILES:%=$(OBJ_DIR)/%.o)
+EXPLORE_FILES = explore-cpp exploreMPC system casadi-system casadi-explore-system explore-system logging
+EXPLORE_OBJS = $(EXPLORE_FILES:%=$(OBJ_DIR)/%.o)
 
 explore-setup:
 	bash setupFiles.sh explore $(T) $(M) $(N)
 
-explore: explore-setup $(POINT_EXPLORE_OBJS) 
-	$(CXX) $(BFLAGS) $(POINT_EXPLORE_OBJS) -o $(BIN_DIR)/explore $(PYTHON_FLAGS) $(BOOST_FLAGS) $(LINKER_FLAGS) $(CASADI_FLAGS) $(CASADI_LIBS)
+explore: explore-setup $(EXPLORE_OBJS) 
+	$(CXX) $(BFLAGS) $(EXPLORE_OBJS) -o $(BIN_DIR)/explore $(PYTHON_FLAGS) $(BOOST_FLAGS) $(LINKER_FLAGS) $(CASADI_FLAGS) $(CASADI_LIBS)
 
 $(OBJ_DIR)/exploreMPC.o : explore/exploreMPC.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
 
-$(OBJ_DIR)/point-explore-system.o : explore/point-explore-system.cpp
+$(OBJ_DIR)/explore-system.o : explore/explore-system.cpp
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
 
-$(OBJ_DIR)/casadi-point-explore-system.o : explore/casadi-point-explore-system.cpp
+$(OBJ_DIR)/casadi-explore-system.o : explore/casadi-explore-system.cpp
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
 	
-
 $(OBJ_DIR)/explore-cpp.o : explore/explore.cpp
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
 

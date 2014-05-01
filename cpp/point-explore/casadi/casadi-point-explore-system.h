@@ -1,6 +1,8 @@
 #ifndef __CASADI_POINT_EXPLORE_SYSTEM_H__
 #define __CASADI_POINT_EXPLORE_SYSTEM_H__
 
+#include "casadi-system.h"
+
 class CasadiPointExploreSystem;
 #include "../point-explore-system.h"
 
@@ -13,23 +15,30 @@ namespace AD = CasADi;
 #include <armadillo>
 using namespace arma;
 
-class CasadiPointExploreSystem {
+class CasadiPointExploreSystem : CasadiSystem {
 public:
 	CasadiPointExploreSystem();
 	CasadiPointExploreSystem(const ObsType obs_type, const CostType cost_type, mat& R);
+	CasadiPointExploreSystem(const ObsType obs_type, const CostType cost_type, mat& R,
+								int T, int M, int N, double DT, int X_DIM, int U_DIM, int Z_DIM, int Q_DIM, int R_DIM);
+	~CasadiPointExploreSystem() { };
 
 	double casadi_cost(const std::vector<mat>& X, const std::vector<mat>& U,
 			const mat& P);
 	mat casadi_cost_grad(const std::vector<mat>& X, const std::vector<mat>& U,
 			const mat& P);
 
-private:
+protected:
+	int T, M, N, TOTAL_VARS, X_DIM, U_DIM, Z_DIM, Q_DIM, R_DIM;
+	double DT;
+
 	ObsType obs_type;
 	CostType cost_type;
 	mat R;
 
 	AD::SXFunction cost_func, cost_grad_func;
 
+	void init_dims(int T=10, int M=100, int N=1, double DT=1.0, int X_DIM=2, int U_DIM=2, int Z_DIM=1, int Q_DIM=2, int R_DIM=1);
 	void init(ObsType obs_type, CostType cost_type, mat& R);
 
 	AD::SXMatrix dist(AD::SXMatrix a, AD::SXMatrix b);

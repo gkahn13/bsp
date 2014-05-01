@@ -37,11 +37,8 @@ CPP_TIMESTEPS_DEF="#define TIMESTEPS"
 CPP_PARTICLES_DEF="#define PARTICLES"
 CPP_AGENTS_DEF="#define AGENTS"
 
-echo "replacing TIMESTEPS definition with new TIMESTEPS for point-explore.h"
-sed -i "s/^${CPP_TIMESTEPS_DEF}.*/${CPP_TIMESTEPS_DEF} ${TIMESTEPS}/" point-explore-system.h
+echo "replacing TIMESTEPS definition with new TIMESTEPS for ${POINT_EXPLORE_TYPE}/${POINT_EXPLORE_TYPE}.cpp"
+sed -i "s/^${CPP_TIMESTEPS_DEF}.*/${CPP_TIMESTEPS_DEF} ${TIMESTEPS}/" ${POINT_EXPLORE_TYPE}/${POINT_EXPLORE_TYPE}.cpp
 
-echo "replacing PARTICLES definition with new PARTICLES for point-explore.h"
-sed -i "s/^${CPP_PARTICLES_DEF}.*/${CPP_PARTICLES_DEF} ${PARTICLES}/" point-explore-system.h
-
-echo "replacing AGENTS definition with new AGENTS for point-explore.h"
-sed -i "s/^${CPP_AGENTS_DEF}.*/${CPP_AGENTS_DEF} ${AGENTS}/" point-explore-system.h
+echo "replacing AGENTS definition with new AGENTS for ${POINT_EXPLORE_TYPE}/${POINT_EXPLORE_TYPE}.cpp"
+sed -i "s/^${CPP_AGENTS_DEF}.*/${CPP_AGENTS_DEF} ${AGENTS}/" ${POINT_EXPLORE_TYPE}/${POINT_EXPLORE_TYPE}.cpp

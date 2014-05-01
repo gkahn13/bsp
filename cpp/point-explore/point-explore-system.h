@@ -22,23 +22,8 @@ namespace po = boost::program_options;
 #include <armadillo>
 using namespace arma;
 
-#define TIMESTEPS 10
-#define PARTICLES 1000
-#define AGENTS 1
-#define DT 1.0 // Note: if you change this, must change the FORCES matlab file
-#define X_DIM 2
-#define U_DIM 2
-#define Z_DIM 1
-#define Q_DIM 2
-#define R_DIM 1
-
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
-
-const int T = TIMESTEPS;
-const int M = PARTICLES;
-const int N = AGENTS;
-const int TOTAL_VARS = T*N*X_DIM + (T-1)*N*U_DIM;
 
 const double step = 0.0078125*0.0078125;
 const double INFTY = 1e10;
@@ -115,7 +100,7 @@ public:
 	PointExploreSystem();
 	PointExploreSystem(mat& target, const ObsType obs_type, const CostType cost_type, bool use_casadi);
 	PointExploreSystem(mat& target, const ObsType obs_type, const CostType cost_type, bool use_casadi,
-						mat& xMin, mat& xMax, mat& uMin, mat& uMax, mat& R);
+			int T, int M, int N, double DT, int X_DIM, int U_DIM, int Z_DIM, int Q_DIM, int R_DIM);
 
 	mat dynfunc(const mat& x, const mat& u);
 	mat obsfunc(const mat& x, const mat& t, const mat& r);
@@ -132,7 +117,10 @@ public:
 	mat get_uMin() { return this->uMin; }
 	mat get_uMax() { return this->uMax; }
 
-private:
+protected:
+	int T, M, N, TOTAL_VARS, X_DIM, U_DIM, Z_DIM, Q_DIM, R_DIM;
+	double DT;
+
 	mat target;
 	ObsType obs_type;
 	CostType cost_type;
@@ -143,6 +131,7 @@ private:
 
 	CasadiPointExploreSystem* casadi_sys;
 
+	void init_dims(int T=10, int M=100, int N=1, double DT=1.0, int X_DIM=2, int U_DIM=2, int Z_DIM=1, int Q_DIM=2, int R_DIM=1);
 	void init(mat& target, const ObsType obs_type, const CostType cost_type, bool use_casadi,
 			mat& xMin, mat& xMax, mat& uMin, mat& uMax, mat& R);
 

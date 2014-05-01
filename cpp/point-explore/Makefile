@@ -29,7 +29,7 @@ T = 10
 # default PARTICLES
 M = 100
 # default AGENTS
-N = 2
+N = 1
 
 ###### DIRECTORY CREATION ###########
 dir:
@@ -50,6 +50,14 @@ $(OBJ_DIR)/point-explore.o : point-explore.cpp
 	
 $(OBJ_DIR)/casadi-point-explore.o : casadi/casadi-point-explore.cpp
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
+	
+##### system #####
+
+$(OBJ_DIR)/system.o : system.cpp
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
+	
+$(OBJ_DIR)/casadi-system.o : casadi/casadi-system.cpp
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
 	
 ##### point-explore-system #####
 
@@ -90,7 +98,7 @@ $(OBJ_DIR)/test-entropy.o : tests/test-entropy.cpp
 
 #######  explore ########
 
-POINT_EXPLORE_FILES = explore-cpp exploreMPC casadi-point-explore-system point-explore-system logging
+POINT_EXPLORE_FILES = explore-cpp exploreMPC casadi-system casadi-point-explore-system point-explore-system logging
 POINT_EXPLORE_OBJS = $(POINT_EXPLORE_FILES:%=$(OBJ_DIR)/%.o)
 
 explore-setup:

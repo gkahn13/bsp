@@ -11,6 +11,21 @@ extern "C" {
 exploreMPC_FLOAT **H, **f, **lb, **ub, **z, **c;
 }
 
+#define TIMESTEPS 10
+#define AGENTS 2
+#define DT 1.0 // Note: if you change this, must change the FORCES matlab file
+#define X_DIM 2
+#define U_DIM 2
+#define Z_DIM 1
+#define Q_DIM 2
+#define R_DIM 1
+
+const int T = TIMESTEPS;
+int M;
+const int N = AGENTS;
+const int TOTAL_VARS = T*N*X_DIM + (T-1)*N*U_DIM;
+
+
 mat::fixed<N*X_DIM, 1> x0;
 
 namespace cfg {
@@ -415,6 +430,7 @@ void parse_explore(int argc, char* argv[], ObsType& obs_type, CostType& cost_typ
 	po::options_description desc("Allowed options");
 	desc.add_options()
 		    				("help", "produce help message")
+		    				("M", po::value<int>(&M), "Number of particles (default 100)")
 		    				("obs", po::value<ObsTypeList>(&obs_list)->multitoken(), "Observation type <angle> or <distance> (default is <angle>)")
 		    				("cost", po::value<CostTypeList>(&cost_list)->multitoken(), "Cost type <entropy> or <platt> (default is <entropy>)")
 		    				("casadi", po::value<bool>(&use_casadi), "Use CasADi or not")
@@ -452,6 +468,7 @@ int main(int argc, char* argv[]) {
 	ObsType obs_type = ObsType::angle;
 	CostType cost_type = CostType::entropy;
 	bool use_casadi = true;
+	M = 100;
 
 	parse_explore(argc, argv, obs_type, cost_type, use_casadi);
 
@@ -460,10 +477,11 @@ int main(int argc, char* argv[]) {
 	target << 4 << endr << 1;
 
 	LOG_DEBUG("Initializing...");
-	PointExploreSystem sys = PointExploreSystem(target, obs_type, cost_type, use_casadi);
+	PointExploreSystem sys = PointExploreSystem(target, obs_type, cost_type, use_casadi,
+			T, M, N, DT, X_DIM, U_DIM, Z_DIM, Q_DIM, R_DIM);
 	LOG_DEBUG("System initialized");
 
-	x0 << 0 << endr << 0;// << endr << .5 << endr << 0;
+	x0 << 0 << endr << 0 << endr << .5 << endr << 0;
 
 	const int M_FULL = 1000;
 	mat P_full(X_DIM, M_FULL, fill::zeros);
@@ -518,8 +536,8 @@ int main(int argc, char* argv[]) {
 		LOG_DEBUG("Cost: %4.10f", cost);
 		LOG_DEBUG("Time: %4.10f ms", forces_time*1000);
 
-//		LOG_DEBUG("Optimized path");
-//		sys.display_states_and_particles(X, P);
+		LOG_DEBUG("Optimized path");
+		sys.display_states_and_particles(X, P);
 
 		mat x = X[0], x_tp1(N*X_DIM, 1, fill::zeros);
 		mat P_full_tp1(X_DIM, M_FULL, fill::zeros);
@@ -539,8 +557,8 @@ int main(int argc, char* argv[]) {
 		x0 = x_tp1;
 		initialize_trajectory(X, U, P_full, init_type, sys);
 
-//		LOG_DEBUG("Particle update step");
-//		sys.display_states_and_particles(X, P_full);
+		LOG_DEBUG("Particle update step");
+		sys.display_states_and_particles(X, P_full);
 	}
 
 	LOG_DEBUG("Found the landmark");

@@ -5,13 +5,15 @@
  */
 
 PointExploreSystem::PointExploreSystem() {
-	mat::fixed <X_DIM,1> target(fill::zeros);
+	this->init_dims();
+
+	mat target(X_DIM, 1, fill::zeros);
 	ObsType obs_type = ObsType::angle;
 	CostType cost_type = CostType::entropy;
 	bool use_casadi = false;
 
-	mat::fixed <X_DIM,1> xMin(fill::ones), xMax(fill::ones);
-	mat::fixed <U_DIM,1> uMin(fill::ones), uMax(fill::ones);
+	mat xMin(X_DIM, 1, fill::ones), xMax(X_DIM, 1, fill::ones);
+	mat uMin(U_DIM, 1, fill::ones), uMax(U_DIM, 1, fill::ones);
 
 	xMin *= -1;
 	xMax *= 6;
@@ -23,8 +25,10 @@ PointExploreSystem::PointExploreSystem() {
 }
 
 PointExploreSystem::PointExploreSystem(mat& target, const ObsType obs_type, const CostType cost_type, bool use_casadi) {
-	mat::fixed <X_DIM,1> xMin(fill::ones), xMax(fill::ones);
-	mat::fixed <U_DIM,1> uMin(fill::ones), uMax(fill::ones);
+	this->init_dims();
+
+	mat xMin(X_DIM, 1, fill::ones), xMax(X_DIM, 1, fill::ones);
+	mat uMin(U_DIM, 1, fill::ones), uMax(U_DIM, 1, fill::ones);
 
 	xMin *= -1;
 	xMax *= 6;
@@ -36,8 +40,34 @@ PointExploreSystem::PointExploreSystem(mat& target, const ObsType obs_type, cons
 }
 
 PointExploreSystem::PointExploreSystem(mat& target, const ObsType obs_type, const CostType cost_type, bool use_casadi,
-											mat& xMin, mat& xMax, mat& uMin, mat& uMax, mat& R) {
+								int T, int M, int N, double DT, int X_DIM, int U_DIM, int Z_DIM, int Q_DIM, int R_DIM) {
+	this->init_dims(T, M, N, DT, X_DIM, U_DIM, Z_DIM, Q_DIM, R_DIM);
+
+	mat xMin(X_DIM, 1, fill::ones), xMax(X_DIM, 1, fill::ones);
+	mat uMin(U_DIM, 1, fill::ones), uMax(U_DIM, 1, fill::ones);
+
+	xMin *= -1;
+	xMax *= 6;
+	uMin *= -.25;
+	uMax *= .25;
+	mat R = 1e-2*eye<mat>(N*R_DIM, N*R_DIM);
+
 	this->init(target, obs_type, cost_type, use_casadi, xMin, xMax, uMin, uMax, R);
+}
+
+
+void PointExploreSystem::init_dims(int T, int M, int N, double DT, int X_DIM, int U_DIM, int Z_DIM, int Q_DIM, int R_DIM) {
+	this->T = T;
+	this->M = M;
+	this->N = N;
+	this->DT = DT;
+	this->X_DIM = X_DIM;
+	this->U_DIM = U_DIM;
+	this->Z_DIM = N*Z_DIM;
+	this->Q_DIM = Q_DIM;
+	this->R_DIM = R_DIM;
+
+	this->TOTAL_VARS = T*N*X_DIM + (T-1)*N*U_DIM;
 }
 
 void PointExploreSystem::init(mat& target, const ObsType obs_type, const CostType cost_type, bool use_casadi,
@@ -53,7 +83,8 @@ void PointExploreSystem::init(mat& target, const ObsType obs_type, const CostTyp
 	this->R = R;
 
 	if (this->use_casadi) {
-		this->casadi_sys = new CasadiPointExploreSystem(this->obs_type, this->cost_type, this->R);
+		this->casadi_sys = new CasadiPointExploreSystem(this->obs_type, this->cost_type, this->R,
+				T, M, N, DT, X_DIM, U_DIM, Z_DIM/N, Q_DIM, R_DIM);
 	}
 }
 
@@ -63,20 +94,11 @@ void PointExploreSystem::init(mat& target, const ObsType obs_type, const CostTyp
  *
  */
 
-/**
- * x -- N*X_DIM by 1
- * u -- N*U_DIM by 1
- */
 mat PointExploreSystem::dynfunc(const mat& x, const mat& u) {
 	mat x_new = x + DT*u;
 	return x_new;
 }
 
-/**
- * x -- N*X_DIM by 1
- * t -- N*X_DIM by 1
- * r -- N*R_DIM by 1
- */
 mat PointExploreSystem::obsfunc(const mat& x, const mat& t, const mat& r) {
 	if (this->obs_type == ObsType::angle) {
 		return this->obsfunc_angle(x, t, r);
@@ -85,13 +107,6 @@ mat PointExploreSystem::obsfunc(const mat& x, const mat& t, const mat& r) {
 	}
 }
 
-/**
- * x_t -- N*X_DIM by 1
- * P_t -- N*X_DIM by m
- * u_t -- N*U_DIM by 1
- * x_tp1 -- N*X_DIM by 1
- * P_tp1 -- N*X_DIM by m
- */
 void PointExploreSystem::update_state_and_particles(const mat& x_t, const mat& P_t, const mat& u_t, mat& x_tp1, mat& P_tp1) {
 	int M = P_t.n_cols;
 	x_tp1 = this->dynfunc(x_t, u_t);
@@ -144,7 +159,7 @@ mat PointExploreSystem::cost_grad(std::vector<mat>& X, std::vector<mat>& U, cons
 	double orig, entropy_p, entropy_l;
 	int index = 0;
 	for(int t=0; t < T; ++t) {
-		for(int i=0; i < N*X_DIM; ++i) {
+		for(int i=0; i < X[t].n_rows; ++i) {
 			orig = X[t](i);
 
 			X[t](i) = orig + step;
@@ -158,7 +173,7 @@ mat PointExploreSystem::cost_grad(std::vector<mat>& X, std::vector<mat>& U, cons
 		}
 
 		if (t < T-1) {
-			for(int i=0; i < N*U_DIM; ++i) {
+			for(int i=0; i < U[t].n_rows; ++i) {
 				orig = U[t](i);
 
 				U[t](i) = orig + step;
@@ -185,7 +200,7 @@ mat PointExploreSystem::cost_grad(std::vector<mat>& X, std::vector<mat>& U, cons
  */
 
 mat PointExploreSystem::obsfunc_angle(const mat& x, const mat& t, const mat& r) {
-	mat z(N*Z_DIM, 1, fill::zeros);
+	mat z(Z_DIM, 1, fill::zeros);
 	for(int n=0; n < N; ++n) {
 		mat x_n = x.rows(n*X_DIM, (n+1)*X_DIM-1);
 		z(n) = atan((x_n(1)-t(1))/(x_n(0)-t(0))) + r(n);
@@ -194,8 +209,8 @@ mat PointExploreSystem::obsfunc_angle(const mat& x, const mat& t, const mat& r) 
 }
 
 mat PointExploreSystem::obsfunc_dist(const mat& x, const mat& t, const mat& r) {
-	mat z(N*Z_DIM, 1, fill::zeros);
-	mat::fixed<X_DIM, 1> x_n;
+	mat z(Z_DIM, 1, fill::zeros);
+	mat x_n(X_DIM, 1);
 	for(int n=0; n < N; ++n) {
 		x_n = x.rows(n*X_DIM, (n+1)*X_DIM-1);
 		z(n) = 1.0/(1.0 + exp(-Constants::alpha*(Constants::max_range - norm(x_n-t,2)))) + r(n);
@@ -217,10 +232,6 @@ double PointExploreSystem::gauss_likelihood(const mat& v, const mat& S) {
 	return w;
 }
 
-/*
- * P -- X_DIM by M
- * W -- M by 1
- */
 mat PointExploreSystem::low_variance_sampler(const mat& P, const mat& W, double r) {
 	int M = P.n_cols;
 	mat P_sampled(P.n_rows, P.n_cols, fill::zeros);
@@ -245,8 +256,8 @@ double PointExploreSystem::cost_entropy(const std::vector<mat>& X, const std::ve
 	double entropy = 0;
 
 	std::vector<mat> X_prop(T);
-	std::vector<mat> H(T, zeros<mat>(N*Z_DIM, M));
-	mat r(N*R_DIM, 1, fill::zeros);
+	std::vector<mat> H(T, zeros<mat>(Z_DIM, M));
+	mat r(Z_DIM, 1, fill::zeros);
 	for(int t=0; t < T-1; ++t) {
 		X_prop[t+1] = this->dynfunc(X[t], U[t]);
 		for(int m=0; m < M; ++m) {
@@ -279,17 +290,17 @@ double PointExploreSystem::cost_platt(const std::vector<mat>& X, const std::vect
 	int T = X.size();
 	int M = P.n_cols;
 
-	std::vector<mat> X_prop(T, zeros<mat>(N*X_DIM,1));
+	std::vector<mat> X_prop(T, zeros<mat>(X[0].n_rows,1));
 	X_prop[0] = X[0];
 	for(int t=0; t < T-1; ++t) {
 		X_prop[t+1] = this->dynfunc(X[t], U[t]);
 	}
 
-	std::vector<mat> H(M, zeros<mat>(T*(N*Z_DIM),1));
-	mat r(N*Z_DIM, 1, fill::zeros);
+	std::vector<mat> H(M, zeros<mat>(T*(Z_DIM),1));
+	mat r(Z_DIM, 1, fill::zeros);
 	for(int m=0; m < M; ++m) {
 		for(int t=0; t < T; ++t) {
-			H[m].rows(t*(N*Z_DIM), (t+1)*(N*Z_DIM)-1) = this->obsfunc(X_prop[t], P.col(m), r);
+			H[m].rows(t*(Z_DIM), (t+1)*(Z_DIM)-1) = this->obsfunc(X_prop[t], P.col(m), r);
 		}
 	}
 

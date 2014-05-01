@@ -26,8 +26,6 @@ BIN_DIR = bin/$(BUILD)
 
 # default TIMESTEPS
 T = 10
-# default PARTICLES
-M = 100
 # default AGENTS
 N = 1
 
@@ -51,6 +49,48 @@ $(OBJ_DIR)/system.o : system.cpp
 $(OBJ_DIR)/casadi-system.o : casadi-system.cpp
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
 	
+#######  explore ########
+
+EXPLORE_FILES = explore-cpp exploreMPC system casadi-system casadi-explore-system explore-system logging
+EXPLORE_OBJS = $(EXPLORE_FILES:%=$(OBJ_DIR)/%.o)
+
+explore-setup:
+	bash explore/setupFiles.sh $(T) $(N)
+
+explore: explore-setup $(EXPLORE_OBJS) 
+	$(CXX) $(BFLAGS) $(EXPLORE_OBJS) -o $(BIN_DIR)/explore $(PYTHON_FLAGS) $(BOOST_FLAGS) $(LINKER_FLAGS) $(CASADI_FLAGS) $(CASADI_LIBS)
+
+$(OBJ_DIR)/exploreMPC.o : explore/exploreMPC.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+
+$(OBJ_DIR)/explore-system.o : explore/explore-system.cpp
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
+
+$(OBJ_DIR)/casadi-explore-system.o : explore/casadi-explore-system.cpp
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
+	
+$(OBJ_DIR)/explore-cpp.o : explore/explore.cpp
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
+
+###### boxes ########
+
+BOXES_FILES = boxes-cpp system casadi-system boxes-system logging
+BOXES_OBJS = $(BOXES_FILES:%=$(OBJ_DIR)/%.o)
+
+boxes-setup:
+	#bash boxes/setupFiles.sh $(T) $(M)
+
+boxes: boxes-setup $(BOXES_OBJS) 
+	$(CXX) $(BFLAGS) $(BOXES_OBJS) -o $(BIN_DIR)/boxes $(PYTHON_FLAGS) $(BOOST_FLAGS) $(LINKER_FLAGS) $(CASADI_FLAGS) $(CASADI_LIBS)
+
+$(OBJ_DIR)/boxes-system.o : boxes/boxes-system.cpp
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
+
+$(OBJ_DIR)/boxes-cpp.o : boxes/boxes.cpp
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
+
+
+
 ##### kdpee ##############
 
 $(OBJ_DIR)/kdpee.o : kdpee/src/kdpee.c
@@ -78,29 +118,6 @@ test-entropy: $(TEST_ENTROPY_OBJS)
 	$(CXX) $(BFLAGS) $(TEST_ENTROPY_OBJS) -o $(BIN_DIR)/test-entropy $(PYTHON_FLAGS) $(BOOST_FLAGS) $(LINKER_FLAGS) $(CASADI_FLAGS) $(CASADI_LIBS) 
 	
 $(OBJ_DIR)/test-entropy.o : tests/test-entropy.cpp
-	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
-
-#######  explore ########
-
-EXPLORE_FILES = explore-cpp exploreMPC system casadi-system casadi-explore-system explore-system logging
-EXPLORE_OBJS = $(EXPLORE_FILES:%=$(OBJ_DIR)/%.o)
-
-explore-setup:
-	bash setupFiles.sh explore $(T) $(M) $(N)
-
-explore: explore-setup $(EXPLORE_OBJS) 
-	$(CXX) $(BFLAGS) $(EXPLORE_OBJS) -o $(BIN_DIR)/explore $(PYTHON_FLAGS) $(BOOST_FLAGS) $(LINKER_FLAGS) $(CASADI_FLAGS) $(CASADI_LIBS)
-
-$(OBJ_DIR)/exploreMPC.o : explore/exploreMPC.c
-	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
-
-$(OBJ_DIR)/explore-system.o : explore/explore-system.cpp
-	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
-
-$(OBJ_DIR)/casadi-explore-system.o : explore/casadi-explore-system.cpp
-	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
-	
-$(OBJ_DIR)/explore-cpp.o : explore/explore.cpp
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
 
 

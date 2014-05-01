@@ -206,7 +206,7 @@ void ExploreSystem::display_states_and_particles(const std::vector<mat>& X, cons
 		py::object main_namespace = main_module.attr("__dict__");
 		py::exec("import sys, os", main_namespace);
 		py::exec(py::str("sys.path.append('"+workingDir+"/explore')"), main_namespace);
-		py::object plot_module = py::import("plot_point_explore");
+		py::object plot_module = py::import("plot_explore");
 		py::object plot_state_and_particles = plot_module.attr("plot_state_and_particles");
 
 		plot_state_and_particles(x_list, particles_list, targ_list, X_DIM, M, N);

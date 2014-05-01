@@ -46,7 +46,7 @@ const double INFTY = 1e10;
 
 // .001 for platt
 // .1 for entropy
-const double alpha_control = .001;
+const double alpha_control = .1;
 
 #include "casadi/casadi-point-pf.h"
 AD::SXFunction casadi_belief_dynamics_func;
@@ -201,7 +201,7 @@ void pythonDisplayParticles(std::vector<std::vector<Matrix<X_DIM> > >& particle_
 		py::object main_module = py::import("__main__");
 		py::object main_namespace = main_module.attr("__dict__");
 		py::exec("import sys, os", main_namespace);
-		py::exec(py::str("sys.path.append('"+workingDir+"/slam')"), main_namespace);
+		py::exec(py::str("sys.path.append('"+workingDir+"')"), main_namespace);
 		py::object plot_module = py::import("plot_point_pf");
 		py::object plot_particles = plot_module.attr("plot_particles");
 

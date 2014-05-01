@@ -10,9 +10,7 @@
 
 #include <boost/python.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/program_options.hpp>
 namespace py = boost::python;
-namespace po = boost::program_options;
 
 
 #include <symbolic/casadi.hpp>
@@ -27,15 +25,6 @@ using namespace arma;
 
 const double step = 0.0078125*0.0078125;
 const double INFTY = 1e10;
-
-//namespace Constants {
-//	const double alpha = 2.5;
-//	const double max_range = 0.25;
-//
-//	const double alpha_control_norm = 0; // 1e-2
-//	const double alpha_control_smooth = 0; // 1e-2
-//	const double alpha_separation = 0; // 1e-3
-//}
 
 
 inline double uniform(double low, double high) {
@@ -57,18 +46,17 @@ inline mat subsample(mat& P, int size) {
 	return P_subsampled;
 }
 
-#include "casadi/casadi-system.h"
+#include "casadi-system.h"
 namespace AD = CasADi;
 
 class System {
 public:
 	System();
-	virtual ~System() =0;
 
 	virtual mat dynfunc(const mat& x, const mat& u) =0;
 	virtual mat obsfunc(const mat& x, const mat& t, const mat& r) =0;
 
-	void update_state_and_particles(const mat& x_t, const mat& P_t, const mat& u_t, mat& x_tp1, mat& P_tp1);
+	virtual void update_state_and_particles(const mat& x_t, const mat& P_t, const mat& u_t, mat& x_tp1, mat& P_tp1) =0;
 	virtual double cost(const std::vector<mat>& X, const std::vector<mat>& U, const mat& P) =0;
 	mat cost_grad(std::vector<mat>& X, std::vector<mat>& U, const mat& P);
 

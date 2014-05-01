@@ -2,30 +2,17 @@
 
 /**
  *
- * Public methods
+ * Constructors
  *
  */
 
-void System::update_state_and_particles(const mat& x_t, const mat& P_t, const mat& u_t, mat& x_tp1, mat& P_tp1) {
-	int M = P_t.n_cols;
-	x_tp1 = this->dynfunc(x_t, u_t);
+System::System() { }
 
-	// receive noisy measurement
-	mat z_tp1 = this->obsfunc(x_tp1, this->target, sample_gaussian(zeros<mat>(N*R_DIM,1), .01*this->R));
-
-	mat W(M, 1, fill::zeros);
-	mat r(N*R_DIM, 1, fill::zeros);
-	// for each particle, weight by gauss_likelihood of that measurement given particle/agent observation
-	for(int m=0; m < M; ++m) {
-		mat z_particle = this->obsfunc(x_tp1, P_t.col(m), r);
-		mat e = z_particle - z_tp1;
-		W(m) = this->gauss_likelihood(e, this->R);
-	}
-	W = W / accu(W);
-
-	double sampling_noise = uniform(0, 1/double(M));
-	P_tp1 = this->low_variance_sampler(P_t, W, sampling_noise);
-}
+/**
+ *
+ * Public methods
+ *
+ */
 
 mat System::cost_grad(std::vector<mat>& X, std::vector<mat>& U, const mat& P) {
 	if (this->use_casadi) {

@@ -43,28 +43,12 @@ dir:
 $(OBJ_DIR)/logging.o : ../util/logging.cpp
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) -c -o $@ $^
 	
-##### point-explore ######
-
-$(OBJ_DIR)/point-explore.o : point-explore.cpp
-	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
-	
-$(OBJ_DIR)/casadi-point-explore.o : casadi/casadi-point-explore.cpp
-	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
-	
 ##### system #####
 
 $(OBJ_DIR)/system.o : system.cpp
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
 	
-$(OBJ_DIR)/casadi-system.o : casadi/casadi-system.cpp
-	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
-	
-##### point-explore-system #####
-
-$(OBJ_DIR)/point-explore-system.o : point-explore-system.cpp
-	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
-
-$(OBJ_DIR)/casadi-point-explore-system.o : casadi/casadi-point-explore-system.cpp
+$(OBJ_DIR)/casadi-system.o : casadi-system.cpp
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
 	
 ##### kdpee ##############
@@ -98,7 +82,7 @@ $(OBJ_DIR)/test-entropy.o : tests/test-entropy.cpp
 
 #######  explore ########
 
-POINT_EXPLORE_FILES = explore-cpp exploreMPC casadi-system casadi-point-explore-system point-explore-system logging
+POINT_EXPLORE_FILES = explore-cpp exploreMPC system casadi-system casadi-point-explore-system point-explore-system logging
 POINT_EXPLORE_OBJS = $(POINT_EXPLORE_FILES:%=$(OBJ_DIR)/%.o)
 
 explore-setup:
@@ -109,6 +93,13 @@ explore: explore-setup $(POINT_EXPLORE_OBJS)
 
 $(OBJ_DIR)/exploreMPC.o : explore/exploreMPC.c
 	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+
+$(OBJ_DIR)/point-explore-system.o : explore/point-explore-system.cpp
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
+
+$(OBJ_DIR)/casadi-point-explore-system.o : explore/casadi-point-explore-system.cpp
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
+	
 
 $(OBJ_DIR)/explore-cpp.o : explore/explore.cpp
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)

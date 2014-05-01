@@ -1,10 +1,13 @@
-#include "../point-explore-system.h"
+#include "point-explore-system.h"
 
 #include <iostream>
 #include <vector>
 
 #include "../../util/Timer.h"
 #include "../../util/logging.h"
+
+#include <boost/program_options.hpp>
+namespace po = boost::program_options;
 
 extern "C" {
 #include "exploreMPC.h"

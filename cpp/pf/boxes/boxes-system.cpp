@@ -19,8 +19,8 @@ BoxesSystem::BoxesSystem() {
 	mat xMin(X_DIM, 1, fill::ones), xMax(X_DIM, 1, fill::ones);
 	mat uMin(U_DIM, 1, fill::ones), uMax(U_DIM, 1, fill::ones);
 
-	xMin *= -1;
-	xMax *= 6;
+	xMin *= -3;
+	xMax *= 3;
 	uMin *= -.25;
 	uMax *= .25;
 	mat R = 1e-2*eye<mat>(N*R_DIM, N*R_DIM);
@@ -34,8 +34,8 @@ BoxesSystem::BoxesSystem(mat& box_centers, mat& box_dims, const ObsType obs_type
 	mat xMin(X_DIM, 1, fill::ones), xMax(X_DIM, 1, fill::ones);
 	mat uMin(U_DIM, 1, fill::ones), uMax(U_DIM, 1, fill::ones);
 
-	xMin *= -1;
-	xMax *= 6;
+	xMin *= -3;
+	xMax *= 3;
 	uMin *= -.25;
 	uMax *= .25;
 	mat R = 1e-2*eye<mat>(N*R_DIM, N*R_DIM);
@@ -50,8 +50,8 @@ BoxesSystem::BoxesSystem(mat& box_centers, mat& box_dims, const ObsType obs_type
 	mat xMin(X_DIM, 1, fill::ones), xMax(X_DIM, 1, fill::ones);
 	mat uMin(U_DIM, 1, fill::ones), uMax(U_DIM, 1, fill::ones);
 
-	xMin *= -1;
-	xMax *= 6;
+	xMin *= -3;
+	xMax *= 3;
 	uMin *= -.25;
 	uMax *= .25;
 	mat R = 1e-2*eye<mat>(N*R_DIM, N*R_DIM);
@@ -71,7 +71,7 @@ void BoxesSystem::init_dims(int T, int M, int N, double DT, int X_DIM, int U_DIM
 	this->Q_DIM = Q_DIM;
 	this->R_DIM = R_DIM;
 
-	this->TOTAL_VARS = T*N*X_DIM + (T-1)*N*U_DIM;
+	this->TOTAL_VARS = T*X_DIM + (T-1)*U_DIM;
 }
 
 void BoxesSystem::init(mat& box_centers, mat& box_dims, const ObsType obs_type, const CostType cost_type, bool use_casadi,
@@ -88,8 +88,8 @@ void BoxesSystem::init(mat& box_centers, mat& box_dims, const ObsType obs_type, 
 	this->R = R;
 
 	if (this->use_casadi) {
-//		this->casadi_sys = new CasadiExploreSystem(this->obs_type, this->cost_type, this->R,
-//				T, M, N, DT, X_DIM, U_DIM, Z_DIM/N, Q_DIM, R_DIM);
+		this->casadi_sys = new CasadiBoxesSystem(this->box_dims, this->obs_type, this->cost_type, this->R,
+				T, M, N, DT, X_DIM, U_DIM, Z_DIM/N, Q_DIM, R_DIM);
 	}
 }
 
@@ -120,6 +120,11 @@ mat BoxesSystem::obsfunc(const mat& x, const mat& b_centers, const mat& r) {
 		} else {
 			z(n) = 0 + r(n);
 		}
+
+//		double vert_dist_to_center = sqrt((y_eye-by)*(y_eye-by));
+//		double horz_dist = (x_eye - (bx+width/2.0))*(x_eye - (bx+width/2.0));
+//
+//		z(n) = (1.0/(1.0+exp(-Constants::alpha*(height/2.0 - vert_dist_to_center))))*horz_dist + r(0);
 	}
 
 	return z;
@@ -158,10 +163,14 @@ double BoxesSystem::cost(const std::vector<mat>& X, const std::vector<mat>& U, c
 		cost = this->cost_entropy(X, U, P);
 	}
 
+	for(int t=0; t < T-1; ++t) {
+		cost += Constants::alpha_control_norm*norm(U[t], 2);
+	}
+
 	return cost;
 }
 
-void BoxesSystem::display_states_and_particles(const std::vector<mat>& X, const mat& P) {
+void BoxesSystem::display_states_and_particles(const std::vector<mat>& X, const mat& P, bool pause) {
 	int M = P.n_cols; // in case use high-res particle set
 
 	py::list x_list;
@@ -198,8 +207,10 @@ void BoxesSystem::display_states_and_particles(const std::vector<mat>& X, const 
 
 		plot_state_and_particles(x_list, particles_list, box_centers_list, box_dims_list, X_DIM, M);
 
-		LOG_INFO("Press enter to continue");
-		py::exec("raw_input()",main_namespace);
+		if (pause) {
+			LOG_INFO("Press enter to continue");
+			py::exec("raw_input()",main_namespace);
+		}
 	}
 	catch(py::error_already_set const &)
 	{

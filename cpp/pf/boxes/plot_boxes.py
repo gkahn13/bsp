@@ -16,7 +16,8 @@ def plot_state_and_particles(x, particles, box_centers, box_dims, xDim, M):
     plt.clf()
     plt.cla()
     
-    plt.axis([-2, 2, -2, 2])
+    #plt.axis([-2, 2, -2, 2])
+    plt.axis([-5, 5, -5, 5])
     
     pDim = len(particles)/M
     P = np.matrix(particles)

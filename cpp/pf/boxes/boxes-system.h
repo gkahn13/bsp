@@ -7,7 +7,9 @@
 namespace po = boost::program_options;
 
 namespace Constants {
+	const double alpha = .5;
 
+	const double alpha_control_norm = 0;
 }
 
 enum class ObsType { distance};
@@ -58,7 +60,7 @@ public:
 	void update_state_and_particles(const mat& x_t, const mat& P_t, const mat& u_t, mat& x_tp1, mat& P_tp1);
 	double cost(const std::vector<mat>& X, const std::vector<mat>& U, const mat& P);
 
-	void display_states_and_particles(const std::vector<mat>& X, const mat& P);
+	void display_states_and_particles(const std::vector<mat>& X, const mat& P, bool pause=true);
 
 	mat get_box_centers() { return this->box_centers; }
 	mat get_box_dims() { return this->box_dims; }

@@ -18,7 +18,7 @@ echo ${MPC_H_FILE}
 if [ ! -f $MPC_C_FILE ] || [ ! -f $MPC_H_FILE ]; then
     echo "mpc files do not exist. generating with matlab..."
     
-    matlab -nodisplay -nosplash -nodesktop -r "$boxes_mpc_gen(${TIMESTEPS},${AGENTS}); exit"
+    matlab -nodisplay -nosplash -nodesktop -r "$boxes_mpc_gen(${TIMESTEPS}); exit"
 fi
 
 echo "Copying ${MPC_FILE_NAME}${TIMESTEPS}_${AGENTS}.c/h to ${MPC_FILE_NAME}.c/h"

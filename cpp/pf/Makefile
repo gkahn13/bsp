@@ -74,7 +74,7 @@ $(OBJ_DIR)/explore-cpp.o : explore/explore.cpp
 
 ###### boxes ########
 
-BOXES_FILES = boxes-cpp system casadi-system boxes-system logging
+BOXES_FILES = boxes-cpp boxesMPC system casadi-system boxes-system casadi-boxes-system logging
 BOXES_OBJS = $(BOXES_FILES:%=$(OBJ_DIR)/%.o)
 
 boxes-setup:
@@ -83,7 +83,13 @@ boxes-setup:
 boxes: boxes-setup $(BOXES_OBJS) 
 	$(CXX) $(BFLAGS) $(BOXES_OBJS) -o $(BIN_DIR)/boxes $(PYTHON_FLAGS) $(BOOST_FLAGS) $(LINKER_FLAGS) $(CASADI_FLAGS) $(CASADI_LIBS)
 
+$(OBJ_DIR)/boxesMPC.o : boxes/boxesMPC.c
+	$(CC) $(C_FLAGS) $(BFLAGS) -c -o $@ $^
+
 $(OBJ_DIR)/boxes-system.o : boxes/boxes-system.cpp
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
+
+$(OBJ_DIR)/casadi-boxes-system.o : boxes/casadi-boxes-system.cpp
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
 
 $(OBJ_DIR)/boxes-cpp.o : boxes/boxes.cpp

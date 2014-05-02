@@ -10,7 +10,9 @@
 
 #include <boost/python.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/program_options.hpp>
 namespace py = boost::python;
+namespace po = boost::program_options;
 
 
 #include <symbolic/casadi.hpp>
@@ -46,6 +48,25 @@ inline mat subsample(mat& P, int size) {
 	return P_subsampled;
 }
 
+inline std::istream& operator>>(std::istream& in, mat& m)
+{
+    std::string token;
+    in >> token;
+    std::cout << token << "\n";
+    try {
+    	std::istringstream iss(token);
+    	std::string word;
+    	int index = 0;
+    	while(iss >> word) {
+    		m(index++) = std::atof(word.c_str());
+    	}
+    } catch (std::exception &e) {
+    	throw po::validation_error(po::validation_error::invalid_option_value);
+    }
+
+    return in;
+}
+
 #include "casadi-system.h"
 namespace AD = CasADi;
 
@@ -60,7 +81,7 @@ public:
 	virtual double cost(const std::vector<mat>& X, const std::vector<mat>& U, const mat& P) =0;
 	mat cost_grad(std::vector<mat>& X, std::vector<mat>& U, const mat& P);
 
-	virtual void display_states_and_particles(const std::vector<mat>& X, const mat& P) =0;
+	virtual void display_states_and_particles(const std::vector<mat>& X, const mat& P, bool pause=true) =0;
 
 	mat get_xMin() { return this->xMin; }
 	mat get_xMax() { return this->xMax; }

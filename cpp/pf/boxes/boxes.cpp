@@ -424,7 +424,7 @@ bool found(const mat& P, mat& dims) {
 		}
 	}
 
-	return (max_spread < MAX(dims(0), dims(1)));
+	return (max_spread < dims(0) + dims(1));
 }
 
 void parse_boxes(int argc, char* argv[], ObsType& obs_type, CostType& cost_type, bool& use_casadi, mat& box_centers, mat& box_dims) {
@@ -525,8 +525,8 @@ int main(int argc, char* argv[]) {
 	double init_cost = sys.cost(X,U,P);
 	LOG_DEBUG("Initial cost: %4.10f", init_cost);
 
-	LOG_DEBUG("Display initial trajectory");
-	sys.display_states_and_particles(X, P_full);
+//	LOG_DEBUG("Display initial trajectory");
+//	sys.display_states_and_particles(X, P_full);
 
 	// initialize FORCES variables
 	boxesMPC_params problem;
@@ -580,40 +580,10 @@ int main(int argc, char* argv[]) {
 	for(int t=0; t < X_actual.size()-1; ++t) {
 		total_dist += norm(X_actual[t+1] - X_actual[t], 2);
 	}
-	LOG_INFO("Total distance traveled: %4.10f", total_dist);
+//	LOG_INFO("Total distance traveled: %4.10f", total_dist);
+	std::cout << total_dist << ",\n";
 
 	sys.display_states_and_particles(X_actual, P_full);
 
-//	int M_FULL = 1000;
-//	mat P0(X_DIM, M_FULL, fill::zeros);
-//	for(int m=0; m < M_FULL; ++m) {
-//		P0(0, m) = uniform(-2, 0.5);
-//		P0(1, m) = uniform(-2, 2);
-//	}
-//
-//	x0 << 1.5 << endr << 1.5;
-//	std::vector<mat> X(T, zeros<mat>(X_DIM, 1));
-//
-//	mat u(U_DIM, 1, fill::zeros);
-//	u(0) = 0;
-//	u(1) = -.2;
-//
-//	std::vector<mat> P(T, zeros<mat>(N*X_DIM, M_FULL));
-//
-//	X[0] = x0;
-//	P[0] = P0;
-//	for(int t=0; t < T-1; ++t) {
-////		X[t+1] = sys.dynfunc(X[t], u);
-//		sys.update_state_and_particles(X[t], P[t], u, X[t+1], P[t+1]);
-//
-////		sys.display_states_and_particles(std::vector<mat>(1, X[t]), P[t]);
-//	}
-//
-//	std::vector<mat> U(T-1, u);
-//	double cost = sys.cost(X, U, subsample(P[0], M));
-//	LOG_DEBUG("Cost: %4.10f", cost);
-//
-//	mat grad = sys.cost_grad(X, U, subsample(P[0], M));
-//	grad.print();
 
 }

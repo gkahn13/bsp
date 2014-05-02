@@ -23,7 +23,7 @@ BoxesSystem::BoxesSystem() {
 	xMax *= 3;
 	uMin *= -.25;
 	uMax *= .25;
-	mat R = 1e-2*eye<mat>(N*R_DIM, N*R_DIM);
+	mat R = 1e-1*eye<mat>(N*R_DIM, N*R_DIM);
 
 	this->init(box_centers, box_dims, obs_type, cost_type, use_casadi, xMin, xMax, uMin, uMax, R);
 }
@@ -38,7 +38,7 @@ BoxesSystem::BoxesSystem(mat& box_centers, mat& box_dims, const ObsType obs_type
 	xMax *= 3;
 	uMin *= -.25;
 	uMax *= .25;
-	mat R = 1e-2*eye<mat>(N*R_DIM, N*R_DIM);
+	mat R = 1e-1*eye<mat>(N*R_DIM, N*R_DIM);
 
 	this->init(box_centers, box_dims, obs_type, cost_type, use_casadi, xMin, xMax, uMin, uMax, R);
 }
@@ -54,7 +54,7 @@ BoxesSystem::BoxesSystem(mat& box_centers, mat& box_dims, const ObsType obs_type
 	xMax *= 3;
 	uMin *= -.25;
 	uMax *= .25;
-	mat R = 1e-2*eye<mat>(N*R_DIM, N*R_DIM);
+	mat R = 1e-1*eye<mat>(N*R_DIM, N*R_DIM);
 
 	this->init(box_centers, box_dims, obs_type, cost_type, use_casadi, xMin, xMax, uMin, uMax, R);
 }
@@ -114,6 +114,9 @@ mat BoxesSystem::obsfunc(const mat& x, const mat& b_centers, const mat& r) {
 
 		double width = this->box_dims(n*X_DIM);
 		double height = this->box_dims(n*X_DIM+1);
+
+//		z(n*X_DIM) = (fabs(y_eye-by) < height/2.0) ? 1 : 0;
+//		z(n*X_DIM+1) = sqrt((x_eye - (bx+width/2.0))*(x_eye - (bx+width/2.0))) + r(n);
 
 		if (fabs(y_eye-by) < height/2.0) {
 			z(n) = sqrt((x_eye - (bx+width/2.0))*(x_eye - (bx+width/2.0))) + r(n);

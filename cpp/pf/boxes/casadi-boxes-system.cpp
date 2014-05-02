@@ -74,12 +74,13 @@ AD::SXMatrix CasadiBoxesSystem::obsfunc(const AD::SXMatrix& x, const AD::SXMatri
 		double width = this->box_dims(n*X_DIM);
 		double height = this->box_dims(n*X_DIM+1);
 
-//		AD::SXMatrix vert_dist_to_center = sqrt((y_eye-by)*(y_eye-by));
-//		AD::SXMatrix horz_dist = (x_eye - (bx+width/2.0))*(x_eye - (bx+width/2.0));
 		AD::SXMatrix vert_dist_to_center = fabs(y_eye-by);
 		AD::SXMatrix horz_dist = fabs(x_eye - (bx+width/2.0));
 
 		z(n) = (1.0/(1.0+exp(-Constants::alpha*(height/2.0 - vert_dist_to_center))));//*horz_dist;
+
+//		z(n*X_DIM) = (1.0/(1.0+exp(-Constants::alpha*(height/2.0 - vert_dist_to_center))));
+//		z(n*X_DIM+1) = horz_dist;
 	}
 
 	return z;

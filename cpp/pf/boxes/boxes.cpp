@@ -525,8 +525,8 @@ int main(int argc, char* argv[]) {
 	double init_cost = sys.cost(X,U,P);
 	LOG_DEBUG("Initial cost: %4.10f", init_cost);
 
-//	LOG_DEBUG("Display initial trajectory");
-//	sys.display_states_and_particles(X, P_full);
+	LOG_DEBUG("Display initial trajectory");
+	sys.display_states_and_particles(X, P_full);
 
 	// initialize FORCES variables
 	boxesMPC_params problem;
@@ -549,8 +549,8 @@ int main(int argc, char* argv[]) {
 		LOG_DEBUG("Cost: %4.10f", cost);
 		LOG_DEBUG("Time: %4.10f ms", forces_time*1000);
 
-//		LOG_DEBUG("Optimized path");
-//		sys.display_states_and_particles(X, P, true);
+		LOG_DEBUG("Optimized path");
+		sys.display_states_and_particles(X, P, true);
 
 		mat x = X[0], x_tp1(N*X_DIM, 1, fill::zeros);
 		mat P_full_tp1(X_DIM, M_FULL, fill::zeros);
@@ -570,8 +570,8 @@ int main(int argc, char* argv[]) {
 		x0 = x_tp1;
 		initialize_trajectory(X, U, P_full, init_type, sys);
 
-//		LOG_DEBUG("Particle update step");
-//		sys.display_states_and_particles(X, P_full, true);
+		LOG_DEBUG("Particle update step");
+		sys.display_states_and_particles(X, P_full, true);
 	}
 
 	LOG_DEBUG("Found the landmark");

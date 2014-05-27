@@ -84,128 +84,128 @@ typedef double exploreMPC_FLOAT;
 /* fill this with data before calling the solver! */
 typedef struct exploreMPC_params
 {
-    /* diagonal matrix of size [8 x 8] (only the diagonal is stored) */
-    exploreMPC_FLOAT H1[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT f1[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT lb1[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT ub1[8];
+    /* diagonal matrix of size [4 x 4] (only the diagonal is stored) */
+    exploreMPC_FLOAT H1[4];
 
     /* vector of size 4 */
-    exploreMPC_FLOAT c1[4];
+    exploreMPC_FLOAT f1[4];
 
-    /* diagonal matrix of size [8 x 8] (only the diagonal is stored) */
-    exploreMPC_FLOAT H2[8];
+    /* vector of size 4 */
+    exploreMPC_FLOAT lb1[4];
 
-    /* vector of size 8 */
-    exploreMPC_FLOAT f2[8];
+    /* vector of size 4 */
+    exploreMPC_FLOAT ub1[4];
 
-    /* vector of size 8 */
-    exploreMPC_FLOAT lb2[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT ub2[8];
-
-    /* diagonal matrix of size [8 x 8] (only the diagonal is stored) */
-    exploreMPC_FLOAT H3[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT f3[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT lb3[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT ub3[8];
-
-    /* diagonal matrix of size [8 x 8] (only the diagonal is stored) */
-    exploreMPC_FLOAT H4[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT f4[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT lb4[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT ub4[8];
-
-    /* diagonal matrix of size [8 x 8] (only the diagonal is stored) */
-    exploreMPC_FLOAT H5[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT f5[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT lb5[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT ub5[8];
-
-    /* diagonal matrix of size [8 x 8] (only the diagonal is stored) */
-    exploreMPC_FLOAT H6[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT f6[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT lb6[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT ub6[8];
-
-    /* diagonal matrix of size [8 x 8] (only the diagonal is stored) */
-    exploreMPC_FLOAT H7[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT f7[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT lb7[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT ub7[8];
-
-    /* diagonal matrix of size [8 x 8] (only the diagonal is stored) */
-    exploreMPC_FLOAT H8[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT f8[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT lb8[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT ub8[8];
-
-    /* diagonal matrix of size [8 x 8] (only the diagonal is stored) */
-    exploreMPC_FLOAT H9[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT f9[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT lb9[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT ub9[8];
+    /* vector of size 2 */
+    exploreMPC_FLOAT c1[2];
 
     /* diagonal matrix of size [4 x 4] (only the diagonal is stored) */
-    exploreMPC_FLOAT H10[4];
+    exploreMPC_FLOAT H2[4];
 
     /* vector of size 4 */
-    exploreMPC_FLOAT f10[4];
+    exploreMPC_FLOAT f2[4];
 
     /* vector of size 4 */
-    exploreMPC_FLOAT lb10[4];
+    exploreMPC_FLOAT lb2[4];
 
     /* vector of size 4 */
-    exploreMPC_FLOAT ub10[4];
+    exploreMPC_FLOAT ub2[4];
+
+    /* diagonal matrix of size [4 x 4] (only the diagonal is stored) */
+    exploreMPC_FLOAT H3[4];
+
+    /* vector of size 4 */
+    exploreMPC_FLOAT f3[4];
+
+    /* vector of size 4 */
+    exploreMPC_FLOAT lb3[4];
+
+    /* vector of size 4 */
+    exploreMPC_FLOAT ub3[4];
+
+    /* diagonal matrix of size [4 x 4] (only the diagonal is stored) */
+    exploreMPC_FLOAT H4[4];
+
+    /* vector of size 4 */
+    exploreMPC_FLOAT f4[4];
+
+    /* vector of size 4 */
+    exploreMPC_FLOAT lb4[4];
+
+    /* vector of size 4 */
+    exploreMPC_FLOAT ub4[4];
+
+    /* diagonal matrix of size [4 x 4] (only the diagonal is stored) */
+    exploreMPC_FLOAT H5[4];
+
+    /* vector of size 4 */
+    exploreMPC_FLOAT f5[4];
+
+    /* vector of size 4 */
+    exploreMPC_FLOAT lb5[4];
+
+    /* vector of size 4 */
+    exploreMPC_FLOAT ub5[4];
+
+    /* diagonal matrix of size [4 x 4] (only the diagonal is stored) */
+    exploreMPC_FLOAT H6[4];
+
+    /* vector of size 4 */
+    exploreMPC_FLOAT f6[4];
+
+    /* vector of size 4 */
+    exploreMPC_FLOAT lb6[4];
+
+    /* vector of size 4 */
+    exploreMPC_FLOAT ub6[4];
+
+    /* diagonal matrix of size [4 x 4] (only the diagonal is stored) */
+    exploreMPC_FLOAT H7[4];
+
+    /* vector of size 4 */
+    exploreMPC_FLOAT f7[4];
+
+    /* vector of size 4 */
+    exploreMPC_FLOAT lb7[4];
+
+    /* vector of size 4 */
+    exploreMPC_FLOAT ub7[4];
+
+    /* diagonal matrix of size [4 x 4] (only the diagonal is stored) */
+    exploreMPC_FLOAT H8[4];
+
+    /* vector of size 4 */
+    exploreMPC_FLOAT f8[4];
+
+    /* vector of size 4 */
+    exploreMPC_FLOAT lb8[4];
+
+    /* vector of size 4 */
+    exploreMPC_FLOAT ub8[4];
+
+    /* diagonal matrix of size [4 x 4] (only the diagonal is stored) */
+    exploreMPC_FLOAT H9[4];
+
+    /* vector of size 4 */
+    exploreMPC_FLOAT f9[4];
+
+    /* vector of size 4 */
+    exploreMPC_FLOAT lb9[4];
+
+    /* vector of size 4 */
+    exploreMPC_FLOAT ub9[4];
+
+    /* diagonal matrix of size [2 x 2] (only the diagonal is stored) */
+    exploreMPC_FLOAT H10[2];
+
+    /* vector of size 2 */
+    exploreMPC_FLOAT f10[2];
+
+    /* vector of size 2 */
+    exploreMPC_FLOAT lb10[2];
+
+    /* vector of size 2 */
+    exploreMPC_FLOAT ub10[2];
 
 } exploreMPC_params;
 
@@ -214,35 +214,35 @@ typedef struct exploreMPC_params
 /* the desired variables are put here by the solver */
 typedef struct exploreMPC_output
 {
-    /* vector of size 8 */
-    exploreMPC_FLOAT z1[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT z2[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT z3[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT z4[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT z5[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT z6[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT z7[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT z8[8];
-
-    /* vector of size 8 */
-    exploreMPC_FLOAT z9[8];
+    /* vector of size 4 */
+    exploreMPC_FLOAT z1[4];
 
     /* vector of size 4 */
-    exploreMPC_FLOAT z10[4];
+    exploreMPC_FLOAT z2[4];
+
+    /* vector of size 4 */
+    exploreMPC_FLOAT z3[4];
+
+    /* vector of size 4 */
+    exploreMPC_FLOAT z4[4];
+
+    /* vector of size 4 */
+    exploreMPC_FLOAT z5[4];
+
+    /* vector of size 4 */
+    exploreMPC_FLOAT z6[4];
+
+    /* vector of size 4 */
+    exploreMPC_FLOAT z7[4];
+
+    /* vector of size 4 */
+    exploreMPC_FLOAT z8[4];
+
+    /* vector of size 4 */
+    exploreMPC_FLOAT z9[4];
+
+    /* vector of size 2 */
+    exploreMPC_FLOAT z10[2];
 
 } exploreMPC_output;
 

@@ -175,7 +175,7 @@ mat ExploreSystem::obsfunc_dist(const mat& x, const mat& t, const mat& r) {
 	return z;
 }
 
-void ExploreSystem::display_states_and_particles(const std::vector<mat>& X, const mat& P) {
+void ExploreSystem::display_states_and_particles(const std::vector<mat>& X, const mat& P, bool pause) {
 	int M = P.n_cols; // in case use high-res particle set
 
 	py::list x_list;
@@ -211,8 +211,10 @@ void ExploreSystem::display_states_and_particles(const std::vector<mat>& X, cons
 
 		plot_state_and_particles(x_list, particles_list, targ_list, X_DIM, M, N);
 
-		LOG_INFO("Press enter to continue");
-		py::exec("raw_input()",main_namespace);
+		if (pause) {
+			LOG_INFO("Press enter to continue");
+			py::exec("raw_input()",main_namespace);
+		}
 	}
 	catch(py::error_already_set const &)
 	{

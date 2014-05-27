@@ -138,7 +138,7 @@ void BoxesSystem::update_state_and_particles(const mat& x_t, const mat& P_t, con
 	x_tp1 = this->dynfunc(x_t, u_t);
 
 	// receive noisy measurement
-	mat z_tp1 = this->obsfunc(x_tp1, this->box_centers, sample_gaussian(zeros<mat>(N*R_DIM,1), this->R));
+	mat z_tp1 = this->obsfunc(x_tp1, this->box_centers, sample_gaussian(zeros<mat>(N*R_DIM,1), .01*this->R));
 
 	mat W(M, 1, fill::zeros);
 	mat r(N*R_DIM, 1, fill::zeros);

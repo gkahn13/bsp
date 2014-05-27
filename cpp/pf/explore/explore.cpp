@@ -15,7 +15,7 @@ exploreMPC_FLOAT **H, **f, **lb, **ub, **z, **c;
 }
 
 #define TIMESTEPS 10
-#define AGENTS 2
+#define AGENTS 1
 #define DT 1.0 // Note: if you change this, must change the FORCES matlab file
 #define X_DIM 2
 #define U_DIM 2

@@ -8,7 +8,7 @@ do
     #cp landmarks.txt ${landmarkDir}/landmarks-${num_landmarks}.txt
     cd ..
     make clean
-    for slam_type in {"ilqg",};
+    for slam_type in {"control",};
     do
 	make slam-${slam_type} BUILD=release NUM_LANDMARKS=${num_landmarks}
     done

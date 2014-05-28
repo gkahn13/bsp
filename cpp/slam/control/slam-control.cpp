@@ -1,3 +1,5 @@
+#define USE_COST_INFO
+
 #include "../slam.h"
 #include "../traj/slam-traj.h"
 
@@ -530,10 +532,13 @@ bool controlCollocation(std::vector< Matrix<U_DIM> >& U, controlMPC_params& prob
 		LOG_DEBUG("  Iter: %d", it);
 
 		// Compute gradients
-//		casadiComputeCostGrad(U, cost, Grad);
+#ifndef USE_COST_INFO
+		casadiComputeCostGrad(U, cost, Grad);
 //		computeCostGrad(U, cost, Grad);
-//		casadiComputeCostGradInfo(U, cost, Grad);
-		computeCostGradInfo(U, cost, Grad);
+#else
+		casadiComputeCostGradInfo(U, cost, Grad);
+//		computeCostGradInfo(U, cost, Grad);
+#endif
 
 		// Problem linearization and definition
 		// fill in H, f
@@ -633,10 +638,13 @@ bool controlCollocation(std::vector< Matrix<U_DIM> >& U, controlMPC_params& prob
 
 			model_merit = optcost + constant_cost;
 
-//			new_merit = casadiComputeCost(Uopt);
+#ifndef USE_COST_INFO
+			new_merit = casadiComputeCost(Uopt);
 //			new_merit = computeCost(Uopt);
-//			new_merit = casadiComputeCostInfo(Uopt);
-			new_merit = computeCostInfo(Uopt);
+#else
+			new_merit = casadiComputeCostInfo(Uopt);
+//			new_merit = computeCostInfo(Uopt);
+#endif
 
 			merit = cost;
 			LOG_DEBUG("       merit: %4.10f", merit);
@@ -672,11 +680,13 @@ bool controlCollocation(std::vector< Matrix<U_DIM> >& U, controlMPC_params& prob
 				Uvel_eps *= cfg::trust_expand_ratio;
 				Uangle_eps *= cfg::trust_expand_ratio;
 
-
-//				casadiComputeCostGrad(Uopt, cost, Gradopt);
+#ifndef USE_COST_INFO
+				casadiComputeCostGrad(Uopt, cost, Gradopt);
 //				computeCostGrad(Uopt, cost, Gradopt);
-//				casadiComputeCostGradInfo(Uopt, cost, Gradopt);
-				computeCostGradInfo(Uopt, cost, Gradopt);
+#else
+				casadiComputeCostGradInfo(Uopt, cost, Gradopt);
+//				computeCostGradInfo(Uopt, cost, Gradopt);
+#endif
 
 				Matrix<TU_DIM> s, y;
 
@@ -950,22 +960,23 @@ int main(int argc, char* argv[])
 
 	std::vector<std::vector<Matrix<P_DIM> > > l_list = landmarks_list();
 
-	std::ofstream f;
-	logDataHandle("slam/data/slam-control", f);
-
 	LOG_INFO("initializing casadi functions...");
 
+	std::ofstream f;
+#ifndef USE_COST_INFO
+	logDataHandle("slam/data/slam-control", f);
 	casadi_cost_func = casadiCostFunc();
 	casadi_gradcost_func = casadiCostGradFunc();
-
+#else
+	logDataHandle("slam/data/slam-control-info", f);
 	casadi_cost_func_info = casadiCostFuncInfo();
 	casadi_gradcost_func_info = casadiCostGradFuncInfo();
+#endif
 
 	LOG_INFO("casadi functions initialized");
 
-	casadi_gradcost_func.generateCode("casadi_gradcost_func.c");
-	casadi_gradcost_func_info.generateCode("casadi_gradcost_func_info.c");
-	return 0;
+//	casadi_gradcost_func.generateCode("casadi_gradcost_func.c");
+//	casadi_gradcost_func_info.generateCode("casadi_gradcost_func_info.c");
 
 //	// TODO: temp
 //	test_hamiltonian(l_list[0]);

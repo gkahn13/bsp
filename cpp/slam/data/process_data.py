@@ -34,7 +34,7 @@ class Data:
 
 class File:
     attrs = ['sum_cov_trace','waypoint_distance_error','solve_time','initialization_time','total_time'] # 'failure'
-    slam_types = ['slam-traj', 'slam-belief', 'slam-state', 'slam-control', 'slam-ilqg']
+    slam_types = ['slam-traj', 'slam-belief', 'slam-state', 'slam-control', 'slam-ilqg', 'slam-control-info']
     
     def __init__(self, file_name, slam_type, file_time):
         self.file_name = file_name
@@ -81,6 +81,8 @@ class File:
             return 'Partial Coll.'
         if self.slam_type == 'slam-control':
             return 'Shooting'
+        if self.slam_type == 'slam-control-info':
+            return 'Shooting Info'
         
         
             
@@ -176,12 +178,14 @@ def process_data():
     belief_files = [file for file in files if file.slam_type == 'slam-belief']
     state_files = [file for file in files if file.slam_type == 'slam-state']
     control_files = [file for file in files if file.slam_type == 'slam-control']
+    control_info_files = [file for file in files if file.slam_type == 'slam-control-info']
     
     trajFG = FileGroup(traj_files)
     ilqgFG = FileGroup(ilqg_files)
     beliefFG = FileGroup(belief_files)
     stateFG = FileGroup(state_files)
     controlFG = FileGroup(control_files)
+    controlInfoFG = FileGroup(control_info_files)
 
     landmarks = [3,4,5,6,10,15,20,25,30,35,40,45,50]
     time_abs_fig = plt.figure()
@@ -198,11 +202,11 @@ def process_data():
     	print('{0:.2f} $\pm$ {1:.2f}'.format(m,s))
     return
     """
-    print(FileGroup.toLatexTable([trajFG, ilqgFG, beliefFG, stateFG, controlFG], landmarks, 'total_time', shiftFactor=.001))
+    print(FileGroup.toLatexTable([trajFG, ilqgFG, beliefFG, stateFG, controlFG, controlInfoFG], landmarks, 'total_time', shiftFactor=.001))
     
     print('############ Absolute statistics #########')
 
-    for fg in [controlFG, stateFG, beliefFG, ilqgFG]:
+    for fg in [controlFG, controlInfoFG, stateFG, beliefFG, ilqgFG]:
     	time_abs_avgs, time_abs_sds = [], []
         dist_err_avgs, dist_err_sds = [], []
         for num_landmarks in landmarks:
@@ -240,7 +244,7 @@ def process_data():
     
     state_comp_times = []
     control_comp_times = []
-    for fg in [controlFG, stateFG, beliefFG, ilqgFG]:
+    for fg in [controlFG, controlInfoFG, stateFG, beliefFG, ilqgFG]:
         cost_comp_avgs, cost_comp_sds = [], []
         time_comp_avgs, time_comp_sds = [], []
         dist_err_comp_avgs, dist_err_comp_sds = [], []

@@ -100,7 +100,7 @@ CasADi::SXMatrix costfuncinfo(const CasADi::SXMatrix& U, const CasADi::SXMatrix&
 		}
 
 		B_ham[t+1] = mul(A, B_ham[t]) + mul(mul(mul(mul(MC, QC), trans(MC)), trans(A_inv)), C_ham[t]);
-		C_ham[t+1] = mul(trans(A_inv), C_ham[t]) + mul(mul(mul(mul(trans(H), delta), R_inv), H), B_ham[t+1]);
+		C_ham[t+1] = mul(trans(A_inv), C_ham[t]) + mul(mul(mul(mul(mul(trans(H), delta), R_inv), delta), H), B_ham[t+1]);
 
 		cost += params[1]*inner_prod(u_t, u_t);
 	}

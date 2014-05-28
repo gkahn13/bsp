@@ -23,7 +23,7 @@ BUILD := debug
 
 BFLAGS.debug = -g -Wall
 BFLAGS.release = -O3
-BFLAGS := $(BFLAGS.$(BUILD))
+BFLAGS := $(BFLAGS.$(BUILD)) -fpermissive -Wno-sign-compare
 
 OBJ_DIR = build/$(BUILD)
 BIN_DIR = bin/$(BUILD)

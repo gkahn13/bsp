@@ -1,6 +1,8 @@
 #ifndef __UTILS_H__
 #define __UTILS_H__
 
+#include <vector>
+
 #define M_SQRT_PI_2 sqrt(M_PI/2.0)
 #define M_1_SQRT2PI 1.0/sqrt(M_PI*2.0)
 #define M_SQRT_2_PI sqrt(2.0/M_PI)

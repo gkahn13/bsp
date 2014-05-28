@@ -18,11 +18,12 @@ controlMPC_FLOAT **H, **f, **lb, **ub, **z;
 #include "boost/preprocessor.hpp"
 
 const double alpha_belief = 10; // 10;
-const double alpha_final_belief = 10; // 10;
-const double alpha_control = .1; // .1
+const double alpha_final_belief = 100; // 10;
+const double alpha_control = .01; // .1
 const double alpha_goal_state = 10; // 10
 
 CasADi::SXFunction casadi_cost_func, casadi_gradcost_func;
+CasADi::SXFunction casadi_cost_func_info, casadi_gradcost_func_info;
 
 namespace cfg {
 const double improve_ratio_threshold = .1; // .1
@@ -196,6 +197,133 @@ double computeCost(const std::vector< Matrix<U_DIM> >& U)
 	unVec(b, x, SqrtSigma);
 	cost += alpha_final_belief*tr(SqrtSigma*SqrtSigma) + alpha_goal_state*tr(~(x - xGoal)*(x - xGoal));
 	return cost;
+}
+
+void computeCostGrad(std::vector< Matrix<U_DIM> >& U, double& cost, Matrix<TU_DIM>& Grad) {
+	cost = computeCost(U);
+
+	int index = 0;
+	for(int t=0; t < T-1; ++t) {
+		for(int i=0; i < U_DIM; ++i) {
+			double u_orig = U[t][i];
+
+			U[t][i] = u_orig + step;
+			double cost_p = computeCost(U);
+			U[t][i] = u_orig - step;
+			double cost_m = computeCost(U);
+
+			U[t][i] = u_orig;
+			Grad[index++] = (cost_p - cost_m) / (2*step);
+		}
+	}
+}
+
+double computeCostInfo(const std::vector<Matrix<U_DIM> >& U) {
+	double cost = 0;
+	// factored form, Sigma_t = B_ham_t * !C_ham_t
+	std::vector<Matrix<X_DIM,X_DIM> > B_ham(T), C_ham(T);
+	B_ham[0] = SqrtSigma0*SqrtSigma0;
+	C_ham[0] = identity<X_DIM>();
+
+	std::vector<Matrix<X_DIM> > X(T);
+	X[0] = x0;
+	for(int t=0; t < T-1; ++t) {
+		Matrix<C_DIM,C_DIM> Acar;
+		Matrix<C_DIM,Q_DIM> Mcar;
+		linearizeDynamics(X[t], U[t], zeros<Q_DIM,1>(), Acar, Mcar);
+
+		Matrix<X_DIM,X_DIM> A = identity<X_DIM>();
+		A.insert<C_DIM,C_DIM>(0, 0, Acar);
+		Matrix<X_DIM,Q_DIM> M = zeros<X_DIM,Q_DIM>();
+		M.insert<C_DIM, 2>(0, 0, Mcar);
+
+		X[t+1] = dynfunc(X[t], U[t], zeros<Q_DIM,1>());
+
+		Matrix<Z_DIM,X_DIM> H;
+		Matrix<Z_DIM,R_DIM> N;
+		linearizeObservation(X[t+1], zeros<R_DIM,1>(), H, N);
+
+		Matrix<Z_DIM,Z_DIM> delta = deltaMatrix(X[t+1]);
+
+		// factored form update
+		B_ham[t+1] = A*B_ham[t] + M*Q*~M*(!(~A)*C_ham[t]);
+		C_ham[t+1] = !(~A)*C_ham[t] + (~H*delta)*!(Matrix<R_DIM,R_DIM>)R*H*B_ham[t+1];
+
+		cost += .1*tr(~U[t]*U[t]);
+	}
+
+	Matrix<X_DIM,X_DIM> SigmaFinalInfo = B_ham[T-1]*!C_ham[T-1];
+
+	cost += alpha_final_belief*tr(SigmaFinalInfo) + 0*tr(~(X[T-1] - xGoal)*(X[T-1] - xGoal));
+
+	return cost;
+}
+
+void computeCostGradInfo(std::vector< Matrix<U_DIM> >& U, double& cost, Matrix<TU_DIM>& Grad) {
+	cost = computeCostInfo(U);
+
+	int index = 0;
+	for(int t=0; t < T-1; ++t) {
+		for(int i=0; i < U_DIM; ++i) {
+			double u_orig = U[t][i];
+
+			U[t][i] = u_orig + step;
+			double cost_p = computeCostInfo(U);
+			U[t][i] = u_orig - step;
+			double cost_m = computeCostInfo(U);
+
+			U[t][i] = u_orig;
+			Grad[index++] = (cost_p - cost_m) / (2*step);
+		}
+	}
+}
+
+double casadiComputeCostInfo(const std::vector< Matrix<U_DIM> >& U)
+{
+	double U_arr[TU_DIM];
+	double x0_arr[X_DIM];
+	double Sigma0_arr[X_DIM*X_DIM];
+	double xGoal_arr[X_DIM];
+	double params_arr[4];
+
+	setupCasadiVars(U, U_arr, x0_arr, Sigma0_arr, xGoal_arr, params_arr);
+
+	double cost = 0;
+
+	casadi_cost_func_info.setInput(U_arr,0);
+	casadi_cost_func_info.setInput(x0_arr,1);
+	casadi_cost_func_info.setInput(Sigma0_arr,2);
+	casadi_cost_func_info.setInput(xGoal_arr,3);
+	casadi_cost_func_info.setInput(params_arr,4);
+
+	casadi_cost_func_info.evaluate();
+
+	casadi_cost_func_info.getOutput(&cost,0);
+
+	return cost;
+}
+
+void casadiComputeCostGradInfo(const std::vector< Matrix<U_DIM> >& U, double& cost, Matrix<TU_DIM>& Grad)
+{
+	double U_arr[TU_DIM];
+	double x0_arr[X_DIM];
+	double Sigma0_arr[X_DIM*X_DIM];
+	double xGoal_arr[X_DIM];
+	double params_arr[4];
+
+	setupCasadiVars(U, U_arr, x0_arr, Sigma0_arr, xGoal_arr, params_arr);
+
+	casadi_gradcost_func_info.setInput(U_arr,0);
+	casadi_gradcost_func_info.setInput(x0_arr,1);
+	casadi_gradcost_func_info.setInput(Sigma0_arr,2);
+	casadi_gradcost_func_info.setInput(xGoal_arr,3);
+	casadi_gradcost_func_info.setInput(params_arr,4);
+
+	casadi_gradcost_func_info.evaluate();
+
+	casadi_gradcost_func_info.getOutput(&cost,0);
+	casadi_gradcost_func_info.getOutput(Grad.getPtr(),1);
+
 }
 
 
@@ -402,7 +530,10 @@ bool controlCollocation(std::vector< Matrix<U_DIM> >& U, controlMPC_params& prob
 		LOG_DEBUG("  Iter: %d", it);
 
 		// Compute gradients
-		casadiComputeCostGrad(U, cost, Grad);
+//		casadiComputeCostGrad(U, cost, Grad);
+//		computeCostGrad(U, cost, Grad);
+		casadiComputeCostGradInfo(U, cost, Grad);
+//		computeCostGradInfo(U, cost, Grad);
 
 		// Problem linearization and definition
 		// fill in H, f
@@ -499,7 +630,10 @@ bool controlCollocation(std::vector< Matrix<U_DIM> >& U, controlMPC_params& prob
 
 			model_merit = optcost + constant_cost;
 
-			new_merit = casadiComputeCost(Uopt);
+//			new_merit = casadiComputeCost(Uopt);
+//			new_merit = computeCost(Uopt);
+			new_merit = casadiComputeCostInfo(Uopt);
+//			new_merit = computeCostInfo(Uopt);
 
 			merit = cost;
 			LOG_DEBUG("       merit: %4.10f", merit);
@@ -536,7 +670,10 @@ bool controlCollocation(std::vector< Matrix<U_DIM> >& U, controlMPC_params& prob
 				Uangle_eps *= cfg::trust_expand_ratio;
 
 
-				casadiComputeCostGrad(Uopt, cost, Gradopt);
+//				casadiComputeCostGrad(Uopt, cost, Gradopt);
+//				computeCostGrad(Uopt, cost, Gradopt);
+				casadiComputeCostGradInfo(Uopt, cost, Gradopt);
+//				computeCostGradInfo(Uopt, cost, Gradopt);
 
 				Matrix<TU_DIM> s, y;
 
@@ -647,7 +784,7 @@ void planPath(std::vector<Matrix<P_DIM> > l, controlMPC_params& problem, control
 		//double initCasadiTrajCost = casadiComputeCost(U);
 		//LOG_INFO("Initial casadi trajectory cost: %4.10f", initCasadiTrajCost);
 
-		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
+		pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
 
 		util::Timer_tic(&solveTimer);
 
@@ -689,18 +826,163 @@ void planPath(std::vector<Matrix<P_DIM> > l, controlMPC_params& problem, control
 
 		unVec(B[T-1], x0, SqrtSigma0);
 
-		//pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
+		pythonDisplayTrajectory(B, U, waypoints, landmarks, T, true);
+
+		// TODO: temp
+		exit(0);
 	}
 
 
 
-	LOG_INFO("Total trajectory cost: %4.10f", totalTrajCost);
-	LOG_INFO("Total trajectory solve time: %5.3f ms", trajTime*1000);
-	LOG_INFO("Total solve time: %5.3f ms", totalSolveTime*1000);
+//	LOG_INFO("Total trajectory cost: %4.10f", totalTrajCost);
+//	LOG_INFO("Total trajectory solve time: %5.3f ms", trajTime*1000);
+//	LOG_INFO("Total solve time: %5.3f ms", totalSolveTime*1000);
+//
+//	logDataToFile(f, B_total, totalSolveTime*1000, trajTime*1000, 0);
+//
+//	pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, true);
+//
+//	// TODO: propagate forward with information filter
+//	std::vector<Matrix<B_DIM> > B_info(U_total.size()+1);
+//	std::vector<Matrix<X_DIM> > X(U_total.size()+1);
+//	std::vector<Matrix<X_DIM, X_DIM> > omega(U_total.size()+1), omega_bar(U_total.size()+1);
+//	std::vector<Matrix<X_DIM,X_DIM> > B_ham(U_total.size()+1), C_ham(U_total.size()+1);
+//	unVec(B_total[0], X[0], SqrtSigma0);
+//	B_ham[0] = SqrtSigma0*SqrtSigma0;
+//	C_ham[0] = identity<X_DIM>();
+//	omega[0] = !(SqrtSigma0*SqrtSigma0);
+//	B_info[0] = B_total[0];
+//	for(int t=0; t < U_total.size(); ++t) {
+//		Matrix<C_DIM,C_DIM> Acar;
+//		Matrix<C_DIM,Q_DIM> Mcar;
+//		linearizeDynamics(X[t], U_total[t], zeros<Q_DIM,1>(), Acar, Mcar);
+//
+//		Matrix<X_DIM,X_DIM> A = identity<X_DIM>();
+//		A.insert<C_DIM,C_DIM>(0, 0, Acar);
+//		Matrix<X_DIM,Q_DIM> M = zeros<X_DIM,Q_DIM>();
+//		M.insert<C_DIM, 2>(0, 0, Mcar);
+//
+//		X[t+1] = dynfunc(X[t], U_total[t], zeros<Q_DIM,1>());
+//
+////		omega_bar[t+1] = !(A*!omega[t]*~A + M*Q*~M);
+//
+//		Matrix<Z_DIM,X_DIM> H;
+//		Matrix<Z_DIM,R_DIM> N;
+//		linearizeObservation(X[t+1], zeros<R_DIM,1>(), H, N);
+//
+//		Matrix<Z_DIM,Z_DIM> delta = deltaMatrix(X[t+1]);
+////		omega[t+1] = omega_bar[t+1] + (~H*delta)*!(Matrix<R_DIM,R_DIM>)R*(H);
+////		vec(X[t+1], sqrtm(!omega[t+1]), B_info[t+1]);
+//
+//		// factored form update
+//		B_ham[t+1] = A*B_ham[t] + M*Q*~M*(!(~A)*C_ham[t]);
+//		C_ham[t+1] = !(~A)*C_ham[t] + (~H*delta)*!(Matrix<R_DIM,R_DIM>)R*H*B_ham[t+1];
+//
+//		vec(X[t+1], sqrtm(B_ham[t+1]*!C_ham[t+1]), B_info[t+1]);
+//	}
+//
+//	pythonDisplayTrajectory(B_info, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, true);
 
-	logDataToFile(f, B_total, totalSolveTime*1000, trajTime*1000, 0);
+}
 
-	pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, false);
+void test_hamiltonian(std::vector<Matrix<P_DIM> > l) {
+	initProblemParams(l);
+
+	xGoal.insert(0, 0, waypoints[0]);
+	xGoal[2] = x0[2];
+
+	Matrix<U_DIM> uinit;
+	uinit[0] = (xGoal[0] - x0[0])/((float)(T-1));
+	uinit[1] = 0;
+	std::vector<Matrix<U_DIM> > U(T-1, uinit);
+//	U[0][1] = M_PI/8;
+//	U[7][1] = -M_PI/4;
+
+	double cost_info = computeCostInfo(U);
+	std::cout << "cost_info: " << cost_info << "\n";
+	double casadi_cost_info = casadiComputeCostInfo(U);
+	std::cout << "casadi_cost_info: " << casadi_cost_info << "\n";
+	pythonDisplayTrajectory(U, T, true);
+	exit(0);
+
+	std::vector<Matrix<B_DIM> > B(T);
+	vec(x0, SqrtSigma0, B[0]);
+	for(int t=0; t < T-1; ++t) {
+		B[t+1] = beliefDynamics(B[t], U[t]);
+	}
+
+	Matrix<X_DIM> xFinal;
+	Matrix<X_DIM, X_DIM> SqrtSigmaFinal;
+	unVec(B[T-1], xFinal, SqrtSigmaFinal);
+
+	std::cout << "xFinal:\n" << xFinal.subMatrix<P_DIM,1>(0,0) << "\n";
+	std::cout << "SigmaFinal:\n" << SqrtSigmaFinal*SqrtSigmaFinal << "\n";
+
+	pythonDisplayTrajectory(B, U, waypoints, l, T, true);
+
+	// factored form, Sigma_t = B_ham_t * !C_ham_t
+	std::vector<Matrix<X_DIM,X_DIM> > B_ham(T), C_ham(T);
+	B_ham[0] = SqrtSigma0*SqrtSigma0;
+	C_ham[0] = identity<X_DIM>();
+
+	std::vector<Matrix<B_DIM> > B_info(T);
+	std::vector<Matrix<X_DIM> > X(T);
+	std::vector<Matrix<X_DIM, X_DIM> > omega(T), omega_bar(T);
+	X[0] = x0;
+	omega[0] = !(SqrtSigma0*SqrtSigma0);
+	vec(X[0], sqrtm(!omega[0]), B_info[0]);
+	for(int t=0; t < T-1; ++t) {
+		Matrix<C_DIM,C_DIM> Acar;
+		Matrix<C_DIM,Q_DIM> Mcar;
+		linearizeDynamics(X[t], U[t], zeros<Q_DIM,1>(), Acar, Mcar);
+
+		Matrix<X_DIM,X_DIM> A = identity<X_DIM>();
+		A.insert<C_DIM,C_DIM>(0, 0, Acar);
+		Matrix<X_DIM,Q_DIM> M = zeros<X_DIM,Q_DIM>();
+		M.insert<C_DIM, 2>(0, 0, Mcar);
+
+		X[t+1] = dynfunc(X[t], U[t], zeros<Q_DIM,1>());
+
+		omega_bar[t+1] = !(A*!omega[t]*~A + M*Q*~M);
+
+		Matrix<Z_DIM,X_DIM> H;
+		Matrix<Z_DIM,R_DIM> N;
+		linearizeObservation(X[t+1], zeros<R_DIM,1>(), H, N);
+
+		Matrix<Z_DIM,Z_DIM> delta = deltaMatrix(X[t+1]);
+		omega[t+1] = omega_bar[t+1] + (~H*delta)*!(Matrix<R_DIM,R_DIM>)R*(H);
+
+//		Matrix<X_DIM,Z_DIM> K = ((!omega_bar[t+1]*~H*delta)/(delta*H*!omega_bar[t+1]*~H*delta + R))*delta;
+//		omega[t+1] = !((identity<X_DIM>() - K*H)*!omega_bar[t+1]);
+
+		vec(X[t+1], sqrtm(!omega[t+1]), B_info[t+1]);
+
+		// factored form update
+		B_ham[t+1] = A*B_ham[t] + M*Q*~M*(!(~A)*C_ham[t]);
+		C_ham[t+1] = !(~A)*C_ham[t] + (~H*delta)*!(Matrix<R_DIM,R_DIM>)R*H*B_ham[t+1];
+
+		vec(X[t+1], sqrtm(B_ham[t+1]*!C_ham[t+1]), B_info[t+1]);
+
+//		Matrix<X_DIM,X_DIM> sigma_info = !omega[t+1];
+//		Matrix<X_DIM,X_DIM> sigma_factored = B_ham[t+1]*!C_ham[t+1];
+//		std::cout << "factored difference:\n" << sigma_info - sigma_factored << "\n";
+	}
+
+	std::cout << "SigmaFinal information:\n" << !omega[T-1] << "\n";
+
+	pythonDisplayTrajectory(B_info, U, waypoints, l, T, true);
+
+	// sum of square of singular values
+	Matrix<X_DIM,X_DIM> SigmaFinal = SqrtSigmaFinal*SqrtSigmaFinal;
+	double sigma_final_sum_sqr_singulars = tr(~SigmaFinal*SigmaFinal);
+	Matrix<X_DIM,X_DIM> SigmaFinalInfo = !omega[T-1];
+	double sigma_final_info_sum_sqr_singulars = tr(~SigmaFinalInfo*SigmaFinalInfo);
+
+	std::cout << "SigmaFinal sum square singulars: " << sigma_final_sum_sqr_singulars << "\n";
+	std::cout << "SigmaFinalInfo sum square singulars: " << sigma_final_info_sum_sqr_singulars << "\n";
+
+	Matrix<X_DIM,X_DIM> diff = (SigmaFinal - SigmaFinalInfo);
+	std::cout << "(SigmaFinal - SigmaFinalInfo):\n" << diff << "\n";
 
 }
 
@@ -721,7 +1003,15 @@ int main(int argc, char* argv[])
 	casadi_cost_func = casadiCostFunc();
 	casadi_gradcost_func = casadiCostGradFunc();
 
+	casadi_cost_func_info = casadiCostFuncInfo();
+	casadi_gradcost_func_info = casadiCostGradFuncInfo();
+
 	LOG_INFO("casadi functions initialized");
+
+//	// TODO: temp
+//	test_hamiltonian(l_list[0]);
+//	return 0;
+
 
 	for(size_t i=0; i < l_list.size(); ++i) {
 		planPath(l_list[i], problem, output, info, f);

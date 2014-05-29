@@ -74,7 +74,8 @@ def pr2_sensors():
 
 def pr2_flashlidar():
     env = rave.Environment()
-    env.Load('envs/testpr2sensors.env.xml')
+    #env.Load('envs/testpr2sensors.env.xml')
+    env.Load('envs/pr2-table.env.xml')
     
     env.SetViewer('qtcoin') 
     time.sleep(1)
@@ -96,7 +97,9 @@ def pr2_flashlidar():
             time.sleep(0.1)
         print('Elapsed: {0}'.format(time.time() - start_time))
         break
-
+    
+    lidar.Configure(Sensor.ConfigureCommand.PowerOff)
+    #lidar.Configure(Sensor.ConfigureCommand.RenderDataOff)
     
     IPython.embed()
 

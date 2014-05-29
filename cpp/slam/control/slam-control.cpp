@@ -850,7 +850,7 @@ void planPath(std::vector<Matrix<P_DIM> > l, controlMPC_params& problem, control
 
 	logDataToFile(f, B_total, totalSolveTime*1000, trajTime*1000, 0);
 
-	pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, false);
+	pythonDisplayTrajectory(B_total, U_total, waypoints, landmarks, T*NUM_WAYPOINTS, true);
 }
 
 void test_hamiltonian(std::vector<Matrix<P_DIM> > l) {

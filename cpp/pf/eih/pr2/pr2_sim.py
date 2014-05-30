@@ -52,10 +52,8 @@ def cart_to_joint(manip, matrix4, ref_frame, targ_frame, filter_options = 0):
     return joint_positions_unrolled
 
 class PR2:
-    sensor_names = ['flashlidar3d','cam']
-    def __init__(self, env_file='../robots/pr2-beta-static.zae'):
+    def __init__(self, env_file):
         self.env = rave.Environment()
-        #self.env.StopSimulation()
         self.env.Load(env_file)
         self.robot = self.env.GetRobots()[0]
         
@@ -63,8 +61,11 @@ class PR2:
         self.rarm = Arm(self, "r")
         self.head = Head(self)
         
-        self.depth_sensor = DepthSensor(self.robot.GetSensor('flashlidar3d').GetSensor())
-        self.cam_sensor = CameraSensor(self.robot.GetSensor('cam').GetSensor())
+        # 'head_depth', 'head_cam'
+        # 'r_gripper_depth', 'r_gripper_cam'
+        depth_sensor = DepthSensor(self.robot.GetSensor('r_gripper_depth').GetSensor())
+        cam_sensor = CameraSensor(self.robot.GetSensor('r_gripper_cam').GetSensor())
+        self.kinect_sensor = KinectSensor(depth_sensor, cam_sensor)
         
 class Arm:
     L_POSTURES = dict(        
@@ -79,6 +80,7 @@ class Arm:
         self.lrlong = {"r":"right", "l":"left"}[lr]
         self.tool_frame = "%s_gripper_tool_frame"%lr
 
+        self.pr2 = pr2
         self.robot = pr2.robot
         self.manip = self.robot.GetManipulator("%sarm"%self.lrlong)
         self.arm_indices = self.manip.GetArmIndices()
@@ -87,8 +89,16 @@ class Arm:
         return self.manip.GetArmDOFValues()
     
     def get_pose(self):
-        """ Returns pose of end effector """
-        return tfx.pose(self.manip.GetEndEffectorTransform(), frame="world")
+        """ Returns pose of tool_frame """
+        #pose_mat = utils.openraveTransformFromTo(self.robot, np.eye(4), self.tool_frame, 'world')
+        #return tfx.pose(pose_mat, frame='world')
+        return tfx.pose(self.manip.GetEndEffectorTransform(), frame='world')
+    
+    def get_limits(self):
+        l_limits, u_limits = self.robot.GetDOFLimits()
+        arm_l_limits = np.array([l_limits[i] for i in self.arm_indices])
+        arm_u_limits = np.array([u_limits[i] for i in self.arm_indices])
+        return arm_l_limits, arm_u_limits
         
     def set_posture(self, name):
         l_joints = self.L_POSTURES[name]        
@@ -105,12 +115,64 @@ class Arm:
             self.set_joint_values(joint_values)
         else:
             print('pose_matrix invalid, ignoring command')
-
+            
+    def teleop(self):
+        pos_step = .01
+        delta_position = {'a' : [pos_step, 0, 0],
+                          'd' : [-pos_step, 0, 0],
+                          'w' : [0, pos_step, 0],
+                          'x' : [0, -pos_step, 0],
+                          '+' : [0, 0, pos_step],
+                          '-' : [0, 0, -pos_step]}
+        
+        angle_step = 2.0
+        delta_angle = {'o' : [angle_step, 0, 0],
+                       'p' : [-angle_step, 0, 0],
+                       'k' : [0, angle_step, 0],
+                       'l' : [0, -angle_step, 0],
+                       'n' : [0, 0, angle_step],
+                       'm' : [0, 0, -angle_step]}
+        
+        char = ''
+        while char != 'q':
+            char = utils.Getch.getch()
+            pose = self.get_pose()
+            new_pose = tfx.pose(pose)
+            if delta_position.has_key(char):
+                new_pose.position = pose.position.array + delta_position[char]
+                
+                #p = tfx.pose(delta_position[char], frame=self.manip.GetEndEffector().GetName())
+                #p = tfx.pose([0,0,0], frame=self.tool_frame)
+                #new_mat = utils.openraveTransformFromTo(self.robot, p.matrix, self.tool_frame, 'world')
+                #new_pose = tfx.pose(new_mat, frame='world')
+                #print(pose)
+                #print(new_pose)
+                #IPython.embed()
+                
+                #p = tfx.pose(transform_relative_pose_for_ik(self.manip, np.array(new_pose.matrix), new_pose.frame, 'end_effector'))
+                #h = utils.plot_transform(self.robot.GetEnv(), p.matrix)
+                #IPython.embed()
+                #pose += delta_position[char]
+            ypr = np.array([pose.tb_angles.yaw_deg, pose.tb_angles.pitch_deg, pose.tb_angles.roll_deg])
+            if delta_angle.has_key(char):
+                ypr += np.array(delta_angle[char])
+                new_pose = tfx.pose(pose.position, tfx.tb_angles(ypr[0], ypr[1], ypr[2]))
+            #angle = tfx.tb_angles(ypr[0], ypr[1], ypr[2])
+            #new_pose = tfx.pose(position, angle, frame=position.frame)
+            self.set_pose(new_pose)    
+            time.sleep(.01)
+            
 class Head:
     joint_names = ['head_pan_joint', 'head_tilt_joint']
     def __init__(self, pr2):
         self.robot = pr2.robot
         self.joint_indices = [self.robot.GetJointIndex(joint_name) for joint_name in Head.joint_names]
+        
+    def get_limits(self):
+        l_limits, u_limits = self.robot.GetDOFLimits()
+        head_l_limits = np.array([l_limits[i] for i in self.joint_indices])
+        head_u_limits = np.array([u_limits[i] for i in self.joint_indices])
+        return head_l_limits, head_u_limits
         
     def set_pan_tilt(self, pan, tilt):
         self.robot.SetDOFValues([pan, tilt], self.joint_indices)
@@ -134,7 +196,6 @@ class Sensor:
         self.is_powered = False
         self.is_rendering = False
         
-        print(self.sensor.GetName())
         for type in rave.Sensor.Type.values.values():
             if self.sensor.Supports(type):
                 self.type = type
@@ -200,15 +261,15 @@ class CameraSensor(Sensor):
     def get_pixels_and_colors(self, points):
         """
         3d points --> 2d pixel coordinates
-        Assumes all points within FOV
+        Only for points in FOV
         
         Returns
-        [(pixel, color), ...]
+        [(point, pixel, color), ...]
         """
         data = self.get_data()
         P = data.KK
         
-        pixels_colors = list()
+        points_pixels_colors = list()
         for i in xrange(len(points)):
             x = points[i]
             
@@ -224,11 +285,65 @@ class CameraSensor(Sensor):
             y = np.dot(P, xtilde[0:3,3])
             y_pixel = int(y[1]/y[2])
             x_pixel = int(y[0]/y[2])
+
+            y_max, x_max, _ = data.imagedata.shape
+            if 0 <= y_pixel < y_max and 0 <= x_pixel < x_max:        
+                color = data.imagedata[y_pixel, x_pixel]
+                points_pixels_colors.append((x, np.array([y_pixel, x_pixel]), np.array(color, dtype=float)))
             
-            color = data.imagedata[y_pixel, x_pixel]
-            pixels_colors.append((np.array([y_pixel, x_pixel]), np.array(color, dtype=float)))
+        return points_pixels_colors
+    
+class KinectSensor:
+    """
+    Simulates a kinect by having a depth sensor + camera sensor
+    """
+    def __init__(self, depth_sensor, camera_sensor):
+        self.depth_sensor = depth_sensor
+        self.camera_sensor = camera_sensor
+        
+    def power_on(self):
+        self.depth_sensor.power_on()
+        self.camera_sensor.power_on()
+        
+    def power_off(self):
+        self.depth_sensor.power_off()
+        self.camera_sensor.power_off()
+        
+    def get_data(self):
+        """ Returns a PointCloud, i.e. a list of ColoredPoint """
+        points = self.depth_sensor.get_points()
+        points_pixels_colors = self.camera_sensor.get_pixels_and_colors(points)
+        
+        colored_points = list()
+        for point, pixel, color in points_pixels_colors:
+            colored_points.append(ColoredPoint(point, color))
             
-        return pixels_colors
+        return colored_points
+                
+    def render_on(self):
+        self.depth_sensor.render_on()
+        self.camera_sensor.render_on()
+        
+    def render_off(self):
+        self.depth_sensor.render_off()
+        self.camera_sensor.render_off()
+        
+        
+class ColoredPoint:
+    """
+    Wrapper to simulate components of a point cloud
+    Contains a point and a color
+    """
+    def __init__(self, point, color):
+        """
+        point -- tfx point
+        color -- 3d array with values 0..255
+        """
+        self.point = point
+        self.color = color
+        
+    def display(self, env):
+        return utils.plot_point(env, self.point.array, color=self.color/255.)
     
 def test():
     brett = PR2('../envs/pr2-test.env.xml')
@@ -238,30 +353,44 @@ def test():
     larm = brett.larm
     rarm = brett.rarm
     head = brett.head
-    depth_sensor = brett.depth_sensor
-    cam_sensor = brett.cam_sensor
+    kinect = brett.kinect_sensor
     
-    depth_sensor.power_on()
+    larm.set_posture('side')
+    rarm.set_posture('side')
+    
+    rarm.set_pose(tfx.pose((2.8011817158976595, -1.882240568190215, 0.9784708528906445),(-0.2167526477835155, 0.7996943738474431, 0.1764675951856764, 0.5313815822598347),frame='world'))
+    p = rarm.get_pose()
+    h = utils.plot_transform(env, p.matrix)
     time.sleep(1)
-    points = depth_sensor.get_points()
-    depth_sensor.power_off()
     
-    #handles = []
-    #for p in points:
-    #    handles.append(utils.plot_point(env, p.array))
+    ee_mat = rarm.manip.GetEndEffectorTransform()
+    
+    #name = 'r_gripper_tool_frame'
+    #p_mat = utils.openraveTransformFromTo(brett.robot, np.eye(4), name, 'world')
+    #h = utils.plot_transform(env, p_mat)
+    IPython.embed()
+    return
+    
+    
+    kinect.power_on()
+    kinect.render_on()
+    time.sleep(1)
+    colored_points = kinect.get_data()
+
+    handles = list()    
+    for colored_point in colored_points:
+        handles.append(colored_point.display(env))
         
-    cam_sensor.power_on()
-    time.sleep(1)
-    cam_sensor.render_on()
-    data = cam_sensor.get_data()
+    image = kinect.camera_sensor.get_data().imagedata
+    points_pixels_colors = kinect.camera_sensor.get_pixels_and_colors(kinect.depth_sensor.get_points())
+    for point, pixel, color in points_pixels_colors:
+        for i in xrange(-5,5):
+            image[pixel[0],pixel[1]+i] = [0, 255, 0]
+        for i in xrange(-5,5):
+            image[pixel[0]+i,pixel[1]] = [0, 255, 0]
     
-    
-    pixels_colors = cam_sensor.get_pixels_and_colors(points)
-    handles = []
-    for point, pixel_color in zip(points, pixels_colors):
-        pixel, color = pixel_color
-        handles.append(utils.plot_point(env, point.array, color=color/255.))
-    
+    plt.imshow(image)
+    plt.show(block=False)
     IPython.embed()
     
 if __name__ == '__main__':

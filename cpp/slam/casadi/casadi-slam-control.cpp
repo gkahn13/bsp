@@ -38,7 +38,7 @@ CasADi::SXMatrix costfunc(const CasADi::SXMatrix& U, const CasADi::SXMatrix& x0,
 // params[1] = alpha_control
 // params[2] = alpha_final_belief
 // params[3] = alpha_goal_state
-CasADi::SXMatrix costfuncinfo(const CasADi::SXMatrix& U, const CasADi::SXMatrix& x0, const CasADi::SXMatrix& Sigma_0, const CasADi::SXMatrix& xGoal, const CasADi::SXMatrix& params)
+CasADi::SXMatrix costfuncham(const CasADi::SXMatrix& U, const CasADi::SXMatrix& x0, const CasADi::SXMatrix& Sigma_0, const CasADi::SXMatrix& xGoal, const CasADi::SXMatrix& params)
 {
 	CasADi::SXMatrix cost = 0;
 
@@ -105,9 +105,14 @@ CasADi::SXMatrix costfuncinfo(const CasADi::SXMatrix& U, const CasADi::SXMatrix&
 		cost += params[1]*inner_prod(u_t, u_t);
 	}
 
-	CasADi::SXMatrix SigmaFinalInfo = mul(B_ham[T-1], solve(C_ham[T-1], CasADi::SXMatrix(CasADi::DMatrix::eye(X_DIM))));
+//	CasADi::SXMatrix SigmaFinalInfo = mul(B_ham[T-1], solve(C_ham[T-1], CasADi::SXMatrix(CasADi::DMatrix::eye(X_DIM))));
+//	cost += params[2]*trace(SigmaFinalInfo) + params[3]*inner_prod(X[T-1] - xGoal, X[T-1] - xGoal);
 
-	cost += params[2]*trace(SigmaFinalInfo) + params[3]*inner_prod(X[T-1] - xGoal, X[T-1] - xGoal);
+	CasADi::SXMatrix InvSigmaFinalInfo = mul(C_ham[T-1], solve(B_ham[T-1], CasADi::SXMatrix(CasADi::DMatrix::eye(X_DIM))));
+	cost += params[3]*inner_prod(X[T-1] - xGoal, X[T-1] - xGoal);
+	for(int i=0; i < X_DIM; ++i) {
+		cost += params[2]*(1/InvSigmaFinalInfo(i,i));
+	}
 
 	return cost;
 }
@@ -168,7 +173,7 @@ CasADi::SXFunction casadiCostGradFunc() {
 	return grad_f_fcn;
 }
 
-CasADi::SXFunction casadiCostFuncInfo() {
+CasADi::SXFunction casadiCostFuncHam() {
 	int nU = (T-1)*U_DIM;
 	CasADi::SXMatrix U = CasADi::ssym("U",nU,1);
 	CasADi::SXMatrix x0 = CasADi::ssym("x0",X_DIM,1);
@@ -177,7 +182,7 @@ CasADi::SXFunction casadiCostFuncInfo() {
 	CasADi::SXMatrix params = CasADi::ssym("params",4); // alpha_control, alpha_belief, alpha_final_belief, alpha_goal_state
 
 	// Objective
-	CasADi::SXMatrix f = costfuncinfo(U, x0, Sigma_0, xGoal, params);
+	CasADi::SXMatrix f = costfuncham(U, x0, Sigma_0, xGoal, params);
 
 	// Create functions
 	std::vector<CasADi::SXMatrix> inp;
@@ -193,7 +198,7 @@ CasADi::SXFunction casadiCostFuncInfo() {
 	return f_fcn;
 }
 
-CasADi::SXFunction casadiCostGradFuncInfo() {
+CasADi::SXFunction casadiCostGradFuncHam() {
 	int nU = (T-1)*U_DIM;
 	CasADi::SXMatrix U = CasADi::ssym("U",nU,1);
 	CasADi::SXMatrix x0 = CasADi::ssym("x0",X_DIM,1);
@@ -202,7 +207,7 @@ CasADi::SXFunction casadiCostGradFuncInfo() {
 	CasADi::SXMatrix params = CasADi::ssym("params",4); // alpha_control, alpha_belief, alpha_final_belief, alpha_goal_state
 
 	// Objective
-	CasADi::SXMatrix f = costfuncinfo(U, x0, Sigma_0, xGoal, params);
+	CasADi::SXMatrix f = costfuncham(U, x0, Sigma_0, xGoal, params);
 
 	CasADi::SXMatrix grad_f = gradient(f,U);
 

@@ -44,7 +44,7 @@
       <power>0</power>
     </sensor>
   </attachedsensor>
-  <attachedsensor name="cam">
+  <attachedsensor name="head_cam">
     <link>wide_stereo_optical_frame</link>
     <translation>0 0 0.05</translation>
     <sensor type="BaseCamera" args="">
@@ -56,10 +56,37 @@
       <power>0</power>
     </sensor>
   </attachedsensor>
-  <attachedsensor name="flashlidar3d">
+  <attachedsensor name="head_depth">
     <link>wide_stereo_optical_frame</link>
     <translation>0 0 0.05</translation>
     <rotationaxis>0 1 0 0</rotationaxis>
+    <sensor type="BaseFlashLidar3D">
+      <maxrange>5</maxrange>
+      <time_scan>0.2</time_scan>
+      <KK>8 6 8 6</KK>
+      <width>16</width>
+      <height>12</height>
+      <color>1 1 0</color>
+    </sensor>
+  </attachedsensor>
+  
+  <attachedsensor name="r_gripper_cam">
+    <link>r_gripper_tool_frame</link>
+    <translation>0 0 0.05</translation>
+    <rotationmat>0 0 1 -1 0 0 0 -1 0</rotationmat>
+    <sensor type="BaseCamera" args="">
+      <KK>320 320 320.5 240.5</KK>
+      <width>640</width>
+      <height>480</height>
+      <framerate>5</framerate>
+      <color>1 0.5 0</color>
+      <power>0</power>
+    </sensor>
+  </attachedsensor>
+  <attachedsensor name="r_gripper_depth">
+    <link>r_gripper_tool_frame</link>
+    <translation>0 0 0.05</translation>
+    <rotationmat>0 0 1 -1 0 0 0 -1 0</rotationmat>
     <sensor type="BaseFlashLidar3D">
       <maxrange>5</maxrange>
       <time_scan>0.2</time_scan>

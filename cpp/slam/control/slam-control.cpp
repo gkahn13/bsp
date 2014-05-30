@@ -1,4 +1,4 @@
-#define USE_COST_INFO
+#define USE_COST_HAM
 
 #include "../slam.h"
 #include "../traj/slam-traj.h"
@@ -25,7 +25,7 @@ const double alpha_control = .1; // .1
 const double alpha_goal_state = 10; // 10
 
 CasADi::SXFunction casadi_cost_func, casadi_gradcost_func;
-CasADi::SXFunction casadi_cost_func_info, casadi_gradcost_func_info;
+CasADi::SXFunction casadi_cost_func_ham, casadi_gradcost_func_ham;
 
 namespace cfg {
 const double improve_ratio_threshold = .1; // .1
@@ -220,7 +220,7 @@ void computeCostGrad(std::vector< Matrix<U_DIM> >& U, double& cost, Matrix<TU_DI
 	}
 }
 
-double computeCostInfo(const std::vector<Matrix<U_DIM> >& U) {
+double computeCostHam(const std::vector<Matrix<U_DIM> >& U) {
 	double cost = 0;
 	// factored form, Sigma_t = B_ham_t * !C_ham_t
 	std::vector<Matrix<X_DIM,X_DIM> > B_ham(T), C_ham(T);
@@ -261,8 +261,8 @@ double computeCostInfo(const std::vector<Matrix<U_DIM> >& U) {
 	return cost;
 }
 
-void computeCostGradInfo(std::vector< Matrix<U_DIM> >& U, double& cost, Matrix<TU_DIM>& Grad) {
-	cost = computeCostInfo(U);
+void computeCostGradHam(std::vector< Matrix<U_DIM> >& U, double& cost, Matrix<TU_DIM>& Grad) {
+	cost = computeCostHam(U);
 
 	int index = 0;
 	for(int t=0; t < T-1; ++t) {
@@ -270,9 +270,9 @@ void computeCostGradInfo(std::vector< Matrix<U_DIM> >& U, double& cost, Matrix<T
 			double u_orig = U[t][i];
 
 			U[t][i] = u_orig + step;
-			double cost_p = computeCostInfo(U);
+			double cost_p = computeCostHam(U);
 			U[t][i] = u_orig - step;
-			double cost_m = computeCostInfo(U);
+			double cost_m = computeCostHam(U);
 
 			U[t][i] = u_orig;
 			Grad[index++] = (cost_p - cost_m) / (2*step);
@@ -280,7 +280,8 @@ void computeCostGradInfo(std::vector< Matrix<U_DIM> >& U, double& cost, Matrix<T
 	}
 }
 
-double casadiComputeCostInfo(const std::vector< Matrix<U_DIM> >& U)
+
+double casadiComputeCostHam(const std::vector< Matrix<U_DIM> >& U)
 {
 	double U_arr[TU_DIM];
 	double x0_arr[X_DIM];
@@ -292,20 +293,20 @@ double casadiComputeCostInfo(const std::vector< Matrix<U_DIM> >& U)
 
 	double cost = 0;
 
-	casadi_cost_func_info.setInput(U_arr,0);
-	casadi_cost_func_info.setInput(x0_arr,1);
-	casadi_cost_func_info.setInput(Sigma0_arr,2);
-	casadi_cost_func_info.setInput(xGoal_arr,3);
-	casadi_cost_func_info.setInput(params_arr,4);
+	casadi_cost_func_ham.setInput(U_arr,0);
+	casadi_cost_func_ham.setInput(x0_arr,1);
+	casadi_cost_func_ham.setInput(Sigma0_arr,2);
+	casadi_cost_func_ham.setInput(xGoal_arr,3);
+	casadi_cost_func_ham.setInput(params_arr,4);
 
-	casadi_cost_func_info.evaluate();
+	casadi_cost_func_ham.evaluate();
 
-	casadi_cost_func_info.getOutput(&cost,0);
+	casadi_cost_func_ham.getOutput(&cost,0);
 
 	return cost;
 }
 
-void casadiComputeCostGradInfo(const std::vector< Matrix<U_DIM> >& U, double& cost, Matrix<TU_DIM>& Grad)
+void casadiComputeCostGradHam(const std::vector< Matrix<U_DIM> >& U, double& cost, Matrix<TU_DIM>& Grad)
 {
 	double U_arr[TU_DIM];
 	double x0_arr[X_DIM];
@@ -315,17 +316,73 @@ void casadiComputeCostGradInfo(const std::vector< Matrix<U_DIM> >& U, double& co
 
 	setupCasadiVars(U, U_arr, x0_arr, Sigma0_arr, xGoal_arr, params_arr);
 
-	casadi_gradcost_func_info.setInput(U_arr,0);
-	casadi_gradcost_func_info.setInput(x0_arr,1);
-	casadi_gradcost_func_info.setInput(Sigma0_arr,2);
-	casadi_gradcost_func_info.setInput(xGoal_arr,3);
-	casadi_gradcost_func_info.setInput(params_arr,4);
+	casadi_gradcost_func_ham.setInput(U_arr,0);
+	casadi_gradcost_func_ham.setInput(x0_arr,1);
+	casadi_gradcost_func_ham.setInput(Sigma0_arr,2);
+	casadi_gradcost_func_ham.setInput(xGoal_arr,3);
+	casadi_gradcost_func_ham.setInput(params_arr,4);
 
-	casadi_gradcost_func_info.evaluate();
+	casadi_gradcost_func_ham.evaluate();
 
-	casadi_gradcost_func_info.getOutput(&cost,0);
-	casadi_gradcost_func_info.getOutput(Grad.getPtr(),1);
+	casadi_gradcost_func_ham.getOutput(&cost,0);
+	casadi_gradcost_func_ham.getOutput(Grad.getPtr(),1);
 
+}
+
+
+double computeCostInfo(const std::vector<Matrix<U_DIM> >& U) {
+	double cost = 0;
+
+	std::vector<Matrix<B_DIM> > B(T);
+	vec(x0, SqrtSigma0, B[0]);
+	for(int t=0; t < T-1; ++t) {
+		B[t+1] = beliefDynamics(B[t], U[t]);
+	}
+
+	Matrix<X_DIM> xFinal;
+	Matrix<X_DIM, X_DIM> SqrtSigmaFinal;
+	unVec(B[T-1], xFinal, SqrtSigmaFinal);
+
+	std::vector<Matrix<X_DIM> > X(T);
+	std::vector<Matrix<X_DIM, X_DIM> > omega(T), omega_bar(T);
+	X[0] = x0;
+	omega[0] = !(SqrtSigma0*SqrtSigma0);
+	for(int t=0; t < T-1; ++t) {
+		Matrix<C_DIM,C_DIM> Acar;
+		Matrix<C_DIM,Q_DIM> Mcar;
+		linearizeDynamics(X[t], U[t], zeros<Q_DIM,1>(), Acar, Mcar);
+
+		Matrix<X_DIM,X_DIM> A = identity<X_DIM>();
+		A.insert<C_DIM,C_DIM>(0, 0, Acar);
+		Matrix<X_DIM,Q_DIM> M = zeros<X_DIM,Q_DIM>();
+		M.insert<C_DIM, 2>(0, 0, Mcar);
+
+		X[t+1] = dynfunc(X[t], U[t], zeros<Q_DIM,1>());
+
+		omega_bar[t+1] = !(A*!omega[t]*~A + M*Q*~M);
+		std::cout << A*!omega[t]*~A << "\n";
+//		Matrix<X_DIM,X_DIM> MQM = M*Q*~M;
+//		std::cout << MQM << "\n";
+//		Matrix<C_DIM,C_DIM> MQM_submat = MQM.subMatrix<C_DIM,C_DIM>(0,0);
+//		Matrix<X_DIM,X_DIM> MQM_pinv = zeros<X_DIM,X_DIM>();
+//		std::cout << !(MQM_submat + 1e-7*identity<C_DIM>()) << "\n";
+//		MQM_pinv.insert(0,0, !(MQM_submat + 1e-7*identity<C_DIM>()));
+//		omega_bar[t+1] = (!(~A))*omega[t]*!A + pseudoInverse(MQM);
+
+		Matrix<Z_DIM,X_DIM> H;
+		Matrix<Z_DIM,R_DIM> N;
+		linearizeObservation(X[t+1], zeros<R_DIM,1>(), H, N);
+
+		Matrix<Z_DIM,Z_DIM> delta = deltaMatrix(X[t+1]);
+		omega[t+1] = omega_bar[t+1] + (~H*delta)*!(Matrix<R_DIM,R_DIM>)R*(delta*H);
+
+		cost += alpha_belief*tr(!omega[t]);
+		cost += alpha_control*tr(~U[t]*U[t]);
+	}
+
+	cost += alpha_final_belief*tr(!omega[T-1]) + alpha_goal_state*tr(~(X[T-1] - xGoal)*(X[T-1] - xGoal));
+
+	return cost;
 }
 
 
@@ -532,12 +589,12 @@ bool controlCollocation(std::vector< Matrix<U_DIM> >& U, controlMPC_params& prob
 		LOG_DEBUG("  Iter: %d", it);
 
 		// Compute gradients
-#ifndef USE_COST_INFO
+#ifndef USE_COST_HAM
 		casadiComputeCostGrad(U, cost, Grad);
 //		computeCostGrad(U, cost, Grad);
 #else
-		casadiComputeCostGradInfo(U, cost, Grad);
-//		computeCostGradInfo(U, cost, Grad);
+		casadiComputeCostGradHam(U, cost, Grad);
+//		computeCostGradHam(U, cost, Grad);
 #endif
 
 		// Problem linearization and definition
@@ -638,12 +695,12 @@ bool controlCollocation(std::vector< Matrix<U_DIM> >& U, controlMPC_params& prob
 
 			model_merit = optcost + constant_cost;
 
-#ifndef USE_COST_INFO
+#ifndef USE_COST_HAM
 			new_merit = casadiComputeCost(Uopt);
 //			new_merit = computeCost(Uopt);
 #else
-			new_merit = casadiComputeCostInfo(Uopt);
-//			new_merit = computeCostInfo(Uopt);
+			new_merit = casadiComputeCostHam(Uopt);
+//			new_merit = computeCostHam(Uopt);
 #endif
 
 			merit = cost;
@@ -680,12 +737,12 @@ bool controlCollocation(std::vector< Matrix<U_DIM> >& U, controlMPC_params& prob
 				Uvel_eps *= cfg::trust_expand_ratio;
 				Uangle_eps *= cfg::trust_expand_ratio;
 
-#ifndef USE_COST_INFO
+#ifndef USE_COST_HAM
 				casadiComputeCostGrad(Uopt, cost, Gradopt);
 //				computeCostGrad(Uopt, cost, Gradopt);
 #else
-				casadiComputeCostGradInfo(Uopt, cost, Gradopt);
-//				computeCostGradInfo(Uopt, cost, Gradopt);
+				casadiComputeCostGradHam(Uopt, cost, Gradopt);
+//				computeCostGradHam(Uopt, cost, Gradopt);
 #endif
 
 				Matrix<TU_DIM> s, y;
@@ -866,10 +923,10 @@ void test_hamiltonian(std::vector<Matrix<P_DIM> > l) {
 //	U[0][1] = M_PI/8;
 //	U[7][1] = -M_PI/4;
 
-	double cost_info = computeCostInfo(U);
-	std::cout << "cost_info: " << cost_info << "\n";
-	double casadi_cost_info = casadiComputeCostInfo(U);
-	std::cout << "casadi_cost_info: " << casadi_cost_info << "\n";
+	double cost_ham = computeCostHam(U);
+	std::cout << "cost_ham: " << cost_ham << "\n";
+	double casadi_cost_ham = casadiComputeCostHam(U);
+	std::cout << "casadi_cost_ham: " << casadi_cost_ham << "\n";
 //	pythonDisplayTrajectory(U, T, true);
 
 	std::vector<Matrix<B_DIM> > B(T);
@@ -951,6 +1008,30 @@ void test_hamiltonian(std::vector<Matrix<P_DIM> > l) {
 
 }
 
+void test_info(std::vector<Matrix<P_DIM> > l) {
+	initProblemParams(l);
+
+	xGoal.insert(0, 0, waypoints[0]);
+	xGoal[2] = x0[2];
+
+	Matrix<U_DIM> uinit;
+	uinit[0] = (xGoal[0] - x0[0])/((float)(T-1));
+	uinit[1] = 0;
+	std::vector<Matrix<U_DIM> > U(T-1, uinit);
+
+	double cost_info = computeCostInfo(U);
+	std::cout << "cost_info: " << cost_info << "\n";
+	double cost = computeCost(U);
+	std::cout << "cost: " << cost << "\n";
+//	pythonDisplayTrajectory(U, T, true);
+//
+//	std::vector<Matrix<B_DIM> > B(T);
+//	vec(x0, SqrtSigma0, B[0]);
+//	for(int t=0; t < T-1; ++t) {
+//		B[t+1] = beliefDynamics(B[t], U[t]);
+//	}
+}
+
 int main(int argc, char* argv[])
 {
 	controlMPC_params problem;
@@ -959,24 +1040,26 @@ int main(int argc, char* argv[])
 	setupControlVars(problem, output);
 
 	std::vector<std::vector<Matrix<P_DIM> > > l_list = landmarks_list();
+	test_info(l_list[0]);
+	return 0;
 
 	LOG_INFO("initializing casadi functions...");
 
 	std::ofstream f;
-#ifndef USE_COST_INFO
+#ifndef USE_COST_HAM
 	logDataHandle("slam/data/slam-control", f);
 	casadi_cost_func = casadiCostFunc();
 	casadi_gradcost_func = casadiCostGradFunc();
 #else
-	logDataHandle("slam/data/slam-control-info", f);
-	casadi_cost_func_info = casadiCostFuncInfo();
-	casadi_gradcost_func_info = casadiCostGradFuncInfo();
+	logDataHandle("slam/data/slam-control-ham", f);
+	casadi_cost_func_ham = casadiCostFuncHam();
+	casadi_gradcost_func_ham = casadiCostGradFuncHam();
 #endif
 
 	LOG_INFO("casadi functions initialized");
 
 //	casadi_gradcost_func.generateCode("casadi_gradcost_func.c");
-//	casadi_gradcost_func_info.generateCode("casadi_gradcost_func_info.c");
+//	casadi_gradcost_func_ham.generateCode("casadi_gradcost_func_ham.c");
 
 //	// TODO: temp
 //	test_hamiltonian(l_list[0]);

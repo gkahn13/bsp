@@ -8,8 +8,8 @@ CasADi::SXFunction casadiCostFunc();
 
 CasADi::SXFunction casadiCostGradFunc();
 
-CasADi::SXFunction casadiCostFuncInfo();
+CasADi::SXFunction casadiCostFuncHam();
 
-CasADi::SXFunction casadiCostGradFuncInfo();
+CasADi::SXFunction casadiCostGradFuncHam();
 
 #endif

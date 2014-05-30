@@ -10,7 +10,10 @@ def openraveTransformFromTo(robot, poseMatInRef, refLinkName, targLinkName):
         refFromWorld = np.eye(4)
 
     # target -> world
-    targFromWorld = robot.GetLink(targLinkName).GetTransform()
+    if targLinkName != 'world':
+        targFromWorld = robot.GetLink(targLinkName).GetTransform()
+    else:
+        targFromWorld = np.eye(4)
 
     # target -> ref
     targFromRef = np.dot(np.linalg.inv(targFromWorld), refFromWorld)
@@ -43,3 +46,16 @@ def plot_transform(env, T, s=0.1):
     h.append(env.drawlinestrip(points=np.array([o, o+s*y]), linewidth=3.0, colors=np.array(((0,1,0),(0,1,0)))))
     h.append(env.drawlinestrip(points=np.array([o, o+s*z]), linewidth=3.0, colors=np.array(((0,0,1),(0,0,1)))))
     return h
+
+class Getch:
+    @staticmethod
+    def getch():
+        import sys, tty, termios
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(sys.stdin.fileno())
+            ch = sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        return ch

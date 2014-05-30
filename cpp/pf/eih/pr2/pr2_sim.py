@@ -52,9 +52,11 @@ def cart_to_joint(manip, matrix4, ref_frame, targ_frame, filter_options = 0):
     return joint_positions_unrolled
 
 class PR2:
-    def __init__(self, env_file):
+    def __init__(self, env_file, view=True):
         self.env = rave.Environment()
         self.env.Load(env_file)
+        if view:
+            self.env.SetViewer('qtcoin')
         self.robot = self.env.GetRobots()[0]
         
         self.larm = Arm(self, "l")
@@ -63,16 +65,17 @@ class PR2:
         
         # 'head_depth', 'head_cam'
         # 'r_gripper_depth', 'r_gripper_cam'
-        depth_sensor = DepthSensor(self.robot.GetSensor('r_gripper_depth').GetSensor())
-        cam_sensor = CameraSensor(self.robot.GetSensor('r_gripper_cam').GetSensor())
-        self.kinect_sensor = KinectSensor(depth_sensor, cam_sensor)
+        self.h_kinect = KinectSensor(self.robot, 'head_depth', 'head_cam')
+        self.r_kinect = KinectSensor(self.robot, 'r_gripper_depth', 'r_gripper_cam')
+        self.l_kinect = KinectSensor(self.robot, 'l_gripper_depth', 'l_gripper_cam')
         
 class Arm:
     L_POSTURES = dict(        
         untucked = [0.4,  1.0,   0.0,  -2.05,  0.0,  -0.1,  0.0],
         tucked = [0.06, 1.25, 1.79, -1.68, -1.73, -0.10, -0.09],
         up = [ 0.33, -0.35,  2.59, -0.15,  0.59, -1.41, -0.27],
-        side = [  1.832,  -0.332,   1.011,  -1.437,   1.1  ,  -2.106,  3.074]
+        side = [  1.832,  -0.332,   1.011,  -1.437,   1.1  ,  -2.106,  3.074],
+        mantis = [ 2.03018192, -0.05474993, 1.011, -1.47618716,  0.55995636, -1.42855926,  3.96467305]
     ) 
         
     def __init__(self, pr2, lr):
@@ -118,10 +121,10 @@ class Arm:
             
     def teleop(self):
         pos_step = .01
-        delta_position = {'a' : [pos_step, 0, 0],
-                          'd' : [-pos_step, 0, 0],
-                          'w' : [0, pos_step, 0],
-                          'x' : [0, -pos_step, 0],
+        delta_position = {'a' : [0, pos_step, 0],
+                          'd' : [0, -pos_step, 0],
+                          'w' : [pos_step, 0, 0],
+                          'x' : [-pos_step, 0, 0],
                           '+' : [0, 0, pos_step],
                           '-' : [0, 0, -pos_step]}
         
@@ -166,16 +169,19 @@ class Head:
     joint_names = ['head_pan_joint', 'head_tilt_joint']
     def __init__(self, pr2):
         self.robot = pr2.robot
-        self.joint_indices = [self.robot.GetJointIndex(joint_name) for joint_name in Head.joint_names]
+        self.head_indices = [self.robot.GetJointIndex(joint_name) for joint_name in Head.joint_names]
+    
+    def get_joint_values(self):
+        return self.robot.GetDOFValues(self.head_indices)
         
     def get_limits(self):
         l_limits, u_limits = self.robot.GetDOFLimits()
-        head_l_limits = np.array([l_limits[i] for i in self.joint_indices])
-        head_u_limits = np.array([u_limits[i] for i in self.joint_indices])
+        head_l_limits = np.array([l_limits[i] for i in self.head_indices])
+        head_u_limits = np.array([u_limits[i] for i in self.head_indices])
         return head_l_limits, head_u_limits
         
-    def set_pan_tilt(self, pan, tilt):
-        self.robot.SetDOFValues([pan, tilt], self.joint_indices)
+    def set_joint_values(self, joint_values):
+        self.robot.SetDOFValues(joint_values, self.joint_indices)
         
     def look_at(self, pose, camera_frame='wide_stereo_link'):
         reference_frame = pose.frame if pose.frame is not None else "world" 
@@ -254,6 +260,16 @@ class CameraSensor(Sensor):
     def __init__(self, sensor):
         Sensor.__init__(self, sensor)
         
+        
+        self.power_on()
+        time.sleep(1)
+        data = self.get_data()
+        
+        self.P = data.KK
+        self.height, self.width = data.imagedata.shape[0:2]
+        
+        self.power_off()
+        
     def get_image(self):
         data = self.get_data()
         return data.imagedata
@@ -267,40 +283,48 @@ class CameraSensor(Sensor):
         [(point, pixel, color), ...]
         """
         data = self.get_data()
-        P = data.KK
         
         points_pixels_colors = list()
-        for i in xrange(len(points)):
-            x = points[i]
-            
-            x_mat = x.as_pose().matrix
-            x_mat[0:3,0:3] = np.zeros((3,3))
-            xtilde = np.dot(inv(self.sensor.GetTransform()), x_mat)
-            
-            x1, x2, x3 = xtilde[0,3], xtilde[1,3], xtilde[2,3]
-            f = P[0,0]
-            y1 = (f/x3)*x1
-            y2 = (f/x3)*x2
-            
-            y = np.dot(P, xtilde[0:3,3])
-            y_pixel = int(y[1]/y[2])
-            x_pixel = int(y[0]/y[2])
+        for x in points:
 
-            y_max, x_max, _ = data.imagedata.shape
-            if 0 <= y_pixel < y_max and 0 <= x_pixel < x_max:        
-                color = data.imagedata[y_pixel, x_pixel]
-                points_pixels_colors.append((x, np.array([y_pixel, x_pixel]), np.array(color, dtype=float)))
+            pixel = self.get_pixel_from_point(x)
+            if pixel is not None:
+                color = data.imagedata[pixel[0], pixel[1]]
+                points_pixels_colors.append((x, np.array(pixel), np.array(color, dtype=float)))
             
         return points_pixels_colors
+    
+    def get_pixel_from_point(self, x):
+        x_mat = x.as_pose().matrix
+        x_mat[0:3,0:3] = np.zeros((3,3))
+        xtilde = np.dot(inv(self.sensor.GetTransform()), x_mat)
+        
+        x1, x2, x3 = xtilde[0,3], xtilde[1,3], xtilde[2,3]
+        f = self.P[0,0]
+        y1 = (f/x3)*x1
+        y2 = (f/x3)*x2
+        
+        y = np.dot(self.P, xtilde[0:3,3])
+        y_pixel = int(y[1]/y[2])
+        x_pixel = int(y[0]/y[2])
+        
+        if 0 <= y_pixel < self.height and 0 <= x_pixel < self.width:
+            return (y_pixel, x_pixel)
+        
+        return None
     
 class KinectSensor:
     """
     Simulates a kinect by having a depth sensor + camera sensor
     """
-    def __init__(self, depth_sensor, camera_sensor):
-        self.depth_sensor = depth_sensor
-        self.camera_sensor = camera_sensor
-        
+    def __init__(self, robot, depth_sensor_name, camera_sensor_name):
+        self.robot = robot
+        self.depth_sensor = DepthSensor(robot.GetSensor(depth_sensor_name).GetSensor())
+        self.camera_sensor = CameraSensor(robot.GetSensor(camera_sensor_name).GetSensor())
+                
+        geom = self.camera_sensor.sensor.GetSensorGeometry(rave.Sensor.Type.Camera)
+        self.height, self.width = geom.imagedata.shape[0:2]
+                
     def power_on(self):
         self.depth_sensor.power_on()
         self.camera_sensor.power_on()
@@ -309,7 +333,7 @@ class KinectSensor:
         self.depth_sensor.power_off()
         self.camera_sensor.power_off()
         
-    def get_data(self):
+    def get_point_cloud(self):
         """ Returns a PointCloud, i.e. a list of ColoredPoint """
         points = self.depth_sensor.get_points()
         points_pixels_colors = self.camera_sensor.get_pixels_and_colors(points)
@@ -319,6 +343,30 @@ class KinectSensor:
             colored_points.append(ColoredPoint(point, color))
             
         return colored_points
+    
+    def get_z_buffer(self):
+        points = self.depth_sensor.get_points()
+        points_pixels_colors = self.camera_sensor.get_pixels_and_colors(points)
+        
+        origin_pos = tfx.pose(self.camera_sensor.sensor.GetTransform()).position
+        
+        from collections import defaultdict
+        z_buffer = defaultdict(lambda: None)
+        for point, pixel, color in points_pixels_colors:
+            z_buffer[tuple(pixel)] = (point - origin_pos).norm
+            
+        return z_buffer
+    
+    def get_image(self):
+        return self.camera_sensor.get_image()
+    
+    def get_pixel_from_point(self, x):
+        return self.camera_sensor.get_pixel_from_point(x)
+    
+    def distance_to(self, x):
+        """ x -- tfx.point """
+        origin_pos = tfx.pose(self.camera_sensor.sensor.GetTransform()).position
+        return (x - origin_pos).norm
                 
     def render_on(self):
         self.depth_sensor.render_on()
@@ -327,6 +375,12 @@ class KinectSensor:
     def render_off(self):
         self.depth_sensor.render_off()
         self.camera_sensor.render_off()
+        
+    def display_point_cloud(self, colored_points):
+        env = self.robot.GetEnv()
+        self.handles = list()
+        for colored_point in colored_points:
+            self.handles.append(colored_point.display(env))
         
         
 class ColoredPoint:
@@ -348,49 +402,38 @@ class ColoredPoint:
 def test():
     brett = PR2('../envs/pr2-test.env.xml')
     env = brett.env
-    env.SetViewer('qtcoin')
     
     larm = brett.larm
     rarm = brett.rarm
     head = brett.head
-    kinect = brett.kinect_sensor
+    h_kinect = brett.h_kinect
+    l_kinect = brett.l_kinect
+    r_kinect = brett.r_kinect
     
-    larm.set_posture('side')
-    rarm.set_posture('side')
+    kinect = r_kinect
     
-    rarm.set_pose(tfx.pose((2.8011817158976595, -1.882240568190215, 0.9784708528906445),(-0.2167526477835155, 0.7996943738474431, 0.1764675951856764, 0.5313815822598347),frame='world'))
-    p = rarm.get_pose()
-    h = utils.plot_transform(env, p.matrix)
-    time.sleep(1)
-    
-    ee_mat = rarm.manip.GetEndEffectorTransform()
-    
-    #name = 'r_gripper_tool_frame'
-    #p_mat = utils.openraveTransformFromTo(brett.robot, np.eye(4), name, 'world')
-    #h = utils.plot_transform(env, p_mat)
-    IPython.embed()
-    return
-    
+    larm.set_posture('mantis')
+    rarm.set_posture('mantis')
     
     kinect.power_on()
     kinect.render_on()
     time.sleep(1)
-    colored_points = kinect.get_data()
+    colored_points = kinect.get_point_cloud()
+    z_buffer = kinect.get_z_buffer()
 
-    handles = list()    
-    for colored_point in colored_points:
-        handles.append(colored_point.display(env))
+    kinect.display_point_cloud(colored_points)
         
     image = kinect.camera_sensor.get_data().imagedata
     points_pixels_colors = kinect.camera_sensor.get_pixels_and_colors(kinect.depth_sensor.get_points())
     for point, pixel, color in points_pixels_colors:
-        for i in xrange(-5,5):
-            image[pixel[0],pixel[1]+i] = [0, 255, 0]
-        for i in xrange(-5,5):
-            image[pixel[0]+i,pixel[1]] = [0, 255, 0]
+        image[pixel[0],pixel[1]] = [0, 255, 0]
     
     plt.imshow(image)
     plt.show(block=False)
+    
+    
+    
+    
     IPython.embed()
     
 if __name__ == '__main__':

@@ -6,7 +6,6 @@ import colorsys
 
 import numpy as np
 from matplotlib import pyplot as plt
-import scipy
 
 from pr2 import pr2_sim
 from pr2 import utils
@@ -16,6 +15,11 @@ roslib.load_manifest('tfx')
 import tfx
 
 UNKNOWN = -1e6
+
+"""
+TODO LIST:
+- occluded particles getting weighted too much
+"""
 
 class EihSystem:
     def __init__(self, env, manip, kinect):
@@ -52,7 +56,11 @@ class EihSystem:
         #                             np.array((1, .5, UNKNOWN, UNKNOWN, UNKNOWN)),
         #                             np.array((1, 0) + colorsys.rgb_to_hsv(1., 0, 0))]
         
-        self.R = np.diag([.5, .01, .05, 1, 1])
+        self.R = np.diag([.5, .01, .1, 1, 1])
+        
+        # higher it is, more it weights particles inside of FOV
+        # [.5, 1]
+        self.exploitation = .75
         
     def dynfunc(self, x, u):
         x_new = np.array(x + self.DT*u)
@@ -70,9 +78,24 @@ class EihSystem:
         """
         is_in_fov, sd_sigmoid, color = UNKNOWN, UNKNOWN, (UNKNOWN, UNKNOWN, UNKNOWN)
         
-        is_in_fov = 1 if self.kinect.is_in_fov(particle) else .5
+        exact_is_in_fov = 1 if self.kinect.is_in_fov(particle) else .5
+        # sigmoid approximation to check if in FOV
+        y, x = self.kinect.get_pixel_from_point(particle)
+        alpha = 1e6
+        h_l_fov = sigmoid(y, alpha)
+        h_u_fov = sigmoid(-y + self.kinect.height, alpha)
+        w_l_fov = sigmoid(x, alpha)
+        w_u_fov = sigmoid(-x + self.kinect.width, alpha)
+        is_in_fov = h_l_fov*h_u_fov*w_l_fov*w_u_fov
         
-        if is_in_fov == 1:
+        is_in_fov = .5*is_in_fov + .5 # make being out of FOV not so advantageous for gauss likelihood
+        
+        # TEMP
+        #is_in_fov = exact_is_in_fov
+        
+        if is_in_fov > self.exploitation:
+            if exact_is_in_fov != 1:
+                print('CRAPPPPPPPPPPPPPPP')
             particle_dist = self.kinect.distance_to(particle)
             
             y, x = self.kinect.get_pixel_from_point(particle)
@@ -80,7 +103,7 @@ class EihSystem:
             sd = particle_dist - z_buffer[y,x]
             sd_sigmoid = sigmoid(sd, 1e1)
             
-            if abs(sd) < .02:
+            if abs(sd) < .03:
                 image = self.kinect.get_image()
                 r, g, b = tuple(image[y, x]/255.)
                 color = colorsys.rgb_to_hsv(r, g, b)
@@ -113,7 +136,7 @@ class EihSystem:
             
             h, s, v = z_m[2:]
             r, g, b = colorsys.hsv_to_rgb(h, s, v)
-            if z_m[0] != 1: # out of fov
+            if z_m[0] <= .5: # out of fov
                 color = np.array((0,1,0))
             elif z_m[1] < .25: # free space
                 color = np.array((1,1,1))
@@ -256,10 +279,10 @@ def test_eih_system():
         particles_t = particles_tp1
         print('Iter: {0}'.format(t))
         
-        rarm.teleop()
+        #rarm.teleop()
         x_t = rarm.get_joint_values()
         
-        #utils.save_view(env, 'figures/eih_pf_{0}.png'.format(t))
+        utils.save_view(env, 'figures/eih_pf_{0}.png'.format(t))
         
         t += 1
         handles = None

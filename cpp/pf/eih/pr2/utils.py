@@ -1,4 +1,5 @@
 import numpy as np
+import scipy
 
 def openraveTransformFromTo(robot, poseMatInRef, refLinkName, targLinkName):
     poseMatInRef = np.array(poseMatInRef)

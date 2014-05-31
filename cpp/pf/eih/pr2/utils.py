@@ -47,6 +47,12 @@ def plot_transform(env, T, s=0.1):
     h.append(env.drawlinestrip(points=np.array([o, o+s*z]), linewidth=3.0, colors=np.array(((0,0,1),(0,0,1)))))
     return h
 
+def save_view(env, file_name):
+    env.GetViewer().SendCommand('SetFiguresInCamera 1') # also shows the figures in the image
+    I = env.GetViewer().GetCameraImage(640,480,  env.GetViewer().GetCameraTransform(),[640,640,320,240])
+    scipy.misc.imsave(file_name ,I)
+    env.GetViewer().SendCommand('SetFiguresInCamera 0')
+
 class Getch:
     @staticmethod
     def getch():

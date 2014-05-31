@@ -33,14 +33,20 @@ class EihSystem:
         self.DT = 1.0
         self.X_DIM = len(self.manip.get_joint_values())
         self.U_DIM = self.X_DIM
-        # is_in_fov
-        # signed_distance
-        # r, g, b
+        """
+        is_in_fov
+        sd_sigmoid
+          sd = particle - z_buffer
+          0 -- free space
+          .5 -- near surface
+          1 -- occluded
+        h, s, v
+        """
         self.Z_DIM = 5
         
         self.desired_observations = [np.array((0, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN)),
                                      np.array((1, 1, UNKNOWN, UNKNOWN, UNKNOWN)),
-                                     np.array((1, 0) + colorsys.rgb_to_hsv(1., 0, 0))]
+                                     np.array((1, .5) + colorsys.rgb_to_hsv(1., 0, 0))]
         
         #self.desired_observations = [np.array((0.5, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN)),
         #                             np.array((1, .5, UNKNOWN, UNKNOWN, UNKNOWN)),
@@ -62,27 +68,26 @@ class EihSystem:
         x -- current state
         particle -- tfx.point 
         """
-        is_in_fov, signed_distance, color = UNKNOWN, UNKNOWN, (UNKNOWN, UNKNOWN, UNKNOWN)
+        is_in_fov, sd_sigmoid, color = UNKNOWN, UNKNOWN, (UNKNOWN, UNKNOWN, UNKNOWN)
         
-        pixel = self.kinect.get_pixel_from_point(particle)
-        is_in_fov = 1 if pixel is not None else .5
-        #if z_buffer[pixel[0],pixel[1]] is None:
-        #    print 'z_buffer is None!'
+        is_in_fov = 1 if self.kinect.is_in_fov(particle) else .5
         
         if is_in_fov == 1:
             particle_dist = self.kinect.distance_to(particle)
             
-            y, x = pixel
+            y, x = self.kinect.get_pixel_from_point(particle)
             
-            #is_occluded = 0 if particle_dist - .01 < z_buffer[y,x] else .5
-            signed_distance = particle_dist - z_buffer[y,x]
+            sd = particle_dist - z_buffer[y,x]
+            sd_sigmoid = sigmoid(sd, 1e1)
             
-            if signed_distance > -.01:
+            if abs(sd) < .02:
                 image = self.kinect.get_image()
                 r, g, b = tuple(image[y, x]/255.)
                 color = colorsys.rgb_to_hsv(r, g, b)
+                
+            #sd = sigmoid(-sd, 1e4) * sd
         
-        return np.array((is_in_fov, signed_distance) + color)
+        return np.array((is_in_fov, sd_sigmoid) + color)
     
     def update_state_and_particles(self, x_t, particles_t, u_t):
         M = len(particles_t)
@@ -108,19 +113,28 @@ class EihSystem:
             
             h, s, v = z_m[2:]
             r, g, b = colorsys.hsv_to_rgb(h, s, v)
-            if z_m[0] == 1:
-                color = np.array((r,g,b))
-            else:
+            if z_m[0] != 1: # out of fov
                 color = np.array((0,1,0))
+            elif z_m[1] < .25: # free space
+                color = np.array((1,1,1))
+            elif z_m[1] > .75: # occluded
+                color = np.array((0,0,0))
+            else: # near surface
+                color = np.array((r,g,b))
             handles.append(utils.plot_point(self.env, particles_t[m].array, color=color))
-            #fov_str = 'in fov' if z_m[0] == 1 else 'NOT in fov'
-            #occ_str = 'occluded' if z_m[1] == 1 else 'NOT occluded'
-            #color = (r,g,b)
-            #print('m: {0}'.format(m))
-            #print(fov_str)
-            #print(occ_str)
-            #print(str(color))
-            #print('w: {0}\n'.format(W[m]))
+            
+            """
+            fov_str = 'in fov' if z_m[0] == 1 else 'NOT in fov'
+            sd_str = z_m[1]
+            color = (r,g,b)
+            print('m: {0}'.format(m))
+            print(fov_str)
+            print('signed_distance: {0}'.format(sd_str))
+            print(str(color))
+            print('w: {0}\n'.format(W[m]))
+            raw_input()
+            handles = list()
+            """
             
             
             
@@ -158,7 +172,8 @@ class EihSystem:
             
         return particles_sampled
             
-        
+def sigmoid(x, alpha):
+    return 1.0/(1.0 + np.exp(-alpha*x))
 
 def random_within(lower, upper):
     return random.random()*(upper - lower) + lower
@@ -212,7 +227,7 @@ def test_eih_system():
         
     sys = EihSystem(env, rarm, r_kinect)
     r_kinect.render_on()
-    rarm.set_pose(tfx.pose([2.901, -1.712,  0.978],tfx.tb_angles(-143.0, 67.9, 172.1)))
+    rarm.set_pose(tfx.pose([2.901, -1.712,  0.868],tfx.tb_angles(-143.0, 77.9, 172.1)))
     time.sleep(1)
     
     """
@@ -244,10 +259,7 @@ def test_eih_system():
         rarm.teleop()
         x_t = rarm.get_joint_values()
         
-        env.GetViewer().SendCommand('SetFiguresInCamera 1') # also shows the figures in the image
-        I = env.GetViewer().GetCameraImage(640,480,  env.GetViewer().GetCameraTransform(),[640,640,320,240])
-        scipy.misc.imsave('figures/eih_pf_{0}.png'.format(t),I)
-        env.GetViewer().SendCommand('SetFiguresInCamera 0')
+        #utils.save_view(env, 'figures/eih_pf_{0}.png'.format(t))
         
         t += 1
         handles = None

@@ -272,8 +272,8 @@ class CameraSensor(Sensor):
         points_pixels_colors = list()
         for x in points:
 
-            pixel = self.get_pixel_from_point(x)
-            if pixel is not None:
+            if self.is_in_fov(x):
+                pixel = self.get_pixel_from_point(x)
                 color = data.imagedata[pixel[0], pixel[1]]
                 points_pixels_colors.append((x, np.array(pixel), np.array(color, dtype=float)))
             
@@ -293,10 +293,12 @@ class CameraSensor(Sensor):
         y_pixel = int(y[1]/y[2])
         x_pixel = int(y[0]/y[2])
         
-        if 0 <= y_pixel < self.height and 0 <= x_pixel < self.width:
-            return (y_pixel, x_pixel)
-        
-        return None
+        return (y_pixel, x_pixel)
+    
+    def is_in_fov(self, x):
+        """ True if x (tfx.point) is in the field-of-view """
+        y_pixel, x_pixel = self.get_pixel_from_point(x)
+        return ((0 <= y_pixel < self.height) and (0 <= x_pixel < self.width))
     
 class KinectSensor:
     """
@@ -347,6 +349,9 @@ class KinectSensor:
     
     def get_pixel_from_point(self, x):
         return self.camera_sensor.get_pixel_from_point(x)
+    
+    def is_in_fov(self, x):
+        return self.camera_sensor.is_in_fov(x)
     
     def get_pose(self):
         return tfx.pose(self.camera_sensor.sensor.GetTransform())

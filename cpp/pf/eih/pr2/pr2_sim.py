@@ -63,8 +63,6 @@ class PR2:
         self.rarm = Arm(self, "r")
         self.head = Head(self)
         
-        # 'head_depth', 'head_cam'
-        # 'r_gripper_depth', 'r_gripper_cam'
         self.h_kinect = KinectSensor(self.robot, 'head_depth', 'head_cam')
         self.r_kinect = KinectSensor(self.robot, 'r_gripper_depth', 'r_gripper_cam')
         self.l_kinect = KinectSensor(self.robot, 'l_gripper_depth', 'l_gripper_cam')
@@ -93,8 +91,6 @@ class Arm:
     
     def get_pose(self):
         """ Returns pose of tool_frame """
-        #pose_mat = utils.openraveTransformFromTo(self.robot, np.eye(4), self.tool_frame, 'world')
-        #return tfx.pose(pose_mat, frame='world')
         return tfx.pose(self.manip.GetEndEffectorTransform(), frame='world')
     
     def get_limits(self):
@@ -145,25 +141,10 @@ class Arm:
             new_pose = tfx.pose(pose)
             if delta_position.has_key(char):
                 new_pose.position = pose.position.array + delta_position[char]
-                
-                #p = tfx.pose(delta_position[char], frame=self.manip.GetEndEffector().GetName())
-                #p = tfx.pose([0,0,0], frame=self.tool_frame)
-                #new_mat = utils.openraveTransformFromTo(self.robot, p.matrix, self.tool_frame, 'world')
-                #new_pose = tfx.pose(new_mat, frame='world')
-                #print(pose)
-                #print(new_pose)
-                #IPython.embed()
-                
-                #p = tfx.pose(transform_relative_pose_for_ik(self.manip, np.array(new_pose.matrix), new_pose.frame, 'end_effector'))
-                #h = utils.plot_transform(self.robot.GetEnv(), p.matrix)
-                #IPython.embed()
-                #pose += delta_position[char]
             ypr = np.array([pose.tb_angles.yaw_deg, pose.tb_angles.pitch_deg, pose.tb_angles.roll_deg])
             if delta_angle.has_key(char):
                 ypr += np.array(delta_angle[char])
                 new_pose = tfx.pose(pose.position, tfx.tb_angles(ypr[0], ypr[1], ypr[2]))
-            #angle = tfx.tb_angles(ypr[0], ypr[1], ypr[2])
-            #new_pose = tfx.pose(position, angle, frame=position.frame)
             self.set_pose(new_pose)    
             time.sleep(.01)
             
@@ -352,10 +333,10 @@ class KinectSensor:
         points = self.depth_sensor.get_points()
         points_pixels_colors = self.camera_sensor.get_pixels_and_colors(points)
         
-        origin_pos = tfx.pose(self.camera_sensor.sensor.GetTransform()).position
+        origin_pos = self.get_pose().position
         
         from collections import defaultdict
-        z_buffer = defaultdict(lambda: None)
+        z_buffer = defaultdict(lambda: np.inf)
         for point, pixel, color in points_pixels_colors:
             z_buffer[tuple(pixel)] = (point - origin_pos).norm
             
@@ -366,6 +347,9 @@ class KinectSensor:
     
     def get_pixel_from_point(self, x):
         return self.camera_sensor.get_pixel_from_point(x)
+    
+    def get_pose(self):
+        return tfx.pose(self.camera_sensor.sensor.GetTransform())
     
     def distance_to(self, x):
         """ x -- tfx.point """

@@ -6,6 +6,7 @@ import colorsys
 
 import numpy as np
 from matplotlib import pyplot as plt
+import scipy
 
 from pr2 import pr2_sim
 from pr2 import utils
@@ -14,7 +15,7 @@ import roslib
 roslib.load_manifest('tfx')
 import tfx
 
-UNKNOWN = -1
+UNKNOWN = -1e6
 
 class EihSystem:
     def __init__(self, env, manip, kinect):
@@ -33,7 +34,7 @@ class EihSystem:
         self.X_DIM = len(self.manip.get_joint_values())
         self.U_DIM = self.X_DIM
         # is_in_fov
-        # is_occluded
+        # signed_distance
         # r, g, b
         self.Z_DIM = 5
         
@@ -45,7 +46,7 @@ class EihSystem:
         #                             np.array((1, .5, UNKNOWN, UNKNOWN, UNKNOWN)),
         #                             np.array((1, 0) + colorsys.rgb_to_hsv(1., 0, 0))]
         
-        self.R = np.diag([.5, .5, .2, 1, 1])
+        self.R = np.diag([.5, .01, .05, 1, 1])
         
     def dynfunc(self, x, u):
         x_new = np.array(x + self.DT*u)
@@ -61,27 +62,27 @@ class EihSystem:
         x -- current state
         particle -- tfx.point 
         """
-        is_in_fov, is_occluded, color = UNKNOWN, UNKNOWN, (UNKNOWN, UNKNOWN, UNKNOWN)
+        is_in_fov, signed_distance, color = UNKNOWN, UNKNOWN, (UNKNOWN, UNKNOWN, UNKNOWN)
         
         pixel = self.kinect.get_pixel_from_point(particle)
-        is_in_fov = 1 if pixel is not None and z_buffer[pixel[0],pixel[1]] is not None else .5
+        is_in_fov = 1 if pixel is not None else .5
         #if z_buffer[pixel[0],pixel[1]] is None:
         #    print 'z_buffer is None!'
         
         if is_in_fov == 1:
             particle_dist = self.kinect.distance_to(particle)
             
-            #z_buffer = self.kinect.get_z_buffer()
             y, x = pixel
             
-            is_occluded = 0 if particle_dist - .01 < z_buffer[y,x] else .5
+            #is_occluded = 0 if particle_dist - .01 < z_buffer[y,x] else .5
+            signed_distance = particle_dist - z_buffer[y,x]
             
-            if is_occluded == 0:
+            if signed_distance > -.01:
                 image = self.kinect.get_image()
                 r, g, b = tuple(image[y, x]/255.)
                 color = colorsys.rgb_to_hsv(r, g, b)
         
-        return np.array((is_in_fov, is_occluded) + color)
+        return np.array((is_in_fov, signed_distance) + color)
     
     def update_state_and_particles(self, x_t, particles_t, u_t):
         M = len(particles_t)
@@ -224,6 +225,7 @@ def test_eih_system():
     plt.show(block=False)
     """
     
+    rarm.teleop()
     x_t = rarm.get_joint_values()
     particles_t = particles
     u_t = np.zeros(x_t.shape[0])
@@ -238,10 +240,17 @@ def test_eih_system():
             
         particles_t = particles_tp1
         print('Iter: {0}'.format(t))
+        
         rarm.teleop()
-        handles = None
         x_t = rarm.get_joint_values()
+        
+        env.GetViewer().SendCommand('SetFiguresInCamera 1') # also shows the figures in the image
+        I = env.GetViewer().GetCameraImage(640,480,  env.GetViewer().GetCameraTransform(),[640,640,320,240])
+        scipy.misc.imsave('figures/eih_pf_{0}.png'.format(t),I)
+        env.GetViewer().SendCommand('SetFiguresInCamera 0')
+        
         t += 1
+        handles = None
     
     IPython.embed()
 

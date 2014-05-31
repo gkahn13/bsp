@@ -120,6 +120,8 @@ class Arm:
             print('pose_matrix invalid, ignoring command')
             
     def teleop(self):
+        print('{0} arm teleop'.format(self.lrlong))
+        
         pos_step = .01
         delta_position = {'a' : [0, pos_step, 0],
                           'd' : [0, -pos_step, 0],
@@ -164,6 +166,8 @@ class Arm:
             #new_pose = tfx.pose(position, angle, frame=position.frame)
             self.set_pose(new_pose)    
             time.sleep(.01)
+            
+        print('{0} arm end teleop'.format(self.lrlong))
             
 class Head:
     joint_names = ['head_pan_joint', 'head_tilt_joint']

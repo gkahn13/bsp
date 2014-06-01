@@ -105,6 +105,12 @@ class Arm:
         self.set_joint_values(joints)
 
     def set_joint_values(self, joint_values):
+        l_limits, u_limits = self.get_limits()
+        valid_joint_values = np.array(joint_values)
+        valid_joint_values = np.maximum(joint_values, l_limits)
+        valid_joint_values = np.minimum(joint_values, u_limits)
+        if not np.min(np.array(joint_values) == valid_joint_values):
+            print('Invalid joints. Setting invalid values to limits')
         self.robot.SetDOFValues(joint_values, self.arm_indices)
         
     def set_pose(self, pose):

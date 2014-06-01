@@ -1,12 +1,8 @@
 *~
 *.pyc
 *#
-cpp/bin/*
-cpp/build/*
-cpp/point-pf/bin/*
-cpp/point-pf/build/*
-cpp/pf/bin/*
-cpp/pf/build/*
+bin
+build
 *.project
 *.cproject
 *.pydevproject

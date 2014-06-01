@@ -2,7 +2,8 @@ Belief Space Planning
 =====================
 
 Various examples and implementations of belief space planning
-====
+
+===
 
 point: Ideas first tested in canonical light-dark example. **NOT MAINTAINED**
 

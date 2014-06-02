@@ -5,8 +5,6 @@
 
 TIMESTEPS=$1
 
-cd boxes
-
 MPC_FILE_NAME="boxesMPC"
 
 MPC_C_FILE="mpc/${MPC_FILE_NAME}${TIMESTEPS}_${AGENTS}.c"
@@ -29,5 +27,3 @@ CPP_TIMESTEPS_DEF="#define TIMESTEPS"
 
 echo "replacing TIMESTEPS definition with new TIMESTEPS for explore.cpp"
 sed -i "s/^${CPP_TIMESTEPS_DEF}.*/${CPP_TIMESTEPS_DEF} ${TIMESTEPS}/" explore.cpp
-
-cd ..

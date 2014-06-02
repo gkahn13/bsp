@@ -1,10 +1,10 @@
 #ifndef __CASADI_BOXES_SYSTEM_H__
 #define __CASADI_BOXES_SYSTEM_H__
 
-#include "../casadi-system.h"
-
 class CasadiBoxesSystem;
 #include "boxes-system.h"
+
+#include "../casadi-system.h"
 
 #include <symbolic/casadi.hpp>
 #include <symbolic/stl_vector_tools.hpp>

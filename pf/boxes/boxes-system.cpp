@@ -196,7 +196,9 @@ void BoxesSystem::display_states_and_particles(const std::vector<mat>& X, const 
 		}
 	}
 
-	std::string workingDir = boost::filesystem::current_path().normalize().string();
+	std::string working_dir = boost::filesystem::current_path().normalize().string();
+	std::string bsp_dir = working_dir.substr(0,working_dir.find("bsp"));
+	std::string explore_dir = bsp_dir + "bsp/pf/boxes";
 
 	try
 	{
@@ -204,7 +206,7 @@ void BoxesSystem::display_states_and_particles(const std::vector<mat>& X, const 
 		py::object main_module = py::import("__main__");
 		py::object main_namespace = main_module.attr("__dict__");
 		py::exec("import sys, os", main_namespace);
-		py::exec(py::str("sys.path.append('"+workingDir+"/boxes')"), main_namespace);
+		py::exec(py::str("sys.path.append('"+explore_dir+"')"), main_namespace);
 		py::object plot_module = py::import("plot_boxes");
 		py::object plot_state_and_particles = plot_module.attr("plot_state_and_particles");
 

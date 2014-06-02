@@ -1,12 +1,12 @@
-#include "kdpee/kdpee/kdpee.h"
-
-#include <../util/logging.h>
-
 #include <Python.h>
 
 #include <boost/python.hpp>
 #include <boost/filesystem.hpp>
 namespace py = boost::python;
+
+//#include "../kdpee/kdpee/kdpee.h"
+
+#include <../util/logging.h>
 
 #include <iostream>
 
@@ -155,37 +155,38 @@ double particle_entropy(const mat& P) {
 	return entropy;
 }
 
-floatval particle_entropy_kdpee(const mat& P) {
-	const int d = P.n_rows;
-	const int n = P.n_cols;
-
-	floatval **dimrefs = new floatval*[d];
-	for(int i=0; i < d; ++i) {
-		dimrefs[i] = new floatval[n];
-		for(int j=0; j < n; ++j) {
-			dimrefs[i][j] = P(i,j);
-		}
-	}
-
-	floatval *mins = new floatval[d];
-	floatval *maxs = new floatval[d];
-
-	for(int i=0; i < d; ++i) {
-		mat row = P.row(i);
-		mins[i] = row.min();
-		maxs[i] = row.max();
-	}
-
-	floatval zcut = 1.96;
-
-	int *keys = new int[n];
-	for(int i=0; i < n; ++i) {
-		keys[i] = i+1;
-	}
-
-	floatval entropy_kdpee = kdpee(dimrefs, n, d, mins, maxs, zcut, keys);
-	return entropy_kdpee;
-}
+//floatval particle_entropy_kdpee(const mat& P) {
+//	const int d = P.n_rows;
+//	const int n = P.n_cols;
+//
+//	floatval **dimrefs = new floatval*[d];
+//	for(int i=0; i < d; ++i) {
+//		dimrefs[i] = new floatval[n];
+//		for(int j=0; j < n; ++j) {
+//			dimrefs[i][j] = P(i,j);
+//		}
+//	}
+//
+//	floatval *mins = new floatval[d];
+//	floatval *maxs = new floatval[d];
+//
+//	for(int i=0; i < d; ++i) {
+//		mat row = P.row(i);
+//		mins[i] = row.min();
+//		maxs[i] = row.max();
+//	}
+//
+//	const floatval zcut = 1.96;
+//
+//	int *keys = new int[n];
+//	for(int i=0; i < n; ++i) {
+//		keys[i] = i+1;
+//	}
+//
+//	const floatval **dimrefs_const = const_cast<const floatval**>(dimrefs);
+//	floatval entropy_kdpee = kdpee(dimrefs_const, n, d, mins, maxs, zcut, keys);
+//	return entropy_kdpee;
+//}
 
 void plot(const mat& mu, const mat& sigma, const mat& P) {
 	int M = P.n_cols;
@@ -209,7 +210,9 @@ void plot(const mat& mu, const mat& sigma, const mat& P) {
 		}
 	}
 
-	std::string workingDir = boost::filesystem::current_path().normalize().string();
+	std::string working_dir = boost::filesystem::current_path().normalize().string();
+	std::string bsp_dir = working_dir.substr(0,working_dir.find("bsp"));
+	std::string explore_dir = bsp_dir + "bsp/pf/tests";
 
 	try
 	{
@@ -217,7 +220,7 @@ void plot(const mat& mu, const mat& sigma, const mat& P) {
 		py::object main_module = py::import("__main__");
 		py::object main_namespace = main_module.attr("__dict__");
 		py::exec("import sys, os", main_namespace);
-		py::exec(py::str("sys.path.append('"+workingDir+"/tests')"), main_namespace);
+		py::exec(py::str("sys.path.append('"+working_dir+"')"), main_namespace);
 		py::object plot_module = py::import("plot_test_entropy");
 		py::object plot = plot_module.attr("plot");
 

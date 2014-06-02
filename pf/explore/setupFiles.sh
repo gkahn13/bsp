@@ -7,8 +7,6 @@
 TIMESTEPS=$1
 AGENTS=$2
 
-cd explore
-
 MPC_FILE_NAME="exploreMPC"
 
 MPC_C_FILE="mpc/${MPC_FILE_NAME}${TIMESTEPS}_${AGENTS}.c"
@@ -36,5 +34,3 @@ sed -i "s/^${CPP_TIMESTEPS_DEF}.*/${CPP_TIMESTEPS_DEF} ${TIMESTEPS}/" explore.cp
 
 echo "replacing AGENTS definition with new AGENTS for explore.cpp"
 sed -i "s/^${CPP_AGENTS_DEF}.*/${CPP_AGENTS_DEF} ${AGENTS}/" explore.cpp
-
-cd ..

@@ -22,13 +22,12 @@ set(CASADI_INCLUDE_DIR "$ENV{CASADIPATH}")
 set(CASADI_LIBRARY_DIR "$ENV{CASADIPATH}/build/lib")
 set(CASADI_LIBRARY "casadi")
 
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x -fpermissive")
 add_definitions(${CMAKE_CXX_FLAGS} "-std=c++0x")
 #add_definitions(${CMAKE_CXX_FLAGS} "-fpermissive")
 add_definitions(${CMAKE_CXX_FLAGS} "-Wno-sign-compare")
 
-#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
 #add_definitions(${CMAKE_C_FLAGS} "-std=gnu99")
+#add_definitions(${CMAKE_C_FLAGS} "-fpermissive")
 add_definitions(${CMAKE_C_FLAGS} "-Wno-sign-compare")
 
 set(MY_LIBRARIES "armadillo;dl;rt;python2.7")
@@ -64,4 +63,12 @@ add_executable(explore system.cpp casadi-system.cpp
                explore/explore.cpp explore/exploreMPC.c
                ../util/logging.cpp)
 target_link_libraries(explore ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} ${CASADI_LIBRARY} ${LAPACK_LIBRARIES} ${MY_LIBRARIES})
-               
+
+add_executable(boxes system.cpp casadi-system.cpp
+               boxes/boxes-system.cpp boxes/casadi-boxes-system.cpp
+               boxes/boxes.cpp boxes/boxesMPC.c
+               ../util/logging.cpp)
+target_link_libraries(boxes ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} ${CASADI_LIBRARY} ${LAPACK_LIBRARIES} ${MY_LIBRARIES})
+
+add_executable(test-entropy tests/test-entropy.cpp ../util/logging.cpp)
+target_link_libraries(test-entropy ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} ${MY_LIBRARIES})

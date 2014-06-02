@@ -38,13 +38,17 @@ def transform_relative_pose_for_ik(manip, matrix4, ref_frame, targ_frame):
         targFromEE = dot(inv(worldFromTarg), worldFromEE)       
 
     refFromTarg_new = matrix4
+    print('world_from_ref*ref_from_targ_new\n{0}'.format(dot(worldFromRef, refFromTarg_new)))
     worldFromEE_new = dot(dot(worldFromRef, refFromTarg_new), targFromEE)    
 
     return worldFromEE_new
 
 def cart_to_joint(manip, matrix4, ref_frame, targ_frame, filter_options = 0):
+    print('ref_frame: {0}\ntarg_frame: {1}'.format(ref_frame,targ_frame))
     robot = manip.GetRobot()
-    worldFromEE = transform_relative_pose_for_ik(manip, matrix4, ref_frame, targ_frame)        
+    print('matrix4: {0}'.format(matrix4))
+    worldFromEE = transform_relative_pose_for_ik(manip, matrix4, ref_frame, targ_frame)
+    print('worldFromEE: {0}'.format(worldFromEE))        
     joint_positions = manip.FindIKSolution(worldFromEE, filter_options)
     if joint_positions is None: return joint_positions
     current_joints = robot.GetDOFValues(manip.GetArmIndices())
@@ -90,7 +94,7 @@ class Arm:
         return self.manip.GetArmDOFValues()
     
     def get_pose(self):
-        """ Returns pose of tool_frame """
+        """ Returns pose of end effector """
         return tfx.pose(self.manip.GetEndEffectorTransform(), frame='world')
     
     def get_limits(self):
@@ -435,5 +439,26 @@ def test():
     
     IPython.embed()
     
+def test_pose():
+    brett = PR2('../../envs/pr2-test.env.xml')
+    
+    larm = brett.larm
+    
+    larm.set_posture('side')
+    start_pose = larm.get_pose()
+    print('start joints: {0}'.format(larm.get_joint_values()))
+    print('start pose: {0}'.format(start_pose.matrix))
+    
+    larm.set_posture('mantis')
+    print('mantis joints: {0}'.format(larm.get_joint_values()))
+    print('Press enter to go back to start_pose')
+    raw_input()
+    
+    larm.set_pose(start_pose)
+    print('end joints: {0}'.format(larm.get_joint_values()))
+    
+    IPython.embed()
+    
 if __name__ == '__main__':
-    test()
+    #test()
+    test_pose()

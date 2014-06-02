@@ -197,7 +197,9 @@ void ExploreSystem::display_states_and_particles(const std::vector<mat>& X, cons
 		}
 	}
 
-	std::string workingDir = boost::filesystem::current_path().normalize().string();
+	std::string working_dir = boost::filesystem::current_path().normalize().string();
+	std::string bsp_dir = working_dir.substr(0,working_dir.find("bsp"));
+	std::string explore_dir = bsp_dir + "bsp/pf/explore";
 
 	try
 	{
@@ -205,7 +207,7 @@ void ExploreSystem::display_states_and_particles(const std::vector<mat>& X, cons
 		py::object main_module = py::import("__main__");
 		py::object main_namespace = main_module.attr("__dict__");
 		py::exec("import sys, os", main_namespace);
-		py::exec(py::str("sys.path.append('"+workingDir+"/explore')"), main_namespace);
+		py::exec(py::str("sys.path.append('"+explore_dir+"')"), main_namespace);
 		py::object plot_module = py::import("plot_explore");
 		py::object plot_state_and_particles = plot_module.attr("plot_state_and_particles");
 

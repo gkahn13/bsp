@@ -1,3 +1,7 @@
+
+
+import IPython
+
 import numpy as np
 from numpy import matlib as ml
 import math
@@ -7,9 +11,6 @@ import matplotlib
 import matplotlib.pyplot as plt
 from scipy.interpolate import spline
 import scipy.interpolate as interp
-
-
-import IPython
 
 
 def plot_state_and_particles(x, particles, target, xDim, M, N):

@@ -399,7 +399,7 @@ class ColoredPoint:
         return utils.plot_point(env, self.point.array, color=self.color/255.)
     
 def test():
-    brett = PR2('../envs/pr2-test.env.xml')
+    brett = PR2('../../envs/pr2-test.env.xml')
     env = brett.env
     
     larm = brett.larm

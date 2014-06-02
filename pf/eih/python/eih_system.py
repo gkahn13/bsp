@@ -383,7 +383,7 @@ def setup_environment(M=1000, lr='r', zero_seed=True):
     if zero_seed:
         random.seed(0)
         
-    brett = pr2_sim.PR2('envs/pr2-test.env.xml')
+    brett = pr2_sim.PR2('../envs/pr2-test.env.xml')
     env = brett.env
     
     larm = brett.larm
@@ -497,6 +497,6 @@ def teleop():
         print arm.get_joint_values()
 
 if __name__ == '__main__':
-    #test_eih_system()
-    test_entropy()
+    test_eih_system()
+    #test_entropy()
     #teleop()

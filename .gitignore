@@ -3,6 +3,8 @@
 *#
 bin
 build
+Debug
+Release
 *.project
 *.cproject
 *.pydevproject

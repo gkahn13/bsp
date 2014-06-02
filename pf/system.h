@@ -3,17 +3,17 @@
 
 #include <Python.h>
 
-#include <vector>
-#include <cmath>
-
-#include "../util/logging.h"
-
 #include <boost/python.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 namespace py = boost::python;
 namespace po = boost::program_options;
 
+
+#include <vector>
+#include <cmath>
+
+#include "../util/logging.h"
 
 #include <symbolic/casadi.hpp>
 #include <symbolic/stl_vector_tools.hpp>

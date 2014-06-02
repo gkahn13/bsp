@@ -10,9 +10,10 @@ LINKER_FLAGS = $(LINKER_FLAGS.$(OS)) -larmadillo
 C_FLAGS = -std=gnu99
 CPP_FLAGS = -std=c++0x -fpermissive -I.
 PYTHON_FLAGS = -I/usr/include/python2.7 -lpython2.7
-BOOST_FLAGS = -lboost_python -lboost_filesystem -lboost_system -lboost_program_options
+BOOST_FLAGS = -lboost_python -lboost_filesystem -lboost_system -lboost_program_options -lboost_thread
 CASADI_FLAGS = -I$(CASADIPATH) -L$(CASADIPATH)/build/lib
 CASADI_LIBS = -lcasadi -ldl
+OPENRAVE_FLAGS = -I/usr/include/openrave-0.9 -lopenrave0.9
 
 # default to debug build
 BUILD := debug
@@ -95,6 +96,14 @@ $(OBJ_DIR)/casadi-boxes-system.o : boxes/casadi-boxes-system.cpp
 $(OBJ_DIR)/boxes-cpp.o : boxes/boxes.cpp
 	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(PYTHON_FLAGS) $(BOOST_FLAGS) $(CASADI_FLAGS) -c -o $@ $^ $(CASADI_LIBS)
 
+
+
+##### test-pr2-sim #######
+test-pr2-sim: $(OBJ_DIR)/pr2_sim.o
+	$(CXX) $(BFLAGS) $(OBJ_DIR)/pr2_sim.o -o $(BIN_DIR)/test-pr2-sim $(OPENRAVE_FLAGS) $(BOOST_FLAGS) $(LINKER_FLAGS)
+
+$(OBJ_DIR)/pr2_sim.o : eih/pr2_sim.cpp
+	$(CXX) $(CPP_FLAGS) $(BFLAGS) $(OPENRAVE_FLAGS) $(BOOST_FLAGS) -c -o $@ $^
 
 
 ##### kdpee ##############

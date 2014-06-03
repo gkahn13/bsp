@@ -19,17 +19,19 @@ namespace rave = OpenRAVE;
 class Arm;
 class Head;
 class Sensor;
-class CameraSensor;
+class KinectSensor;
 
 class PR2 {
 public:
 	Arm *larm, *rarm;
 	Head *head;
-	CameraSensor *camera;
+	KinectSensor *h_kinect, *l_kinect, *r_kinect;
 
 	PR2();
 	PR2(std::string env_file, std::string robot_name, bool view=true);
 	~PR2();
+
+	rave::EnvironmentBasePtr get_env() { return env; }
 
 private:
 	void init(std::string env_file, std::string robot_name, bool view);
@@ -94,11 +96,19 @@ public:
 	void render_off();
 
 	rave::SensorBase::SensorDataPtr get_data();
+	rave::Transform get_pose();
 
-private:
+protected:
 	rave::SensorBasePtr sensor;
 	bool is_powered, is_rendering;
 	rave::SensorBase::SensorType type;
+};
+
+class DepthSensor : public Sensor {
+public:
+	DepthSensor(rave::SensorBasePtr sensor);
+
+	std::vector<mat> get_points();
 };
 
 class CameraSensor : public Sensor {
@@ -110,8 +120,43 @@ public:
 	mat get_pixel_from_point(const mat &point);
 	bool is_in_fov(const mat& point);
 
+	int get_height() { return height; }
+	int get_width() { return width; }
+
 private:
-	rave::SensorBasePtr sensor;
 	int height, width;
 	mat P;
+};
+
+class ColoredPoint {
+public:
+	mat point, color;
+	ColoredPoint(mat &p, mat& c) : point(p), color(c) { };
+
+	rave::GraphHandlePtr display(rave::EnvironmentBasePtr env) { return rave_utils::plot_point(env, point, color);	}
+};
+
+class KinectSensor {
+public:
+	KinectSensor(rave::RobotBasePtr robot, std::string depth_sensor_name, std::string camera_sensor_name);
+
+	void power_on();
+	void power_off();
+	void render_on();
+	void render_off();
+
+	std::vector<ColoredPoint*> get_point_cloud();
+	mat get_z_buffer();
+
+	cube get_image() { return camera_sensor->get_image(); }
+	mat get_pixel_from_point(const mat &point) { return camera_sensor->get_pixel_from_point(point); }
+	bool is_in_fov(const mat &point) { return camera_sensor->is_in_fov(point); }
+	rave::Transform get_pose() { return camera_sensor->get_pose(); }
+
+	void display_point_cloud(const std::vector<ColoredPoint*> &colored_points, std::vector<rave::GraphHandlePtr> &handles);
+
+private:
+	rave::RobotBasePtr robot;
+	DepthSensor* depth_sensor;
+	CameraSensor* camera_sensor;
 };

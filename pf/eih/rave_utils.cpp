@@ -58,6 +58,25 @@ rave::Transform transform_relative_pose_for_ik(rave::RobotBase::ManipulatorPtr m
 	return world_from_EE_new;
 }
 
+rave::GraphHandlePtr plot_point(rave::EnvironmentBasePtr env, const rave::Vector &pos, rave::Vector &color, float size) {
+	float *ppoints = new float[3];
+	ppoints[0] = pos.x;
+	ppoints[1] = pos.y;
+	ppoints[2] = pos.z;
+
+	color.w = 1;
+
+	rave::GraphHandlePtr h = env->plot3(ppoints, 1, sizeof(float), size, color, 1);
+	return h;
+}
+
+
+rave::GraphHandlePtr plot_point(rave::EnvironmentBasePtr env, const mat &pos, mat &color, float size) {
+	rave::Vector pos_vec = mat_to_rave_vec(pos);
+	rave::Vector color_vec = mat_to_rave_vec(color);
+	return plot_point(env, pos_vec, color_vec, size);
+}
+
 mat rave_transform_to_mat(rave::Transform rt) {
 	rave::TransformMatrix rtm(rt);
 
@@ -94,5 +113,20 @@ rave::Transform mat_to_rave_transform(mat m) {
 	rave::Transform rt(rtm);
 	return rt;
 }
+
+mat rave_vec_to_mat(rave::Vector v) {
+	mat m;
+	m << v.x << v.y << v.z << v.w;
+	return m;
+}
+
+rave::Vector mat_to_rave_vec(mat m) {
+	rave::Vector v(m(0), m(1), m(2));
+	if (m.n_rows*m.n_cols == 4) {
+		v.w = m(3);
+	}
+	return v;
+}
+
 
 }

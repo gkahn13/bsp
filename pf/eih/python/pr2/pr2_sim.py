@@ -1,5 +1,6 @@
 import IPython
 import time
+import sys
 
 import numpy as np
 from numpy import inf, zeros, dot, r_
@@ -455,6 +456,18 @@ def test_pose():
     
     IPython.embed()
     
+def test_kinect():
+    brett = PR2('../../envs/pr2-test.env.xml')
+    arm = brett.rarm
+    kinect = brett.r_kinect
+    
+    kinect.power_on()
+    arm.set_posture('mantis')
+    time.sleep(1)
+
+    kinect.get_point_cloud()
+    
 if __name__ == '__main__':
-    test()
+    #test()
     #test_pose()
+    test_kinect()

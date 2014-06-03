@@ -10,12 +10,12 @@ namespace rave = OpenRAVE;
 
 namespace rave_utils {
 
-void cart_to_joint(rave::RobotBase::ManipulatorPtr manip, const mat &matrix4,
+void cart_to_joint(rave::RobotBase::ManipulatorPtr manip, const rave::Transform &matrix4,
 		const std::string &ref_frame, const std::string &targ_frame, std::vector<double> &joint_values,
 		const int filter_options=0);
 
-mat transform_relative_pose_for_ik(rave::RobotBase::ManipulatorPtr manip,
-		const mat &matrix4, const std::string &ref_frame, const std::string &targ_frame);
+rave::Transform transform_relative_pose_for_ik(rave::RobotBase::ManipulatorPtr manip,
+		const rave::Transform &matrix4, const std::string &ref_frame, const std::string &targ_frame);
 
 mat rave_transform_to_mat(rave::Transform rt);
 

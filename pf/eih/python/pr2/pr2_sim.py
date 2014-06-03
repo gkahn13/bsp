@@ -38,17 +38,13 @@ def transform_relative_pose_for_ik(manip, matrix4, ref_frame, targ_frame):
         targFromEE = dot(inv(worldFromTarg), worldFromEE)       
 
     refFromTarg_new = matrix4
-    print('world_from_ref*ref_from_targ_new\n{0}'.format(dot(worldFromRef, refFromTarg_new)))
     worldFromEE_new = dot(dot(worldFromRef, refFromTarg_new), targFromEE)    
 
     return worldFromEE_new
 
 def cart_to_joint(manip, matrix4, ref_frame, targ_frame, filter_options = 0):
-    print('ref_frame: {0}\ntarg_frame: {1}'.format(ref_frame,targ_frame))
     robot = manip.GetRobot()
-    print('matrix4: {0}'.format(matrix4))
     worldFromEE = transform_relative_pose_for_ik(manip, matrix4, ref_frame, targ_frame)
-    print('worldFromEE: {0}'.format(worldFromEE))        
     joint_positions = manip.FindIKSolution(worldFromEE, filter_options)
     if joint_positions is None: return joint_positions
     current_joints = robot.GetDOFValues(manip.GetArmIndices())
@@ -189,7 +185,7 @@ class Head:
         ax = pose.position - xyz_cam # pointing axis
         pan = np.arctan(ax[1]/ax[0])
         tilt = np.arcsin(-ax[2] / norm(ax))
-        self.set_pan_tilt(pan,tilt)
+        self.set_joint_values([pan,tilt])
         
 class Sensor:
     def __init__(self, sensor):
@@ -294,10 +290,10 @@ class CameraSensor(Sensor):
         x_mat[0:3,0:3] = np.zeros((3,3))
         xtilde = np.dot(inv(self.sensor.GetTransform()), x_mat)
         
-        x1, x2, x3 = xtilde[0,3], xtilde[1,3], xtilde[2,3]
-        f = self.P[0,0]
-        y1 = (f/x3)*x1
-        y2 = (f/x3)*x2
+        #x1, x2, x3 = xtilde[0,3], xtilde[1,3], xtilde[2,3]
+        #f = self.P[0,0]
+        #y1 = (f/x3)*x1
+        #y2 = (f/x3)*x2
         
         y = np.dot(self.P, xtilde[0:3,3])
         y_pixel = int(y[1]/y[2])
@@ -460,5 +456,5 @@ def test_pose():
     IPython.embed()
     
 if __name__ == '__main__':
-    #test()
-    test_pose()
+    test()
+    #test_pose()

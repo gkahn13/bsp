@@ -19,6 +19,7 @@ find_package(Boost ${OpenRAVE_Boost_VERSION} EXACT COMPONENTS iostreams python t
 find_package(Armadillo)
 find_package(LAPACK)
 find_package(BLAS)
+find_package(Curses)
 
 set(CASADI_INCLUDE_DIR "$ENV{CASADIPATH}")
 set(CASADI_LIBRARY_DIR "$ENV{CASADIPATH}/build/lib")
@@ -27,6 +28,8 @@ set(CASADI_LIBRARY "casadi")
 add_definitions(${CMAKE_CXX_FLAGS} "-std=c++0x")
 #add_definitions(${CMAKE_CXX_FLAGS} "-fpermissive")
 add_definitions(${CMAKE_CXX_FLAGS} "-Wno-sign-compare")
+add_definitions(${CMAKE_CXX_FLAGS} "-g")
+add_definitions(${CMAKE_CXX_FLAGS} "-Wall")
 
 #add_definitions(${CMAKE_C_FLAGS} "-std=gnu99")
 #add_definitions(${CMAKE_C_FLAGS} "-fpermissive")
@@ -55,13 +58,13 @@ if( Boost_INCLUDE_DIRS )
 endif()
 
 link_directories(${OpenRAVE_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS} ${PYTHON_LIBRARIES} ${CASADI_LIBRARY_DIR}
-                 ${ARMADILLO_LIBRARIES})
+                 ${ARMADILLO_LIBRARIES} ${CURSES_LIBRARIES})
 
 add_executable(test-pr2-sim eih/pr2_sim.cpp eih/rave_utils.cpp)
 set_target_properties(test-pr2-sim PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
 set_target_properties(test-pr2-sim PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 target_link_libraries(test-pr2-sim ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES} ${Boost_LIBRARIES}
-                                   ${ARMADILLO_LIBRARIES})
+                                   ${ARMADILLO_LIBRARIES} ${CURSES_LIBRARIES})
 
 add_executable(explore system.cpp casadi-system.cpp
                explore/explore-system.cpp explore/casadi-explore-system.cpp

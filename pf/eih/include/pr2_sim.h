@@ -43,7 +43,18 @@ private:
 	rave::RobotBasePtr robot;
 };
 
-class Arm {
+class Manipulator {
+public:
+	virtual mat get_joint_values() = 0;
+	virtual void get_limits(mat &lower, mat &upper) = 0;
+
+	virtual void set_joint_values(const mat &joint_values) = 0;
+
+	// DO NOT HOLD DOWN KEYS
+	virtual void teleop() = 0;
+};
+
+class Arm : public virtual Manipulator {
 public:
 	enum ArmType { left, right };
 	enum Posture { untucked, tucked, up, side, mantis };
@@ -69,7 +80,7 @@ private:
 	int num_joints;
 };
 
-class Head {
+class Head : public virtual Manipulator {
 public:
 	Head(rave::RobotBasePtr robot);
 
@@ -79,6 +90,8 @@ public:
 	void set_joint_values(const mat &joint_values);
 	void look_at(const rave::Transform &pose,
 			const std::string reference_frame="world", const std::string camera_frame="wide_stereo_link");
+
+	void teleop();
 
 private:
 	rave::RobotBasePtr robot;
@@ -139,6 +152,7 @@ public:
 class KinectSensor {
 public:
 	KinectSensor(rave::RobotBasePtr robot, std::string depth_sensor_name, std::string camera_sensor_name);
+	~KinectSensor();
 
 	void power_on();
 	void power_off();
@@ -154,6 +168,9 @@ public:
 	rave::Transform get_pose() { return camera_sensor->get_pose(); }
 
 	void display_point_cloud(const std::vector<ColoredPoint*> &colored_points, std::vector<rave::GraphHandlePtr> &handles);
+
+	int get_height() { return camera_sensor->get_height(); }
+	int get_width() { return camera_sensor->get_width(); }
 
 private:
 	rave::RobotBasePtr robot;

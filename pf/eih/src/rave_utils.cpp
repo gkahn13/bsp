@@ -1,4 +1,4 @@
-#include "rave_utils.h"
+#include "../include/rave_utils.h"
 
 inline double smaller_ang(double x) {
 	return fmod(x + M_PI, 2*M_PI) - M_PI;
@@ -114,9 +114,12 @@ rave::Transform mat_to_rave_transform(mat m) {
 	return rt;
 }
 
-mat rave_vec_to_mat(rave::Vector v) {
-	mat m;
-	m << v.x << v.y << v.z << v.w;
+mat rave_vec_to_mat(rave::Vector v, bool is_4d) {
+	mat m(is_4d ? 4 : 3, 1);
+	m(0) = v.x;
+	m(1) = v.y;
+	m(2) = v.z;
+	if (is_4d) { m(3) = v.w; }
 	return m;
 }
 

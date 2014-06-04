@@ -25,7 +25,7 @@ mat rave_transform_to_mat(rave::Transform rt);
 
 rave::Transform mat_to_rave_transform(mat m);
 
-mat rave_vec_to_mat(rave::Vector v);
+mat rave_vec_to_mat(rave::Vector v, bool is_4d=false);
 
 rave::Vector mat_to_rave_vec(mat m);
 

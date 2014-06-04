@@ -1,0 +1,224 @@
+#include "../include/eih_system.h"
+#include "../include/pr2_sim.h"
+#include "../include/rave_utils.h"
+
+/**
+ * TESTS
+ */
+
+void test_arm() {
+	PR2 *brett = new PR2();
+	boost::this_thread::sleep(boost::posix_time::seconds(1));
+
+	brett->larm->set_posture(Arm::Posture::side);
+	rave::Transform start_pose = brett->larm->get_pose();
+	std::cout << "start joints:\n" << brett->larm->get_joint_values() << "\n";
+	std::cout << "start pose:\n" << rave_utils::rave_transform_to_mat(start_pose) << "\n";
+
+	brett->larm->set_posture(Arm::Posture::mantis);
+	std::cout << "mantis joints:\n" << brett->larm->get_joint_values() << "\n";
+	std::cout << "In mantis. Press enter to go back to start pose\n";
+	std::cin.ignore();
+
+	brett->larm->set_pose(start_pose);
+	std::cout << "end joints:\n" << brett->larm->get_joint_values() << "\n";
+
+	std::cout << "Press enter to quit\n";
+	std::cin.ignore();
+}
+
+void test_teleop() {
+	PR2 *brett = new PR2();
+	boost::this_thread::sleep(boost::posix_time::seconds(1));
+
+	brett->larm->set_posture(Arm::Posture::mantis);
+	brett->rarm->set_posture(Arm::Posture::mantis);
+
+	brett->r_kinect->power_on();
+	brett->r_kinect->render_on();
+	while(true) {
+		brett->rarm->teleop();
+	}
+}
+
+void test_head() {
+	PR2 *brett = new PR2();
+	boost::this_thread::sleep(boost::posix_time::seconds(1));
+
+	Arm *arm = brett->rarm;
+	Head *head = brett->head;
+
+	arm->set_posture(Arm::Posture::mantis);
+
+	mat j = head->get_joint_values();
+	std::cout << "head joints: " << j.t() << "\n";
+
+	mat lower, upper;
+	head->get_limits(lower, upper);
+	std::cout << "lower: " << lower.t() << "\n";
+	std::cout << "upper: " << upper.t() << "\n";
+
+	arm->teleop();
+	head->look_at(arm->get_pose());
+}
+
+void test_camera() {
+	PR2 *brett = new PR2();
+	KinectSensor *kinect = brett->h_kinect;
+
+	kinect->power_on();
+	boost::this_thread::sleep(boost::posix_time::seconds(1));
+	std::cout << "Getting image...\n";
+	cube image = kinect->get_image();
+	for(int i=0; i < image.n_rows; ++i) {
+		for(int j=0; j < image.n_cols; ++j) {
+			mat rgb = image.subcube(i,j,0,i,j,2);
+//			std::cout << rgb.n_rows << " " << rgb.n_cols << "\n";
+//			std::cout << rgb;
+		}
+	}
+	std::cout << "Image size: (" << image.n_rows << ", " << image.n_cols << ", " << image.n_slices << ")\n";
+
+//	std::vector<std::vector<mat> > points_pixels_colors = camera->get_pixels_and_colors()
+
+}
+
+void test_plot() {
+	PR2 *brett = new PR2();
+	Arm *arm = brett->rarm;
+	KinectSensor *kinect = brett->r_kinect;
+
+	arm->set_posture(Arm::Posture::mantis);
+	boost::this_thread::sleep(boost::posix_time::seconds(1));
+
+	rave::Transform p = kinect->get_pose();
+
+	rave::Vector pos = p.trans;
+	rave::Vector color(0, 1, 0);
+	rave::GraphHandlePtr h = rave_utils::plot_point(brett->get_env(), pos, color);
+
+	std::cout << "Press enter to exit\n";
+	std::cin.ignore();
+}
+
+void test_kinect() {
+	PR2 *brett = new PR2();
+	Arm *arm = brett->rarm;
+	KinectSensor *kinect = brett->r_kinect;
+
+	kinect->power_on();
+	kinect->render_on();
+	arm->set_posture(Arm::Posture::mantis);
+	boost::this_thread::sleep(boost::posix_time::seconds(4));
+
+	std::vector<rave::GraphHandlePtr> handles;
+	while(true) {
+		arm->teleop();
+		handles.clear();
+
+		std::vector<ColoredPoint*> colored_points = kinect->get_point_cloud();
+		kinect->display_point_cloud(colored_points, handles);
+	}
+
+	std::cout << "Press enter to exit\n";
+	std::cin.ignore();
+}
+
+void setup_eih_environment(PR2 *brett, int M, Arm::ArmType arm_type, bool zero_seed, mat &P, EihSystem **sys) {
+	if (zero_seed) {
+		srand(time(0));
+	}
+
+	rave::EnvironmentBasePtr env = brett->get_env();
+
+	Arm *larm = brett->larm;
+	Arm *rarm = brett->rarm;
+	KinectSensor *l_kinect = brett->l_kinect;
+	KinectSensor *r_kinect = brett->r_kinect;
+
+	larm->set_posture(Arm::Posture::mantis);
+	rarm->set_posture(Arm::Posture::mantis);
+
+	rave::KinBodyPtr table = env->GetKinBody("table");
+	rave::KinBody::LinkPtr base = table->GetLink("base");
+	rave::Vector extents = base->GetGeometry(0)->GetBoxExtents();
+
+	rave::Vector table_pos = table->GetTransform().trans;
+	double x_min, x_max, y_min, y_max, z_min, z_max;
+	x_min = table_pos.x - extents.x;
+	x_max = table_pos.x + extents.x;
+	y_min = table_pos.y - extents.y;
+	y_max = table_pos.y + extents.y;
+	z_min = table_pos.z + extents.z;
+	z_max = table_pos.z + extents.z + .2;
+
+	for(int m=0; m < M; ++m) {
+		P(0,m) = uniform(x_min, x_max);
+		P(1,m) = uniform(y_min, y_max);
+		P(2,m) = uniform(z_min, z_max);
+	}
+
+	Manipulator *manip;
+	KinectSensor *kinect;
+	if (arm_type == Arm::ArmType::left) {
+		manip = larm;
+		kinect = l_kinect;
+	} else {
+		manip = rarm;
+		kinect = r_kinect;
+	}
+	*sys = new EihSystem(env, manip, kinect);
+	kinect->render_on();
+	boost::this_thread::sleep(boost::posix_time::seconds(2));
+}
+
+void test_eih_system() {
+	PR2 *brett = new PR2();
+	int M = 1000;
+	mat P(3,1000,fill::zeros);
+	EihSystem *sys = NULL;
+	Manipulator *manip = NULL;
+	KinectSensor *kinect = NULL;
+	setup_eih_environment(brett, 1000, Arm::ArmType::right, true, P, &sys);
+	manip = sys->get_manip();
+	kinect = sys->get_kinect();
+
+	rave::EnvironmentBasePtr env = brett->get_env();
+
+//	std::vector<rave::GraphHandlePtr> handles;
+//	mat color;
+//	color << 1 << 0 << 0;
+//	for(int m=0; m < M; ++m) {
+//		handles.push_back(rave_utils::plot_point(env, P.col(m), color));
+//	}
+
+	mat x_t = manip->get_joint_values();
+	mat P_t = P;
+	mat u_t(x_t.n_rows, x_t.n_cols, fill::zeros);
+	mat x_tp1(x_t.n_rows, x_t.n_cols, fill::zeros), P_tp1(3, M, fill::zeros);
+
+	std::cout << "x_t: " << x_t << "\n";
+	std::cout << "u_t: " << u_t << "\n";
+
+	while(true) {
+		manip->teleop();
+		x_t = manip->get_joint_values();
+		sys->update_state_and_particles(x_t, P_t, u_t, x_tp1, P_tp1);
+
+		P_t = P_tp1;
+	}
+
+	std::cout << "Press enter to exit\n";
+	std::cin.ignore();
+}
+
+int main(int argc, char* argv[]) {
+//	test_arm();
+//	test_teleop();
+//	test_head();
+//	test_camera();
+//	test_plot();
+//	test_kinect();
+	test_eih_system();
+}
+

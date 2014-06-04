@@ -26,14 +26,15 @@ set(CASADI_LIBRARY_DIR "$ENV{CASADIPATH}/build/lib")
 set(CASADI_LIBRARY "casadi")
 
 add_definitions(${CMAKE_CXX_FLAGS} "-std=c++0x")
-#add_definitions(${CMAKE_CXX_FLAGS} "-fpermissive")
 add_definitions(${CMAKE_CXX_FLAGS} "-Wno-sign-compare")
-add_definitions(${CMAKE_CXX_FLAGS} "-g")
-add_definitions(${CMAKE_CXX_FLAGS} "-Wall")
 
 #add_definitions(${CMAKE_C_FLAGS} "-std=gnu99")
-#add_definitions(${CMAKE_C_FLAGS} "-fpermissive")
 add_definitions(${CMAKE_C_FLAGS} "-Wno-sign-compare")
+
+add_definitions(${CMAKE_CXX_FLAGS_DEBUG} "-g")
+#add_definitions(${CMAKE_CXX_FLAGS_DEBUG} "-Wall")
+add_definitions(${CMAKE_C_FLAGS_DEBUG} "-g")
+#add_definitions(${CMAKE_C_FLAGS_DEBUG} "-Wall")
 
 set(MY_LIBRARIES "dl;rt;python2.7")
 
@@ -60,11 +61,13 @@ endif()
 link_directories(${OpenRAVE_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS} ${PYTHON_LIBRARIES} ${CASADI_LIBRARY_DIR}
                  ${ARMADILLO_LIBRARIES} ${CURSES_LIBRARIES})
 
-add_executable(test-pr2-sim eih/pr2_sim.cpp eih/rave_utils.cpp)
-set_target_properties(test-pr2-sim PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
-set_target_properties(test-pr2-sim PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
-target_link_libraries(test-pr2-sim ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES} ${Boost_LIBRARIES}
-                                   ${ARMADILLO_LIBRARIES} ${CURSES_LIBRARIES})
+add_executable(test-eih eih/tests/test.cpp 
+               system.cpp casadi-system.cpp
+               eih/src/eih_system.cpp eih/src/pr2_sim.cpp eih/src/rave_utils.cpp)
+set_target_properties(test-eih PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
+set_target_properties(test-eih PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
+target_link_libraries(test-eih ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES} ${Boost_LIBRARIES}
+                                   ${ARMADILLO_LIBRARIES} ${CURSES_LIBRARIES} ${CASADI_LIBRARY} ${PYTHON_LIBRARIES})
 
 add_executable(explore system.cpp casadi-system.cpp
                explore/explore-system.cpp explore/casadi-explore-system.cpp

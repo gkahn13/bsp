@@ -1,4 +1,4 @@
-#include "pr2_sim.h"
+#include "../include/pr2_sim.h"
 
 /**
  * PR2 Constructors/Destructors
@@ -19,6 +19,12 @@ PR2::PR2(std::string env_file, std::string robot_name, bool view) {
 }
 
 PR2::~PR2() {
+	free(larm);
+	free(rarm);
+	free(head);
+	free(h_kinect);
+	free(l_kinect);
+	free(r_kinect);
 	env->Destroy();
 }
 
@@ -151,12 +157,6 @@ void Arm::set_pose(const rave::Transform &pose, std::string ref_frame) {
 }
 
 void Arm::teleop() {
-	initscr();
-	raw();
-	noecho();
-
-	printw("%s teleop\n", manip_name.c_str());
-
 	double pos_step = .01;
 	std::map<int,rave::Vector> delta_position =
 	{
@@ -179,30 +179,38 @@ void Arm::teleop() {
 			{'m', rave::Vector(0, 0, -angle_step)},
 	};
 
+
+
+	initscr();
+	cbreak();
+	noecho();
+
+	printw("%s teleop\n", manip_name.c_str());
+
 	int c;
 	do {
-		boost::this_thread::sleep(boost::posix_time::seconds(.01));
 		c = getch();
-
-		if (c == ERR) {
-			continue;
-		}
+		clear();
+		printw("%s teleop\n", manip_name.c_str());
 
 		rave::Transform pose = get_pose();
 		if (delta_position.count(c) > 0) {
 			pose.trans += delta_position[c];
+			printw("%c", c);
 		} else if (delta_angle.count(c) > 0) {
 			pose.rot = rave::geometry::quatFromAxisAngle(rave::geometry::axisAngleFromQuat(pose.rot) + delta_angle[c]);
+			printw("%c", c);
 		}
 
 		set_pose(pose);
-
 	} while (c != 'q');
 
 	printw("%s end teleop\n", manip_name.c_str());
 
+	clear();
 	refresh();
 	endwin();
+
 }
 
 
@@ -262,6 +270,44 @@ void Head::look_at(const rave::Transform &pose, const std::string reference_fram
 	mat joint_values;
 	joint_values << pan << tilt;
 	set_joint_values(joint_values);
+}
+
+void Head::teleop() {
+	double pos_step = .01;
+	std::map<int,std::vector<double> > delta_joints =
+	{
+			{'a' , {pos_step, 0}},
+			{'d' , {-pos_step, 0}},
+			{'w' , {0, -pos_step}},
+			{'x' , {0, pos_step}},
+	};
+
+	initscr();
+	raw();
+	noecho();
+
+	printw("Head teleop\n");
+
+	int c;
+	do {
+		c = getch();
+		clear();
+		printw("Head teleop\n");
+
+		mat j = get_joint_values();
+		if (delta_joints.count(c) > 0) {
+			j += conv_to<mat>::from(delta_joints[c]);
+			printw("%c", c);
+		}
+
+		set_joint_values(j);
+
+	} while (c != 'q');
+
+	printw("Head end teleop\n");
+
+	refresh();
+	endwin();
 }
 
 
@@ -330,7 +376,6 @@ void Sensor::render_off() {
 }
 
 rave::SensorBase::SensorDataPtr Sensor::get_data() {
-	std::cout << "get_data()\n";
 	rave::SensorBase::SensorDataPtr data = sensor->CreateSensorData(type);
 	bool success = sensor->GetSensorData(data);
 
@@ -402,6 +447,7 @@ CameraSensor::CameraSensor(rave::SensorBasePtr sensor) : Sensor(sensor) {
  * Public methods
  */
 
+// all values [0, 1]
 cube CameraSensor::get_image() {
 	boost::shared_ptr<rave::SensorBase::CameraSensorData> c_data =
 				boost::static_pointer_cast<rave::SensorBase::CameraSensorData>(get_data());
@@ -438,7 +484,11 @@ std::vector<std::vector<mat> > CameraSensor::get_pixels_and_colors(const std::ve
 
 mat CameraSensor::get_pixel_from_point(const mat &point) {
 	mat x_mat = zeros(4,4);
-	x_mat.submat(0,3,2,3) = point.t();
+	if (point.is_colvec()) {
+		x_mat.submat(0,3,2,3) = point;
+	} else {
+		x_mat.submat(0,3,2,3) = point.t();
+	}
 	x_mat(3,3) = 1;
 	mat pose = rave_utils::rave_transform_to_mat(get_pose());
 	mat xtilde = inv(rave_utils::rave_transform_to_mat(get_pose()))*x_mat;
@@ -484,6 +534,11 @@ KinectSensor::KinectSensor(rave::RobotBasePtr robot, std::string depth_sensor_na
 		RAVELOG_ERROR("Invalid sensor names. Exiting.\n");
 		exit(0);
 	}
+}
+
+KinectSensor::~KinectSensor() {
+	free(depth_sensor);
+	free(camera_sensor);
 }
 
 /**
@@ -536,7 +591,7 @@ mat KinectSensor::get_z_buffer() {
 	for(int i=0; i < points_pixels_colors.size(); ++i) {
 		mat point = points_pixels_colors[i][0];
 		mat pixel = points_pixels_colors[i][1];
-		z_buffer(int(point(0)), int(point(1))) = norm(point - pose_pos, 2);
+		z_buffer(int(pixel(0)), int(pixel(1))) = norm(point - pose_pos, 2);
 	}
 
 	return z_buffer;
@@ -549,129 +604,3 @@ void KinectSensor::display_point_cloud(const std::vector<ColoredPoint*> &colored
 }
 
 
-/**
- * TESTS
- */
-
-void test_arm() {
-	PR2 *brett = new PR2();
-	boost::this_thread::sleep(boost::posix_time::seconds(1));
-
-	brett->larm->set_posture(Arm::Posture::side);
-	rave::Transform start_pose = brett->larm->get_pose();
-	std::cout << "start joints:\n" << brett->larm->get_joint_values() << "\n";
-	std::cout << "start pose:\n" << rave_utils::rave_transform_to_mat(start_pose) << "\n";
-
-	brett->larm->set_posture(Arm::Posture::mantis);
-	std::cout << "mantis joints:\n" << brett->larm->get_joint_values() << "\n";
-	std::cout << "In mantis. Press enter to go back to start pose\n";
-	std::cin.ignore();
-
-	brett->larm->set_pose(start_pose);
-	std::cout << "end joints:\n" << brett->larm->get_joint_values() << "\n";
-
-	std::cout << "Press enter to quit\n";
-	std::cin.ignore();
-}
-
-void test_teleop() {
-	PR2 *brett = new PR2();
-	boost::this_thread::sleep(boost::posix_time::seconds(1));
-
-	brett->rarm->set_posture(Arm::Posture::mantis);
-	brett->rarm->teleop();
-}
-
-void test_head() {
-	PR2 *brett = new PR2();
-	boost::this_thread::sleep(boost::posix_time::seconds(1));
-
-	Arm *arm = brett->rarm;
-	Head *head = brett->head;
-
-	arm->set_posture(Arm::Posture::mantis);
-
-	mat j = head->get_joint_values();
-	std::cout << "head joints: " << j.t() << "\n";
-
-	mat lower, upper;
-	head->get_limits(lower, upper);
-	std::cout << "lower: " << lower.t() << "\n";
-	std::cout << "upper: " << upper.t() << "\n";
-
-	arm->teleop();
-	head->look_at(arm->get_pose());
-}
-
-void test_camera() {
-	PR2 *brett = new PR2();
-	KinectSensor *kinect = brett->h_kinect;
-
-	kinect->power_on();
-	boost::this_thread::sleep(boost::posix_time::seconds(1));
-	std::cout << "Getting image...\n";
-	cube image = kinect->get_image();
-	for(int i=0; i < image.n_rows; ++i) {
-		for(int j=0; j < image.n_cols; ++j) {
-			mat rgb = image.subcube(i,j,0,i,j,2);
-//			std::cout << rgb.n_rows << " " << rgb.n_cols << "\n";
-//			std::cout << rgb;
-		}
-	}
-	std::cout << "Image size: (" << image.n_rows << ", " << image.n_cols << ", " << image.n_slices << ")\n";
-
-//	std::vector<std::vector<mat> > points_pixels_colors = camera->get_pixels_and_colors()
-
-}
-
-void test_plot() {
-	PR2 *brett = new PR2();
-	Arm *arm = brett->rarm;
-	KinectSensor *kinect = brett->r_kinect;
-
-	arm->set_posture(Arm::Posture::mantis);
-	boost::this_thread::sleep(boost::posix_time::seconds(1));
-
-	rave::Transform p = kinect->get_pose();
-
-	rave::Vector pos = p.trans;
-	rave::Vector color(0, 1, 0);
-	rave::GraphHandlePtr h = rave_utils::plot_point(brett->get_env(), pos, color);
-
-	std::cout << "Press enter to exit\n";
-	std::cin.ignore();
-}
-
-void test_kinect() {
-	PR2 *brett = new PR2();
-	Arm *arm = brett->rarm;
-	KinectSensor *kinect = brett->r_kinect;
-
-	kinect->power_on();
-	kinect->render_on();
-	arm->set_posture(Arm::Posture::mantis);
-	boost::this_thread::sleep(boost::posix_time::seconds(4));
-
-	std::vector<rave::GraphHandlePtr> handles;
-	while(true) {
-		arm->teleop();
-		handles.clear();
-
-		std::vector<ColoredPoint*> colored_points = kinect->get_point_cloud();
-		kinect->display_point_cloud(colored_points, handles);
-	}
-
-
-
-	std::cout << "Press enter to exit\n";
-	std::cin.ignore();
-}
-
-int main(int argc, char* argv[]) {
-//	test_arm();
-//	test_teleop();
-//	test_head();
-//	test_camera();
-//	test_plot();
-	test_kinect();
-}

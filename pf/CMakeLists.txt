@@ -19,7 +19,6 @@ find_package(Boost ${OpenRAVE_Boost_VERSION} EXACT COMPONENTS iostreams python t
 find_package(Armadillo)
 find_package(LAPACK)
 find_package(BLAS)
-find_package(Curses)
 
 set(CASADI_INCLUDE_DIR "$ENV{CASADIPATH}")
 set(CASADI_LIBRARY_DIR "$ENV{CASADIPATH}/build/lib")
@@ -59,7 +58,7 @@ if( Boost_INCLUDE_DIRS )
 endif()
 
 link_directories(${OpenRAVE_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS} ${PYTHON_LIBRARIES} ${CASADI_LIBRARY_DIR}
-                 ${ARMADILLO_LIBRARIES} ${CURSES_LIBRARIES})
+                 ${ARMADILLO_LIBRARIES})
 
 add_executable(test-eih eih/tests/test.cpp 
                system.cpp casadi-system.cpp
@@ -67,13 +66,14 @@ add_executable(test-eih eih/tests/test.cpp
 set_target_properties(test-eih PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
 set_target_properties(test-eih PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 target_link_libraries(test-eih ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES} ${Boost_LIBRARIES}
-                                   ${ARMADILLO_LIBRARIES} ${CURSES_LIBRARIES} ${CASADI_LIBRARY} ${PYTHON_LIBRARIES})
+                                   ${ARMADILLO_LIBRARIES} ${CASADI_LIBRARY} ${PYTHON_LIBRARIES})
 
 add_executable(explore system.cpp casadi-system.cpp
                explore/explore-system.cpp explore/casadi-explore-system.cpp
                explore/explore.cpp explore/exploreMPC.c
                ../util/logging.cpp)
-target_link_libraries(explore ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} ${CASADI_LIBRARY} ${LAPACK_LIBRARIES} ${MY_LIBRARIES})
+target_link_libraries(explore ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} ${CASADI_LIBRARY} ${LAPACK_LIBRARIES} 
+                              ${ARMADILLO_LIBRARIES} ${MY_LIBRARIES})
 
 add_executable(boxes system.cpp casadi-system.cpp
                boxes/boxes-system.cpp boxes/casadi-boxes-system.cpp

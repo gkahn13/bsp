@@ -4,14 +4,14 @@
  * PR2 Constructors/Destructors
  */
 
-PR2::PR2() {
+PR2::PR2(bool view) {
 	std::string working_dir = boost::filesystem::current_path().normalize().string();
 	std::string bsp_dir = working_dir.substr(0,working_dir.find("bsp"));
 	std::string env_file = bsp_dir + "bsp/pf/eih/envs/pr2-test.env.xml";
 
 	std::string robot_name = "Brett";
 
-	this->init(env_file, robot_name, true);
+	this->init(env_file, robot_name, view);
 }
 
 PR2::PR2(std::string env_file, std::string robot_name, bool view) {
@@ -179,38 +179,24 @@ void Arm::teleop() {
 			{'m', rave::Vector(0, 0, -angle_step)},
 	};
 
+	std::cout << manip_name << " teleop\n";
 
-
-	initscr();
-	cbreak();
-	noecho();
-
-	printw("%s teleop\n", manip_name.c_str());
-
-	int c;
-	do {
-		c = getch();
-		clear();
-		printw("%s teleop\n", manip_name.c_str());
+	char c;
+	while ((c = utils::getch()) != 'q') {
 
 		rave::Transform pose = get_pose();
 		if (delta_position.count(c) > 0) {
 			pose.trans += delta_position[c];
-			printw("%c", c);
+//			std::cout << "\r " << c;
 		} else if (delta_angle.count(c) > 0) {
 			pose.rot = rave::geometry::quatFromAxisAngle(rave::geometry::axisAngleFromQuat(pose.rot) + delta_angle[c]);
-			printw("%c", c);
+//			std::cout << "\r " << c;
 		}
 
 		set_pose(pose);
-	} while (c != 'q');
+	}
 
-	printw("%s end teleop\n", manip_name.c_str());
-
-	clear();
-	refresh();
-	endwin();
-
+	std::cout << manip_name << " end teleop\n";
 }
 
 
@@ -227,6 +213,8 @@ Head::Head(rave::RobotBasePtr robot) {
 		head_indices.push_back(robot->GetJointIndex(joint_names[i]));
 	}
 	num_joints = head_indices.size();
+
+	pose_link = robot->GetLink("wide_stereo_link");
 }
 
 /**
@@ -245,6 +233,10 @@ void Head::get_limits(mat &lower, mat &upper) {
 
 	lower = conv_to<mat>::from(lower_vec);
 	upper = conv_to<mat>::from(upper_vec);
+}
+
+rave::Transform Head::get_pose() {
+	return pose_link->GetTransform();
 }
 
 void Head::set_joint_values(const mat &joint_values) {
@@ -282,32 +274,21 @@ void Head::teleop() {
 			{'x' , {0, pos_step}},
 	};
 
-	initscr();
-	raw();
-	noecho();
+	std::cout << "Head teleop\n";
 
-	printw("Head teleop\n");
-
-	int c;
-	do {
-		c = getch();
-		clear();
-		printw("Head teleop\n");
+	char c;
+	while ((c = utils::getch()) != 'q') {
 
 		mat j = get_joint_values();
 		if (delta_joints.count(c) > 0) {
 			j += conv_to<mat>::from(delta_joints[c]);
-			printw("%c", c);
 		}
 
 		set_joint_values(j);
 
-	} while (c != 'q');
+	}
 
-	printw("Head end teleop\n");
-
-	refresh();
-	endwin();
+	std::cout << "Head end teleop\n";
 }
 
 

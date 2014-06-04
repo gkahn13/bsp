@@ -1,7 +1,7 @@
-#pragma once
+#ifndef _PR2_SIM_H__
+#define _PR2_SIM_H__
 
 #include <map>
-#include <ncurses.h>
 
 #include <armadillo>
 using namespace arma;
@@ -14,6 +14,7 @@ using namespace arma;
 namespace rave = OpenRAVE;
 
 #include "rave_utils.h"
+#include "utils.h"
 
 // forward declarations
 class Arm;
@@ -27,7 +28,7 @@ public:
 	Head *head;
 	KinectSensor *h_kinect, *l_kinect, *r_kinect;
 
-	PR2();
+	PR2(bool view=true);
 	PR2(std::string env_file, std::string robot_name, bool view=true);
 	~PR2();
 
@@ -47,6 +48,7 @@ class Manipulator {
 public:
 	virtual mat get_joint_values() = 0;
 	virtual void get_limits(mat &lower, mat &upper) = 0;
+	virtual rave::Transform get_pose() = 0;
 
 	virtual void set_joint_values(const mat &joint_values) = 0;
 
@@ -86,6 +88,7 @@ public:
 
 	mat get_joint_values();
 	void get_limits(mat &lower, mat &upper);
+	rave::Transform get_pose();
 
 	void set_joint_values(const mat &joint_values);
 	void look_at(const rave::Transform &pose,
@@ -97,6 +100,7 @@ private:
 	rave::RobotBasePtr robot;
 	std::vector<int> head_indices;
 	int num_joints;
+	rave::KinBody::LinkPtr pose_link;
 };
 
 class Sensor {
@@ -177,3 +181,5 @@ private:
 	DepthSensor* depth_sensor;
 	CameraSensor* camera_sensor;
 };
+
+#endif

@@ -1,110 +1,6 @@
 #include "../include/eih_system.h"
 
 /**
- * Helper functions
- */
-
-// r,g,b values are from 0 to 1
-// h = [0,1], s = [0,1], v = [0,1]
-//		if s == 0, then h = -1 (undefined)
-
-inline mat rgb_to_hsv(const mat &rgb) {
-	mat hsv(rgb.n_rows, rgb.n_cols, fill::zeros);
-	double min, max, delta;
-
-	min = rgb.min();
-	max = rgb.max();
-	hsv(2) = max; // v
-
-	delta = max - min;
-
-	if( max != 0 ) {
-		hsv(1) = delta / max;		// s
-	}
-	else {
-		// r = g = b = 0		// s = 0, v is undefined
-		hsv(1) = 0;
-		hsv(0) = -1;
-
-		return hsv;
-	}
-
-	if( rgb(0) == max ) {
-		hsv(0) = ( rgb(1) - rgb(2) ) / delta;		// between yellow & magenta
-	}
-	else if( rgb(1) == max ) {
-		hsv(0) = 2 + ( rgb(2) - rgb(0) ) / delta;	// between cyan & yellow
-	}
-	else {
-		hsv(0) = 4 + ( rgb(0) - rgb(1) ) / delta;	// between magenta & cyan
-	}
-
-	hsv(0) *= 60;				// degrees
-	if( hsv(0) < 0 ) {
-		hsv(0) += 360;
-	}
-
-	hsv(0) /= 360;
-	return hsv;
-}
-
-inline mat hsv_to_rgb(const mat &hsv) {
-	mat rgb(hsv.n_rows, hsv.n_cols, fill::zeros);
-	double h = hsv(0), s = hsv(1), v = hsv(2);
-	int i;
-	double f, p, q, t;
-
-	if( s == 0 ) {
-		// achromatic (grey)
-		rgb(0) = rgb(1) = rgb(2) = v;
-		return rgb;
-	}
-
-	h *= 360; // [0,1] --> [0,360]
-	h /= 60;  // sector 0 to 5
-	i = floor( h );
-	f = h - i;  // factorial part of h
-	p = v * ( 1 - s );
-	q = v * ( 1 - s * f );
-	t = v * ( 1 - s * ( 1 - f ) );
-
-	switch( i ) {
-		case 0:
-			rgb(0) = v;
-			rgb(1) = t;
-			rgb(2) = p;
-			break;
-		case 1:
-			rgb(0) = q;
-			rgb(1) = v;
-			rgb(2) = p;
-			break;
-		case 2:
-			rgb(0) = p;
-			rgb(1) = v;
-			rgb(2) = t;
-			break;
-		case 3:
-			rgb(0) = p;
-			rgb(1) = q;
-			rgb(2) = v;
-			break;
-		case 4:
-			rgb(0) = t;
-			rgb(1) = p;
-			rgb(2) = v;
-			break;
-		default:		// case 5:
-			rgb(0) = v;
-			rgb(1) = p;
-			rgb(2) = q;
-			break;
-	}
-
-	return rgb;
-}
-
-/**
  * EihSystem constructors and initializers
  */
 
@@ -192,7 +88,7 @@ double EihSystem::obsfunc_continuous_weight(const mat &particle, const cube &ima
 
 		if (fabs(sd) < .03) {
 			mat rgb = image.subcube(y,x,0,y,x,2);
-			color = rgb_to_hsv(rgb);
+			color = utils::rgb_to_hsv(rgb);
 		}
 
 		sd_sigmoid = (1-.1)*sd_sigmoid + .1/2.0;
@@ -257,7 +153,7 @@ double EihSystem::obsfunc_discrete_weight(const mat &particle, const cube &image
 			color = rave::Vector(1, 1, 1);
 		} else {
 			mat rgb = image.subcube(y,x,0,y,x,2);
-			mat hsv = rgb_to_hsv(rgb);
+			mat hsv = utils::rgb_to_hsv(rgb);
 
 			double dist_to_red = MIN(hsv(0), 1-hsv(0));
 			if (dist_to_red < .04) {
@@ -308,6 +204,53 @@ double EihSystem::cost(const std::vector<mat>& X, const std::vector<mat>& U, con
 
 }
 
-void EihSystem::display_states_and_particles(const std::vector<mat>& X, const mat& P, bool pause) {
+double EihSystem::cost(const mat &x0, const std::vector<mat>& U, const mat& P) {
+	double entropy = 0;
 
+	int M = P.n_cols;
+	int T = U.size()+1;
+	manip->set_joint_values(x0);
+
+	mat x_t = x0, x_tp1;
+	mat W_t = (1/double(M))*ones<mat>(M, 1), W_tp1(M, 1, fill::zeros);
+	for(int t=0; t < T-1; ++t) {
+		x_tp1 = dynfunc(x_t, U[t]);
+		manip->set_joint_values(x_tp1);
+
+		cube image = kinect->get_image();
+		mat z_buffer = kinect->get_z_buffer();
+
+		for(int m=0; m < M; ++m) {
+			W_tp1(m) = obsfunc_continuous_weight(P.col(m), image, z_buffer) * W_t(m);
+		}
+
+		entropy += accu(-W_tp1 % log(W_tp1));
+
+		W_t = W_tp1;
+	}
+
+	manip->set_joint_values(x0);
+
+	return entropy;
+}
+
+void EihSystem::display_states_and_particles(const std::vector<mat>& X, const mat& P, bool pause) {
+	handles.clear();
+	int M = P.n_cols;
+
+	mat color;
+	color << 0 << 1 << 0;
+	for(int m=0; m < M; ++m) {
+		handles.push_back(rave_utils::plot_point(env, P.col(m), color));
+	}
+
+	int T = X.size();
+	double hue_start = 180.0/360, hue_end = 240.0/360;
+	mat initial_joints = manip->get_joint_values();
+	for(int t=0; t < T; ++t) {
+		manip->set_joint_values(X[t]);
+		rave::Vector color = rave::Vector(hue_start + (hue_end - hue_start)*(t/T), 1, 1);
+		handles.push_back(rave_utils::plot_point(env, manip->get_pose().trans, color));
+	}
+	manip->set_joint_values(initial_joints);
 }

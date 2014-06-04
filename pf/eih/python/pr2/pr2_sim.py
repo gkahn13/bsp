@@ -252,15 +252,10 @@ class CameraSensor(Sensor):
     def __init__(self, sensor):
         Sensor.__init__(self, sensor)
         
-        
-        self.power_on()
-        time.sleep(1)
-        data = self.get_data()
+        data = self.sensor.GetSensorGeometry(self.type)
         
         self.P = data.KK
         self.height, self.width = data.imagedata.shape[0:2]
-        
-        self.power_off()
         
     def get_image(self):
         data = self.get_data()
@@ -469,5 +464,5 @@ def test_kinect():
     
 if __name__ == '__main__':
     #test()
-    #test_pose()
-    test_kinect()
+    test_pose()
+    #test_kinect()

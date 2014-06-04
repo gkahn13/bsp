@@ -466,7 +466,7 @@ void parse_explore(int argc, char* argv[], ObsType& obs_type, CostType& cost_typ
 
 
 int main(int argc, char* argv[]) {
-	srand(time(0));
+//	srand(time(0));
 
 	ObsType obs_type = ObsType::angle;
 	CostType cost_type = CostType::entropy;

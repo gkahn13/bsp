@@ -111,22 +111,39 @@ double System::cost_entropy(const std::vector<mat>& X, const std::vector<mat>& U
 		}
 	}
 
-	std::vector<mat> W(T, zeros<mat>(M, 1));
-	W[0] = (1/double(M))*ones<mat>(M,1);
+//	std::vector<mat> W(T, zeros<mat>(M, 1));
+//	W[0] = (1/double(M))*ones<mat>(M,1);
+//	for(int t=1; t < T; ++t) {
+//		for(int m=0; m < M; ++m) {
+//			for(int p=0; p < M; ++p) {
+//				mat diff = H[t].col(m) - H[t].col(p);
+//				W[t](m) += this->gauss_likelihood(diff, this->R);
+//			}
+//		}
+//		W[t] = W[t] / accu(W[t]);
+//
+//		// skoglar version
+//		// second term simplifies because zero particle dynamics
+//		entropy += accu(-W[t] % log(W[t])) +
+//				   accu(-W[t] % log(W[t-1])) +
+//				   log(accu(W[t-1] % W[t]));
+//	}
+
+	mat W_t = (1/double(M))*ones<mat>(M, 1);
 	for(int t=1; t < T; ++t) {
+		mat W_tp1(M, 1, fill::zeros);
 		for(int m=0; m < M; ++m) {
 			for(int p=0; p < M; ++p) {
 				mat diff = H[t].col(m) - H[t].col(p);
-				W[t](m) += this->gauss_likelihood(diff, this->R);
+				W_tp1(m) += this->gauss_likelihood(diff, this->R);
 			}
+			W_tp1(m) *= W_t(m);
 		}
-		W[t] = W[t] / accu(W[t]);
+		W_tp1 = W_tp1 / accu(W_tp1);
 
-		// skoglar version
-		// second term simplifies because zero particle dynamics
-		entropy += accu(-W[t] % log(W[t])) +
-				   accu(-W[t] % log(W[t-1])) +
-				   log(accu(W[t-1] % W[t]));
+		entropy += accu(-W_tp1 % log(W_tp1));
+
+		W_t = W_tp1;
 	}
 
 	return entropy;

@@ -1,6 +1,7 @@
 #include "../include/eih_system.h"
 #include "../include/pr2_sim.h"
 #include "../include/rave_utils.h"
+#include "../include/utils.h"
 
 /**
  * TESTS
@@ -38,6 +39,10 @@ void test_teleop() {
 	brett->r_kinect->render_on();
 	while(true) {
 		brett->rarm->teleop();
+
+		std::cout << "\n" << brett->rarm->get_joint_values().t();
+		std::cout << "Press enter to continue\n";
+		std::cin.ignore();
 	}
 }
 
@@ -212,6 +217,46 @@ void test_eih_system() {
 	std::cin.ignore();
 }
 
+void test_cost() {
+//	-2.0302  -0.0547  -1.0110  -1.4762  -0.5600  -1.4286  -3.9647
+//	-1.9594  -0.0394  -1.0110  -1.3647  -0.4439  -1.6257  -3.8557
+//	-1.9594  -0.0394  -1.0110  -1.3647  -0.4439  -1.6257  -3.8557
+	PR2 *brett = new PR2();
+	int M = 1000;
+	mat P(3,1000,fill::zeros);
+	EihSystem *sys = NULL;
+	Manipulator *manip = NULL;
+	KinectSensor *kinect = NULL;
+	setup_eih_environment(brett, 1000, Arm::ArmType::right, false, P, &sys);
+	manip = sys->get_manip();
+	kinect = sys->get_kinect();
+
+	rave::EnvironmentBasePtr env = brett->get_env();
+
+	int T = 3;
+	std::vector<mat> X_DES(T);
+
+	for(int t=0; t < T; ++t) {
+		manip->teleop();
+		X_DES[t] = manip->get_joint_values().t();
+	}
+
+//	X_DES[0] << -2.0302  << -0.0547 << -1.0110 << -1.4762 << -0.5600 << -1.4286 << -3.9647;
+//	X_DES[1] << -1.9594 << -0.0394 << -1.0110 << -1.3647 << -0.4439 << -1.6257 << -3.8557;
+//	X_DES[2] << -1.9594 << -0.0394 << -1.0110 << -1.3647 << -0.4439 << -1.6257 << -3.8557;
+
+	mat x0 = X_DES[0];
+
+	std::vector<mat> U(T-1);
+	for(int t=0; t < T-1; ++t) {
+		U[t] = X_DES[t+1] - X_DES[t];
+	}
+
+	double cost = sys->cost(x0, U, P);
+	std::cout << "cost: " << cost << "\n";
+}
+
+
 int main(int argc, char* argv[]) {
 //	test_arm();
 //	test_teleop();
@@ -219,6 +264,7 @@ int main(int argc, char* argv[]) {
 //	test_camera();
 //	test_plot();
 //	test_kinect();
-	test_eih_system();
+//	test_eih_system();
+	test_cost();
 }
 

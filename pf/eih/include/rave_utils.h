@@ -1,4 +1,5 @@
-#pragma once
+#ifndef _RAVE_UTILS_H__
+#define _RAVE_UTILS_H__
 
 #include <iostream>
 
@@ -30,3 +31,5 @@ mat rave_vec_to_mat(rave::Vector v, bool is_4d=false);
 rave::Vector mat_to_rave_vec(mat m);
 
 }
+
+#endif

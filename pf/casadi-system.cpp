@@ -103,39 +103,59 @@ AD::SXMatrix CasadiSystem::cost_entropy(const std::vector<AD::SXMatrix>& X, cons
 		}
 	}
 
-	std::vector<std::vector<AD::SXMatrix> > W(T, std::vector<AD::SXMatrix>(M, AD::SXMatrix(1,1)));
-	for(int m=0; m < M; ++m) { W[0][m](0,0) = 1/float(M); }
-	for(int t=1; t < T; ++t) {
+//	std::vector<std::vector<AD::SXMatrix> > W(T, std::vector<AD::SXMatrix>(M, AD::SXMatrix(1,1)));
+//	for(int m=0; m < M; ++m) { W[0][m](0,0) = 1/float(M); }
+//	for(int t=1; t < T; ++t) {
+//
+//		AD::SXMatrix W_sum(1,1);
+//		for(int m=0; m < M; ++m) {
+//			for(int p=0; p < M; ++p) {
+//				int a = MIN(m,p);
+//				int b = MAX(m,p);
+//				W[t][m] += GL_H[t][a][b];
+//			}
+//			W_sum += W[t][m];
+//		}
+//		for(int m=0; m < M; ++m) { W[t][m] = W[t][m] / W_sum; }
+//
+//		// use skoglar version
+//		AD::SXMatrix entropy_t(1,1);
+//		for(int m=0; m < M; ++m) {
+//			entropy_t += -W[t][m]*log(W[t][m]);
+//		}
+//
+//		// simplifies because zero particle dynamics
+//		for(int m=0; m < M; ++m) {
+//			entropy_t += -W[t][m]*log(W[t-1][m]);
+//		}
+//
+//		AD::SXMatrix sum_cross_time_weights(1,1);
+//		for(int m=0; m < M; ++m) {
+//			sum_cross_time_weights += W[t-1][m]*W[t][m];
+//		}
+//		entropy_t += log(sum_cross_time_weights);
+//
+//		entropy += entropy_t;
+//	}
 
-		AD::SXMatrix W_sum(1,1);
+	AD::SXMatrix W_t(M,1);
+	for(int m=0; m < M; ++m) { W_t(m,0) = 1/float(M); }
+	for(int t=1; t < T; ++t) {
+		AD::SXMatrix W_tp1(M,1), W_tp1_sum(1,1);
 		for(int m=0; m < M; ++m) {
 			for(int p=0; p < M; ++p) {
 				int a = MIN(m,p);
 				int b = MAX(m,p);
-				W[t][m] += GL_H[t][a][b];
+				W_tp1(m,0) += GL_H[t][a][b];
 			}
-			W_sum += W[t][m];
+			W_tp1(m,0) *= W_t(m,0);
+			W_tp1_sum += W_tp1(m,0);
 		}
-		for(int m=0; m < M; ++m) { W[t][m] = W[t][m] / W_sum; }
+		for(int m=0; m < M; ++m) { W_tp1(m,0) /= W_tp1_sum; }
 
-		// use skoglar version
-		AD::SXMatrix entropy_t(1,1);
-		for(int m=0; m < M; ++m) {
-			entropy_t += -W[t][m]*log(W[t][m]);
-		}
+		entropy += AD::sumAll(-W_tp1*log(W_tp1));
 
-		// simplifies because zero particle dynamics
-		for(int m=0; m < M; ++m) {
-			entropy_t += -W[t][m]*log(W[t-1][m]);
-		}
-
-		AD::SXMatrix sum_cross_time_weights(1,1);
-		for(int m=0; m < M; ++m) {
-			sum_cross_time_weights += W[t-1][m]*W[t][m];
-		}
-		entropy_t += log(sum_cross_time_weights);
-
-		entropy += entropy_t;
+		W_t = W_tp1;
 	}
 
 //	for(int t=0; t < T-2; ++t) {

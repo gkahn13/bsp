@@ -64,7 +64,7 @@ void test_head() {
 	std::cout << "upper: " << upper.t() << "\n";
 
 	arm->teleop();
-	head->look_at(arm->get_pose());
+	head->set_pose(arm->get_pose());
 }
 
 void test_camera() {
@@ -218,9 +218,6 @@ void test_eih_system() {
 }
 
 void test_cost() {
-//	-2.0302  -0.0547  -1.0110  -1.4762  -0.5600  -1.4286  -3.9647
-//	-1.9594  -0.0394  -1.0110  -1.3647  -0.4439  -1.6257  -3.8557
-//	-1.9594  -0.0394  -1.0110  -1.3647  -0.4439  -1.6257  -3.8557
 	PR2 *brett = new PR2();
 	int M = 1000;
 	mat P(3,1000,fill::zeros);
@@ -233,7 +230,7 @@ void test_cost() {
 
 	rave::EnvironmentBasePtr env = brett->get_env();
 
-	int T = 3;
+	int T = 2;
 	std::vector<mat> X_DES(T);
 
 	for(int t=0; t < T; ++t) {
@@ -254,6 +251,80 @@ void test_cost() {
 
 	double cost = sys->cost(x0, U, P);
 	std::cout << "cost: " << cost << "\n";
+
+	mat cost_grad = sys->cost_grad(x0, U, P);
+	std::cout << "cost grad:\n" << cost_grad;
+}
+
+void test_greedy() {
+	PR2 *brett = new PR2();
+	int M = 1000;
+	mat P(3,1000,fill::zeros);
+	EihSystem *sys = NULL;
+	Manipulator *manip = NULL;
+	KinectSensor *kinect = NULL;
+	setup_eih_environment(brett, 1000, Arm::ArmType::right, false, P, &sys);
+	manip = sys->get_manip();
+	kinect = sys->get_kinect();
+
+	rave::EnvironmentBasePtr env = brett->get_env();
+
+	int T = 2, ch;
+	mat x0 = manip->get_joint_values();
+	std::vector<mat> U(1);
+	while(true) {
+//		std::cout << "\nPress 'q' to exit\n";
+//		if (utils::getch() == 'q') { break; }
+//		std::cout << "\n";
+		boost::this_thread::sleep(boost::posix_time::seconds(.5));
+
+//		manip->teleop();
+
+		U[0] = zeros<mat>(x0.n_rows, x0.n_cols);
+
+		double cost = sys->cost(x0, U, P);
+		std::cout << "cost: " << cost << "\n";
+
+		mat cost_grad = sys->cost_grad(x0, U, P);
+		std::cout << "cost grad: " << cost_grad.t();
+
+		// step along negative gradient
+//		x0 -= (2*(M_PI/180))*(cost_grad/norm(cost_grad,2));
+//		manip->set_joint_values(x0);
+
+		// step along negative gradient
+		// (clip joint input)
+//		mat u = -(2*(M_PI/180))*(cost_grad/norm(cost_grad,2));
+//		mat x_tp1(x0.n_rows, x0.n_cols), P_tp1(3, M, fill::zeros);
+//		sys->update_state_and_particles(x0, P, u, x_tp1, P_tp1, true);
+//		x0 = x_tp1;
+//		P = P_tp1;
+
+		// step along negative gradient
+		// (clip pos/rot change)
+		mat u_grad = -(2*(M_PI/180))*(cost_grad/norm(cost_grad,2));
+		mat x1 = x0 + u_grad;
+
+		rave::Transform p0, p1;
+		p0 = manip->get_pose();
+		manip->set_joint_values(x1);
+		p1 = manip->get_pose();
+
+		rave::Vector trans_diff_dir = (p1.trans - p0.trans).normalize3();
+		rave::Vector trans1_clipped = p0.trans + .03*(trans_diff_dir);
+		rave::Vector rot1_clipped = rave::geometry::quatSlerp(p0.rot, p1.rot, 1.0);
+		rave::Transform p1_clipped(rot1_clipped, trans1_clipped);
+
+		manip->set_pose(p1_clipped);
+		mat x1_clipped = manip->get_joint_values();
+		mat u = x1_clipped - x0;
+
+		manip->set_joint_values(x0);
+		mat x_tp1(x0.n_rows, x0.n_cols), P_tp1(3, M, fill::zeros);
+		sys->update_state_and_particles(x0, P, u, x_tp1, P_tp1, true);
+		x0 = x_tp1;
+		P = P_tp1;
+	}
 }
 
 
@@ -265,6 +336,7 @@ int main(int argc, char* argv[]) {
 //	test_plot();
 //	test_kinect();
 //	test_eih_system();
-	test_cost();
+//	test_cost();
+	test_greedy();
 }
 

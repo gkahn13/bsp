@@ -67,7 +67,43 @@ void PR2::init(std::string env_file, std::string robot_name, bool view) {
 	r_kinect = new KinectSensor(robot, "r_gripper_depth", "r_gripper_cam");
 }
 
+/**
+ * Manipulator public methods
+ */
 
+mat Manipulator::get_joint_values() {
+	std::vector<double> joint_values;
+	robot->GetDOFValues(joint_values, joint_indices);
+	return conv_to<mat>::from(joint_values);
+}
+
+void Manipulator::get_limits(mat &l, mat &u) {
+	l = lower;
+	u = upper;
+}
+
+void Manipulator::set_joint_values(mat j) {
+	for(int i=0; i < num_joints; ++i) {
+		j(i) = std::min(j(i), upper(i));
+		j(i) = std::max(j(i), lower(i));
+	}
+
+	std::vector<double> joint_values_vec = conv_to<std::vector<double>>::from(j);
+
+	robot->SetDOFValues(joint_values_vec, rave::KinBody::CheckLimitsAction::CLA_Nothing, joint_indices);
+}
+
+/**
+ * Manipulator protected methods
+ */
+
+void Manipulator::init() {
+	std::vector<double> lower_vec(num_joints), upper_vec(num_joints);
+	robot->GetDOFLimits(lower_vec, upper_vec, joint_indices);
+
+	lower = conv_to<mat>::from(lower_vec);
+	upper = conv_to<mat>::from(upper_vec);
+}
 
 /**
  * Arm Constructors
@@ -84,30 +120,18 @@ Arm::Arm(rave::RobotBasePtr robot, ArmType arm_type) {
 	}
 
 	manip = robot->GetManipulator(manip_name);
-	arm_indices = manip->GetArmIndices();
-	num_joints = arm_indices.size();
+	joint_indices = manip->GetArmIndices();
+	num_joints = joint_indices.size();
+
+	init();
 }
 
 /**
  * Arm public methods
  */
 
-mat Arm::get_joint_values() {
-	std::vector<double> joint_values;
-	manip->GetArmDOFValues(joint_values);
-	return conv_to<mat>::from(joint_values);
-}
-
 rave::Transform Arm::get_pose() {
 	return manip->GetEndEffectorTransform();
-}
-
-void Arm::get_limits(mat& lower, mat& upper) {
-	std::vector<double> lower_vec(num_joints), upper_vec(num_joints);
-	robot->GetDOFLimits(lower_vec, upper_vec, arm_indices);
-
-	lower = conv_to<mat>::from(lower_vec);
-	upper = conv_to<mat>::from(upper_vec);
 }
 
 void Arm::set_posture(Posture posture) {
@@ -141,11 +165,6 @@ void Arm::set_posture(Posture posture) {
 
 	mat j_mat = conv_to<mat>::from(j);
 	set_joint_values(j_mat);
-}
-
-void Arm::set_joint_values(const mat &joint_values) {
-	std::vector<double> joint_values_vec = conv_to<std::vector<double>>::from(joint_values);
-	robot->SetDOFValues(joint_values_vec, rave::KinBody::CheckLimitsAction::CLA_CheckLimits, arm_indices);
 }
 
 void Arm::set_pose(const rave::Transform &pose, std::string ref_frame) {
@@ -210,49 +229,34 @@ Head::Head(rave::RobotBasePtr robot) {
 
 	std::vector<std::string> joint_names = {"head_pan_joint", "head_tilt_joint"};
 	for(int i=0; i < joint_names.size(); ++i) {
-		head_indices.push_back(robot->GetJointIndex(joint_names[i]));
+		joint_indices.push_back(robot->GetJointIndex(joint_names[i]));
 	}
-	num_joints = head_indices.size();
+	num_joints = joint_indices.size();
 
 	pose_link = robot->GetLink("wide_stereo_link");
+
+	init();
 }
 
 /**
  * Head public methods
  */
 
-mat Head::get_joint_values() {
-	std::vector<double> joint_values;
-	robot->GetDOFValues(joint_values, head_indices);
-	return conv_to<mat>::from(joint_values);
-}
-
-void Head::get_limits(mat &lower, mat &upper) {
-	std::vector<double> lower_vec(num_joints), upper_vec(num_joints);
-	robot->GetDOFLimits(lower_vec, upper_vec, head_indices);
-
-	lower = conv_to<mat>::from(lower_vec);
-	upper = conv_to<mat>::from(upper_vec);
-}
-
 rave::Transform Head::get_pose() {
 	return pose_link->GetTransform();
 }
 
-void Head::set_joint_values(const mat &joint_values) {
-	std::vector<double> joint_values_vec = conv_to<std::vector<double>>::from(joint_values);
-	robot->SetDOFValues(joint_values_vec, rave::KinBody::CheckLimitsAction::CLA_CheckLimits, head_indices);
-}
-
-void Head::look_at(const rave::Transform &pose, const std::string reference_frame, const std::string camera_frame) {
+// should be called look_at (named set_pose b/c of Manipulator)
+// points head to look at pose
+void Head::set_pose(const rave::Transform &pose, const std::string ref_frame) {
 	rave::Transform world_from_ref, world_from_cam, ref_from_cam;
 
-	if (reference_frame == "world") {
+	if (ref_frame == "world") {
 		world_from_ref.identity();
 	} else {
-		world_from_ref = robot->GetLink(reference_frame)->GetTransform();
+		world_from_ref = robot->GetLink(ref_frame)->GetTransform();
 	}
-	world_from_cam = robot->GetLink(camera_frame)->GetTransform();
+	world_from_cam = get_pose();
 	ref_from_cam = world_from_ref.inverse()*world_from_cam;
 
 	rave::Vector ax = pose.trans - ref_from_cam.trans;

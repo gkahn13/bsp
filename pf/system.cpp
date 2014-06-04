@@ -21,20 +21,20 @@ mat System::cost_grad(std::vector<mat>& X, std::vector<mat>& U, const mat& P) {
 
 	mat g(TOTAL_VARS, 1, fill::zeros);
 
-	double orig, entropy_p, entropy_l;
+	double orig, cost_p, cost_l;
 	int index = 0;
 	for(int t=0; t < T; ++t) {
 		for(int i=0; i < X[t].n_rows; ++i) {
 			orig = X[t](i);
 
 			X[t](i) = orig + step;
-			entropy_p = this->cost(X, U, P);
+			cost_p = this->cost(X, U, P);
 
 			X[t](i) = orig - step;
-			entropy_l = this->cost(X, U, P);
+			cost_l = this->cost(X, U, P);
 
 			X[t][i] = orig;
-			g(index++) = (entropy_p - entropy_l)/(2*step);
+			g(index++) = (cost_p - cost_l)/(2*step);
 		}
 
 		if (t < T-1) {
@@ -42,13 +42,13 @@ mat System::cost_grad(std::vector<mat>& X, std::vector<mat>& U, const mat& P) {
 				orig = U[t](i);
 
 				U[t](i) = orig + step;
-				entropy_p = this->cost(X, U, P);
+				cost_p = this->cost(X, U, P);
 
 				U[t](i) = orig - step;
-				entropy_l = this->cost(X, U, P);
+				cost_l = this->cost(X, U, P);
 
 				U[t][i] = orig;
-				g(index++) = (entropy_p - entropy_l)/(2*step);
+				g(index++) = (cost_p - cost_l)/(2*step);
 			}
 		}
 

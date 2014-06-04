@@ -46,14 +46,23 @@ private:
 
 class Manipulator {
 public:
-	virtual mat get_joint_values() = 0;
-	virtual void get_limits(mat &lower, mat &upper) = 0;
+	mat get_joint_values();
+	void get_limits(mat &lower, mat &upper);
 	virtual rave::Transform get_pose() = 0;
 
-	virtual void set_joint_values(const mat &joint_values) = 0;
+	void set_joint_values(mat j);
+	virtual void set_pose(const rave::Transform &pose, std::string ref_frame="world") =0;
 
 	// DO NOT HOLD DOWN KEYS
 	virtual void teleop() = 0;
+
+protected:
+	rave::RobotBasePtr robot;
+	std::vector<int> joint_indices;
+	int num_joints;
+	mat lower, upper;
+
+	void init();
 };
 
 class Arm : public virtual Manipulator {
@@ -63,12 +72,9 @@ public:
 
 	Arm(rave::RobotBasePtr robot, ArmType arm_type);
 
-	mat get_joint_values();
 	rave::Transform get_pose();
-	void get_limits(mat &lower, mat &upper);
 
 	void set_posture(Posture posture);
-	void set_joint_values(const mat &joint_values);
 	void set_pose(const rave::Transform &pose, std::string ref_frame="world");
 
 	void teleop();
@@ -76,30 +82,21 @@ public:
 private:
 	ArmType arm_type;
 	std::string manip_name;
-	rave::RobotBasePtr robot;
 	rave::RobotBase::ManipulatorPtr manip;
-	std::vector<int> arm_indices;
-	int num_joints;
 };
 
 class Head : public virtual Manipulator {
 public:
 	Head(rave::RobotBasePtr robot);
 
-	mat get_joint_values();
-	void get_limits(mat &lower, mat &upper);
 	rave::Transform get_pose();
 
-	void set_joint_values(const mat &joint_values);
-	void look_at(const rave::Transform &pose,
-			const std::string reference_frame="world", const std::string camera_frame="wide_stereo_link");
+	// look_at
+	void set_pose(const rave::Transform &pose, const std::string ref_frame="world");
 
 	void teleop();
 
 private:
-	rave::RobotBasePtr robot;
-	std::vector<int> head_indices;
-	int num_joints;
 	rave::KinBody::LinkPtr pose_link;
 };
 

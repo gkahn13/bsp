@@ -63,7 +63,7 @@ mat EihSystem::obsfunc(const mat& x, const mat& t, const mat& r) {
 
 }
 
-double EihSystem::obsfunc_continuous_weight(const mat &particle, const cube &image, const mat &z_buffer) {
+double EihSystem::obsfunc_continuous_weight(const mat &particle, const cube &image, const mat &z_buffer, bool plot) {
 	double is_in_fov = UNKNOWN, sd_sigmoid = UNKNOWN;
 	mat color = UNKNOWN*ones<mat>(3,1);
 
@@ -114,23 +114,24 @@ double EihSystem::obsfunc_continuous_weight(const mat &particle, const cube &ima
 		weight = MAX(weight, gauss_likelihood(e.t(), R));
 	}
 
-	// plot
-	if (z(0) <= .5) { // outside FOV
-		color << 0 << 1 << 0;
-	} else if (z(1) < .25) { // free space
-		color << 1 << 1 << 1;
-	} else if (z(1) > .75) { // occluded
-		color << 0 << 0 << 0;
-	} else { // near surface and red
-		color = image.subcube(y,x,0,y,x,2);
-	}
+	if (plot) {
+		if (z(0) <= .5) { // outside FOV
+			color << 0 << 1 << 0;
+		} else if (z(1) < .25) { // free space
+			color << 1 << 1 << 1;
+		} else if (z(1) > .75) { // occluded
+			color << 0 << 0 << 0;
+		} else { // near surface and red
+			color = image.subcube(y,x,0,y,x,2);
+		}
 
-	handles.push_back(rave_utils::plot_point(env, particle, color));
+		handles.push_back(rave_utils::plot_point(env, particle, color));
+	}
 
 	return weight;
 }
 
-double EihSystem::obsfunc_discrete_weight(const mat &particle, const cube &image, const mat &z_buffer) {
+double EihSystem::obsfunc_discrete_weight(const mat &particle, const cube &image, const mat &z_buffer, bool plot) {
 	double weight;
 	rave::Vector color;
 
@@ -166,13 +167,19 @@ double EihSystem::obsfunc_discrete_weight(const mat &particle, const cube &image
 		}
 	}
 
-	rave::Vector particle_vec = rave_utils::mat_to_rave_vec(particle);
-	handles.push_back(rave_utils::plot_point(env, particle_vec, color));
+	if (plot) {
+		rave::Vector particle_vec = rave_utils::mat_to_rave_vec(particle);
+		handles.push_back(rave_utils::plot_point(env, particle_vec, color));
+	}
 
 	return weight;
 }
 
 void EihSystem::update_state_and_particles(const mat& x_t, const mat& P_t, const mat& u_t, mat& x_tp1, mat& P_tp1) {
+	update_state_and_particles(x_t, P_t, u_t, x_tp1, P_tp1, false);
+}
+
+void EihSystem::update_state_and_particles(const mat& x_t, const mat& P_t, const mat& u_t, mat& x_tp1, mat& P_tp1, bool plot) {
 	handles.clear();
 	int M = P_t.n_cols;
 
@@ -184,8 +191,8 @@ void EihSystem::update_state_and_particles(const mat& x_t, const mat& P_t, const
 
 	mat W(M, 1, fill::zeros);
 	for(int m=0; m < M; ++m) {
-//		W(m) = obsfunc_discrete_weight(P_t.col(m), image, z_buffer);
-		W(m) = obsfunc_continuous_weight(P_t.col(m), image, z_buffer);
+		W(m) = obsfunc_discrete_weight(P_t.col(m), image, z_buffer, plot);
+//		W(m) = obsfunc_continuous_weight(P_t.col(m), image, z_buffer, plot);
 	}
 
 	W = W / accu(W);
@@ -232,6 +239,30 @@ double EihSystem::cost(const mat &x0, const std::vector<mat>& U, const mat& P) {
 	manip->set_joint_values(x0);
 
 	return entropy;
+}
+
+mat EihSystem::cost_grad(const mat &x0, std::vector<mat>& U, const mat& P) {
+	int T = U.size()+1;
+	mat g(U_DIM*(T-1), 1, fill::zeros);
+
+	double orig, cost_p, cost_l;
+	int index = 0;
+	for(int t=0; t < T-1; ++t) {
+		for(int i=0; i < U_DIM; ++i) {
+			orig = U[t](i);
+
+			U[t](i) = orig + step;
+			cost_p = this->cost(x0, U, P);
+
+			U[t](i) = orig - step;
+			cost_l = this->cost(x0, U, P);
+
+			U[t][i] = orig;
+			g(index++) = (cost_p - cost_l)/(2*step);
+		}
+	}
+
+	return g;
 }
 
 void EihSystem::display_states_and_particles(const std::vector<mat>& X, const mat& P, bool pause) {

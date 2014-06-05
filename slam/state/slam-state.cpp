@@ -728,7 +728,7 @@ bool minimizeMeritFunction(std::vector< Matrix<C_DIM> >& X, std::vector< Matrix<
 				Uvel_eps *= cfg::trust_expand_ratio;
 				Uangle_eps *= cfg::trust_expand_ratio;
 
-
+				// TODO: gradient computed twice, redundant
 				casadiComputeCostGrad(Xopt, Uopt, cost, Gradopt);
 
 				Matrix<CU_DIM> s, y;

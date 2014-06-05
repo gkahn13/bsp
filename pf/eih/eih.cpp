@@ -156,6 +156,37 @@ bool isValidInputs()
 	return true;
 }
 
+void L_BFGS(const std::vector<mat> &X, const std::vector<mat> &U, const mat &grad,
+		const std::vector<mat> &Xopt, const std::vector<mat> &Uopt, const mat &gradopt,
+		mat &hess) {
+	mat s(TOTAL_VARS, 1, fill::zeros);
+
+	int index = 0;
+	for(int t=0; t < T-1; ++t) {
+		s.rows(index, index+X_DIM) = Xopt[t] - X[t];
+		index += X_DIM;
+		s.rows(index, index+U_DIM) = Uopt[t] - U[t];
+		index += U_DIM;
+	}
+	s.rows(index, index+X_DIM) = Xopt[T-1] - X[T-1];
+
+	mat y = gradopt - grad;
+
+	double theta;
+	mat hess_s = hess*s;
+
+	bool decision = accu(s % y) >= .2*accu(s.t()*hess_s);
+	if (decision) {
+		theta = 1;
+	} else {
+		theta = (.8*accu(s.t()*hess_s))/(accu(s.t()*hess_s) - accu(s % y));
+	}
+
+	mat r = theta*y + (1-theta)*hess_s;
+
+	hess = hess - (hess_s*hess_s.t())/(accu(s.t()*hess_s)) + accu(r % r)/accu(s % r);
+}
+
 double eihCollocation(std::vector<mat> &X, std::vector<mat> &U, mat &P, EihSystem *sys,
 		eihMPC_params &problem, eihMPC_output &output, eihMPC_info &info) {
 
@@ -165,10 +196,12 @@ double eihCollocation(std::vector<mat> &X, std::vector<mat> &U, mat &P, EihSyste
 
 	double merit = 0;
 	double constant_cost, hessian_constant, jac_constant;
-	mat g(TOTAL_VARS, 1, fill::zeros), diaghess(TOTAL_VARS, 1, fill::zeros);
+	mat grad;
+	mat hess = eye<mat>(TOTAL_VARS, TOTAL_VARS);
 
 	std::vector<mat> Xopt(T, zeros<mat>(X_DIM, 1));
 	std::vector<mat> Uopt(T-1, zeros<mat>(U_DIM, 1));
+	mat gradopt;
 	double optcost, model_merit, new_merit;
 	double approx_merit_improve, exact_merit_improve, merit_improve_ratio;
 
@@ -182,9 +215,15 @@ double eihCollocation(std::vector<mat> &X, std::vector<mat> &U, mat &P, EihSyste
 
 		// only compute gradient/hessian if P/U has been changed
 		if (solution_accepted) {
-			g = sys->cost_grad(X, U, P);
 
-			diaghess.zeros();
+			if (it == 0) {
+				grad = sys->cost_grad(X, U, P);
+			} else {
+				grad = gradopt; // since L-BFGS calculation required it
+			}
+
+			mat diaghess = diagvec(hess);
+
 			merit = sys->cost(X, U, P);
 
 			constant_cost = 0;
@@ -192,7 +231,7 @@ double eihCollocation(std::vector<mat> &X, std::vector<mat> &U, mat &P, EihSyste
 			jac_constant = 0;
 
 			// fill in Hessian first so we can force it to be PSD
-			// TODO: use finite differences or BFGS to approximate. (else set to 0)
+			std::cout << "Fill in hessian\n";
 			index = 0;
 			for(int t=0; t < T-1; ++t) {
 				for(int i=0; i < (X_DIM+U_DIM); ++i) {
@@ -206,6 +245,7 @@ double eihCollocation(std::vector<mat> &X, std::vector<mat> &U, mat &P, EihSyste
 			}
 
 			// fill in gradient
+			std::cout << "Fill in gradient\n";
 			index = 0;
 			for(int t=0; t < T-1; ++t) {
 				mat::fixed<(X_DIM+U_DIM), 1> zbar;
@@ -214,8 +254,8 @@ double eihCollocation(std::vector<mat> &X, std::vector<mat> &U, mat &P, EihSyste
 
 				for(int i=0; i < (X_DIM+U_DIM); ++i) {
 					hessian_constant += H[t][i]*zbar(i)*zbar(i);
-					jac_constant -= g[index]*zbar(i);
-					f[t][i] = g[index] - H[t][i]*zbar(i);
+					jac_constant -= grad[index]*zbar(i);
+					f[t][i] = grad[index] - H[t][i]*zbar(i);
 					index++;
 				}
 			}
@@ -224,8 +264,8 @@ double eihCollocation(std::vector<mat> &X, std::vector<mat> &U, mat &P, EihSyste
 
 			for(int i=0; i < X_DIM; ++i) {
 				hessian_constant += H[T-1][i]*zbar(i)*zbar(i);
-				jac_constant -= g[index]*zbar(i);
-				f[T-1][i] = g[index] - H[T-1][i]*zbar(i);
+				jac_constant -= grad[index]*zbar(i);
+				f[T-1][i] = grad[index] - H[T-1][i]*zbar(i);
 				index++;
 			}
 
@@ -243,6 +283,7 @@ double eihCollocation(std::vector<mat> &X, std::vector<mat> &U, mat &P, EihSyste
 		mat uMax = sys->get_uMax();
 
 		// set trust region bounds based on current trust region size
+		std::cout << "Set trust regions\n";
 		for(int t=0; t < T; ++t) {
 			index = 0;
 			for(int i=0; i < X_DIM; ++i) {
@@ -272,8 +313,10 @@ double eihCollocation(std::vector<mat> &X, std::vector<mat> &U, mat &P, EihSyste
 
 
 		// call FORCES
+		std::cout << "Call forces\n";
 		int exitflag = eihMPC_solve(&problem, &output, &info);
 		if (exitflag == 1) {
+			std::cout << "Fill in from forces\n";
 			optcost = info.pobj;
 			for(int t=0; t < T; ++t) {
 				index = 0;
@@ -321,7 +364,7 @@ double eihCollocation(std::vector<mat> &X, std::vector<mat> &U, mat &P, EihSyste
 			LOG_DEBUG("Converged: improvement small enough");
 			X = Xopt; U = Uopt;
 			solution_accepted = true;
-			break;
+			return sys->cost(X, U, P);
 		} else if ((exact_merit_improve < 0) || (merit_improve_ratio < cfg::improve_ratio_threshold)) {
 			Xeps *= cfg::trust_shrink_ratio;
 			Ueps *= cfg::trust_shrink_ratio;
@@ -332,6 +375,11 @@ double eihCollocation(std::vector<mat> &X, std::vector<mat> &U, mat &P, EihSyste
 			Xeps *= cfg::trust_expand_ratio;
 			Ueps *= cfg::trust_expand_ratio;
 			LOG_DEBUG("Accepted, Increasing trust region size to:  %2.6f %2.6f", Xeps, Ueps);
+
+			gradopt = sys->cost_grad(Xopt, Uopt, P);
+			LOG_DEBUG("Approximating hessian with L-BFGS");
+			L_BFGS(X, U, grad, Xopt, Uopt, gradopt, hess);
+
 			X = Xopt; U = Uopt;
 			solution_accepted = true;
 		}

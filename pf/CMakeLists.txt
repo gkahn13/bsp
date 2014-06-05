@@ -14,7 +14,8 @@ endif( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
 find_package(PythonLibs 2.7 REQUIRED)
 
 find_package(OpenRAVE REQUIRED)
-find_package(Boost ${OpenRAVE_Boost_VERSION} EXACT COMPONENTS iostreams python thread filesystem system program_options)
+#find_package(Boost ${OpenRAVE_Boost_VERSION} EXACT COMPONENTS iostreams python thread filesystem system program_options)
+find_package(Boost COMPONENTS iostreams python thread filesystem system program_options)
 
 find_package(Armadillo)
 find_package(LAPACK)

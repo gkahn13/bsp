@@ -249,7 +249,6 @@ double boxesCollocation(std::vector<mat>& X, std::vector<mat>& U, mat& P, BoxesS
 
 		// set trust region bounds based on current trust region size
 		for(int t=0; t < T; ++t) {
-			// set each particle lower/upper bound
 			index = 0;
 			for(int n=0; n < N; ++n) {
 				for(int i=0; i < X_DIM; ++i) {

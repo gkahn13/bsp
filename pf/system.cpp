@@ -19,7 +19,8 @@ mat System::cost_grad(std::vector<mat>& X, std::vector<mat>& U, const mat& P) {
 		return this->casadi_sys->casadi_cost_grad(X, U, P);
 	}
 
-	mat g(TOTAL_VARS, 1, fill::zeros);
+	int T = X.size();
+	mat g(X_DIM*T + U_DIM*(T-1), 1, fill::zeros);
 
 	double orig, cost_p, cost_l;
 	int index = 0;

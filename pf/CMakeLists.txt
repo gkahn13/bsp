@@ -68,18 +68,26 @@ set_target_properties(test-eih PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 target_link_libraries(test-eih ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES} ${Boost_LIBRARIES}
                                    ${ARMADILLO_LIBRARIES} ${CASADI_LIBRARY} ${PYTHON_LIBRARIES})
 
+add_executable(eih eih/eih.cpp eih/eihMPC.c
+               system.cpp casadi-system.cpp
+               eih/src/eih_system.cpp eih/src/pr2_sim.cpp eih/src/rave_utils.cpp
+               ../util/logging.cpp)
+set_target_properties(eih PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
+set_target_properties(eih PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
+target_link_libraries(eih ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES} ${Boost_LIBRARIES}
+                          ${ARMADILLO_LIBRARIES} ${CASADI_LIBRARY} ${PYTHON_LIBRARIES} ${MY_LIBRARIES})
+
 add_executable(explore system.cpp casadi-system.cpp
                explore/explore-system.cpp explore/casadi-explore-system.cpp
                explore/explore.cpp explore/exploreMPC.c
                ../util/logging.cpp)
-target_link_libraries(explore ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} ${CASADI_LIBRARY} ${LAPACK_LIBRARIES} 
-                              ${ARMADILLO_LIBRARIES} ${MY_LIBRARIES})
+target_link_libraries(explore ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} ${CASADI_LIBRARY} ${ARMADILLO_LIBRARIES} ${MY_LIBRARIES})
 
 add_executable(boxes system.cpp casadi-system.cpp
                boxes/boxes-system.cpp boxes/casadi-boxes-system.cpp
                boxes/boxes.cpp boxes/boxesMPC.c
                ../util/logging.cpp)
-target_link_libraries(boxes ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} ${CASADI_LIBRARY} ${LAPACK_LIBRARIES} ${MY_LIBRARIES})
+target_link_libraries(boxes ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} ${CASADI_LIBRARY} ${ARMADILLO_LIBRARIES} ${MY_LIBRARIES})
 
 add_executable(test-entropy tests/test-entropy.cpp ../util/logging.cpp)
 target_link_libraries(test-entropy ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} ${MY_LIBRARIES})

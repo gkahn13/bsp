@@ -336,7 +336,7 @@ int main(int argc, char* argv[]) {
 //	test_plot();
 //	test_kinect();
 //	test_eih_system();
-//	test_cost();
-	test_greedy();
+	test_cost();
+//	test_greedy();
 }
 

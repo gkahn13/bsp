@@ -33,6 +33,7 @@ public:
 
 	double cost(const std::vector<mat>& X, const std::vector<mat>& U, const mat& P);
 	double cost(const mat &x0, const std::vector<mat>& U, const mat& P);
+	mat cost_grad(std::vector<mat>& X, std::vector<mat>& U, const mat& P);
 	mat cost_grad(const mat &x0, std::vector<mat>& U, const mat& P);
 
 	void display_states_and_particles(const std::vector<mat>& X, const mat& P, bool pause=true);

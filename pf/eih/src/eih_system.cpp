@@ -42,6 +42,8 @@ void EihSystem::init(int Z_DIM, const mat &R, const mat &uMin, const mat &uMax, 
 
 	kinect->power_on();
 	boost::this_thread::sleep(boost::posix_time::seconds(2));
+
+	use_casadi = false;
 }
 
 /**
@@ -208,20 +210,15 @@ void EihSystem::update_state_and_particles(const mat& x_t, const mat& P_t, const
 }
 
 double EihSystem::cost(const std::vector<mat>& X, const std::vector<mat>& U, const mat& P) {
-
-}
-
-double EihSystem::cost(const mat &x0, const std::vector<mat>& U, const mat& P) {
 	double entropy = 0;
 
 	int M = P.n_cols;
 	int T = U.size()+1;
-	manip->set_joint_values(x0);
+	manip->set_joint_values(X[0]);
 
-	mat x_t = x0, x_tp1;
 	mat W_t = (1/double(M))*ones<mat>(M, 1), W_tp1(M, 1, fill::zeros);
 	for(int t=0; t < T-1; ++t) {
-		x_tp1 = dynfunc(x_t, U[t]);
+		mat x_tp1 = dynfunc(X[t], U[t]);
 		manip->set_joint_values(x_tp1);
 
 		cube image = kinect->get_image();
@@ -236,9 +233,23 @@ double EihSystem::cost(const mat &x0, const std::vector<mat>& U, const mat& P) {
 		W_t = W_tp1;
 	}
 
-	manip->set_joint_values(x0);
+	manip->set_joint_values(X[0]);
 
 	return entropy;
+}
+
+double EihSystem::cost(const mat &x0, const std::vector<mat>& U, const mat& P) {
+	int T = U.size()+1;
+	std::vector<mat> X(T);
+	X[0] = x0;
+	for(int t=0; t < T-1; ++t) {
+		X[t+1] = dynfunc(X[t], U[t]);
+	}
+	return cost(X, U, P);
+}
+
+mat EihSystem::cost_grad(std::vector<mat>& X, std::vector<mat>& U, const mat& P) {
+	return System::cost_grad(X, U, P);
 }
 
 mat EihSystem::cost_grad(const mat &x0, std::vector<mat>& U, const mat& P) {
@@ -265,23 +276,32 @@ mat EihSystem::cost_grad(const mat &x0, std::vector<mat>& U, const mat& P) {
 	return g;
 }
 
+// plots kinect position
 void EihSystem::display_states_and_particles(const std::vector<mat>& X, const mat& P, bool pause) {
 	handles.clear();
 	int M = P.n_cols;
 
 	mat color;
-	color << 0 << 1 << 0;
+	color << 0 << 0 << 1;
 	for(int m=0; m < M; ++m) {
 		handles.push_back(rave_utils::plot_point(env, P.col(m), color));
 	}
 
 	int T = X.size();
-	double hue_start = 180.0/360, hue_end = 240.0/360;
+	double hue_start = 120.0/360, hue_end = 0.0/360;
 	mat initial_joints = manip->get_joint_values();
 	for(int t=0; t < T; ++t) {
 		manip->set_joint_values(X[t]);
-		rave::Vector color = rave::Vector(hue_start + (hue_end - hue_start)*(t/T), 1, 1);
-		handles.push_back(rave_utils::plot_point(env, manip->get_pose().trans, color));
+		mat hsv;
+		hsv << hue_start + (hue_end - hue_start)*(t/double(T)) << 1 << 1;
+		rave::Vector color = rave_utils::mat_to_rave_vec(utils::hsv_to_rgb(hsv));
+		handles.push_back(rave_utils::plot_point(env, kinect->get_pose().trans, color));
+
 	}
 	manip->set_joint_values(initial_joints);
+
+	if (pause) {
+		LOG_INFO("Press enter to continue");
+		std::cin.ignore();
+	}
 }

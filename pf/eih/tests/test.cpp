@@ -98,9 +98,12 @@ void test_plot() {
 
 	rave::Transform p = kinect->get_pose();
 
-	rave::Vector pos = p.trans;
-	rave::Vector color(0, 1, 0);
-	rave::GraphHandlePtr h = rave_utils::plot_point(brett->get_env(), pos, color);
+	std::vector<rave::GraphHandlePtr> h;
+	rave_utils::plot_transform(brett->get_env(), p, h);
+
+//	rave::Vector pos = p.trans;
+//	rave::Vector color(0, 1, 0);
+//	rave::GraphHandlePtr h = rave_utils::plot_point(brett->get_env(), pos, color);
 
 	std::cout << "Press enter to exit\n";
 	std::cin.ignore();
@@ -333,10 +336,10 @@ int main(int argc, char* argv[]) {
 //	test_teleop();
 //	test_head();
 //	test_camera();
-//	test_plot();
+	test_plot();
 //	test_kinect();
 //	test_eih_system();
-	test_cost();
+//	test_cost();
 //	test_greedy();
 }
 

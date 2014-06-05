@@ -22,6 +22,8 @@ rave::GraphHandlePtr plot_point(rave::EnvironmentBasePtr env, const rave::Vector
 
 rave::GraphHandlePtr plot_point(rave::EnvironmentBasePtr env, const mat &pos, mat &color, float size=.01);
 
+void plot_transform(rave::EnvironmentBasePtr env, rave::Transform T, std::vector<rave::GraphHandlePtr> &handles);
+
 mat rave_transform_to_mat(rave::Transform rt);
 
 rave::Transform mat_to_rave_transform(mat m);

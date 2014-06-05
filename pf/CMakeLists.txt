@@ -62,7 +62,8 @@ link_directories(${OpenRAVE_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS} ${PYTHON_LIBRARI
 
 add_executable(test-eih eih/tests/test.cpp 
                system.cpp casadi-system.cpp
-               eih/src/eih_system.cpp eih/src/pr2_sim.cpp eih/src/rave_utils.cpp)
+               eih/src/eih_system.cpp eih/src/pr2_sim.cpp eih/src/rave_utils.cpp
+               ../util/logging.cpp)
 set_target_properties(test-eih PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
 set_target_properties(test-eih PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 target_link_libraries(test-eih ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES} ${Boost_LIBRARIES}

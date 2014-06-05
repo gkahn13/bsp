@@ -296,7 +296,7 @@ void EihSystem::display_states_and_particles(const std::vector<mat>& X, const ma
 		hsv << hue_start + (hue_end - hue_start)*(t/double(T)) << 1 << 1;
 		rave::Vector color = rave_utils::mat_to_rave_vec(utils::hsv_to_rgb(hsv));
 		handles.push_back(rave_utils::plot_point(env, kinect->get_pose().trans, color));
-
+		rave_utils::plot_transform(env, kinect->get_pose(), handles);
 	}
 	manip->set_joint_values(initial_joints);
 

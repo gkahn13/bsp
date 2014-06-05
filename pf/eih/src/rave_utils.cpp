@@ -77,6 +77,20 @@ rave::GraphHandlePtr plot_point(rave::EnvironmentBasePtr env, const mat &pos, ma
 	return plot_point(env, pos_vec, color_vec, size);
 }
 
+void plot_transform(rave::EnvironmentBasePtr env, rave::Transform T, std::vector<rave::GraphHandlePtr> &handles) {
+	fmat M = conv_to<fmat>::from(rave_transform_to_mat(T));
+
+	fmat o = M.submat(span(0, 2), span(3, 3));
+	fmat I = join_vert(eye<fmat>(3,3), eye<fmat>(3,3));
+	fmat ppoints(6,1);
+	ppoints.submat(span(0,2), span(0,0)) = o;
+	for(int i=0; i < 3; ++i) {
+		ppoints.submat(span(3,5), span(0, 0)) = o + 0.1 * M.submat(span(0, 2), span(i, i));
+		fmat color = I.submat(span(0, 5), span(i, i));
+		handles.push_back(env->drawlinestrip(ppoints.colptr(0), 2, sizeof(float)*3, 1.0f, color.colptr(0)));
+	}
+}
+
 mat rave_transform_to_mat(rave::Transform rt) {
 	rave::TransformMatrix rtm(rt);
 

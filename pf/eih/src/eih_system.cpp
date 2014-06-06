@@ -12,33 +12,64 @@ EihSystem::EihSystem(rave::EnvironmentBasePtr e, Manipulator *m, KinectSensor *k
 	mat uMin, uMax;
 	manip->get_limits(uMin, uMax);
 
-	init(R.n_rows, R, uMin, uMax);
+	init(uMin, uMax);
 }
 
 EihSystem::EihSystem(rave::EnvironmentBasePtr e, Manipulator *m, KinectSensor *k,
-		int T, mat &R, mat &uMin, mat &uMax) : env(e), manip(m), kinect(k) {
-	init(R.n_rows, R, uMin, uMax, T);
+		ObsType obs_type) : env(e), manip(m), kinect(k) {
+	mat uMin, uMax;
+	manip->get_limits(uMin, uMax);
+	init(uMin, uMax, obs_type);
 }
 
-void EihSystem::init(int Z_DIM, const mat &R, const mat &uMin, const mat &uMax, int T, double DT) {
+EihSystem::EihSystem(rave::EnvironmentBasePtr e, Manipulator *m, KinectSensor *k,
+		ObsType obs_type, int T) : env(e), manip(m), kinect(k) {
+	mat uMin, uMax;
+	manip->get_limits(uMin, uMax);
+	init(uMin, uMax, obs_type, T);
+}
+
+EihSystem::EihSystem(rave::EnvironmentBasePtr e, Manipulator *m, KinectSensor *k,
+		ObsType obs_type, int T, const mat &uMin, const mat &uMax) : env(e), manip(m), kinect(k) {
+	init(uMin, uMax, obs_type, T);
+}
+
+void EihSystem::init(const mat &uMin, const mat &uMax, ObsType obs_type, int T, double DT) {
 	mat j = manip->get_joint_values();
 	X_DIM = MAX(j.n_rows, j.n_cols);
 	U_DIM = X_DIM;
-	this->Z_DIM = Z_DIM;
-	this->Q_DIM = X_DIM;
-	this->R_DIM = Z_DIM;
-	this->TOTAL_VARS = T*X_DIM + (T-1)*U_DIM;
+
+	this->obs_type = obs_type;
+	mat R_diag;
+	switch(obs_type) {
+	case ObsType::fov:
+		R_diag << .5;
+		desired_observations = std::vector<mat>(1);
+		desired_observations[0] << 0;
+		break;
+	case ObsType::fov_occluded:
+		R_diag << .5 << .01;
+		desired_observations = std::vector<mat>(2);
+		desired_observations[0] << 0 << UNKNOWN;
+		desired_observations[1] << 1 << 1;
+		break;
+	case ObsType::fov_occluded_color:
+	default:
+		R_diag << .5 << .01 << .05 << 1 << 1;
+		desired_observations = std::vector<mat>(3);
+		desired_observations[0] << 0 << UNKNOWN << UNKNOWN << UNKNOWN << UNKNOWN; // outside FOV
+		desired_observations[1] << 1 << 1 << UNKNOWN << UNKNOWN << UNKNOWN; // inside FOV, occluded
+		desired_observations[2] << 1 << .5 << 0 << 1 << 1; // inside FOV, not occluded, red
+		break;
+	}
+	R = diagmat(R_diag);
+	Z_DIM = R.n_rows;
+
 	this->DT = DT;
-	this->R = R;
 
 	manip->get_limits(xMin, xMax);
 	this->uMin = uMin;
 	this->uMax = uMax;
-
-	desired_observations = std::vector<mat>(3);
-	desired_observations[0] << 0 << UNKNOWN << UNKNOWN << UNKNOWN << UNKNOWN; // outside FOV
-	desired_observations[1] << 1 << 1 << UNKNOWN << UNKNOWN << UNKNOWN; // inside FOV, occluded
-	desired_observations[2] << 1 << .5 << 0 << 1 << 1; // inside FOV, not occluded, red
 
 	kinect->power_on();
 	boost::this_thread::sleep(boost::posix_time::seconds(2));
@@ -51,6 +82,7 @@ void EihSystem::init(int Z_DIM, const mat &R, const mat &uMin, const mat &uMax, 
  */
 
 mat EihSystem::dynfunc(const mat &x, const mat &u) {
+	int X_DIM = std::max(x.n_rows, x.n_cols);
 	mat x_new = x + DT*u;
 
 	for(int i=0; i < X_DIM; ++i) {
@@ -66,6 +98,87 @@ mat EihSystem::obsfunc(const mat& x, const mat& t, const mat& r) {
 }
 
 double EihSystem::obsfunc_continuous_weight(const mat &particle, const cube &image, const mat &z_buffer, bool plot) {
+	switch(obs_type) {
+	case ObsType::fov:
+		return obsfunc_continuous_weight_fov(particle, image, z_buffer, plot);
+	case ObsType::fov_occluded:
+		return obsfunc_continuous_weight_fov_occluded(particle, image, z_buffer, plot);
+	case ObsType::fov_occluded_color:
+		return obsfunc_continuous_weight_fov_occluded_color(particle, image, z_buffer, plot);
+	default:
+		return obsfunc_continuous_weight_fov_occluded_color(particle, image, z_buffer, plot);
+	}
+}
+
+double EihSystem::obsfunc_discrete_weight(const mat &particle, const cube &image, const mat &z_buffer, bool plot) {
+	switch(obs_type) {
+	case ObsType::fov:
+		return obsfunc_discrete_weight_fov(particle, image, z_buffer, plot);
+	case ObsType::fov_occluded:
+		return obsfunc_discrete_weight_fov_occluded(particle, image, z_buffer, plot);
+	case ObsType::fov_occluded_color:
+		return obsfunc_discrete_weight_fov_occluded_color(particle, image, z_buffer, plot);
+	default:
+		return obsfunc_discrete_weight_fov_occluded_color(particle, image, z_buffer, plot);
+	}
+}
+
+double EihSystem::obsfunc_continuous_weight_fov(const mat &particle, const cube &image, const mat &z_buffer, bool plot) {
+	mat z(Z_DIM, 1);
+
+	mat pixel = kinect->get_pixel_from_point(particle);
+	int y = int(pixel(0)), x = int(pixel(1));
+
+	mat boundary;
+	boundary << y << -y + kinect->get_height() << x << -x + kinect->get_width();
+	z(0, 0) = prod(prod(sigmoid(boundary, 1e6)));
+
+
+	double weight = -INFINITY;
+	for(int i=0; i < desired_observations.size(); ++i) {
+		mat e = z - desired_observations[i];
+		weight = MAX(weight, gauss_likelihood(e.t(), R));
+	}
+
+	if (plot) {
+		rave::Vector color = (z(0,0) < .5) ? rave::Vector(1, 1, 1) : rave::Vector(0, 1, 0);
+		rave::Vector particle_vec = rave_utils::mat_to_rave_vec(particle);
+		handles.push_back(rave_utils::plot_point(env, particle_vec, color));
+	}
+
+	return weight;
+}
+
+double EihSystem::obsfunc_discrete_weight_fov(const mat &particle, const cube &image, const mat &z_buffer, bool plot) {
+	double weight;
+	rave::Vector color;
+
+	if (!kinect->is_in_fov(particle)) {
+		weight = 1;
+		color = rave::Vector(0, 1, 0);
+	} else {
+		weight = 0;
+		color = rave::Vector(1, 1, 1);
+	}
+
+	if (plot) {
+		rave::Vector particle_vec = rave_utils::mat_to_rave_vec(particle);
+		handles.push_back(rave_utils::plot_point(env, particle_vec, color));
+	}
+
+	return weight;
+}
+
+double EihSystem::obsfunc_continuous_weight_fov_occluded(const mat &particle, const cube &image, const mat &z_buffer, bool plot) {
+	return -INFINITY;
+}
+
+double EihSystem::obsfunc_discrete_weight_fov_occluded(const mat &particle, const cube &image, const mat &z_buffer, bool plot) {
+	return -INFINITY;
+}
+
+
+double EihSystem::obsfunc_continuous_weight_fov_occluded_color(const mat &particle, const cube &image, const mat &z_buffer, bool plot) {
 	double is_in_fov = UNKNOWN, sd_sigmoid = UNKNOWN;
 	mat color = UNKNOWN*ones<mat>(3,1);
 
@@ -133,7 +246,7 @@ double EihSystem::obsfunc_continuous_weight(const mat &particle, const cube &ima
 	return weight;
 }
 
-double EihSystem::obsfunc_discrete_weight(const mat &particle, const cube &image, const mat &z_buffer, bool plot) {
+double EihSystem::obsfunc_discrete_weight_fov_occluded_color(const mat &particle, const cube &image, const mat &z_buffer, bool plot) {
 	double weight;
 	rave::Vector color;
 
@@ -188,13 +301,13 @@ void EihSystem::update_state_and_particles(const mat& x_t, const mat& P_t, const
 	x_tp1 = dynfunc(x_t, u_t);
 	manip->set_joint_values(x_tp1);
 
-	cube image = kinect->get_image();
-	mat z_buffer = kinect->get_z_buffer();
+	cube image = kinect->get_image(true);
+	mat z_buffer = kinect->get_z_buffer(false);
 
 	mat W(M, 1, fill::zeros);
 	for(int m=0; m < M; ++m) {
-		W(m) = obsfunc_discrete_weight(P_t.col(m), image, z_buffer, plot);
-//		W(m) = obsfunc_continuous_weight(P_t.col(m), image, z_buffer, plot);
+//		W(m) = obsfunc_discrete_weight(P_t.col(m), image, z_buffer, plot);
+		W(m) = obsfunc_continuous_weight(P_t.col(m), image, z_buffer, plot);
 	}
 
 	W = W / accu(W);
@@ -221,12 +334,13 @@ double EihSystem::cost(const std::vector<mat>& X, const std::vector<mat>& U, con
 		mat x_tp1 = dynfunc(X[t], U[t]);
 		manip->set_joint_values(x_tp1);
 
-		cube image = kinect->get_image();
-		mat z_buffer = kinect->get_z_buffer();
+		cube image = kinect->get_image(true);
+		mat z_buffer = kinect->get_z_buffer(false);
 
 		for(int m=0; m < M; ++m) {
 			W_tp1(m) = obsfunc_continuous_weight(P.col(m), image, z_buffer) * W_t(m);
 		}
+		W_tp1 = W_tp1 / accu(W_tp1);
 
 		entropy += accu(-W_tp1 % log(W_tp1));
 

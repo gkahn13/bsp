@@ -21,9 +21,13 @@ inline T sigmoid(const T &x, const double alpha) {
 
 class EihSystem : public virtual System {
 public:
+	enum ObsType {fov, fov_occluded, fov_occluded_color};
+
 	EihSystem(rave::EnvironmentBasePtr e, Manipulator *m, KinectSensor *k);
+	EihSystem(rave::EnvironmentBasePtr e, Manipulator *m, KinectSensor *k, ObsType obs_type);
+	EihSystem(rave::EnvironmentBasePtr e, Manipulator *m, KinectSensor *k, ObsType obs_type, int T);
 	EihSystem(rave::EnvironmentBasePtr e, Manipulator *m, KinectSensor *k,
-			int T, mat &R, mat &uMin, mat &uMax);
+			ObsType obs_type, int T, const mat &uMin, const mat &uMax);
 
 	mat dynfunc(const mat &x, const mat &u);
 	mat obsfunc(const mat& x, const mat& t, const mat& r);
@@ -42,14 +46,25 @@ public:
 	KinectSensor* get_kinect() { return kinect; }
 
 protected:
-	void init(int Z_DIM, const mat &R, const mat &uMin, const mat &uMat, int T=10, double DT=1.0);
+	void init(const mat &uMin, const mat &uMat,
+			ObsType obs_type=ObsType::fov_occluded_color, int T=5, double DT=1.0);
 
 	double obsfunc_continuous_weight(const mat &particle, const cube &image, const mat &z_buffer, bool plot=false);
 	double obsfunc_discrete_weight(const mat &particle, const cube &image, const mat &z_buffer, bool plot=false);
 
+	double obsfunc_continuous_weight_fov(const mat &particle, const cube &image, const mat &z_buffer, bool plot=false);
+	double obsfunc_discrete_weight_fov(const mat &particle, const cube &image, const mat &z_buffer, bool plot=false);
+
+	double obsfunc_continuous_weight_fov_occluded(const mat &particle, const cube &image, const mat &z_buffer, bool plot=false);
+	double obsfunc_discrete_weight_fov_occluded(const mat &particle, const cube &image, const mat &z_buffer, bool plot=false);
+
+	double obsfunc_continuous_weight_fov_occluded_color(const mat &particle, const cube &image, const mat &z_buffer, bool plot=false);
+	double obsfunc_discrete_weight_fov_occluded_color(const mat &particle, const cube &image, const mat &z_buffer, bool plot=false);
+
 	rave::EnvironmentBasePtr env;
 	Manipulator *manip;
 	KinectSensor *kinect;
+	ObsType obs_type;
 
 	std::vector<mat> desired_observations;
 

@@ -4,22 +4,18 @@ project (pf)
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 message("CMAKE_BUILD_TYPE is ${CMAKE_BUILD_TYPE}")
-message("CMAKE_CXX_FLAGS is ${CMAKE_CXX_FLAGS}")
 
 #---- Now check the compiler
 if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
-  add_definitions("-fno-strict-aliasing -Wall")
+  add_definitions("-fno-strict-aliasing -Wall -Wno-sign-compare")
 endif( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
 
 find_package(PythonLibs 2.7 REQUIRED)
 
 find_package(OpenRAVE REQUIRED)
-#find_package(Boost ${OpenRAVE_Boost_VERSION} EXACT COMPONENTS iostreams python thread filesystem system program_options)
-find_package(Boost COMPONENTS iostreams python thread filesystem system program_options)
+find_package(Boost ${OpenRAVE_Boost_VERSION} EXACT COMPONENTS iostreams python thread filesystem system program_options)
 
 find_package(Armadillo)
-find_package(LAPACK)
-find_package(BLAS)
 
 set(CASADI_INCLUDE_DIR "$ENV{CASADIPATH}")
 set(CASADI_LIBRARY_DIR "$ENV{CASADIPATH}/build/lib")
@@ -32,26 +28,13 @@ add_definitions(${CMAKE_CXX_FLAGS} "-Wno-sign-compare")
 add_definitions(${CMAKE_C_FLAGS} "-Wno-sign-compare")
 
 add_definitions(${CMAKE_CXX_FLAGS_DEBUG} "-g")
-#add_definitions(${CMAKE_CXX_FLAGS_DEBUG} "-Wall")
 add_definitions(${CMAKE_C_FLAGS_DEBUG} "-g")
-#add_definitions(${CMAKE_C_FLAGS_DEBUG} "-Wall")
 
 set(MY_LIBRARIES "dl;rt;python2.7")
 
 message("CASADI_INCLUDE_DIR: ${CASADI_INCLUDE_DIR}")
 message("CASADI_LIBRARY_DIR: ${CASADI_LIBRARY_DIR}")
 message("CASADI_LIBRARY: ${CASADI_LIBRARY}")
-
-message("CMAKE_CXX_FLAGS: ${CMAKE_CXX_FLAGS}")
-message("CMAKE_C_FLAGS: ${CMAKE_C_FLAGS}")
-
-message("LAPACK_FOUND: ${LAPACK_FOUND}")
-message("BLAS FOUND: ${BLAS_FOUND}")
-
-message("BOOST LIBRARIES: ${Boost_LIBRARIES}")
-message("PYTHON LIBRARIES: ${PYTHON_LIBRARIES}")
-message("PYTHON INCLUDES: ${PYTHON_INCLUDE_DIRS}")
-message("PYTHON VERSION: ${PYTHONLIBS_VERSION_STRING}")
 
 include_directories(${OpenRAVE_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR} ${PYTHON_INCLUDE_DIRS} ${CASADI_INCLUDE_DIR})
 if( Boost_INCLUDE_DIRS )

@@ -91,6 +91,28 @@ void plot_transform(rave::EnvironmentBasePtr env, rave::Transform T, std::vector
 	}
 }
 
+void save_view(rave::ViewerBasePtr viewer, std::string file_name) {
+	std::string input = "SetFiguresInCamera 1", output = "";
+	viewer->SendCommand(input, output);
+
+	int width = 640, height = 480;
+	std::vector<uint8_t> image(3*width*height);
+	rave::SensorBase::CameraIntrinsics intrinsics(640, 640, 320, 240);
+	viewer->GetCameraImage(image, width, height, viewer->GetCameraTransform(), intrinsics);
+
+//	FILE *f = fopen("out.ppm", "wb");
+//	fprintf(f, "P6\n%i %i 255\n", width, height);
+	int index = 0;
+	for (int y=0; y < height; ++y) {
+		for (int x=0; x < width; ++x) {
+			for(int i=0; i < 3; ++i) {
+//				fputc(image[index++], f);   // 0 .. 255
+			}
+		}
+	}
+//	fclose(f);
+}
+
 mat rave_transform_to_mat(rave::Transform rt) {
 	rave::TransformMatrix rtm(rt);
 

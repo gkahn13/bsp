@@ -29,8 +29,8 @@ mat::fixed<X_DIM, 1> x0;
 
 namespace cfg {
 const double improve_ratio_threshold = .1;
-const double min_approx_improve = 1e-4;
-const double min_trust_box_size = 1e-4;
+const double min_approx_improve = 1;
+const double min_trust_box_size = .1;
 const double trust_shrink_ratio = .5;
 const double trust_expand_ratio = 1.5;
 }
@@ -163,12 +163,12 @@ void L_BFGS(const std::vector<mat> &X, const std::vector<mat> &U, const mat &gra
 
 	int index = 0;
 	for(int t=0; t < T-1; ++t) {
-		s.rows(index, index+X_DIM) = Xopt[t] - X[t];
+		s.rows(index, index+X_DIM-1) = Xopt[t] - X[t];
 		index += X_DIM;
-		s.rows(index, index+U_DIM) = Uopt[t] - U[t];
+		s.rows(index, index+U_DIM-1) = Uopt[t] - U[t];
 		index += U_DIM;
 	}
-	s.rows(index, index+X_DIM) = Xopt[T-1] - X[T-1];
+	s.rows(index, index+X_DIM-1) = Xopt[T-1] - X[T-1];
 
 	mat y = gradopt - grad;
 
@@ -211,7 +211,8 @@ double eihCollocation(std::vector<mat> &X, std::vector<mat> &U, mat &P, EihSyste
 	bool solution_accepted = true;
 	for(int it=0; it < max_iter; ++it) {
 
-		LOG_DEBUG("\nIter: %d", it);
+		std::cout << "\n\n";
+		LOG_DEBUG("Iter: %d", it);
 
 		// only compute gradient/hessian if P/U has been changed
 		if (solution_accepted) {
@@ -231,7 +232,6 @@ double eihCollocation(std::vector<mat> &X, std::vector<mat> &U, mat &P, EihSyste
 			jac_constant = 0;
 
 			// fill in Hessian first so we can force it to be PSD
-			std::cout << "Fill in hessian\n";
 			index = 0;
 			for(int t=0; t < T-1; ++t) {
 				for(int i=0; i < (X_DIM+U_DIM); ++i) {
@@ -245,7 +245,6 @@ double eihCollocation(std::vector<mat> &X, std::vector<mat> &U, mat &P, EihSyste
 			}
 
 			// fill in gradient
-			std::cout << "Fill in gradient\n";
 			index = 0;
 			for(int t=0; t < T-1; ++t) {
 				mat::fixed<(X_DIM+U_DIM), 1> zbar;
@@ -283,7 +282,6 @@ double eihCollocation(std::vector<mat> &X, std::vector<mat> &U, mat &P, EihSyste
 		mat uMax = sys->get_uMax();
 
 		// set trust region bounds based on current trust region size
-		std::cout << "Set trust regions\n";
 		for(int t=0; t < T; ++t) {
 			index = 0;
 			for(int i=0; i < X_DIM; ++i) {
@@ -313,10 +311,8 @@ double eihCollocation(std::vector<mat> &X, std::vector<mat> &U, mat &P, EihSyste
 
 
 		// call FORCES
-		std::cout << "Call forces\n";
 		int exitflag = eihMPC_solve(&problem, &output, &info);
 		if (exitflag == 1) {
-			std::cout << "Fill in from forces\n";
 			optcost = info.pobj;
 			for(int t=0; t < T; ++t) {
 				index = 0;
@@ -335,10 +331,11 @@ double eihCollocation(std::vector<mat> &X, std::vector<mat> &U, mat &P, EihSyste
 			exit(-1);
 		}
 
-		std::cout << "Displaying optimized path\n";
-		sys->display_states_and_particles(Xopt, P, true);
+//		std::cout << "Displaying optimized path\n";
+//		sys->display_states_and_particles(Xopt, P, true);
 
 
+//		model_merit = optcost; // TODO: constant_cost blows up, why??
 		model_merit = optcost + constant_cost; // need to add constant terms that were dropped
 
 		new_merit = sys->cost(Xopt, Uopt, P);
@@ -377,7 +374,6 @@ double eihCollocation(std::vector<mat> &X, std::vector<mat> &U, mat &P, EihSyste
 			LOG_DEBUG("Accepted, Increasing trust region size to:  %2.6f %2.6f", Xeps, Ueps);
 
 			gradopt = sys->cost_grad(Xopt, Uopt, P);
-			LOG_DEBUG("Approximating hessian with L-BFGS");
 			L_BFGS(X, U, grad, Xopt, Uopt, gradopt, hess);
 
 			X = Xopt; U = Uopt;
@@ -433,7 +429,7 @@ void setup_eih_environment(PR2 *brett, Arm::ArmType arm_type, bool zero_seed, ma
 		manip = rarm;
 		kinect = r_kinect;
 	}
-	*sys = new EihSystem(env, manip, kinect);
+	*sys = new EihSystem(env, manip, kinect, EihSystem::ObsType::fov, T);
 	kinect->render_on();
 	boost::this_thread::sleep(boost::posix_time::seconds(2));
 }
@@ -464,6 +460,7 @@ int main(int argc, char* argv[]) {
 	util::Timer forces_timer;
 	std::vector<mat> X_actual(1, x0);
 
+	mat P_tp1(3, M, fill::zeros), x_tp1(X_DIM, 1);
 	do {
 		init_cost = sys->cost(X, U, P);
 
@@ -491,7 +488,12 @@ int main(int argc, char* argv[]) {
 
 		LOG_DEBUG("Optimized path");
 		sys->display_states_and_particles(X, P, true);
-		break;
+
+		LOG_DEBUG("Updating state and particles");
+		sys->update_state_and_particles(X[0], P, U[0], x_tp1, P_tp1);
+		X = std::vector<mat>(T, x_tp1);
+		U = std::vector<mat>(T-1, zeros<mat>(U_DIM, 1));
+		P = P_tp1;
 
 		std::cout << "\nPress 'q' to exit\n";
 	} while (utils::getch() != 'q');

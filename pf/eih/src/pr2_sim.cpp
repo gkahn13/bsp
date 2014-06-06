@@ -305,6 +305,7 @@ Sensor::Sensor(rave::SensorBasePtr sensor) {
 	this->sensor = sensor;
 	is_powered = false;
 	is_rendering = false;
+	data_timeout = 5;
 
 	std::vector<rave::SensorBase::SensorType> types =
 	{
@@ -324,8 +325,6 @@ Sensor::Sensor(rave::SensorBasePtr sensor) {
 		RAVELOG_ERROR("Invalid sensor type. Exiting.\n");
 		exit(0);
 	}
-
-
 }
 
 /**
@@ -360,12 +359,31 @@ void Sensor::render_off() {
 	}
 }
 
-rave::SensorBase::SensorDataPtr Sensor::get_data() {
-	rave::SensorBase::SensorDataPtr data = sensor->CreateSensorData(type);
-	bool success = sensor->GetSensorData(data);
+rave::SensorBase::SensorDataPtr Sensor::get_data(bool wait_for_new) {
+	rave::SensorBase::SensorDataPtr old_data, data;
+	data = sensor->CreateSensorData(type);
+	old_data = sensor->CreateSensorData(type);
+
+	bool success = sensor->GetSensorData(old_data);
+	util::Timer timeout_timer;
+	util::Timer_tic(&timeout_timer);
+	double elapsed_time = 0;
+	do {
+		success = sensor->GetSensorData(data);
+
+		elapsed_time += util::Timer_toc(&timeout_timer);
+		util::Timer_tic(&timeout_timer);
+
+		if (elapsed_time > data_timeout) {
+			RAVELOG_ERROR("Timeout in get_data\n");
+			exit(-1);
+		}
+
+	} while(wait_for_new && (data->__stamp == old_data->__stamp));
 
 	if (!success) {
-		RAVELOG_WARN("Couldn't retrieve data\n");
+		RAVELOG_ERROR("Couldn't retrieve data: unsuccessful\n");
+		exit(-1);
 	}
 
 	return data;
@@ -380,16 +398,21 @@ rave::Transform Sensor::get_pose() {
  */
 
 DepthSensor::DepthSensor(rave::SensorBasePtr sensor) : Sensor(sensor) {
+	rave::SensorBase::SensorGeometryPtr geom = sensor->GetSensorGeometry(rave::SensorBase::ST_Laser);
 
+	boost::shared_ptr<rave::SensorBase::LaserGeomData> depth_geom =
+			boost::static_pointer_cast<rave::SensorBase::LaserGeomData>(geom);
+
+	data_timeout = 2*depth_geom->time_scan;
 }
 
 /**
  * DepthSensor public methods
  */
 
-std::vector<mat> DepthSensor::get_points() {
+std::vector<mat> DepthSensor::get_points(bool wait_for_new) {
 	boost::shared_ptr<rave::SensorBase::LaserSensorData> l_data =
-			boost::static_pointer_cast<rave::SensorBase::LaserSensorData>(get_data());
+			boost::static_pointer_cast<rave::SensorBase::LaserSensorData>(get_data(wait_for_new));
 	std::vector<double> in_range = l_data->intensity;
 
 	rave::Transform sensor_pose = sensor->GetTransform();
@@ -417,6 +440,7 @@ CameraSensor::CameraSensor(rave::SensorBasePtr sensor) : Sensor(sensor) {
 	boost::shared_ptr<rave::SensorBase::CameraGeomData> cam_geom =
 			boost::static_pointer_cast<rave::SensorBase::CameraGeomData>(geom);
 
+
 	P = zeros(3,3);
 	P(0,0) = cam_geom->KK.fx;
 	P(1,1) = cam_geom->KK.fy;
@@ -433,9 +457,9 @@ CameraSensor::CameraSensor(rave::SensorBasePtr sensor) : Sensor(sensor) {
  */
 
 // all values [0, 1]
-cube CameraSensor::get_image() {
+cube CameraSensor::get_image(bool wait_for_new) {
 	boost::shared_ptr<rave::SensorBase::CameraSensorData> c_data =
-				boost::static_pointer_cast<rave::SensorBase::CameraSensorData>(get_data());
+				boost::static_pointer_cast<rave::SensorBase::CameraSensorData>(get_data(wait_for_new));
 	std::vector<uint8_t> raw_image = c_data->vimagedata;
 
 	cube image(height, width, 3);
@@ -451,8 +475,8 @@ cube CameraSensor::get_image() {
 	return image;
 }
 
-std::vector<std::vector<mat> > CameraSensor::get_pixels_and_colors(const std::vector<mat> &points) {
-	cube image = get_image();
+std::vector<std::vector<mat> > CameraSensor::get_pixels_and_colors(const std::vector<mat> &points, bool wait_for_new) {
+	cube image = get_image(wait_for_new);
 
 	std::vector<std::vector<mat> > points_pixels_colors;
 	for(int i=0; i < points.size(); ++i) {
@@ -551,9 +575,9 @@ void KinectSensor::render_off() {
 }
 
 
-std::vector<ColoredPoint*> KinectSensor::get_point_cloud() {
-	std::vector<mat> points = depth_sensor->get_points();
-	std::vector<std::vector<mat> > points_pixels_colors = camera_sensor->get_pixels_and_colors(points);
+std::vector<ColoredPoint*> KinectSensor::get_point_cloud(bool wait_for_new) {
+	std::vector<mat> points = depth_sensor->get_points(wait_for_new);
+	std::vector<std::vector<mat> > points_pixels_colors = camera_sensor->get_pixels_and_colors(points, false);
 
 	std::vector<ColoredPoint*> colored_points(points_pixels_colors.size());
 	for(int i=0; i < points_pixels_colors.size(); ++i) {
@@ -563,9 +587,9 @@ std::vector<ColoredPoint*> KinectSensor::get_point_cloud() {
 	return colored_points;
 }
 
-mat KinectSensor::get_z_buffer() {
-	std::vector<mat> points = depth_sensor->get_points();
-	std::vector<std::vector<mat> > points_pixels_colors = camera_sensor->get_pixels_and_colors(points);
+mat KinectSensor::get_z_buffer(bool wait_for_new) {
+	std::vector<mat> points = depth_sensor->get_points(wait_for_new);
+	std::vector<std::vector<mat> > points_pixels_colors = camera_sensor->get_pixels_and_colors(points, false);
 
 	rave::Transform pose = camera_sensor->get_pose();
 	mat pose_pos;

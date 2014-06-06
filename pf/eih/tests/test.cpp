@@ -2,6 +2,7 @@
 #include "../include/pr2_sim.h"
 #include "../include/rave_utils.h"
 #include "../include/utils.h"
+#include "../../../util/Timer.h"
 
 /**
  * TESTS
@@ -132,7 +133,8 @@ void test_kinect() {
 	std::cin.ignore();
 }
 
-void setup_eih_environment(PR2 *brett, int M, Arm::ArmType arm_type, bool zero_seed, mat &P, EihSystem **sys) {
+void setup_eih_environment(PR2 *brett, int M, Arm::ArmType arm_type, bool zero_seed, mat &P,
+		EihSystem **sys, EihSystem::ObsType obs_type) {
 	if (zero_seed) {
 		srand(time(0));
 	}
@@ -175,19 +177,19 @@ void setup_eih_environment(PR2 *brett, int M, Arm::ArmType arm_type, bool zero_s
 		manip = rarm;
 		kinect = r_kinect;
 	}
-	*sys = new EihSystem(env, manip, kinect);
+	*sys = new EihSystem(env, manip, kinect, obs_type);
 	kinect->render_on();
 	boost::this_thread::sleep(boost::posix_time::seconds(2));
 }
 
-void test_eih_system() {
+void test_pf_update() {
 	PR2 *brett = new PR2();
 	int M = 1000;
 	mat P(3,1000,fill::zeros);
 	EihSystem *sys = NULL;
 	Manipulator *manip = NULL;
 	KinectSensor *kinect = NULL;
-	setup_eih_environment(brett, 1000, Arm::ArmType::right, true, P, &sys);
+	setup_eih_environment(brett, 1000, Arm::ArmType::right, true, P, &sys, EihSystem::ObsType::fov);
 	manip = sys->get_manip();
 	kinect = sys->get_kinect();
 
@@ -211,7 +213,7 @@ void test_eih_system() {
 	while(true) {
 		manip->teleop();
 		x_t = manip->get_joint_values();
-		sys->update_state_and_particles(x_t, P_t, u_t, x_tp1, P_tp1);
+		sys->update_state_and_particles(x_t, P_t, u_t, x_tp1, P_tp1, true);
 
 		P_t = P_tp1;
 	}
@@ -227,7 +229,7 @@ void test_cost() {
 	EihSystem *sys = NULL;
 	Manipulator *manip = NULL;
 	KinectSensor *kinect = NULL;
-	setup_eih_environment(brett, 1000, Arm::ArmType::right, false, P, &sys);
+	setup_eih_environment(brett, 1000, Arm::ArmType::right, false, P, &sys, EihSystem::ObsType::fov_occluded_color);
 	manip = sys->get_manip();
 	kinect = sys->get_kinect();
 
@@ -266,7 +268,7 @@ void test_greedy() {
 	EihSystem *sys = NULL;
 	Manipulator *manip = NULL;
 	KinectSensor *kinect = NULL;
-	setup_eih_environment(brett, 1000, Arm::ArmType::right, false, P, &sys);
+	setup_eih_environment(brett, 1000, Arm::ArmType::right, false, P, &sys, EihSystem::ObsType::fov);
 	manip = sys->get_manip();
 	kinect = sys->get_kinect();
 
@@ -279,7 +281,6 @@ void test_greedy() {
 //		std::cout << "\nPress 'q' to exit\n";
 //		if (utils::getch() == 'q') { break; }
 //		std::cout << "\n";
-		boost::this_thread::sleep(boost::posix_time::seconds(.5));
 
 //		manip->teleop();
 
@@ -330,16 +331,44 @@ void test_greedy() {
 	}
 }
 
+void test_stamps() {
+	PR2 *brett = new PR2();
+
+	Arm *arm = brett->rarm;
+	KinectSensor *kinect = brett->r_kinect;
+	DepthSensor *depth = kinect->get_depth_sensor();
+	CameraSensor *cam = kinect->get_camera_sensor();
+
+	arm->set_posture(Arm::Posture::mantis);
+	kinect->power_on();
+	kinect->render_on();
+	boost::this_thread::sleep(boost::posix_time::seconds(2));
+
+
+	double data_time_elapse;
+	util::Timer data_timer;
+	while(true) {
+		util::Timer_tic(&data_timer);
+		kinect->get_point_cloud(true);
+		kinect->get_z_buffer(false);
+		data_time_elapse = util::Timer_toc(&data_timer);
+		std::cout << data_time_elapse << " (s)\n";
+	}
+
+
+}
+
 
 int main(int argc, char* argv[]) {
 //	test_arm();
 //	test_teleop();
 //	test_head();
 //	test_camera();
-	test_plot();
+//	test_plot();
 //	test_kinect();
-//	test_eih_system();
+//	test_pf_update();
 //	test_cost();
-//	test_greedy();
+	test_greedy();
+//	test_stamps();
 }
 

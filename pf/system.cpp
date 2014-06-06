@@ -20,12 +20,14 @@ mat System::cost_grad(std::vector<mat>& X, std::vector<mat>& U, const mat& P) {
 	}
 
 	int T = X.size();
+	int X_DIM = X[0].n_rows;
+	int U_DIM = U[0].n_rows;
 	mat g(X_DIM*T + U_DIM*(T-1), 1, fill::zeros);
 
 	double orig, cost_p, cost_l;
 	int index = 0;
 	for(int t=0; t < T; ++t) {
-		for(int i=0; i < X[t].n_rows; ++i) {
+		for(int i=0; i < X_DIM; ++i) {
 			orig = X[t](i);
 
 			X[t](i) = orig + step;
@@ -39,7 +41,7 @@ mat System::cost_grad(std::vector<mat>& X, std::vector<mat>& U, const mat& P) {
 		}
 
 		if (t < T-1) {
-			for(int i=0; i < U[t].n_rows; ++i) {
+			for(int i=0; i < U_DIM; ++i) {
 				orig = U[t](i);
 
 				U[t](i) = orig + step;

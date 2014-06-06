@@ -15,6 +15,7 @@ namespace rave = OpenRAVE;
 
 #include "rave_utils.h"
 #include "utils.h"
+#include "../../../util/Timer.h"
 
 // forward declarations
 class Arm;
@@ -109,28 +110,29 @@ public:
 	void render_on();
 	void render_off();
 
-	rave::SensorBase::SensorDataPtr get_data();
+	rave::SensorBase::SensorDataPtr get_data(bool wait_for_new=true);
 	rave::Transform get_pose();
 
 protected:
 	rave::SensorBasePtr sensor;
 	bool is_powered, is_rendering;
 	rave::SensorBase::SensorType type;
+	double data_timeout;
 };
 
 class DepthSensor : public Sensor {
 public:
 	DepthSensor(rave::SensorBasePtr sensor);
 
-	std::vector<mat> get_points();
+	std::vector<mat> get_points(bool wait_for_new=true);
 };
 
 class CameraSensor : public Sensor {
 public:
 	CameraSensor(rave::SensorBasePtr sensor);
 
-	cube get_image();
-	std::vector<std::vector<mat> > get_pixels_and_colors(const std::vector<mat> &points);
+	cube get_image(bool wait_for_new=true);
+	std::vector<std::vector<mat> > get_pixels_and_colors(const std::vector<mat> &points, bool wait_for_new=true);
 	mat get_pixel_from_point(const mat &point);
 	bool is_in_fov(const mat& point);
 
@@ -160,10 +162,10 @@ public:
 	void render_on();
 	void render_off();
 
-	std::vector<ColoredPoint*> get_point_cloud();
-	mat get_z_buffer();
+	std::vector<ColoredPoint*> get_point_cloud(bool wait_for_new=true);
+	mat get_z_buffer(bool wait_for_new=true);
 
-	cube get_image() { return camera_sensor->get_image(); }
+	cube get_image(bool wait_for_new=true) { return camera_sensor->get_image(wait_for_new); }
 	mat get_pixel_from_point(const mat &point) { return camera_sensor->get_pixel_from_point(point); }
 	bool is_in_fov(const mat &point) { return camera_sensor->is_in_fov(point); }
 	rave::Transform get_pose() { return camera_sensor->get_pose(); }
@@ -172,6 +174,10 @@ public:
 
 	int get_height() { return camera_sensor->get_height(); }
 	int get_width() { return camera_sensor->get_width(); }
+
+	// TODO: temp!
+	DepthSensor* get_depth_sensor() { return depth_sensor; }
+	CameraSensor* get_camera_sensor() { return camera_sensor; }
 
 private:
 	rave::RobotBasePtr robot;

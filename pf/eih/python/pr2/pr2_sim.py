@@ -461,8 +461,18 @@ def test_kinect():
     time.sleep(1)
 
     kinect.get_point_cloud()
+
+def test_set_kinect_pose():
+    brett = PR2('../../envs/pr2-test.env.xml')
+    arm = brett.rarm
+    kinect = brett.r_kinect
+    
+    arm.set_posture('mantis')
+    
+    IPython.embed()
     
 if __name__ == '__main__':
     #test()
-    test_pose()
+    #test_pose()
     #test_kinect()
+    test_set_kinect_pose()

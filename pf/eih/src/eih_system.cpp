@@ -43,9 +43,16 @@ void EihSystem::init(const mat &uMin, const mat &uMax, ObsType obs_type, int T, 
 	mat R_diag;
 	switch(obs_type) {
 	case ObsType::fov:
-		R_diag << .5;
-		desired_observations = std::vector<mat>(1);
-		desired_observations[0] << 0;
+		R_diag << .5 << .5 << .5 << .5;
+		desired_observations = std::vector<mat>(8);
+		desired_observations[0] << 0 << 1 << 0 << 1;
+		desired_observations[1] << 0 << 1 << 1 << 1;
+		desired_observations[2] << 0 << 1 << 1 << 0;
+		desired_observations[3] << 1 << 1 << 1 << 0;
+		desired_observations[4] << 1 << 0 << 1 << 0;
+		desired_observations[5] << 1 << 0 << 1 << 1;
+		desired_observations[6] << 1 << 0 << 0 << 1;
+		desired_observations[7] << 1 << 1 << 0 << 1;
 		break;
 	case ObsType::fov_occluded:
 		R_diag << .5 << .01;
@@ -131,7 +138,7 @@ double EihSystem::obsfunc_continuous_weight_fov(const mat &particle, const cube 
 
 	mat boundary;
 	boundary << y << -y + kinect->get_height() << x << -x + kinect->get_width();
-	z(0, 0) = prod(prod(sigmoid(boundary, 1e6)));
+	z = sigmoid(boundary, 1e-1);
 
 
 	double weight = -INFINITY;
@@ -141,7 +148,7 @@ double EihSystem::obsfunc_continuous_weight_fov(const mat &particle, const cube 
 	}
 
 	if (plot) {
-		rave::Vector color = (z(0,0) < .5) ? rave::Vector(1, 1, 1) : rave::Vector(0, 1, 0);
+		rave::Vector color = (prod(prod(z)) < .5) ? rave::Vector(1, 1, 1) : rave::Vector(0, 1, 0);
 		rave::Vector particle_vec = rave_utils::mat_to_rave_vec(particle);
 		handles.push_back(rave_utils::plot_point(env, particle_vec, color));
 	}

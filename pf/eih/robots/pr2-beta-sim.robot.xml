@@ -125,6 +125,7 @@
   </attachedsensor>
 </robot>
 
+
 <!--
   <attachedsensor name="wide_stereo_cam">
     <link>wide_stereo_optical_frame</link>

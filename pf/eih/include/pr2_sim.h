@@ -133,7 +133,7 @@ public:
 
 	cube get_image(bool wait_for_new=true);
 	std::vector<std::vector<mat> > get_pixels_and_colors(const std::vector<mat> &points, bool wait_for_new=true);
-	mat get_pixel_from_point(const mat &point);
+	mat get_pixel_from_point(const mat &point, bool is_round=true);
 	bool is_in_fov(const mat& point);
 
 	int get_height() { return height; }
@@ -166,8 +166,8 @@ public:
 	mat get_z_buffer(bool wait_for_new=true);
 
 	cube get_image(bool wait_for_new=true) { return camera_sensor->get_image(wait_for_new); }
-	mat get_pixel_from_point(const mat &point) { return camera_sensor->get_pixel_from_point(point); }
-	bool is_in_fov(const mat &point) { return camera_sensor->is_in_fov(point); }
+	mat get_pixel_from_point(const mat &point, bool is_round=true) { return camera_sensor->get_pixel_from_point(point, is_round); }
+	bool is_in_fov(const mat &point) { return camera_sensor->is_in_fov(point); } // TODO: add depth sensor max range
 	rave::Transform get_pose() { return camera_sensor->get_pose(); }
 
 	void display_point_cloud(const std::vector<ColoredPoint*> &colored_points, std::vector<rave::GraphHandlePtr> &handles);

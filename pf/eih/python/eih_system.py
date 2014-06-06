@@ -15,6 +15,7 @@ import openravepy as rave
 import roslib
 roslib.load_manifest('tfx')
 import tfx
+from tfx import transformations as tft
 
 UNKNOWN = -1e6
 
@@ -24,14 +25,36 @@ TODO LIST:
 """
 
 class EihSystem:
-    def __init__(self, env, manip, kinect):
+    def __init__(self, env, manip, kinect, obs_type='fov_occluded_color'):
         """
         manip -- Head or Arm
            must have methods get_joint_values, set_joint_values, get_limits
+        obs_type -- 'fov_occluded_color'
         """
         self.env = env
         self.manip = manip
         self.kinect = kinect
+        
+        self.obs_type = obs_type
+        if obs_type == 'fov':
+            self.obsfunc_discrete_weight = self.obsfunc_discrete_weight_fov
+            self.obsfunc_continuous_weight = self.obsfunc_continuous_weight_fov
+            
+            self.desired_observations = [np.array([0])]
+            
+            self.R = np.diag([.5])
+        else:
+            self.obs_type = 'fov_occluded_color'
+            self.obsfunc_discrete_weight = self.obsfunc_discrete_weight_fov_occluded_color
+            self.obsfunc_continuous_weight = self.obsfunc_continuous_weight_fov_occluded_color
+            
+            self.desired_observations = [np.array((0, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN)),
+                                     np.array((1, 1, UNKNOWN, UNKNOWN, UNKNOWN)),
+                                     np.array((1, .5) + colorsys.rgb_to_hsv(1., 0, 0))]
+            
+            self.R = np.diag([.5, .01, .05, 1, 1])
+            
+        self.Z_DIM = self.R.shape[0]
         
         self.kinect.power_on()
         time.sleep(1)
@@ -39,31 +62,8 @@ class EihSystem:
         self.DT = 1.0
         self.X_DIM = len(self.manip.get_joint_values())
         self.U_DIM = self.X_DIM
-        """
-        is_in_fov
-        sd_sigmoid
-          sd = particle - z_buffer
-          0 -- free space
-          .5 -- near surface
-          1 -- occluded
-        h, s, v
-        """
-        self.Z_DIM = 5
         
-        self.desired_observations = [np.array((0, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN)),
-                                     np.array((1, 1, UNKNOWN, UNKNOWN, UNKNOWN)),
-                                     np.array((1, .5) + colorsys.rgb_to_hsv(1., 0, 0))]
-        
-        #self.desired_observations = [np.array((0.5, UNKNOWN, UNKNOWN, UNKNOWN, UNKNOWN)),
-        #                             np.array((1, .5, UNKNOWN, UNKNOWN, UNKNOWN)),
-        #                             np.array((1, 0) + colorsys.rgb_to_hsv(1., 0, 0))]
-        
-        self.R = np.diag([.5, .01, .05, 1, 1])
-        
-        # higher it is, more it weights particles inside of FOV
-        # [.5, 1]
-        # .75 best so far
-        self.exploitation = .75
+        self.handles = list()
         
     def dynfunc(self, x, u):
         x_new = np.array(x + self.DT*u)
@@ -74,24 +74,47 @@ class EihSystem:
         
         return x_new
     
-    def obsfunc_discrete_weight_direct(self, pixel_coord, particle_dist, z_buffer_val, hue):
-        y, x = pixel_coord
-        if not (0 <= y < self.kinect.height and 0 <= x < self.kinect.width):
-            return 1.0, (0, 1, 0)
-        
-        sd = particle_dist - z_buffer_val
-        if sd > .03:
-            return 1.0, (0, 0, 0)
-        elif sd < -.03:
-            return 0.0, (1, 1, 1)
-        
-        dist_to_red = min(hue, 1-hue)
-        if dist_to_red < .04:
-            return 1.1, None
+    def obsfunc_discrete_weight_fov(self, particle, image, z_buffer):
+        if not self.kinect.is_in_fov(particle):
+            return 1, (0, 1, 0)
         else:
-            return 0.0, (1, 1, 0)
+            return 0, (1, 1, 1)
     
-    def obsfunc_discrete_weight(self, particle, image, z_buffer):
+    def obsfunc_continuous_weight_fov(self, particle, image, z_buffer):
+        y, x = self.kinect.get_pixel_from_point(particle, False)
+        
+        """
+        boundary = np.array([y, -y + self.kinect.height, x, -x + self.kinect.width])
+        is_in_fov = np.prod(sigmoid(boundary, 1))
+        
+        z = np.array([is_in_fov])
+        
+        weight = -np.inf
+        for z_d in self.desired_observations:
+            weight = max(weight, self.gauss_likelihood(z - z_d, self.R)) 
+            
+        color = (1, 1, 1) if is_in_fov > .5 else (0, 1, 0)
+        """
+        
+        """
+        boundary = np.array([y, -y + self.kinect.height, x, -x + self.kinect.width])
+        is_outside_fov = np.max(sigmoid(-boundary, .001))
+        
+        weight = is_outside_fov
+        
+        color = (1, 1, 1) if is_outside_fov < .5 else (0, 1, 0)
+        """
+        
+        e = np.array([y - self.kinect.height/2., x - self.kinect.width/2.])
+        R = np.diag([100*self.kinect.height, 100*self.kinect.width])
+        max_likelihood = self.gauss_likelihood(np.zeros(e.shape), R)
+        weight = (max_likelihood - self.gauss_likelihood(e, R))/max_likelihood
+        
+        color = (1, 1, 1) if weight < .5 else (0, 1, 0)
+        
+        return weight, color
+    
+    def obsfunc_discrete_weight_fov_occluded_color(self, particle, image, z_buffer):
         """ Returns weight, color to display """
         if not self.kinect.is_in_fov(particle):
             return 1.0, (0, 1, 0)
@@ -116,48 +139,65 @@ class EihSystem:
         
         
     
-    def obsfunc(self, particle, image, z_buffer):
+    def obsfunc_continuous_weight_fov_occluded_color(self, particle, image, z_buffer):
         """
         x -- current state
         particle -- tfx.point 
         """
         is_in_fov, sd_sigmoid, color = UNKNOWN, UNKNOWN, (UNKNOWN, UNKNOWN, UNKNOWN)
         
-        exact_is_in_fov = 1 if self.kinect.is_in_fov(particle) else .5
+        # exact_is_in_fov = 1 if self.kinect.is_in_fov(particle) else .5
+        
         # sigmoid approximation to check if in FOV
         y, x = self.kinect.get_pixel_from_point(particle)
-        alpha = 1e6
-        h_l_fov = sigmoid(y, alpha)
-        h_u_fov = sigmoid(-y + self.kinect.height, alpha)
-        w_l_fov = sigmoid(x, alpha)
-        w_u_fov = sigmoid(-x + self.kinect.width, alpha)
-        is_in_fov = h_l_fov*h_u_fov*w_l_fov*w_u_fov
+        boundary = np.array([y, -y + self.kinect.height, x, -x + self.kinect.width])
+        is_in_fov = np.prod(sigmoid(boundary, 1e6))
         
         is_in_fov = (1-.5)*is_in_fov + .5 # make being out of FOV not so advantageous for gauss likelihood
         
-        # TEMP
-        #is_in_fov = exact_is_in_fov
-        
-        if is_in_fov > self.exploitation:
-            if exact_is_in_fov != 1:
-                print('CRAPPPPPPPPPPPPPPP')
+        # higher it is, more it weights particles inside of FOV
+        # [.5, 1]
+        # .75 best so far
+        if is_in_fov > .75:
             particle_dist = self.kinect.distance_to(particle)
             
-            y, x = self.kinect.get_pixel_from_point(particle)
+            y, x = self.kinect.get_pixel_from_point(particle, False)
             
             sd = particle_dist - z_buffer[y,x]
             sd_sigmoid = sigmoid(sd, 10)
             
             if abs(sd) < .03:
-                #image = self.kinect.get_image()
                 r, g, b = tuple(image[y, x]/255.)
                 color = colorsys.rgb_to_hsv(r, g, b)
                 
             sd_sigmoid = (1-.1)*sd_sigmoid + .1/2.0
+            
+        z = np.array((is_in_fov, sd_sigmoid) + color)
         
-        return np.array((is_in_fov, sd_sigmoid) + color)
+        weight = -np.inf
+        for z_d in self.desired_observations:
+            e = z - z_d
+            # special hue case, make it wrap around
+            hue_small, hue_large = min(z[2], z_d[2]), max(z[2], z_d[2])
+            e[2] = min(hue_large - hue_small, hue_small + (1-hue_large))
+            
+            weight = max(weight, self.gauss_likelihood(e, self.R))
+        
+        h, s, v = z[2:]
+        r, g, b = colorsys.hsv_to_rgb(h, s, v)
+        if z[0] <= .5: # out of fov
+            color = np.array((0,1,0))
+        elif z[1] < .25: # free space
+            color = np.array((1,1,1))
+        elif z[1] > .75: # occluded
+            color = np.array((0,0,0))
+        else: # near surface
+            color = np.array((r,g,b))
+        
+        return weight, color
     
-    def update_state_and_particles(self, x_t, particles_t, u_t):
+    def update_state_and_particles(self, x_t, particles_t, u_t, plot=False, add_noise=True):
+        self.handles = list()
         M = len(particles_t)
         
         x_tp1 = self.dynfunc(x_t, u_t)
@@ -166,84 +206,24 @@ class EihSystem:
         image = self.kinect.get_image()
         z_buffer = self.kinect.get_z_buffer()
         
-        handles = list()
         W = np.zeros(M)
-        for m in xrange(M):
-            
-            """
-            particle = particles_t[m]
-            # linear operation with two floor(.) calls
-            # function of particle position, kinect pose, camera intrinsics
-            y, x = self.kinect.get_pixel_from_point(particle)
-            # simple L2 norm
-            # function of particle position, kinect position
-            particle_dist = self.kinect.distance_to(particle)
-            # NON-TRIVIAL
-            # function of kinect position, ENVIRONMENT
-            # what if you assume you know the whole environment? just not the one object you are looking for?
-            # 
-            z_buffer_val = z_buffer[y, x]
-            if self.kinect.is_in_fov(particle):
-                r, g, b = image[y, x]/255.
-                hue, _, _ = colorsys.rgb_to_hsv(r, g, b)
-            else:
-                hue = UNKNOWN
-            W[m], color = self.obsfunc_discrete_weight_direct((y,x), particle_dist, z_buffer_val, hue)
-            if color is None:
-                color = r, g, b
-            handles.append(utils.plot_point(self.env, particle.array, color=color))
-            """
-                
+        for m in xrange(M):    
             W[m], color = self.obsfunc_discrete_weight(particles_t[m], image, z_buffer)
-            handles.append(utils.plot_point(self.env, particles_t[m].array, color=color))
-            
-            """
-            z_m = self.obsfunc(particles_t[m], image, z_buffer)
-            
-            for z_d in self.desired_observations:
-                e = z_m - z_d
-                # special hue case, make it wrap around
-                hue_small, hue_large = min(z_m[2], z_d[2]), max(z_m[2], z_d[2])
-                e[2] = min(hue_large - hue_small, hue_small + (1-hue_large))
-                
-                W[m] = max(W[m], self.gauss_likelihood(e, self.R))
-                #W[m] = max([self.gauss_likelihood(z_m - z_d, self.R) for z_d in self.desired_observations])
-            
-            h, s, v = z_m[2:]
-            r, g, b = colorsys.hsv_to_rgb(h, s, v)
-            if z_m[0] <= .5: # out of fov
-                color = np.array((0,1,0))
-            elif z_m[1] < .25: # free space
-                color = np.array((1,1,1))
-            elif z_m[1] > .75: # occluded
-                color = np.array((0,0,0))
-            else: # near surface
-                color = np.array((r,g,b))
-            handles.append(utils.plot_point(self.env, particles_t[m].array, color=color))
-            """
-            
-            """
-            fov_str = 'in fov' if z_m[0] == 1 else 'NOT in fov'
-            sd_str = z_m[1]
-            color = (r,g,b)
-            print('m: {0}'.format(m))
-            print(fov_str)
-            print('signed_distance: {0}'.format(sd_str))
-            print(str(color))
-            print('w: {0}\n'.format(W[m]))
-            raw_input()
-            handles = list()
-            """
-            
-            
-            
-            
+            #W[m], color = self.obsfunc_continuous_weight(particles_t[m], image, z_buffer)
+            if plot:
+                self.handles.append(utils.plot_point(self.env, particles_t[m].array, color=color))
+        
         W = W / np.sum(W)
         
         sampling_noise = random_within(0, 1.0/float(M))
         particles_tp1 = self.low_variance_sampler(particles_t, W, sampling_noise)
         
-        return x_tp1, particles_tp1, handles
+        if add_noise:
+            for i in xrange(len(particles_tp1)):
+                noise = [random_within(-.005, .005) for _ in xrange(3)]
+                particles_tp[i] = particles_tp1[i] + noise
+        
+        return x_tp1, particles_tp1
             
     def gauss_likelihood(self, v, S):
         Sf = np.linalg.cholesky(S)
@@ -251,7 +231,7 @@ class EihSystem:
         
         E = -0.5*np.sum(M*M)
         C = np.power(2*np.pi, S.shape[1]/2.) * np.prod(np.diag(Sf))
-        w = np.exp(E) #since normalized anyways #np.exp(E) / C
+        w = np.exp(E) / C
         
         return w
     
@@ -266,36 +246,11 @@ class EihSystem:
             while u > c:
                 i += 1
                 c += W[i]
-            noise = [random_within(-.005, .005) for _ in xrange(3)]
-            particles_sampled.append(particles[i].copy() + noise)
+            particles_sampled.append(particles[i].copy())
             
         return particles_sampled
     
-    def cost(self, x0, U, particles):
-        """ Wrapper in case we want to use a different cost function """
-        #return self.cost_entropy_discrete(x0, U, particles)
-        return self.cost_entropy_continuous(x0, U, particles)
-    
-    def cost_grad(self, x0, U, particles, step=1e-5):
-        T = len(U) + 1
-        grad = [np.zeros(self.U_DIM) for _ in xrange(T-1)]
-        
-        for t in xrange(T-1):
-            for i in xrange(self.U_DIM):
-                u_orig = U[t][i]
-                
-                U[t][i] = u_orig + step
-                cost_p = self.cost(x0, U, particles)
-                
-                U[t][i] = u_orig - step
-                cost_m = self.cost(x0, U, particles)
-                
-                grad[t][i] = (cost_p - cost_m) / (2*step)
-                
-        return grad
-                
-    
-    def cost_entropy_discrete(self, x0, U, particles):
+    def cost(self, x0, U, particles, use_discrete=False):
         """
         Starting at x0, propagates weights by each
         u in U, calculating entropy of the particle weights
@@ -316,53 +271,40 @@ class EihSystem:
             z_buffer = self.kinect.get_z_buffer()
             
             for m in xrange(M):
-                W_m, color = self.obsfunc_discrete_weight(particles[m], image, z_buffer)
+                if use_discrete:
+                    W_m, color = self.obsfunc_discrete_weight(particles[m], image, z_buffer)
+                else:
+                    W_m, color = self.obsfunc_continuous_weight(particles[m], image, z_buffer)
+                    
                 W[m] *= W_m
             W = W / np.sum(W)
         
             for w in W.tolist():
                 if w != 0:
                     entropy += -w*np.log(w)
+                    
+        self.manip.set_joint_values(x0)
                     
         return entropy
     
-    def cost_entropy_continuous(self, x0, U, particles):
-        M = len(particles)
-        T = len(U)
-        entropy = 0.
+    def cost_grad(self, x0, U, particles, step=1e-5, use_discrete=False):
+        T = len(U) + 1
+        grad = [np.zeros(self.U_DIM) for _ in xrange(T-1)]
         
-        x_t = x0
-        W = (1./float(M))*np.ones(M)
-        for t in xrange(T):
-            u_t = U[t]
-            x_tp1 = self.dynfunc(x_t, u_t)
-            self.manip.set_joint_values(x_tp1)
-            
-            image = self.kinect.get_image()
-            z_buffer = self.kinect.get_z_buffer()
-            
-            
-            for m in xrange(M):
-                z_m = self.obsfunc(particles[m], image, z_buffer)
+        for t in xrange(T-1):
+            for i in xrange(self.U_DIM):
+                u_orig = U[t][i]
                 
-                W_m = -np.inf
-                for z_d in self.desired_observations:
-                    e = z_m - z_d
-                    # special hue case, make it wrap around
-                    hue_small, hue_large = min(z_m[2], z_d[2]), max(z_m[2], z_d[2])
-                    e[2] = min(hue_large - hue_small, hue_small + (1-hue_large))
-                    
-                    W_m = max(W_m, self.gauss_likelihood(e, self.R))
-                    
-                W[m] *= W_m
-            
-            W = W / np.sum(W)
-        
-            for w in W.tolist():
-                if w != 0:
-                    entropy += -w*np.log(w)
-                    
-        return entropy
+                U[t][i] = u_orig + step
+                cost_p = self.cost(x0, U, particles, use_discrete)
+                
+                U[t][i] = u_orig - step
+                cost_m = self.cost(x0, U, particles, use_discrete)
+                
+                grad[t][i] = (cost_p - cost_m) / (2*step)
+                
+        return grad
+                
     
     
     
@@ -379,7 +321,7 @@ def random_within(lower, upper):
 
 """  Test Functions """
 
-def setup_environment(M=1000, lr='r', zero_seed=True):
+def setup_environment(obs_type, M=1000, lr='r', zero_seed=True):
     if zero_seed:
         random.seed(0)
         
@@ -407,6 +349,10 @@ def setup_environment(M=1000, lr='r', zero_seed=True):
     mug = env.GetKinBody('mug')
     mug_pose = tfx.pose(mug.GetTransform())
     
+    #x_min, x_max = mug_pose.position.x - .03, mug_pose.position.x + .03
+    #y_min, y_max = mug_pose.position.y + .03, mug_pose.position.y + .03
+    #z_min, z_max = mug_pose.position.z + extents[2], mug_pose.position.z + extents[2] + .2
+    
     particles = list()
     for i in xrange(M):
         x = random_within(x_min, x_max)
@@ -420,15 +366,15 @@ def setup_environment(M=1000, lr='r', zero_seed=True):
     arm = larm if lr == 'l' else rarm
     kinect = l_kinect if lr == 'l' else r_kinect
         
-    eih_sys = EihSystem(env, arm, kinect)
+    eih_sys = EihSystem(env, arm, kinect, obs_type)
     kinect.render_on()
-    arm.set_pose(tfx.pose([2.901, -1.712,  0.868],tfx.tb_angles(-143.0, 77.9, 172.1))) # FOR rarm ONLY
+    #arm.set_pose(tfx.pose([2.901, -1.712,  0.868],tfx.tb_angles(-143.0, 77.9, 172.1))) # FOR rarm ONLY
     time.sleep(1)
     
     return eih_sys, particles
     
-def test_eih_system():
-    eih_sys, particles = setup_environment(zero_seed=False)
+def test_pf_update():
+    eih_sys, particles = setup_environment('fov', zero_seed=False)
     arm = eih_sys.manip
     
     arm.teleop()
@@ -439,22 +385,17 @@ def test_eih_system():
     try:
         t = 0
         while True:
-            x_tp1, particles_tp1, handles = eih_sys.update_state_and_particles(x_t, particles_t, u_t)
-        
-            #handles = list()
-            #for p in particles_tp1:
-            #    handles.append(utils.plot_point(env, p.array, color=[1.,0,0]))
-                
+            x_tp1, particles_tp1 = eih_sys.update_state_and_particles(x_t, particles_t, u_t, True)
+            
             particles_t = particles_tp1
             print('Iter: {0}'.format(t))
+            t += 1
             
             arm.teleop()
             x_t = arm.get_joint_values()
             
             #utils.save_view(env, 'figures/eih_pf_{0}.png'.format(t))
             
-            t += 1
-            handles = None
     except KeyboardInterrupt:
         rave.RaveDestroy()
         print('Exiting')
@@ -462,8 +403,8 @@ def test_eih_system():
     
     IPython.embed()
     
-def test_entropy(T = 3):
-    eih_sys, particles = setup_environment()
+def test_cost(T = 2):
+    eih_sys, particles = setup_environment('fov', zero_seed=False)
     arm = eih_sys.manip
     
     X_DIM, U_DIM = eih_sys.X_DIM, eih_sys.U_DIM
@@ -484,19 +425,117 @@ def test_entropy(T = 3):
     #print('cost: {0}'.format(cost))
     
     print('computing grad...')
-    grad = eih_sys.cost_grad(x0, U, particles)
+    grad = eih_sys.cost_grad(x0, U, particles, use_discrete=False)
     
     IPython.embed()
     
-def teleop():
-    eih_sys, particles = setup_environment()
-    arm = eih_sys.manip
+def test_greedy(M=1000):
+    random.seed(0)
+        
+    brett = pr2_sim.PR2('../envs/pr2-test.env.xml')
+    env = brett.env
+    arm = brett.rarm
+    kinect = brett.r_kinect
     
-    while True:
-        arm.teleop()
-        print arm.get_joint_values()
+    arm.set_posture('mantis')
+    p = arm.get_pose()
+    arm.set_pose(tfx.pose(p.position, tfx.tb_angles(0, 90, 0)))
+    
+    # .23 just on edge of range
+    # .25 out of range
+    center = [p.position.x + .525, p.position.y + .5, p.position.z]
+    
+    P = list()
+    for i in xrange(M):
+        pos = [0,0,0]
+        for i in xrange(len(center)):
+            pos[i] = random_within(center[i] - .025, center[i] + .025)
+        particle = tfx.point(pos)
+        P.append(particle)
+        
+    handles = list()
+    for p in P:
+        handles.append(utils.plot_point(env, p.array,color=[1,0,0]))
+    
+                
+    eih_sys = EihSystem(env, arm, kinect, 'fov')
+    kinect.render_on()
+    time.sleep(1)
+        
+    x0 = arm.get_joint_values()
+    U = [np.zeros(x0.shape)]
+    
+    try:
+        t = 0
+        while True:
+            print('Iter: {0}'.format(t))
+            t += 1
+            
+            arm.set_joint_values(x0)
+            
+            avg_gauss = avg_is_outside_fov = avg_is_in_fov = 0.0
+            for particle in P:
+                y, x = kinect.get_pixel_from_point(particle, False)
+        
+                boundary = np.array([y, -y + kinect.height, x, -x + kinect.width])
+                
+                is_in_fov = np.prod(sigmoid(boundary, 1))
+                avg_is_in_fov += is_in_fov/(float(len(P)))
+                
+                is_outside_fov = np.max(sigmoid(-boundary, .001))
+                avg_is_outside_fov += is_outside_fov/(float(len(P)))
+                
+                e = np.array([y - kinect.height/2., x - kinect.width/2.])
+                R = np.diag([100*kinect.height, 100*kinect.width])
+                max_likelihood = eih_sys.gauss_likelihood(np.zeros(e.shape), R)
+                weight = (max_likelihood - eih_sys.gauss_likelihood(e, R))/max_likelihood
+                avg_gauss += weight/float(len(P))
+                
+            #print('avg_is_in_fov: {0}'.format(avg_is_in_fov))
+            #print('avg_is_outside_fov: {0}'.format(avg_is_outside_fov))
+            print('avg_gauss: {0}'.format(avg_gauss))
+            #IPython.embed()
+            #return
+            
+            grad = eih_sys.cost_grad(x0, U, P, step=1e-3, use_discrete=False)[0]
+            print('grad: {0}'.format(list(grad)))
+            
+            u_grad = -(2*(np.pi/180.))*grad/np.linalg.norm(grad, 2)
+            x1 = x0 + u_grad
+            
+            arm.set_joint_values(x0)
+            p0 = arm.get_pose()
+            arm.set_joint_values(x1)
+            p1 = arm.get_pose()
+            
+            delta_pos = .03*(p1.position - p0.position)/(p1.position - p0.position).norm
+            clipped_quat = tft.quaternion_slerp(p0.tb_angles.to_quaternion(), p1.tb_angles.to_quaternion(), .5)
+            
+            p1_clipped = tfx.pose(p0.position + delta_pos, clipped_quat)
+            arm.set_pose(p1_clipped)
+            x1_clipped = arm.get_joint_values()
+            u_t = x1_clipped - x0
+            arm.set_joint_values(x0)
+            
+            x_tp1, P_tp1 = eih_sys.update_state_and_particles(x0, P, u_t, plot=True, add_noise=False)
+            
+            P = P_tp1
+            x0 = x_tp1
+            
+            print('Press enter')
+            raw_input()
+            
+            #utils.save_view(env, 'figures/eih_pf_{0}.png'.format(t))
+            
+    except KeyboardInterrupt:
+        rave.RaveDestroy()
+        print('Exiting')
+        sys.exit()
+    
 
 if __name__ == '__main__':
-    test_eih_system()
-    #test_entropy()
-    #teleop()
+    #test_pf_update()
+    #test_cost()
+    test_greedy()
+
+

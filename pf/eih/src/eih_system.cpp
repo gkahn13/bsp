@@ -41,18 +41,17 @@ void EihSystem::init(const mat &uMin, const mat &uMax, ObsType obs_type, int T, 
 
 	this->obs_type = obs_type;
 	mat R_diag;
+	double height = kinect->get_height(), width = kinect->get_width();
 	switch(obs_type) {
 	case ObsType::fov:
-		R_diag << .5 << .5 << .5 << .5;
-		desired_observations = std::vector<mat>(8);
-		desired_observations[0] << 0 << 1 << 0 << 1;
-		desired_observations[1] << 0 << 1 << 1 << 1;
-		desired_observations[2] << 0 << 1 << 1 << 0;
-		desired_observations[3] << 1 << 1 << 1 << 0;
-		desired_observations[4] << 1 << 0 << 1 << 0;
-		desired_observations[5] << 1 << 0 << 1 << 1;
-		desired_observations[6] << 1 << 0 << 0 << 1;
-		desired_observations[7] << 1 << 1 << 0 << 1;
+//		R_diag << .5;
+//		desired_observations = std::vector<mat>(1);
+//		desired_observations[0] << 0;
+
+		R_diag << 100*height << 100*width;
+		desired_observations = std::vector<mat>(1);
+		desired_observations[0] << height/2 << width/2;
+
 		break;
 	case ObsType::fov_occluded:
 		R_diag << .5 << .01;
@@ -133,22 +132,30 @@ double EihSystem::obsfunc_discrete_weight(const mat &particle, const cube &image
 double EihSystem::obsfunc_continuous_weight_fov(const mat &particle, const cube &image, const mat &z_buffer, bool plot) {
 	mat z(Z_DIM, 1);
 
-	mat pixel = kinect->get_pixel_from_point(particle);
-	int y = int(pixel(0)), x = int(pixel(1));
+	mat pixel = kinect->get_pixel_from_point(particle, false);
+	double y = pixel(0), x = pixel(1);
 
-	mat boundary;
-	boundary << y << -y + kinect->get_height() << x << -x + kinect->get_width();
-	z = sigmoid(boundary, 1e-1);
+//	mat boundary;
+//	boundary << y << -y + kinect->get_height() << x << -x + kinect->get_width();
+//	z(0, 0) = prod(prod(sigmoid(boundary, 1)));
+//
+//	double weight = -INFINITY;
+//	for(int i=0; i < desired_observations.size(); ++i) {
+//		mat e = z - desired_observations[i];
+//		weight = MAX(weight, gauss_likelihood(e.t(), R));
+//	}
 
+	double height = kinect->get_height(), width = kinect->get_width();
+	mat e;
+	e << y - height/2 << endr << x - width/2;
+	mat R_diag;
+	R_diag << 100*height << 100*width;
+	double max_likelihood = gauss_likelihood(zeros<mat>(Z_DIM,1), diagmat(R_diag));
+	double weight = (max_likelihood - gauss_likelihood(e, diagmat(R_diag))) / max_likelihood;
 
-	double weight = -INFINITY;
-	for(int i=0; i < desired_observations.size(); ++i) {
-		mat e = z - desired_observations[i];
-		weight = MAX(weight, gauss_likelihood(e.t(), R));
-	}
 
 	if (plot) {
-		rave::Vector color = (prod(prod(z)) < .5) ? rave::Vector(1, 1, 1) : rave::Vector(0, 1, 0);
+		rave::Vector color = (weight > .5) ? rave::Vector(1, 1, 1) : rave::Vector(0, 1, 0);
 		rave::Vector particle_vec = rave_utils::mat_to_rave_vec(particle);
 		handles.push_back(rave_utils::plot_point(env, particle_vec, color));
 	}
@@ -313,8 +320,8 @@ void EihSystem::update_state_and_particles(const mat& x_t, const mat& P_t, const
 
 	mat W(M, 1, fill::zeros);
 	for(int m=0; m < M; ++m) {
-//		W(m) = obsfunc_discrete_weight(P_t.col(m), image, z_buffer, plot);
-		W(m) = obsfunc_continuous_weight(P_t.col(m), image, z_buffer, plot);
+		W(m) = obsfunc_discrete_weight(P_t.col(m), image, z_buffer, plot);
+//		W(m) = obsfunc_continuous_weight(P_t.col(m), image, z_buffer, plot);
 	}
 
 	W = W / accu(W);

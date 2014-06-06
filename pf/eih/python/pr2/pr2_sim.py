@@ -193,6 +193,7 @@ class Sensor:
         self.sensor = sensor
         self.is_powered = False
         self.is_rendering = False
+        self.data_timeout = utils.Timeout(5)
         
         for type in rave.Sensor.Type.values.values():
             if self.sensor.Supports(type):
@@ -212,8 +213,19 @@ class Sensor:
             self.sensor.Configure(rave.Sensor.ConfigureCommand.PowerOff)
             self.is_powered = False
         
-    def get_data(self):
-        return self.sensor.GetSensorData(self.type)
+    def get_data(self, wait_for_new=True):
+        old_data = self.sensor.GetSensorData(self.type)
+        if not wait_for_new:
+            return old_data
+        
+        self.data_timeout.start()
+        while not self.data_timeout.has_timed_out():
+            data = self.sensor.GetSensorData(self.type)
+            if old_data.stamp != data.stamp:
+                return data
+        
+        print('get_data timed out, exiting')
+        sys.exit(0)
             
     def render_on(self):
         if not self.is_rendering:
@@ -281,8 +293,8 @@ class CameraSensor(Sensor):
             
         return points_pixels_colors
     
-    def get_pixel_from_point(self, x):
-        x_mat = x.as_pose().matrix
+    def get_pixel_from_point(self, x, is_round=True):
+        x_mat = np.array(x.as_pose().matrix)
         x_mat[0:3,0:3] = np.zeros((3,3))
         xtilde = np.dot(inv(self.sensor.GetTransform()), x_mat)
         
@@ -292,9 +304,12 @@ class CameraSensor(Sensor):
         #y2 = (f/x3)*x2
         
         y = np.dot(self.P, xtilde[0:3,3])
-        y_pixel = int(y[1]/y[2])
-        x_pixel = int(y[0]/y[2])
+        y_pixel = y[1]/y[2]
+        x_pixel = y[0]/y[2]
         
+        if is_round:
+            y_pixel, x_pixel = np.round(y_pixel), np.round(x_pixel)
+            
         return (y_pixel, x_pixel)
     
     def is_in_fov(self, x):
@@ -349,8 +364,8 @@ class KinectSensor:
     def get_image(self):
         return self.camera_sensor.get_image()
     
-    def get_pixel_from_point(self, x):
-        return self.camera_sensor.get_pixel_from_point(x)
+    def get_pixel_from_point(self, x, is_round=True):
+        return self.camera_sensor.get_pixel_from_point(x, is_round)
     
     def is_in_fov(self, x):
         return self.camera_sensor.is_in_fov(x)
@@ -462,12 +477,24 @@ def test_kinect():
 
     kinect.get_point_cloud()
 
-def test_set_kinect_pose():
+def test_fov():
     brett = PR2('../../envs/pr2-test.env.xml')
+    env = brett.env
     arm = brett.rarm
     kinect = brett.r_kinect
     
-    arm.set_posture('mantis')
+    kinect.power_on()
+    arm.set_pose(tfx.pose([2.8, -1.88, .98], tfx.tb_angles(0, 90, 0)))
+    time.sleep(1)
+    
+    handles = list()
+    pt = kinect.get_pose().position + [1, 0, 0]
+    handles.append(utils.plot_point(env, pt.array))
+    
+    while True:
+        arm.teleop()
+        pixel = kinect.get_pixel_from_point(pt, False)
+        print(pixel)
     
     IPython.embed()
     
@@ -475,4 +502,4 @@ if __name__ == '__main__':
     #test()
     #test_pose()
     #test_kinect()
-    test_set_kinect_pose()
+    test_fov()

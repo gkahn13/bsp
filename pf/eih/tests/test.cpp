@@ -264,11 +264,11 @@ void test_cost() {
 void test_greedy() {
 	PR2 *brett = new PR2();
 	int M = 1000;
-	mat P(3,1000,fill::zeros);
+	mat P(3, M, fill::zeros);
 	EihSystem *sys = NULL;
 	Manipulator *manip = NULL;
 	KinectSensor *kinect = NULL;
-	setup_eih_environment(brett, 1000, Arm::ArmType::right, false, P, &sys, EihSystem::ObsType::fov);
+	setup_eih_environment(brett, M, Arm::ArmType::right, false, P, &sys, EihSystem::ObsType::fov);
 	manip = sys->get_manip();
 	kinect = sys->get_kinect();
 
@@ -281,8 +281,6 @@ void test_greedy() {
 //		std::cout << "\nPress 'q' to exit\n";
 //		if (utils::getch() == 'q') { break; }
 //		std::cout << "\n";
-
-//		manip->teleop();
 
 		U[0] = zeros<mat>(x0.n_rows, x0.n_cols);
 

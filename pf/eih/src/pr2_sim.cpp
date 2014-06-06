@@ -491,7 +491,7 @@ std::vector<std::vector<mat> > CameraSensor::get_pixels_and_colors(const std::ve
 	return points_pixels_colors;
 }
 
-mat CameraSensor::get_pixel_from_point(const mat &point) {
+mat CameraSensor::get_pixel_from_point(const mat &point, bool is_round) {
 	mat x_mat = zeros(4,4);
 	if (point.is_colvec()) {
 		x_mat.submat(0,3,2,3) = point;
@@ -507,9 +507,12 @@ mat CameraSensor::get_pixel_from_point(const mat &point) {
 //	double y1 = (f/x3)*x1, y2 = (f/x3)*x2;
 
 	mat y = P*xtilde.submat(0,3,2,3);
-	mat pixel(2,1);
-	pixel(0) = floor(y(1)/y(2));
-	pixel(1) =  floor(y(0)/y(2));
+	mat pixel;
+	pixel << y(1)/y(2) << endr << y(0)/y(2);
+
+	if (is_round) {
+		pixel = round(pixel);
+	}
 
 	return pixel;
 }

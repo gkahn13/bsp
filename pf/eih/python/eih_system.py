@@ -19,11 +19,6 @@ from tfx import transformations as tft
 
 UNKNOWN = -1e6
 
-"""
-TODO LIST:
-- occluded particles getting weighted too much
-"""
-
 class EihSystem:
     def __init__(self, env, manip, kinect, obs_type='fov_occluded_color'):
         """
@@ -35,14 +30,18 @@ class EihSystem:
         self.manip = manip
         self.kinect = kinect
         
+        height, width = self.kinect.height, self.kinect.width
+        min_range, max_range, optimal_range = self.kinect.min_range, self.kinect.max_range, self.kinect.optimal_range
         self.obs_type = obs_type
         if obs_type == 'fov':
             self.obsfunc_discrete_weight = self.obsfunc_discrete_weight_fov
             self.obsfunc_continuous_weight = self.obsfunc_continuous_weight_fov
+        elif obs_type == 'fov_occluded':
+            self.obsfunc_discrete_weight = self.obsfunc_discrete_weight_fov_occluded
+            self.obsfunc_continuous_weight = self.obsfunc_continuous_weight_fov_occluded
             
-            self.desired_observations = [np.array([0])]
-            
-            self.R = np.diag([.5])
+            self.fov_occluded_z_d = [np.array([height/2., width/2., optimal_range])]
+            self.R = np.diag([0])
         else:
             self.obs_type = 'fov_occluded_color'
             self.obsfunc_discrete_weight = self.obsfunc_discrete_weight_fov_occluded_color
@@ -53,8 +52,6 @@ class EihSystem:
                                      np.array((1, .5) + colorsys.rgb_to_hsv(1., 0, 0))]
             
             self.R = np.diag([.5, .01, .05, 1, 1])
-            
-        self.Z_DIM = self.R.shape[0]
         
         self.kinect.power_on()
         time.sleep(1)
@@ -75,48 +72,71 @@ class EihSystem:
         return x_new
     
     def obsfunc_discrete_weight_fov(self, particle, image, z_buffer):
-        if not self.kinect.is_in_fov(particle):
+        if not self.kinect.is_visible(particle):
             return 1, (0, 1, 0)
         else:
             return 0, (1, 1, 1)
     
     def obsfunc_continuous_weight_fov(self, particle, image, z_buffer):
         y, x = self.kinect.get_pixel_from_point(particle, False)
+        d = self.kinect.distance_to(particle)
         
-        """
-        boundary = np.array([y, -y + self.kinect.height, x, -x + self.kinect.width])
-        is_in_fov = np.prod(sigmoid(boundary, 1))
+        z = np.array([y, x, d])
         
-        z = np.array([is_in_fov])
+        height, width = self.kinect.height, self.kinect.width
+        min_range, max_range, optimal_range = self.kinect.min_range, self.kinect.max_range, self.kinect.optimal_range
         
-        weight = -np.inf
-        for z_d in self.desired_observations:
-            weight = max(weight, self.gauss_likelihood(z - z_d, self.R)) 
-            
-        color = (1, 1, 1) if is_in_fov > .5 else (0, 1, 0)
-        """
+        R = np.diag([100*height, 100*width, 100*(max_range - min_range)])
+        max_likelihood = self.gauss_likelihood(np.zeros((R.shape[0],1)), R)
         
-        """
-        boundary = np.array([y, -y + self.kinect.height, x, -x + self.kinect.width])
-        is_outside_fov = np.max(sigmoid(-boundary, .001))
+        z_low_weight = np.array([height/2., width/2., optimal_range])
         
-        weight = is_outside_fov
-        
-        color = (1, 1, 1) if is_outside_fov < .5 else (0, 1, 0)
-        """
-        
-        e = np.array([y - self.kinect.height/2., x - self.kinect.width/2.])
-        R = np.diag([100*self.kinect.height, 100*self.kinect.width])
-        max_likelihood = self.gauss_likelihood(np.zeros(e.shape), R)
-        weight = (max_likelihood - self.gauss_likelihood(e, R))/max_likelihood
+        weight = (max_likelihood - self.gauss_likelihood(z - z_low_weight, R)) / max_likelihood
         
         color = (1, 1, 1) if weight < .5 else (0, 1, 0)
         
         return weight, color
     
+    def obsfunc_discrete_weight_fov_occluded(self, particle, image, z_buffer):
+        if not self.kinect.is_visible(particle):
+            return 1, (0, 1, 0)
+        else:
+            particle_dist = self.kinect.distance_to(particle)
+            y, x = self.kinect.get_pixel_from_point(particle)
+            sd = particle_dist - z_buffer[y,x]
+            
+            if sd > -.01:
+                return 1, (0, 0, 0)
+            else:
+                return 0, (1, 1, 1)
+    
+    def obsfunc_continuous_weight_fov_occluded(self, particle, image, z_buffer):
+        fov_weight, color = self.obsfunc_continuous_weight_fov(particle, image, z_buffer)
+        
+        if self.kinect.is_visible(particle):
+            particle_dist = self.kinect.distance_to(particle)
+            y, x = self.kinect.get_pixel_from_point(particle)
+            sd = particle_dist - z_buffer[y,x]
+        
+            occluded_weight = sigmoid(sd, 5)
+            
+            weight = max(fov_weight, occluded_weight)
+            
+            if occluded_weight < .5:
+                color = (1, 1, 1)
+            else:
+                color = (0, 0, 0)
+        else:
+            weight = fov_weight
+            color = (0, 1, 0)
+            
+        return weight, color
+        
+    
     def obsfunc_discrete_weight_fov_occluded_color(self, particle, image, z_buffer):
         """ Returns weight, color to display """
-        if not self.kinect.is_in_fov(particle):
+        #if not self.kinect.is_visible(particle):
+        if not self.kinect.camera_sensor.is_in_fov(particle):
             return 1.0, (0, 1, 0)
         
         particle_dist = self.kinect.distance_to(particle)
@@ -221,7 +241,7 @@ class EihSystem:
         if add_noise:
             for i in xrange(len(particles_tp1)):
                 noise = [random_within(-.005, .005) for _ in xrange(3)]
-                particles_tp[i] = particles_tp1[i] + noise
+                particles_tp1[i] = particles_tp1[i] + noise
         
         return x_tp1, particles_tp1
             
@@ -373,11 +393,26 @@ def setup_environment(obs_type, M=1000, lr='r', zero_seed=True):
     
     return eih_sys, particles
     
-def test_pf_update():
-    eih_sys, particles = setup_environment('fov', zero_seed=False)
+def test_pf_update(M=1000):
+    eih_sys, particles = setup_environment('fov_occluded_color', M=M, zero_seed=False)
     arm = eih_sys.manip
+    kinect = eih_sys.kinect
     
-    arm.teleop()
+    """
+    arm.set_pose(tfx.pose(arm.get_pose().position, tfx.tb_angles(0, 90, 0)))
+    p = arm.get_pose()
+    center = [p.position.x + .75, p.position.y, p.position.z]
+    
+    particles = list()
+    for i in xrange(M):
+        pos = [0,0,0]
+        for i in xrange(len(center)):
+            pos[i] = random_within(center[i] - .025, center[i] + .025)
+        particle = tfx.point(pos)
+        particles.append(particle)
+    """
+    
+    arm.set_pose(tfx.pose([2.901, -1.712,  0.868],tfx.tb_angles(-143.0, 77.9, 172.1))) # FOR rarm ONLY
     x_t = arm.get_joint_values()
     particles_t = particles
     u_t = np.zeros(x_t.shape[0])
@@ -385,7 +420,7 @@ def test_pf_update():
     try:
         t = 0
         while True:
-            x_tp1, particles_tp1 = eih_sys.update_state_and_particles(x_t, particles_t, u_t, True)
+            x_tp1, particles_tp1 = eih_sys.update_state_and_particles(x_t, particles_t, u_t, True, False)
             
             particles_t = particles_tp1
             print('Iter: {0}'.format(t))
@@ -439,11 +474,12 @@ def test_greedy(M=1000):
     
     arm.set_posture('mantis')
     p = arm.get_pose()
-    arm.set_pose(tfx.pose(p.position, tfx.tb_angles(0, 90, 0)))
+    arm.set_pose(tfx.pose(p.position + [.5, 0, 0], tfx.tb_angles(0, 90, 0)))
     
     # .23 just on edge of range
     # .25 out of range
-    center = [p.position.x + .525, p.position.y + .5, p.position.z]
+    p = kinect.get_pose()
+    center = [p.position.x + .3, p.position.y, p.position.z]
     
     P = list()
     for i in xrange(M):
@@ -473,30 +509,6 @@ def test_greedy(M=1000):
             
             arm.set_joint_values(x0)
             
-            avg_gauss = avg_is_outside_fov = avg_is_in_fov = 0.0
-            for particle in P:
-                y, x = kinect.get_pixel_from_point(particle, False)
-        
-                boundary = np.array([y, -y + kinect.height, x, -x + kinect.width])
-                
-                is_in_fov = np.prod(sigmoid(boundary, 1))
-                avg_is_in_fov += is_in_fov/(float(len(P)))
-                
-                is_outside_fov = np.max(sigmoid(-boundary, .001))
-                avg_is_outside_fov += is_outside_fov/(float(len(P)))
-                
-                e = np.array([y - kinect.height/2., x - kinect.width/2.])
-                R = np.diag([100*kinect.height, 100*kinect.width])
-                max_likelihood = eih_sys.gauss_likelihood(np.zeros(e.shape), R)
-                weight = (max_likelihood - eih_sys.gauss_likelihood(e, R))/max_likelihood
-                avg_gauss += weight/float(len(P))
-                
-            #print('avg_is_in_fov: {0}'.format(avg_is_in_fov))
-            #print('avg_is_outside_fov: {0}'.format(avg_is_outside_fov))
-            print('avg_gauss: {0}'.format(avg_gauss))
-            #IPython.embed()
-            #return
-            
             grad = eih_sys.cost_grad(x0, U, P, step=1e-3, use_discrete=False)[0]
             print('grad: {0}'.format(list(grad)))
             
@@ -508,7 +520,7 @@ def test_greedy(M=1000):
             arm.set_joint_values(x1)
             p1 = arm.get_pose()
             
-            delta_pos = .03*(p1.position - p0.position)/(p1.position - p0.position).norm
+            delta_pos = .05*(p1.position - p0.position)/(p1.position - p0.position).norm
             clipped_quat = tft.quaternion_slerp(p0.tb_angles.to_quaternion(), p1.tb_angles.to_quaternion(), .5)
             
             p1_clipped = tfx.pose(p0.position + delta_pos, clipped_quat)
@@ -522,8 +534,6 @@ def test_greedy(M=1000):
             P = P_tp1
             x0 = x_tp1
             
-            print('Press enter')
-            raw_input()
             
             #utils.save_view(env, 'figures/eih_pf_{0}.png'.format(t))
             
@@ -534,8 +544,8 @@ def test_greedy(M=1000):
     
 
 if __name__ == '__main__':
-    #test_pf_update()
+    test_pf_update()
     #test_cost()
-    test_greedy()
+    #test_greedy()
 
 

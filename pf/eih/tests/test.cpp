@@ -189,7 +189,7 @@ void test_pf_update() {
 	EihSystem *sys = NULL;
 	Manipulator *manip = NULL;
 	KinectSensor *kinect = NULL;
-	setup_eih_environment(brett, 1000, Arm::ArmType::right, true, P, &sys, EihSystem::ObsType::fov);
+	setup_eih_environment(brett, 1000, Arm::ArmType::right, true, P, &sys, EihSystem::ObsType::fov_occluded_color);
 	manip = sys->get_manip();
 	kinect = sys->get_kinect();
 
@@ -225,11 +225,11 @@ void test_pf_update() {
 void test_cost() {
 	PR2 *brett = new PR2();
 	int M = 1000;
-	mat P(3,1000,fill::zeros);
+	mat P(3, M, fill::zeros);
 	EihSystem *sys = NULL;
 	Manipulator *manip = NULL;
 	KinectSensor *kinect = NULL;
-	setup_eih_environment(brett, 1000, Arm::ArmType::right, false, P, &sys, EihSystem::ObsType::fov_occluded_color);
+	setup_eih_environment(brett, M, Arm::ArmType::right, false, P, &sys, EihSystem::ObsType::fov);
 	manip = sys->get_manip();
 	kinect = sys->get_kinect();
 
@@ -264,15 +264,38 @@ void test_cost() {
 void test_greedy() {
 	PR2 *brett = new PR2();
 	int M = 1000;
-	mat P(3, M, fill::zeros);
+	mat P(3,1000,fill::zeros);
+	rave::EnvironmentBasePtr env = brett->get_env();
 	EihSystem *sys = NULL;
 	Manipulator *manip = NULL;
 	KinectSensor *kinect = NULL;
-	setup_eih_environment(brett, M, Arm::ArmType::right, false, P, &sys, EihSystem::ObsType::fov);
+	setup_eih_environment(brett, 1000, Arm::ArmType::right, false, P, &sys, EihSystem::ObsType::fov_occluded);
 	manip = sys->get_manip();
 	kinect = sys->get_kinect();
 
-	rave::EnvironmentBasePtr env = brett->get_env();
+
+//	brett->rarm->set_posture(Arm::Posture::mantis);
+//	rave::Transform pose = brett->rarm->get_pose();
+//	pose.rot = rave::geometry::quatFromAxisAngle(rave::Vector(0, M_PI/2, 0));
+//	pose.trans.x += .3;
+//	brett->rarm->set_pose(pose);
+//
+//
+//	mat center;
+//	center << pose.trans.x + .45 << pose.trans.y << pose.trans.z;
+//
+//	for(int m=0; m < M; ++m) {
+//		for(int i=0; i < 3; ++i) {
+//			P(i, m) = uniform(center(i) - .025, center(i) + .025);
+//		}
+//	}
+//
+//	Manipulator *manip = brett->rarm;
+//	KinectSensor *kinect = brett->r_kinect;
+//	EihSystem::ObsType obs_type = EihSystem::ObsType::fov;
+//	EihSystem *sys = new EihSystem(env, manip, kinect, obs_type);
+//	kinect->render_on();
+//	boost::this_thread::sleep(boost::posix_time::seconds(2));
 
 	int T = 2, ch;
 	mat x0 = manip->get_joint_values();
@@ -364,9 +387,9 @@ int main(int argc, char* argv[]) {
 //	test_camera();
 //	test_plot();
 //	test_kinect();
-//	test_pf_update();
+	test_pf_update();
 //	test_cost();
-	test_greedy();
+//	test_greedy();
 //	test_stamps();
 }
 

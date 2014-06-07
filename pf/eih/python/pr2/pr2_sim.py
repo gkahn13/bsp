@@ -241,6 +241,11 @@ class DepthSensor(Sensor):
     def __init__(self, sensor):
         Sensor.__init__(self, sensor)
         
+        # TODO: hard coded, can't get at with Python interface
+        self.min_range = 0.5
+        self.max_range = 5.0
+        self.optimal_range = .75 # TODO: arbitrary, so change for real kinect
+        
     def get_depths(self):
         data = self.get_data()
         points = data.ranges
@@ -259,6 +264,11 @@ class DepthSensor(Sensor):
                 points.append(tfx.point(sensor_pose.position + point_mat[i,:]))
                 
         return points
+    
+    def is_in_range(self, point):
+        depth_pos = tfx.pose(self.sensor.GetTransform()).position
+        dist = (point - depth_pos).norm
+        return (self.min_range <= dist <= self.max_range)
     
 class CameraSensor(Sensor):
     def __init__(self, sensor):
@@ -326,8 +336,9 @@ class KinectSensor:
         self.depth_sensor = DepthSensor(robot.GetSensor(depth_sensor_name).GetSensor())
         self.camera_sensor = CameraSensor(robot.GetSensor(camera_sensor_name).GetSensor())
                 
-        geom = self.camera_sensor.sensor.GetSensorGeometry(rave.Sensor.Type.Camera)
-        self.height, self.width = geom.imagedata.shape[0:2]
+        self.height, self.width = self.camera_sensor.height, self.camera_sensor.width
+        self.min_range, self.max_range = self.depth_sensor.min_range, self.depth_sensor.max_range
+        self.optimal_range = self.depth_sensor.optimal_range
                 
     def power_on(self):
         self.depth_sensor.power_on()
@@ -367,8 +378,8 @@ class KinectSensor:
     def get_pixel_from_point(self, x, is_round=True):
         return self.camera_sensor.get_pixel_from_point(x, is_round)
     
-    def is_in_fov(self, x):
-        return self.camera_sensor.is_in_fov(x)
+    def is_visible(self, x):
+        return self.camera_sensor.is_in_fov(x) and self.depth_sensor.is_in_range(x)
     
     def get_pose(self):
         return tfx.pose(self.camera_sensor.sensor.GetTransform())
@@ -441,9 +452,6 @@ def test():
     plt.imshow(image)
     plt.show(block=False)
     
-    
-    
-    
     IPython.embed()
     
 def test_pose():
@@ -498,8 +506,18 @@ def test_fov():
     
     IPython.embed()
     
+def test_explore():
+    brett = PR2('../../envs/pr2-test.env.xml')
+    env = brett.env
+    arm = brett.rarm
+    kinect = brett.r_kinect
+    
+    IPython.embed()
+    
 if __name__ == '__main__':
     #test()
     #test_pose()
     #test_kinect()
-    test_fov()
+    #test_fov()
+    test_explore()
+    

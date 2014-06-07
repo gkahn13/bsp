@@ -61,6 +61,7 @@
     <translation>0 0 0.05</translation>
     <rotationaxis>0 1 0 0</rotationaxis>
     <sensor type="BaseFlashLidar3D">
+      <minrange>.5</minrange>
       <maxrange>5</maxrange>
       <time_scan>0.2</time_scan>
       <KK>8 6 8 6</KK>
@@ -88,6 +89,7 @@
     <translation>0 0 0.05</translation>
     <rotationmat>0 0 1 -1 0 0 0 -1 0</rotationmat>
     <sensor type="BaseFlashLidar3D">
+      <minrange>.5</minrange>
       <maxrange>5</maxrange>
       <time_scan>0.2</time_scan>
       <KK>128 96 32 24</KK>
@@ -115,6 +117,7 @@
     <translation>0 0 0.05</translation>
     <rotationmat>0 0 1 -1 0 0 0 -1 0</rotationmat>
     <sensor type="BaseFlashLidar3D">
+      <minrange>.5</minrange>
       <maxrange>5</maxrange>
       <time_scan>0.2</time_scan>
       <KK>128 96 32 24</KK>

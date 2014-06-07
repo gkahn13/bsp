@@ -404,6 +404,9 @@ DepthSensor::DepthSensor(rave::SensorBasePtr sensor) : Sensor(sensor) {
 			boost::static_pointer_cast<rave::SensorBase::LaserGeomData>(geom);
 
 	data_timeout = 2*depth_geom->time_scan;
+	min_range = .5; // doesn't work for some reason: depth_geom->min_range;
+	max_range = depth_geom->max_range;
+	optimal_range = .75; // TODO: arbitrary!
 }
 
 /**
@@ -429,6 +432,12 @@ std::vector<mat> DepthSensor::get_points(bool wait_for_new) {
 	return points;
 }
 
+
+bool DepthSensor::is_in_range(const mat& point) {
+	mat depth_pos = rave_utils::rave_vec_to_mat(sensor->GetTransform().trans);
+	double dist = norm(point - depth_pos, 2);
+	return ((dist >= min_range) && (dist <= max_range));
+}
 
 /**
  * CameraSensor constructor
@@ -599,7 +608,7 @@ mat KinectSensor::get_z_buffer(bool wait_for_new) {
 	pose_pos << pose.trans.x << pose.trans.y << pose.trans.z;
 
 	int height = camera_sensor->get_height(), width = camera_sensor->get_width();
-	mat z_buffer = INFINITY*ones(height,width);
+	mat z_buffer = depth_sensor->get_max_range()*ones(height,width);
 	for(int i=0; i < points_pixels_colors.size(); ++i) {
 		mat point = points_pixels_colors[i][0];
 		mat pixel = points_pixels_colors[i][1];

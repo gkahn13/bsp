@@ -125,6 +125,15 @@ public:
 	DepthSensor(rave::SensorBasePtr sensor);
 
 	std::vector<mat> get_points(bool wait_for_new=true);
+
+	bool is_in_range(const mat& point);
+
+	double get_min_range() { return min_range; }
+	double get_max_range() { return max_range; }
+	double get_optimal_range() { return optimal_range; }
+
+private:
+	double min_range, max_range, optimal_range;
 };
 
 class CameraSensor : public Sensor {
@@ -167,13 +176,16 @@ public:
 
 	cube get_image(bool wait_for_new=true) { return camera_sensor->get_image(wait_for_new); }
 	mat get_pixel_from_point(const mat &point, bool is_round=true) { return camera_sensor->get_pixel_from_point(point, is_round); }
-	bool is_in_fov(const mat &point) { return camera_sensor->is_in_fov(point); } // TODO: add depth sensor max range
+	bool is_visible(const mat &point) { return (camera_sensor->is_in_fov(point) && depth_sensor->is_in_range(point)); }
 	rave::Transform get_pose() { return camera_sensor->get_pose(); }
 
 	void display_point_cloud(const std::vector<ColoredPoint*> &colored_points, std::vector<rave::GraphHandlePtr> &handles);
 
 	int get_height() { return camera_sensor->get_height(); }
 	int get_width() { return camera_sensor->get_width(); }
+	double get_min_range() { return depth_sensor->get_min_range(); }
+	double get_max_range() { return depth_sensor->get_max_range(); }
+	double get_optimal_range() { return depth_sensor->get_optimal_range(); }
 
 	// TODO: temp!
 	DepthSensor* get_depth_sensor() { return depth_sensor; }

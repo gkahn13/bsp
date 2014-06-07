@@ -5,13 +5,8 @@
  */
 
 EihSystem::EihSystem(rave::EnvironmentBasePtr e, Manipulator *m, KinectSensor *k) : env(e), manip(m), kinect(k) {
-	mat R_diag;
-	R_diag << .5 << .01 << .05 << 1 << 1;
-	mat R = diagmat(R_diag);
-
 	mat uMin, uMax;
 	manip->get_limits(uMin, uMax);
-
 	init(uMin, uMax);
 }
 
@@ -41,23 +36,20 @@ void EihSystem::init(const mat &uMin, const mat &uMax, ObsType obs_type, int T, 
 
 	this->obs_type = obs_type;
 	mat R_diag;
-	double height = kinect->get_height(), width = kinect->get_width();
+//	double height = kinect->get_height(), width = kinect->get_width();
+//	double min_range = kinect->get_min_range(), max_range = kinect->get_max_range(),
+//			optimal_range = kinect->get_optimal_range();
 	switch(obs_type) {
 	case ObsType::fov:
-//		R_diag << .5;
+//		R_diag << 100*height << 100*width << 1*(max_range - min_range);
 //		desired_observations = std::vector<mat>(1);
-//		desired_observations[0] << 0;
-
-		R_diag << 100*height << 100*width;
-		desired_observations = std::vector<mat>(1);
-		desired_observations[0] << height/2 << width/2;
-
+//		desired_observations[0] << height/2 << width/2 << optimal_range;
 		break;
 	case ObsType::fov_occluded:
-		R_diag << .5 << .01;
-		desired_observations = std::vector<mat>(2);
-		desired_observations[0] << 0 << UNKNOWN;
-		desired_observations[1] << 1 << 1;
+//		R_diag << .5 << .01;
+//		desired_observations = std::vector<mat>(2);
+//		desired_observations[0] << 0 << UNKNOWN;
+//		desired_observations[1] << 1 << 1;
 		break;
 	case ObsType::fov_occluded_color:
 	default:
@@ -130,29 +122,32 @@ double EihSystem::obsfunc_discrete_weight(const mat &particle, const cube &image
 }
 
 double EihSystem::obsfunc_continuous_weight_fov(const mat &particle, const cube &image, const mat &z_buffer, bool plot) {
-	mat z(Z_DIM, 1);
+	// compute comparison
+	double height = kinect->get_height(), width = kinect->get_width();
+	double min_range = kinect->get_min_range(), max_range = kinect->get_max_range(),
+			optimal_range = kinect->get_optimal_range();
+
+	mat R_diag;
+	R_diag << 100*height << 100*width << 1*(max_range - min_range);
+	mat R = diagmat(R_diag);
+
+	mat z_low_weight;
+	z_low_weight << height/2 << width/2 << optimal_range;
+
+	// actual observation
+	mat z;
 
 	mat pixel = kinect->get_pixel_from_point(particle, false);
 	double y = pixel(0), x = pixel(1);
 
-//	mat boundary;
-//	boundary << y << -y + kinect->get_height() << x << -x + kinect->get_width();
-//	z(0, 0) = prod(prod(sigmoid(boundary, 1)));
-//
-//	double weight = -INFINITY;
-//	for(int i=0; i < desired_observations.size(); ++i) {
-//		mat e = z - desired_observations[i];
-//		weight = MAX(weight, gauss_likelihood(e.t(), R));
-//	}
+	double d = norm(rave_utils::rave_vec_to_mat(kinect->get_pose().trans) - particle, 2);
 
-	double height = kinect->get_height(), width = kinect->get_width();
-	mat e;
-	e << y - height/2 << endr << x - width/2;
-	mat R_diag;
-	R_diag << 100*height << 100*width;
-	double max_likelihood = gauss_likelihood(zeros<mat>(Z_DIM,1), diagmat(R_diag));
-	double weight = (max_likelihood - gauss_likelihood(e, diagmat(R_diag))) / max_likelihood;
+	z << y << x << d;
 
+	double max_likelihood = gauss_likelihood(zeros<mat>(Z_DIM,1), R);
+
+	mat e = z - z_low_weight;
+	double weight = (max_likelihood - gauss_likelihood(e.t(), R)) / max_likelihood;
 
 	if (plot) {
 		rave::Vector color = (weight > .5) ? rave::Vector(1, 1, 1) : rave::Vector(0, 1, 0);
@@ -167,7 +162,7 @@ double EihSystem::obsfunc_discrete_weight_fov(const mat &particle, const cube &i
 	double weight;
 	rave::Vector color;
 
-	if (!kinect->is_in_fov(particle)) {
+	if (!kinect->is_visible(particle)) {
 		weight = 1;
 		color = rave::Vector(0, 1, 0);
 	} else {
@@ -184,11 +179,68 @@ double EihSystem::obsfunc_discrete_weight_fov(const mat &particle, const cube &i
 }
 
 double EihSystem::obsfunc_continuous_weight_fov_occluded(const mat &particle, const cube &image, const mat &z_buffer, bool plot) {
-	return -INFINITY;
+	double weight;
+	rave::Vector color;
+
+	double fov_weight = obsfunc_continuous_weight_fov(particle, image, z_buffer, false);
+
+	if (kinect->is_visible(particle)) {
+		mat kinect_pos = rave_utils::rave_vec_to_mat(kinect->get_pose().trans);
+
+		double particle_dist = norm(particle - kinect_pos, 2);
+		mat pixel = kinect->get_pixel_from_point(particle);
+		int y = int(pixel(0)), x = int(pixel(1));
+		double sd = particle_dist - z_buffer(y, x);
+
+		double occluded_weight = sigmoid(sd, 5);
+
+		weight = std::max(fov_weight, occluded_weight);
+
+		color = (occluded_weight < .5) ? rave::Vector(1, 1, 1) : rave::Vector(0, 0, 0);
+
+	} else {
+		weight = fov_weight;
+		color = rave::Vector(0, 1, 0);
+	}
+
+	if (plot) {
+		rave::Vector particle_vec = rave_utils::mat_to_rave_vec(particle);
+		handles.push_back(rave_utils::plot_point(env, particle_vec, color));
+	}
+
+	return weight;
 }
 
 double EihSystem::obsfunc_discrete_weight_fov_occluded(const mat &particle, const cube &image, const mat &z_buffer, bool plot) {
-	return -INFINITY;
+	double weight;
+	rave::Vector color;
+
+	if (!kinect->is_visible(particle)) {
+		weight = 1;
+		color = rave::Vector(0, 1, 0);
+	} else {
+		mat kinect_pos = rave_utils::rave_vec_to_mat(kinect->get_pose().trans);
+
+		double particle_dist = norm(particle - kinect_pos, 2);
+		mat pixel = kinect->get_pixel_from_point(particle);
+		int y = int(pixel(0)), x = int(pixel(1));
+		double sd = particle_dist - z_buffer(y, x);
+
+		if (sd > -.01) {
+			weight = 1;
+			color = rave::Vector(0, 0, 0);
+		} else {
+			weight = 0;
+			color = rave::Vector(1, 1, 1);
+		}
+	}
+
+	if (plot) {
+		rave::Vector particle_vec = rave_utils::mat_to_rave_vec(particle);
+		handles.push_back(rave_utils::plot_point(env, particle_vec, color));
+	}
+
+	return weight;
 }
 
 
@@ -264,7 +316,7 @@ double EihSystem::obsfunc_discrete_weight_fov_occluded_color(const mat &particle
 	double weight;
 	rave::Vector color;
 
-	if (!kinect->is_in_fov(particle)) {
+	if (!kinect->is_visible(particle)) {
 		weight = 1;
 		color = rave::Vector(0, 1, 0);
 	} else {

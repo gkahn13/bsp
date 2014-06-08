@@ -85,3 +85,25 @@ def plot_camera(angle, center, fov, color='blue', alpha=1.0):
     
     plt.plot([center[0], x_left], [center[1], y_left], linewidth=3.0, color=color, alpha=alpha)
     plt.plot([center[0], x_right], [center[1], y_right], linewidth=3.0, color=color, alpha=alpha)
+    
+def plot_beams(beams):
+    # TODO: temp
+    plt.clf()
+    plt.cla()
+    
+    for beam in beams:
+        print(beam)
+        print('')
+        plot_beam(beam)
+        
+    plt.show(block=False)
+    print('Press enter to continue')
+    raw_input()
+    
+def plot_beam(beam):
+    """
+    @param beam 2 by 3 ndarray of triangle points
+    """
+    beam_closed = np.hstack((beam, beam[:,0].reshape(2,1)))
+    plt.plot(beam_closed[0,:], beam_closed[1,:])
+    

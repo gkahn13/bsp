@@ -27,3 +27,6 @@ link_directories(${Boost_LIBRARY_DIRS} ${PYTHON_LIBRARIES} ${ARMADILLO_LIBRARIES
 
 add_executable(test-planar-system tests/test-planar-system.cpp src/planar-system.cpp src/planar-utils.cpp ../util/logging.cpp)
 target_link_libraries(test-planar-system ${Boost_LIBRARIES} ${ARMADILLO_LIBRARIES} ${PYTHON_LIBRARIES} ${MY_LIBRARIES})
+
+add_executable(test-geometry2d tests/test-geometry2d.cpp src/geometry2d.cpp src/planar-utils.cpp)
+target_link_libraries(test-geometry2d ${Boost_LIBRARIES} ${ARMADILLO_LIBRARIES} ${PYTHON_LIBRARIES} ${MY_LIBRARIES})

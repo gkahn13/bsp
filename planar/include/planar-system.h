@@ -3,6 +3,8 @@
 
 #include <Python.h>
 
+#include "planar-utils.h"
+
 #include <boost/python.hpp>
 #include <boost/python/numeric.hpp>
 #include <boost/python/tuple.hpp>
@@ -23,7 +25,7 @@ const double INFTY = 1e10;
 
 class PlanarSystem {
 public:
-	PlanarSystem(const vec& camera, const vec& object, bool is_static);
+	PlanarSystem(const vec& camera_origin, const vec& object, bool is_static);
 
 	vec dynfunc(const vec& x, const vec& u, const vec& q);
 	vec obsfunc(const vec& x_robot, const vec& x_object, const vec& r);
@@ -33,13 +35,14 @@ public:
 	void execute_control_step(const vec& x_t_real, const vec& x_t, const mat& sigma_t, const vec& u_t,
 			vec& x_tp1_real, vec& x_tp1, mat& sigma_tp1);
 
-	void display(std::vector<vec>& X, bool pause=true);
+	void display(std::vector<vec>& X, std::vector<mat>& S, bool pause=true);
 
 	void get_limits(vec& x_min, vec& x_max, vec& u_min, vec& u_max);
 
 private:
 	bool is_static;
-	vec camera;
+	vec camera_origin;
+	double camera_fov;
 	vec object;
 
 	vec robot_origin;
@@ -51,7 +54,7 @@ private:
 	mat Q, R;
 	vec x_min, x_max, u_min, u_max;
 
-	void init(const vec& camera, const vec& object, bool is_static);
+	void init(const vec& camera_origin, const vec& object, bool is_static);
 
 	void linearize_dynfunc(const vec& x, const vec& u, const vec& q, mat& A, mat& M);
 	void linearize_obsfunc(const vec& x, const vec& r, mat& H, mat& N);

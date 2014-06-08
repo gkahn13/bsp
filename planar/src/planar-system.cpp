@@ -4,12 +4,13 @@
  * Constructors and initializers
  */
 
-PlanarSystem::PlanarSystem(const vec& camera, const vec& object, bool is_static) {
-	init(camera, object, is_static);
+PlanarSystem::PlanarSystem(const vec& camera_origin, const vec& object, bool is_static) {
+	init(camera_origin, object, is_static);
 }
 
-void PlanarSystem::init(const vec& camera, const vec& object, bool is_static) {
-	this->camera = camera;
+void PlanarSystem::init(const vec& camera_origin, const vec& object, bool is_static) {
+	this->camera_origin = camera_origin;
+	camera_fov = M_PI/4;
 	this->object = object;
 	this->is_static = is_static;
 
@@ -80,32 +81,22 @@ void PlanarSystem::execute_control_step(const vec& x_t_real, const vec& x_t, con
 
 }
 
-void PlanarSystem::display(std::vector<vec>& X, bool pause) {
+void PlanarSystem::display(std::vector<vec>& X, std::vector<mat>& S, bool pause) {
 	Py_Initialize();
 	np::initialize();
 
 	py::numeric::array::set_module_and_type("numpy", "ndarray");
 
-	py::tuple shape = py::make_tuple(long(X_DIM), long(X.size()));
-	np::dtype dtype = np::dtype::get_builtin<float>();
-	np::ndarray X_ndarray = np::zeros(shape, dtype);
+	py::list X_pylist, S_pylist;
 	for(int t=0; t < X.size(); ++t) {
-		for(int i=0; i < X_DIM; ++i) {
-			X_ndarray[py::make_tuple(i, t)] = X[t](i);
-		}
+		X_pylist.append(planar_utils::arma_to_ndarray(X[t]));
+		S_pylist.append(planar_utils::arma_to_ndarray(S[t]));
 	}
 
-	shape = py::make_tuple(long(robot_origin.n_rows));
-	np::ndarray robot_origin_ndarray = np::zeros(shape, dtype);
-	for(int i=0; i < robot_origin.n_rows; ++i) {
-		robot_origin_ndarray[py::make_tuple(i)] = robot_origin(i);
-	}
-
-	shape = py::make_tuple(long(link_lengths.n_rows));
-	np::ndarray link_lengths_ndarray = np::zeros(shape, dtype);
-	for(int i=0; i < link_lengths.n_rows; ++i) {
-		link_lengths_ndarray[py::make_tuple(i)] = link_lengths(i);
-	}
+	np::ndarray robot_origin_ndarray = planar_utils::arma_to_ndarray(robot_origin);
+	np::ndarray link_lengths_ndarray = planar_utils::arma_to_ndarray(link_lengths);
+	np::ndarray camera_origin_ndarray = planar_utils::arma_to_ndarray(camera_origin);
+	np::ndarray object_ndarray = planar_utils::arma_to_ndarray(object);
 
 	std::string working_dir = boost::filesystem::current_path().normalize().string();
 	std::string bsp_dir = working_dir.substr(0,working_dir.find("bsp"));
@@ -120,7 +111,7 @@ void PlanarSystem::display(std::vector<vec>& X, bool pause) {
 		py::object plot_mod = py::import("plot_planar");
 		py::object plot_planar = plot_mod.attr("plot_planar");
 
-		plot_planar(X_ndarray, robot_origin_ndarray, link_lengths_ndarray);
+		plot_planar(X_pylist, S_pylist, robot_origin_ndarray, link_lengths_ndarray, camera_origin_ndarray, camera_fov, object_ndarray);
 
 		if (pause) {
 			LOG_INFO("Press enter to continue");

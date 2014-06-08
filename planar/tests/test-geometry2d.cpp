@@ -113,7 +113,7 @@ void test_beam() {
 	beams.push_back(Beam({0,0}, {1,1}, {-1,1}));
 //	beams.push_back(Beam({0,0}, {0, .5}, {-1, .5}));
 
-	beams = beams[0].truncate(Segment({-.25,.5}, {0, .5}));
+	beams = beams[0].truncate(Segment({-.25,.5}, {0, 1.5}));
 
 	py::list beams_pylist;
 	for(int i=0; i < beams.size(); ++i) {

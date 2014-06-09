@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 import IPython
 
-def plot_planar(X, S, robot_origin, link_lengths, camera_origin, camera_fov, object):
+def plot_planar(X, S, robot_origin, link_lengths, camera_origin, camera_fov, object, beams):
     """
     @param X                 joints angles, camera angle, object position (for T timesteps)
     @param S                 covariance for X (for T timesteps)
@@ -13,6 +13,7 @@ def plot_planar(X, S, robot_origin, link_lengths, camera_origin, camera_fov, obj
     @param camera_origin     (x,y) position of camera
     @param camera_fov angle  (in radians) of camera field-of-view
     @param object            actual position of the object
+    @param beams             list of size (3,) arrays of triangles representing the FOV
     """
     plt.clf()
     plt.cla()
@@ -23,7 +24,8 @@ def plot_planar(X, S, robot_origin, link_lengths, camera_origin, camera_fov, obj
     X_DIM, T = X[0].shape[0], len(X)
     
     max_length = np.sum(link_lengths)
-    ax.axis([-max_length, max_length, -max_length, max_length])
+    ax.axis([-max_length, max_length, -2, max_length])
+    #ax.axis([-12.4, 12.4, -2, 12])
     
     #colors = plt.cm.RdYlGn(np.linspace(0, 1, T))
     for t in xrange(T):
@@ -45,9 +47,10 @@ def plot_planar(X, S, robot_origin, link_lengths, camera_origin, camera_fov, obj
     """ plot object position """
     plt.plot(object[0], object[1], 's', markersize=10.0, color='green')
     
-    plt.show(block=False)
+    """ plot beams for last timestep only """
+    plot_beams(beams)
     
-    IPython.embed()
+    plt.show(block=False)
     
 def plot_arm(joints, robot_origin, link_lengths, color='red', alpha=1.0):
     x0, y0 = tuple(robot_origin)
@@ -77,33 +80,41 @@ def plot_cov(mu, sigma, color = 'yellow', alpha=1):
     plt.plot(z[:,0]+mu[0], z[:,1]+mu[1], color=color, alpha=alpha)
     
 def plot_camera(angle, center, fov, color='blue', alpha=1.0):
-    x_left = center[0] + 0.1*np.sin(angle - fov/2.0)
-    y_left = center[1] + 0.1*np.cos(angle - fov/2.0)
+    x_left = center[0] + 10*np.sin(angle - fov/2.0)
+    y_left = center[1] + 10*np.cos(angle - fov/2.0)
     
-    x_right = center[0] + 0.1*np.sin(angle + fov/2.0)
-    y_right = center[1] + 0.1*np.cos(angle + fov/2.0)
+    x_right = center[0] + 10*np.sin(angle + fov/2.0)
+    y_right = center[1] + 10*np.cos(angle + fov/2.0)
     
     plt.plot([center[0], x_left], [center[1], y_left], linewidth=3.0, color=color, alpha=alpha)
     plt.plot([center[0], x_right], [center[1], y_right], linewidth=3.0, color=color, alpha=alpha)
-    
-def plot_beams(beams):
-    # TODO: temp
-    plt.clf()
-    plt.cla()
+
+def plot_beams(beams, debug=False):
+    if debug:
+        plt.clf()
+        plt.cla()
+        fig = plt.figure(1)
+        ax = fig.add_subplot(111, axisbg='black')
     
     for beam in beams:
-        print(beam)
-        print('')
         plot_beam(beam)
         
-    plt.show(block=False)
-    print('Press enter to continue')
-    raw_input()
-    
+    if debug:
+        plt.show(block=False)
+        print('Press enter to continue')
+        raw_input()
+
 def plot_beam(beam):
     """
     @param beam 2 by 3 ndarray of triangle points
     """
-    beam_closed = np.hstack((beam, beam[:,0].reshape(2,1)))
-    plt.plot(beam_closed[0,:], beam_closed[1,:])
+    #beam_closed = np.hstack((beam, beam[:,0].reshape(2,1)))
+    #plt.plot(beam_closed[0,:], beam_closed[1,:])
+    
+    x = beam[0,2], beam[0,0], beam[0,1]
+    y = beam[1,2], beam[1,0], beam[1,1]
+    plt.fill(x, y, color='white', edgecolor='none')
+    
+    
+
     

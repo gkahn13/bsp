@@ -17,6 +17,10 @@ using namespace arma;
 
 namespace planar_utils {
 
+inline double uniform(double low, double high) {
+	return (high - low)*(rand() / double(RAND_MAX)) + low;
+}
+
 np::ndarray arma_to_ndarray(mat& m);
 
 }

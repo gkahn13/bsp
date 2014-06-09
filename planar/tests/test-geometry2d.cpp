@@ -91,44 +91,51 @@ void test_scope() {
 	}
 }
 
+
 void test_beam() {
-	Py_Initialize();
-	np::initialize();
-
-	py::numeric::array::set_module_and_type("numpy", "ndarray");
-
-	std::string working_dir = boost::filesystem::current_path().normalize().string();
-	std::string bsp_dir = working_dir.substr(0,working_dir.find("bsp"));
-	std::string planar_dir = bsp_dir + "bsp/planar";
-
-	py::object main_module = py::import("__main__");
-	py::object main_namespace = main_module.attr("__dict__");
-	py::exec("import sys, os", main_namespace);
-	py::exec(py::str("sys.path.append('"+planar_dir+"')"), main_namespace);
-	py::object plot_mod = py::import("plot_planar");
-	py::object plot_beams = plot_mod.attr("plot_beams");
-
-
+	Beam orig_beam({0,0}, {1,1}, {-1,1});
 	std::vector<Beam> beams;
-	beams.push_back(Beam({0,0}, {1,1}, {-1,1}));
-//	beams.push_back(Beam({0,0}, {0, .5}, {-1, .5}));
 
-	beams = beams[0].truncate(Segment({-.25,.5}, {0, 1.5}));
+	std::cout << "intersects right and left\n";
+	beams = orig_beam.truncate(Segment({-1,.5}, {1.5, .75}));
+	geometry2d::plot_beams(beams);
 
-	py::list beams_pylist;
-	for(int i=0; i < beams.size(); ++i) {
-		mat m = join_horiz(beams[i].base, beams[i].a);
-		m = join_horiz(m, beams[i].b);
-		beams_pylist.append(planar_utils::arma_to_ndarray(m));
-	}
+	std::cout << "intersects right and top\n";
+	beams = orig_beam.truncate(Segment({.3, 1.2}, {1.5, .75}));
+	geometry2d::plot_beams(beams);
 
-	try {
-		plot_beams(beams_pylist);
-	}
-	catch(py::error_already_set const &)
-	{
-		PyErr_Print();
-	}
+	std::cout << "intersects top and left\n";
+	beams = orig_beam.truncate(Segment({.4, 1.5}, {-.75, .5}));
+	geometry2d::plot_beams(beams);
+
+	std::cout << "intersects right\n";
+	beams = orig_beam.truncate(Segment({.1,.3}, {1, .4}));
+	geometry2d::plot_beams(beams);
+
+	std::cout << "intersects top\n";
+	beams = orig_beam.truncate(Segment({-.5,.75}, {.2, 1.2}));
+	geometry2d::plot_beams(beams);
+
+	beams = orig_beam.truncate(Segment({.5,.75}, {-.2, 1.2}));
+	geometry2d::plot_beams(beams);
+
+	std::cout << "intersects left\n";
+	beams = orig_beam.truncate(Segment({-.8,.2}, {.05, .1}));
+	geometry2d::plot_beams(beams);
+
+	std::cout << "fully inside\n";
+	beams = orig_beam.truncate(Segment({-.3,.4}, {.7, .75}));
+	geometry2d::plot_beams(beams);
+
+	std::cout << "fully outside\n";
+	beams = orig_beam.truncate(Segment({-1, .25}, {-.8, .7}));
+	geometry2d::plot_beams(beams);
+
+	beams = orig_beam.truncate(Segment({.3, 1.25}, {.5, 1.1}));
+	geometry2d::plot_beams(beams);
+
+	beams = orig_beam.truncate(Segment({.3, .25}, {.5, .4}));
+	geometry2d::plot_beams(beams);
 }
 
 int main(int argc, char* argv[]) {

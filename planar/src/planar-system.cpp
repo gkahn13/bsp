@@ -11,11 +11,12 @@ PlanarSystem::PlanarSystem(const vec& camera_origin, const vec& object, bool is_
 void PlanarSystem::init(const vec& camera_origin, const vec& object, bool is_static) {
 	this->camera_origin = camera_origin;
 	camera_fov = M_PI/4;
+	camera_max_dist = 10;
 	this->object = object;
 	this->is_static = is_static;
 
 	robot_origin = zeros<vec>(2);
-	link_lengths = {.5, .25, .125};
+	link_lengths = {5, 5, 4};
 
 	J_DIM = 4;
 	C_DIM = 2;
@@ -81,6 +82,36 @@ void PlanarSystem::execute_control_step(const vec& x_t_real, const vec& x_t, con
 
 }
 
+std::vector<Beam> PlanarSystem::get_fov(const vec& x) {
+	std::vector<Beam> beams, new_beams;
+
+	// start out with full field of view
+	double angle = x(J_DIM-1);
+	vec dir_right = {sin(angle+camera_fov/2.0), cos(angle+camera_fov/2.0)};
+	vec dir_left = {sin(angle-camera_fov/2.0), cos(angle-camera_fov/2.0)};
+	beams.push_back(Beam(camera_origin,
+			camera_origin + camera_max_dist*dir_right,
+			camera_origin + camera_max_dist*dir_left));
+
+	std::vector<Segment> link_segments = get_link_segments(x);
+
+	for(int l=0; l < link_segments.size(); ++l) {
+		new_beams.clear();
+		for(int i=0; i < beams.size(); ++i) {
+			std::vector<Beam> new_beams_i = beams[i].truncate(link_segments[l]);
+			for(int j=0; j < new_beams_i.size(); ++j) {
+				// prevent small beams from being added
+				if (new_beams_i[j].top_length() > epsilon) {
+					new_beams.push_back(new_beams_i[j]);
+				}
+			}
+		}
+		beams = new_beams;
+	}
+
+	return beams;
+}
+
 void PlanarSystem::display(std::vector<vec>& X, std::vector<mat>& S, bool pause) {
 	Py_Initialize();
 	np::initialize();
@@ -98,6 +129,13 @@ void PlanarSystem::display(std::vector<vec>& X, std::vector<mat>& S, bool pause)
 	np::ndarray camera_origin_ndarray = planar_utils::arma_to_ndarray(camera_origin);
 	np::ndarray object_ndarray = planar_utils::arma_to_ndarray(object);
 
+	py::list beams_pylist;
+	std::vector<Beam> beams = get_fov(X.back());
+	for(int i=0; i < beams.size(); ++i) {
+		mat m = join_horiz(beams[i].base, join_horiz(beams[i].a, beams[i].b));
+		beams_pylist.append(planar_utils::arma_to_ndarray(m));
+	}
+
 	std::string working_dir = boost::filesystem::current_path().normalize().string();
 	std::string bsp_dir = working_dir.substr(0,working_dir.find("bsp"));
 	std::string planar_dir = bsp_dir + "bsp/planar";
@@ -111,7 +149,8 @@ void PlanarSystem::display(std::vector<vec>& X, std::vector<mat>& S, bool pause)
 		py::object plot_mod = py::import("plot_planar");
 		py::object plot_planar = plot_mod.attr("plot_planar");
 
-		plot_planar(X_pylist, S_pylist, robot_origin_ndarray, link_lengths_ndarray, camera_origin_ndarray, camera_fov, object_ndarray);
+		plot_planar(X_pylist, S_pylist, robot_origin_ndarray, link_lengths_ndarray,
+				camera_origin_ndarray, camera_fov, object_ndarray, beams_pylist);
 
 		if (pause) {
 			LOG_INFO("Press enter to continue");
@@ -134,6 +173,25 @@ void PlanarSystem::get_limits(vec& x_min, vec& x_max, vec& u_min, vec& u_max) {
 /**
  * Private methods
  */
+
+std::vector<Segment> PlanarSystem::get_link_segments(const vec& x) {
+	std::vector<Segment> link_segments;
+
+	vec p0 = robot_origin, p1;
+	double joint0 = 0, joint1;
+
+	for(int i=0; i < link_lengths.n_rows; ++i) {
+		joint1 = joint0 + x[i];
+		p1 << p0(0) + sin(joint1)*link_lengths(i) <<
+				p0(1) + cos(joint1)*link_lengths(i);
+		link_segments.push_back(Segment(p0, p1));
+
+		joint0 = joint1;
+		p0 = p1;
+	}
+
+	return link_segments;
+}
 
 /**
  * \param x is X_DIM by 1

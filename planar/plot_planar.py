@@ -19,13 +19,14 @@ def plot_planar(X, S, robot_origin, link_lengths, camera_origin, camera_fov, obj
     plt.cla()
     
     fig = plt.figure(1)
-    ax = fig.add_subplot(111, axisbg='black')
+    ax = fig.axes[0]
+    ax.set_axis_bgcolor('black')
+    ax.set_aspect('equal')
     
     X_DIM, T = X[0].shape[0], len(X)
     
     max_length = np.sum(link_lengths)
     ax.axis([-max_length, max_length, -2, max_length])
-    #ax.axis([-12.4, 12.4, -2, 12])
     
     #colors = plt.cm.RdYlGn(np.linspace(0, 1, T))
     for t in xrange(T):
@@ -49,6 +50,7 @@ def plot_planar(X, S, robot_origin, link_lengths, camera_origin, camera_fov, obj
     
     """ plot beams for last timestep only """
     plot_beams(beams)
+    
     
     plt.show(block=False)
     

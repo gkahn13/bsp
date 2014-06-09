@@ -8,6 +8,8 @@
 #include <boost/python/tuple.hpp>
 #include <boost/numpy.hpp>
 #include <boost/filesystem.hpp>
+#include <boost/math/distributions.hpp>
+const boost::math::normal_distribution<> standard_normal;
 
 namespace py = boost::python;
 namespace np = boost::numpy;
@@ -23,6 +25,7 @@ using namespace arma;
 const double epsilon = 1e-4;
 
 class Line;
+class Halfspace;
 class Segment;
 class Beam;
 
@@ -34,8 +37,22 @@ public:
 	Line(const vec& direction, const vec& origin) : d(direction), o(origin) { };
 
 	bool intersection(const Segment& seg, vec& intersection);
+	double distance_to(const vec& x);
 private:
 	vec d, o;
+};
+
+/**
+ * Normal direction + origin
+ */
+class Halfspace {
+public:
+	Halfspace(const vec& normal, const vec& origin) : n(normal), o(origin) { };
+
+	bool contains(const vec& x);
+	bool contains_part(const Segment& seg, Segment& seg_part);
+private:
+	vec n, o;
 };
 
 class Segment {
@@ -46,7 +63,8 @@ public:
 
 	bool intersection(const Segment& other, vec& intersection);
 	bool within_bounding_rect(const vec& p) const;
-	double distance_from(const vec& x);
+	vec closest_point_to(const vec& x);
+	double distance_to(const vec& x);
 
 	double length() { return norm(p1 - p0, 2); }
 };
@@ -83,6 +101,18 @@ namespace geometry2d {
 double signed_distance(const vec& p, std::vector<Beam>& beams);
 
 std::vector<Segment> beams_border(const std::vector<Beam>& beams);
+
+void truncate_belief(const std::vector<Beam>& beams, const vec& cur_mean, const mat& cur_cov,
+		vec& out_mean, mat& out_cov);
+
+void my_truncate_belief(const std::vector<Beam>& beams, const vec& cur_mean, const mat& cur_cov,
+		vec& out_mean, mat& out_cov);
+
+void truncate_gaussian(const vec& c, double d, const vec& cur_mean, const mat& cur_cov,
+		vec& out_mean, mat& out_cov);
+
+void truncate_univariate_gaussian(const double x, const double cur_mean, const double cur_var,
+		double& out_mean, double& out_var);
 
 void plot_beams(std::vector<Beam>& beams);
 

@@ -88,8 +88,77 @@ void test_sd() {
 
 }
 
+void test_truncate_gaussian() {
+//	vec camera = {0, .5};
+	vec camera = {0, 0.01};
+	vec object = {5, 7};
+	bool is_static = false;
+
+	PlanarSystem sys = PlanarSystem(camera, object, is_static);
+
+	int X_DIM = 6;
+	std::vector<vec> X_initial;
+	std::vector<mat> S_initial;
+
+	X_initial.push_back( vec{M_PI/3, -M_PI/2, -M_PI/16, M_PI/8, 2, 5} );
+	S_initial.push_back(eye<mat>(X_DIM, X_DIM));
+
+	X_initial.push_back( vec{M_PI/2.5, -M_PI/2, -M_PI/3, 0, 2, 5} );
+	S_initial.push_back(eye<mat>(X_DIM, X_DIM));
+
+	X_initial.push_back( vec{M_PI/3, -M_PI/2, -M_PI/16, -M_PI/8, 2, 5} );
+	S_initial.push_back(eye<mat>(X_DIM, X_DIM));
+
+	X_initial.push_back( vec{M_PI/2, 0, 0, 0, .05, 5} );
+	S_initial.push_back(eye<mat>(X_DIM, X_DIM));
+
+	X_initial.push_back( vec{M_PI/3, -M_PI/2, -M_PI/16, -M_PI/6, 2, 5} );
+	S_initial.push_back(eye<mat>(X_DIM, X_DIM));
+
+
+	int T = 1;
+//	int X_DIM = 6;
+	std::vector<vec> X(T);
+	std::vector<mat> S(T, 20*eye<mat>(X_DIM, X_DIM));
+
+
+//	X[0] = {M_PI/3, -M_PI/2, -M_PI/16, M_PI/8, 2, 5};
+//	X[0] = {M_PI/2.5, -M_PI/2, -M_PI/3, 0, 2, 5};
+//	X[0] = {M_PI/3, -M_PI/2, -M_PI/16, -M_PI/8, 2, 5};
+	X[0] = {M_PI/2, 0, 0, 0, .05, 5};
+//	X[0] = {M_PI/3, -M_PI/2, -M_PI/16, -M_PI/6, 2, 5};
+
+
+	std::cout << "Before truncation\n";
+	sys.display(X, S);
+
+	std::vector<Beam> fov = sys.get_fov(X[0]);
+
+	fov.clear();
+	fov.push_back(Beam({-5, 5}, {-1, 10}, {-1, 0}));
+	fov.push_back(Beam({5, 5}, {1, 10}, {1, 0}));
+
+	while(true) {
+		vec cur_mean = X[0].subvec(4,5), out_mean;
+		mat cur_cov = S[0].submat(span(4,5), span(4,5)), out_cov;
+
+//		geometry2d::truncate_belief(fov, cur_mean, cur_cov, out_mean, out_cov);
+		geometry2d::my_truncate_belief(fov, cur_mean, cur_cov, out_mean, out_cov);
+
+		std::cout << "out_mean: " << out_mean.t();
+		std::cout << "out_cov:\n" << out_cov;
+
+		X[0].subvec(4,5) = out_mean;
+		S[0].submat(span(4,5), span(4,5)) = out_cov;
+
+		std::cout << "After truncation\n";
+		sys.display(X, S);
+	}
+}
+
 int main(int argc, char* argv[]) {
 //	test_display();
 //	test_beams();
-	test_sd();
+//	test_sd();
+	test_truncate_gaussian();
 }

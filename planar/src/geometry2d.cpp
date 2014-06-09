@@ -25,6 +25,61 @@ bool Line::intersection(const Segment& seg, vec& intersection) {
 	return seg.within_bounding_rect(intersection);
 }
 
+double Line::distance_to(const vec& x) {
+	// y = o - x
+	// min_{t} ||t*d + y||_{2}
+	vec y = o - x;
+	double t = -dot(d, y)/dot(d, d);
+
+	return norm(t*d + y, 2);
+}
+
+/**
+ * Halfspace public methods
+ */
+
+bool Halfspace::contains(const vec& x) {
+	return (dot(n, x - o) >= epsilon);
+}
+
+bool Halfspace::contains_part(const Segment& seg, Segment& seg_part) {
+	Line split({-n(1), n(0)}, o);
+	vec intersection;
+
+//	std::cout << "checking contains_part for:\n" << seg.p0.t() << seg.p1.t() << "\n";
+
+	if (split.intersection(seg, intersection)) {
+		// segment crosses the half-space
+//		std::cout << "segment crosses the half-space\n";
+
+//		if (contains(seg.p0) && contains(seg.p1)) {
+//			std::cout << "contains both\n";
+//		}
+
+		if (contains(seg.p0) && norm(seg.p1 - intersection, 2) > epsilon) {
+//			std::cout << "contains seg.p0\n";
+			seg_part = Segment(seg.p0, intersection);
+			return true;
+		} else if (contains(seg.p1) && norm(seg.p0 - intersection, 2) > epsilon) {
+//			std::cout << "contains seg.p1\n";
+			seg_part = Segment(seg.p1, intersection);
+			return true;
+		} else {
+			return false;
+		}
+
+	} else {
+//		std::cout << "segment DOES NOT cross the half-space\n";
+
+		if (contains(seg.p0)) {
+			seg_part = seg;
+			return true;
+		} else {
+			return false;
+		}
+	}
+}
+
 /**
  * Segment public methods
  */
@@ -70,7 +125,7 @@ bool Segment::intersection(const Segment& other, vec& intersection) {
 	return (this->within_bounding_rect(intersection) && (other.within_bounding_rect(intersection)));
 }
 
-double Segment::distance_from(const vec& x) {
+vec Segment::closest_point_to(const vec& x) {
 	// min_{0<=t<=1} ||t*(p1-p0) + p0 - x||_{2}^{2}
 	vec v = p1 - p0;
 	vec b = p0 - x;
@@ -78,10 +133,18 @@ double Segment::distance_from(const vec& x) {
 	double t = -trace((v.t()*b)/(v.t()*v));
 	if ((0 <= t) && (t <= 1)) {
 		vec intersection = t*(p1 - p0) + p0;
-		return norm(x - intersection, 2);
+		return intersection;
 	} else {
-		return std::min(norm(x - p0, 2), norm(x - p1, 2));
+		if (norm(x - p0, 2) < norm(x - p1, 2)) {
+			return p0;
+		} else {
+			return p1;
+		}
 	}
+}
+
+double Segment::distance_to(const vec& x) {
+	return norm(closest_point_to(x) - x, 2);
 }
 
 /**
@@ -168,9 +231,9 @@ double Beam::signed_distance(const vec& x) {
 	double sd = (inside) ? -INFINITY : INFINITY;
 	for(int i=0; i < segments.size(); ++i) {
 		if (inside) {
-			sd = std::max(sd, -segments[i].distance_from(x));
+			sd = std::max(sd, -segments[i].distance_to(x));
 		} else {
-			sd = std::min(sd, segments[i].distance_from(x));
+			sd = std::min(sd, segments[i].distance_to(x));
 		}
 	}
 
@@ -211,7 +274,7 @@ double signed_distance(const vec& p, std::vector<Beam>& beams) {
 	std::vector<Segment> border = beams_border(beams);
 	double dist = INFINITY;
 	for(int i=0; i < border.size(); ++i) {
-		dist = std::min(dist, border[i].distance_from(p));
+		dist = std::min(dist, border[i].distance_to(p));
 	}
 
 	return sd_sign*dist;
@@ -241,6 +304,171 @@ std::vector<Segment> beams_border(const std::vector<Beam>& beams) {
 	segments = new_segments;
 
 	return segments;
+}
+
+/**
+ * Find closest point to the top segment
+ * that is on the bottom side of the top segment
+ * (serves as a conservative approximation of convex region)
+ */
+void truncate_belief(const std::vector<Beam>& beams, const vec& cur_mean, const mat& cur_cov,
+		vec& out_mean, mat& out_cov) {
+	vec top_right = beams[0].a;
+	vec top_left = beams.back().b;
+	Segment top_seg(top_right, top_left);
+	Line top_line(top_right, top_left);
+
+	vec max_point = top_right;
+	double max_dist = 0.0;
+
+	if (fabs(top_right(0) - top_left(0)) < epsilon) {
+		out_mean = cur_mean;
+		out_cov = cur_cov;
+		return;
+	}
+
+	vec intersection;
+	double tmp_dist;
+	for(int i=0; i < beams.size(); ++i) {
+		const Beam &beam = beams[i];
+
+		if ((!top_seg.intersection(Segment(beam.base, beam.a), intersection)) &&
+				((tmp_dist = top_line.distance_to(beam.a)) > max_dist)) {
+			max_dist = tmp_dist;
+			max_point = beam.a;
+		}
+
+		if ((!top_seg.intersection(Segment(beam.base, beam.b), intersection)) &&
+				((tmp_dist = top_line.distance_to(beam.b)) > max_dist)) {
+			max_dist = tmp_dist;
+			max_point = beam.b;
+		}
+	}
+
+	// normal vector to top
+	vec c = {top_right(1) - top_left(1), top_left(0) - top_right(0)};
+	double d = dot(c, max_point);
+
+	truncate_gaussian(c, d, cur_mean, cur_cov, out_mean, out_cov);
+}
+
+void my_truncate_belief(const std::vector<Beam>& beams, const vec& cur_mean, const mat& cur_cov,
+		vec& out_mean, mat& out_cov) {
+	int DIM = cur_mean.n_rows;
+
+	std::vector<Beam> shifted_beams(beams);
+	// shift everything to be centered around cur_mean
+	// transform all coordinates by inv(U), where cur_cov = U*U.t() (i.e. cholesky)
+	mat U = chol(cur_cov);
+	mat U_inv = inv(U);
+	for(int i=0; i < shifted_beams.size(); ++i) {
+		Beam& b = shifted_beams[i];
+		b.base = U_inv*(b.base - cur_mean);
+		b.a = U_inv*(b.a - cur_mean);
+		b.b = U_inv*(b.b - cur_mean);
+	}
+
+	// sign of normal depends on if cur_mean inside or outside
+	double n_sign = (signed_distance(zeros<vec>(DIM), shifted_beams) > 0) ? 1 : -1;
+	std::cout << "n_sign: " << n_sign << "\n";
+
+	std::vector<Segment> border = beams_border(shifted_beams);
+
+	vec mean = zeros<vec>(DIM);
+	mat cov = eye<mat>(DIM, DIM);
+
+	int t=0;
+	while(border.size() > 0) {
+		std::cout << "border size: " << border.size() << "\n";
+
+		// find closest point p on geometry (i.e. border) to the origin
+		// the valid space is defined by the hyperplane with normal n = -p
+		vec p;
+		double min_dist = INFINITY;
+		for(int i=0; i < border.size(); ++i) {
+//			std::cout << "i: " << i << "\n";
+//			std::cout << border[i].p0.t() << "\t" << border[i].p1.t() << "\n";
+			if (border[i].distance_to(zeros<vec>(DIM)) < min_dist) {
+				p = border[i].closest_point_to(zeros<vec>(DIM));
+				min_dist = norm(p, 2);
+//				std::cout << "new p: " << p.t();
+			}
+		}
+		vec n = -n_sign*p;
+
+//		std::cout << "closest point: " << (U*p + cur_mean).t();
+
+//		std::cout << "n: " << n.t();
+//		std::cout << "d: " << norm(n,2) << "\n";
+//		std::cout << "mean: " << mean.t();
+//		std::cout << "cov: " << cov << "\n";
+
+		// truncate gaussian w.r.t. to -n (the complement space that we want to truncate)
+		truncate_gaussian(-n, dot(n, n), mean, cov, out_mean, out_cov);
+//		std::cout << "after truncate_gaussian\n";
+		mean = out_mean;
+		cov = out_cov;
+
+//		std::cout << "out_mean: " << mean.t();
+//		std::cout << "out_cov:\n" << cov << "\n";
+
+//		std::cout << "border pre-prune\n";
+//		for(int i=0; i < border.size(); ++i) {
+//			std::cout << border[i].p0.t() << border[i].p1.t() << "\n";
+//		}
+
+//		std::cout << "pruning the border\n";
+		// prune all geometry in infeasible space
+		Halfspace h(n, p);
+		std::vector<Segment> new_border;
+		for(int i=0; i < border.size(); ++i) {
+			Segment seg_part(zeros<vec>(DIM), zeros<vec>(DIM));
+			if (h.contains_part(border[i], seg_part)) {
+				new_border.push_back(seg_part);
+			}
+		}
+		border = new_border;
+		// repeat while still points left
+
+//		std::cout << "border post-prune\n";
+//		for(int i=0; i < border.size(); ++i) {
+//			std::cout << border[i].p0.t() << border[i].p1.t() << "\n";
+//		}
+
+
+//		if (t >= 0) {
+//			exit(0);
+//		}
+//		++t;
+	}
+
+	out_mean = U*mean + cur_mean;
+	out_cov = U*cov*U.t();
+}
+
+void truncate_gaussian(const vec& c, double d, const vec& cur_mean, const mat& cur_cov,
+		vec& out_mean, mat& out_cov) {
+	double y_mean = dot(c, cur_mean);
+	double y_var = trace(c.t()*cur_cov*c);
+
+	double y_new_mean, y_new_var;
+	truncate_univariate_gaussian(d, y_mean, y_var, y_new_mean, y_new_var);
+
+	vec xy_cov = cur_cov*c;
+	vec L = xy_cov / y_var;
+
+	out_mean = cur_mean + L*(y_new_mean - y_mean);
+	out_cov = cur_cov + (y_new_var/y_var - 1.0) * (L*xy_cov.t());
+}
+
+void truncate_univariate_gaussian(const double x, const double cur_mean, const double cur_var,
+		double& out_mean, double& out_var) {
+	double sd = sqrt(cur_var);
+	double y = (x - cur_mean) / sd;
+	double z = pdf(standard_normal, y) / cdf(standard_normal, y);
+
+	out_mean = cur_mean - z*sd;
+	out_var = cur_var*(1.0 - y*z - z*z);
 }
 
 void plot_beams(std::vector<Beam>& beams) {

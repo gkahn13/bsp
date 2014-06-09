@@ -131,6 +131,12 @@ void PlanarSystem::display(std::vector<vec>& X, std::vector<mat>& S, bool pause)
 
 	py::list beams_pylist;
 	std::vector<Beam> beams = get_fov(X.back());
+
+	// TODO: temp
+	beams.clear();
+	beams.push_back(Beam({-5, 5}, {-1, 10}, {-1, 0}));
+	beams.push_back(Beam({5, 5}, {1, 10}, {1, 0}));
+
 	for(int i=0; i < beams.size(); ++i) {
 		mat m = join_horiz(beams[i].base, join_horiz(beams[i].a, beams[i].b));
 		beams_pylist.append(planar_utils::arma_to_ndarray(m));

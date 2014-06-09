@@ -138,8 +138,88 @@ void test_beam() {
 	geometry2d::plot_beams(beams);
 }
 
+void test_segment_distance_to() {
+	{
+	Segment s({0, 0}, {0, 10});
+	vec p = {5, 5};
+	double dist = s.distance_to(p);
+	vec c = s.closest_point_to(p);
+
+	std::cout << "dist should be 5\n";
+	std::cout << "dist: " << dist << "\n";
+	std::cout << "closest point should be (0, 5)\n";
+	std::cout << "closest point: " << c.t() << "\n";
+	}
+
+	{
+	Segment s({0, 0}, {10, 10});
+	vec p = {13, 14};
+	double dist = s.distance_to(p);
+	vec c = s.closest_point_to(p);
+
+	std::cout << "dist should be 5\n";
+	std::cout << "dist: " << dist << "\n";
+	std::cout << "closest point should be (10, 10)\n";
+	std::cout << "closest point: " << c.t();
+	}
+}
+
+void test_halfspace() {
+	{
+	Halfspace h({1,1}, {0,0});
+	Segment seg_part({0,0},{0,0});
+
+	{
+	Segment s({1,1},{2,1});
+	bool c = h.contains_part(s, seg_part);
+
+	std::cout << "should contain part\n";
+	std::cout << "contains part: " << c << "\n";
+	std::cout << "seg_part should be (1,1), (2,1)\n";
+	std::cout << "seg_part\n" << seg_part.p0.t() << seg_part.p1.t() << "\n";
+	}
+
+	{
+	Segment s({1,1},{-1,-1});
+	bool c = h.contains_part(s, seg_part);
+
+	std::cout << "should contain part\n";
+	std::cout << "contains part: " << c << "\n";
+	std::cout << "seg_part should be (0,0), (1,1)\n";
+	std::cout << "seg_part\n" << seg_part.p0.t() << seg_part.p1.t() << "\n";
+	}
+
+	{
+	Segment s({0,0},{1,-1});
+	bool c = h.contains_part(s, seg_part);
+
+	std::cout << "should not contain part\n";
+	std::cout << "contains part: " << c << "\n";
+	std::cout << "seg_part\n" << seg_part.p0.t() << seg_part.p1.t() << "\n";
+	}
+	}
+
+
+	{
+	Halfspace h({2,0}, {-2,0});
+	Segment seg_part({0,0},{0,0});
+
+	{
+	Segment s({-9,2},{-2,5});
+	bool c = h.contains_part(s, seg_part);
+
+	std::cout << "should not contain part\n";
+	std::cout << "contains part: " << c << "\n";
+	std::cout << "seg_part\n" << seg_part.p0.t() << seg_part.p1.t() << "\n";
+	}
+	}
+
+}
+
 int main(int argc, char* argv[]) {
 //	test_segment_intersection();
 //	test_scope();
-	test_beam();
+//	test_beam();
+//	test_segment_distance_to();
+	test_halfspace();
 }

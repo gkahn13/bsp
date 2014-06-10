@@ -42,6 +42,7 @@ public:
 
 	std::vector<Beam> get_fov(const vec& x);
 
+	void display(vec& x, mat& sigma, bool pause=true);
 	void display(std::vector<vec>& X, std::vector<mat>& S, bool pause=true);
 
 	void get_limits(vec& x_min, vec& x_max, vec& u_min, vec& u_max);

@@ -25,8 +25,8 @@ void PlanarSystem::init(const vec& camera_origin, const vec& object, bool is_sta
 	U_DIM = 4;
 	Z_DIM = 6;
 
-	mat Q = eye<mat>(U_DIM, U_DIM);
-	mat R = eye<mat>(Z_DIM, Z_DIM);
+	Q = eye<mat>(U_DIM, U_DIM);
+	R = eye<mat>(Z_DIM, Z_DIM);
 
 	x_min = {-M_PI/2, -M_PI/2, -M_PI/2, -M_PI/2, -INFTY, -INFTY};
 	x_max = {M_PI/2, M_PI/2, M_PI/2, M_PI/2, INFTY, INFTY};
@@ -123,6 +123,12 @@ std::vector<Beam> PlanarSystem::get_fov(const vec& x) {
 	}
 
 	return beams;
+}
+
+void PlanarSystem::display(vec& x, mat& sigma, bool pause) {
+	std::vector<vec> X(1, x);
+	std::vector<mat> S(1, sigma);
+	display(X, S);
 }
 
 void PlanarSystem::display(std::vector<vec>& X, std::vector<mat>& S, bool pause) {
@@ -290,7 +296,7 @@ void PlanarSystem::linearize_dynfunc(const vec& x, const vec& u, const vec& q, m
 	vec q_p = q, q_m = q;
 	for(int i=0; i < Q_DIM; ++i) {
 		q_p(i) += step; q_m(i) -= step;
-		M.submat(span(0, Q_DIM-1), span(i, i)) = (dynfunc(x, u, q_p) - dynfunc(x, u, q_m)) / (2*step);
+		M.submat(span(0, X_DIM-1), span(i, i)) = (dynfunc(x, u, q_p) - dynfunc(x, u, q_m)) / (2*step);
 	}
 }
 

@@ -25,6 +25,11 @@ include_directories(${Boost_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR} ${PYTHON_I
 
 link_directories(${Boost_LIBRARY_DIRS} ${PYTHON_LIBRARIES} ${ARMADILLO_LIBRARIES})
 
+add_executable(planar planar.cpp planarMPC.c
+                      src/planar-system.cpp src/planar-utils.cpp src/geometry2d.cpp
+                      ../util/logging.cpp)
+target_link_libraries(planar ${Boost_LIBRARIES} ${ARMADILLO_LIBRARIES} ${PYTHON_LIBRARIES} ${MY_LIBRARIES}) 
+
 add_executable(test-planar-system tests/test-planar-system.cpp src/planar-system.cpp src/planar-utils.cpp
                                   src/geometry2d.cpp ../util/logging.cpp)
 target_link_libraries(test-planar-system ${Boost_LIBRARIES} ${ARMADILLO_LIBRARIES} ${PYTHON_LIBRARIES} ${MY_LIBRARIES})

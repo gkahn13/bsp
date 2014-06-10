@@ -46,22 +46,12 @@ bool Halfspace::contains_part(const Segment& seg, Segment& seg_part) {
 	Line split({-n(1), n(0)}, o);
 	vec intersection;
 
-//	std::cout << "checking contains_part for:\n" << seg.p0.t() << seg.p1.t() << "\n";
-
 	if (split.intersection(seg, intersection)) {
 		// segment crosses the half-space
-//		std::cout << "segment crosses the half-space\n";
-
-//		if (contains(seg.p0) && contains(seg.p1)) {
-//			std::cout << "contains both\n";
-//		}
-
 		if (contains(seg.p0) && norm(seg.p1 - intersection, 2) > epsilon) {
-//			std::cout << "contains seg.p0\n";
 			seg_part = Segment(seg.p0, intersection);
 			return true;
 		} else if (contains(seg.p1) && norm(seg.p0 - intersection, 2) > epsilon) {
-//			std::cout << "contains seg.p1\n";
 			seg_part = Segment(seg.p1, intersection);
 			return true;
 		} else {
@@ -69,8 +59,6 @@ bool Halfspace::contains_part(const Segment& seg, Segment& seg_part) {
 		}
 
 	} else {
-//		std::cout << "segment DOES NOT cross the half-space\n";
-
 		if (contains(seg.p0)) {
 			seg_part = seg;
 			return true;
@@ -183,13 +171,15 @@ std::vector<Beam> Beam::truncate(const Segment& s) {
 	} else if (is_intersect_right) {
 		vec p_inside = (is_inside(s.p0)) ? s.p0 : s.p1;
 		vec top_projection_intersect;
-		assert(Line(p_inside - base, base).intersection(top, top_projection_intersect));
+		bool should_intersect = Line(p_inside - base, base).intersection(top, top_projection_intersect);
+		assert(should_intersect);
 		new_beams.push_back(Beam(base, right_intersect, p_inside));
 		new_beams.push_back(Beam(base, top_projection_intersect, b));
 	} else if (is_intersect_top) {
 		vec p_inside = (is_inside(s.p0)) ? s.p0 : s.p1;
 		vec top_projection_intersect;
-		assert(Line(p_inside - base, base).intersection(top, top_projection_intersect));
+		bool should_intersect = Line(p_inside - base, base).intersection(top, top_projection_intersect);
+		assert(should_intersect);
 		if (top_intersect(0) > p_inside(0)) {
 			new_beams.push_back(Beam(base, a, top_intersect));
 			new_beams.push_back(Beam(base, top_intersect, p_inside));
@@ -202,7 +192,8 @@ std::vector<Beam> Beam::truncate(const Segment& s) {
 	} else if (is_intersect_left) {
 		vec p_inside = (is_inside(s.p0)) ? s.p0 : s.p1;
 		vec top_projection_intersect;
-		assert(Line(p_inside - base, base).intersection(top, top_projection_intersect));
+		bool should_intersect = Line(p_inside - base, base).intersection(top, top_projection_intersect);
+		assert(should_intersect);
 		new_beams.push_back(Beam(base, a, top_projection_intersect));
 		new_beams.push_back(Beam(base, p_inside, left_intersect));
 	} else if (is_inside(s.p0) && is_inside(s.p1)) {
@@ -210,8 +201,10 @@ std::vector<Beam> Beam::truncate(const Segment& s) {
 		vec left_pt = (s.p0(0) <= s.p1(0)) ? s.p0 : s.p1;
 
 		vec rtop_projection_intersect, ltop_projection_intersect;
-		assert(Line(right_pt - base, base).intersection(top, rtop_projection_intersect));
-		assert(Line(left_pt - base, base).intersection(top, ltop_projection_intersect));
+		bool should_intersect = Line(right_pt - base, base).intersection(top, rtop_projection_intersect);
+		assert(should_intersect);
+		should_intersect = Line(left_pt - base, base).intersection(top, ltop_projection_intersect);
+		assert(should_intersect);
 
 		new_beams.push_back(Beam(base, a, rtop_projection_intersect));
 		new_beams.push_back(Beam(base, right_pt, left_pt));
@@ -246,7 +239,14 @@ bool Beam::is_inside(const vec& p) {
 	double area1 = Beam(base, b, p).area();
 	double area2 = Beam(a, b, p).area();
 
-	return fabs(total_area - (area0 + area1 + area2)) < epsilon;
+	bool is_correct_area = fabs(total_area - (area0 + area1 + area2)) < epsilon;
+
+	double min_dist_to_side = std::min(right_segment().distance_to(p),
+			std::min(top_segment().distance_to(p),
+			left_segment().distance_to(p)));
+	bool is_away_from_side = min_dist_to_side > epsilon;
+
+	return (is_correct_area && is_away_from_side);
 }
 
 /**
@@ -328,7 +328,7 @@ void truncate_belief(const std::vector<Beam>& beams, const vec& cur_mean, const 
 	}
 
 	vec intersection;
-	double tmp_dist;
+	double tmp_dist = -INFINITY;
 	for(int i=0; i < beams.size(); ++i) {
 		const Beam &beam = beams[i];
 
@@ -391,6 +391,7 @@ void my_truncate_belief(const std::vector<Beam>& beams, const vec& cur_mean, con
 			}
 		}
 		vec n = -n_sign*p;
+//		vec n = n_sign*p;
 
 		// truncate gaussian w.r.t. to -n (the complement space that we want to truncate)
 		truncate_gaussian(-n, dot(n, n), mean, cov, out_mean, out_cov);

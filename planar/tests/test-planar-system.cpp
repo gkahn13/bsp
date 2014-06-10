@@ -32,7 +32,30 @@ void test_beams() {
 	std::vector<vec> X(T);
 	std::vector<mat> S(T, eye<mat>(X_DIM, X_DIM));
 
-	X[0] = {M_PI/3, -M_PI/2, -M_PI/16, M_PI/8, 5, 5};
+//	X[0] = {M_PI/3, -M_PI/2, -M_PI/16, M_PI/8-M_PI/16, 5, 5};
+	X[0] = {-M_PI/3, M_PI/2, M_PI/16, -M_PI/8+M_PI/16, 5, 5};
+
+	std::vector<Beam> fov = sys.get_fov(X[0]);
+	std::vector<Segment> link_segments = sys.get_link_segments(X[0]);
+
+	std::cout << "Last link:\n";
+	std::cout << link_segments.back().p0.t() << link_segments.back().p1.t() << "\n";
+
+	for(int i=0; i < fov.size(); ++i) {
+		std::cout << "i: " << i << "\n\n";
+
+		std::cout << "original beam:\n";
+		std::cout << fov[i].a.t();
+		std::cout << fov[i].b.t() << "\n";
+
+		std::vector<Beam> new_beams = fov[i].truncate(link_segments.back());
+		std::cout << "new_beams:\n";
+		for(int j=0; j < new_beams.size(); ++j) {
+			std::cout << new_beams[i].a.t();
+			std::cout << new_beams[i].b.t() << "\n";
+		}
+	}
+
 
 	sys.display(X, S);
 }
@@ -201,8 +224,8 @@ void test_belief_dynamics() {
 
 int main(int argc, char* argv[]) {
 //	test_display();
-//	test_beams();
+	test_beams();
 //	test_sd();
 //	test_truncate_gaussian();
-	test_belief_dynamics();
+//	test_belief_dynamics();
 }

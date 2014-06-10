@@ -8,23 +8,23 @@ planarMPC_FLOAT **H, **f, **lb, **ub, **z, **c;
 
 #define TIMESTEPS 10
 #define DT 1.0 // Note: if you change this, must change the FORCES matlab file
+#define J_DIM 4 // joint dimension (three for robot, one for camera)
+#define C_DIM 2 // object dimension
 #define X_DIM 6
 #define U_DIM 4
 
 const int T = TIMESTEPS;
 const int TOTAL_VARS = T*X_DIM + (T-1)*U_DIM;
 
-#define MIN(a,b) (((a)<(b))?(a):(b))
-#define MAX(a,b) (((a)>(b))?(a):(b))
 const double INFTY = 1e10;
 
 namespace cfg {
-const double alpha_init = 1; // 1
+const double alpha_init = .01; // 1
 const double alpha_gain = 3; // 3
 const double alpha_epsilon = .001; // .001
 
-const double improve_ratio_threshold = .1; // .1
-const double min_approx_improve = 1; // 1
+const double improve_ratio_threshold = 1e-1; // .1
+const double min_approx_improve = 1e-1; // 1
 const double min_trust_box_size = .1; // .1
 const double trust_shrink_ratio = .5; // .5
 const double trust_expand_ratio = 1.5; // 1.5
@@ -208,8 +208,8 @@ double eih_collocation(std::vector<vec>& X, mat& sigma0, std::vector<vec>& U, co
 	bool solution_accepted = true;
 	for(int it=0; it < max_iter; ++it) {
 
-		LOG_DEBUG("");
-		LOG_DEBUG("");
+		LOG_DEBUG(" ");
+		LOG_DEBUG(" ");
 		LOG_DEBUG("Iter: %d", it);
 
 		// only compute gradient/hessian if P/U has been changed
@@ -281,8 +281,8 @@ double eih_collocation(std::vector<vec>& X, mat& sigma0, std::vector<vec>& U, co
 		for(int t=0; t < T; ++t) {
 			index = 0;
 			for(int i=0; i < X_DIM; ++i) {
-				lb[t][index] = MAX(x_min(i), X[t](i) - Xeps);
-				ub[t][index] = MIN(x_max(i), X[t](i) + Xeps);
+				lb[t][index] = std::max(x_min(i), X[t](i) - Xeps);
+				ub[t][index] = std::min(x_max(i), X[t](i) + Xeps);
 				index++;
 			}
 
@@ -290,8 +290,8 @@ double eih_collocation(std::vector<vec>& X, mat& sigma0, std::vector<vec>& U, co
 			if (t < T-1) {
 				// set each input lower/upper bound
 				for(int i=0; i < U_DIM; ++i) {
-					lb[t][index] = MAX(u_min(i), U[t](i) - Ueps);
-					ub[t][index] = MIN(u_max(i), U[t](i) + Ueps);
+					lb[t][index] = std::max(u_min(i), U[t](i) - Ueps);
+					ub[t][index] = std::min(u_max(i), U[t](i) + Ueps);
 					index++;
 				}
 			}
@@ -388,24 +388,26 @@ double eih_minimize_merit(std::vector<vec>& X, mat& sigma0, std::vector<vec>& U,
 		LOG_DEBUG("Calling collocation with alpha = %4.2f", alpha);
 		cost = eih_collocation(X, sigma0, U, alpha, sys, problem, output, info);
 
+		LOG_DEBUG("Reintegrating trajectory");
+		for(int t=0; t < T-1; ++t) {
+			X[t+1] = sys.dynfunc(X[t], U[t], zeros<vec>(U_DIM));
+		}
+
 		double max_delta_diff = -INFINITY;
 		for(int t=0; t < T; ++t) {
 			max_delta_diff = std::max(max_delta_diff,
 					max(abs(diagvec(sys.delta_matrix(X[t], alpha)) - diagvec(sys.delta_matrix(X[t], INFINITY)))));
 		}
 
-		LOG_DEBUG("");
+		LOG_DEBUG(" ");
 		LOG_DEBUG("Max delta difference: %4.2f", max_delta_diff);
 		if (max_delta_diff < cfg::alpha_epsilon) {
 			LOG_DEBUG("Max delta difference < %4.10f, exiting minimize merit", cfg::alpha_epsilon);
 			break;
 		}
 
-		LOG_DEBUG("Increasing alpha by gain %4.10f and reintegrating the trajectory", cfg::alpha_gain);
+		LOG_DEBUG("Increasing alpha by gain %4.5f", cfg::alpha_gain);
 		alpha *= cfg::alpha_gain;
-		for(int t=0; t < T-1; ++t) {
-			X[t+1] = sys.dynfunc(X[t], U[t], zeros<vec>(U_DIM));
-		}
 
 //		LOG_DEBUG("Press enter to continue");
 //		std::cin.ignore();
@@ -416,7 +418,7 @@ double eih_minimize_merit(std::vector<vec>& X, mat& sigma0, std::vector<vec>& U,
 
 int main(int argc, char* argv[]) {
 	vec camera = {0, 1};
-	vec object = {5, 8};
+	vec object = {8, 8}; // {6, 7}
 	bool is_static = false;
 
 	PlanarSystem sys = PlanarSystem(camera, object, is_static);
@@ -426,15 +428,15 @@ int main(int argc, char* argv[]) {
 	sigma0.submat(span(4,5), span(4,5)) = 20*eye<mat>(2, 2);
 
 	vec x0 = {M_PI/5, -M_PI/2+M_PI/16, -M_PI/4, 0, 5, 5};
-//	vec x0 = {M_PI/2, 0, 0, M_PI/4, 5, 5};
+	vec x0_real = join_vert(x0.subvec(0, 3), object);
 
 	// initialize state and controls
 	std::vector<vec> U(T-1, zeros<vec>(U_DIM));
 	std::vector<vec> X(T);
-	X[0] = x0;
-	for(int t=0; t < T-1; ++t) {
-		X[t+1] = sys.dynfunc(X[t], U[t], zeros<vec>(U_DIM));
-	}
+
+	// track real states/beliefs
+	std::vector<vec> X_real(1, x0_real);
+	std::vector<mat> S_real(1, sigma0);
 
 	// initialize FORCES variables
 	planarMPC_params problem;
@@ -444,22 +446,66 @@ int main(int argc, char* argv[]) {
 	setup_mpc_vars(problem, output);
 	util::Timer forces_timer;
 
-//	double init_cost = sys.cost(X, sigma0, U, INFTY);
-//	LOG_DEBUG("Initial cost %4.10f", init_cost);
+	bool stop_condition = false;
+	while(!stop_condition) {
+		// integrate dynamics
+		X[0] = x0;
+		for(int t=0; t < T-1; ++t) {
+			U[t] = zeros<vec>(U_DIM);
+			X[t+1] = sys.dynfunc(X[t], U[t], zeros<vec>(U_DIM));
+		}
 
-//	LOG_DEBUG("Initial setup");
-//	sys.display(x0, sigma0);
+		double init_cost = sys.cost(X, sigma0, U, INFINITY);
+		LOG_INFO("Initial cost: %4.5f", init_cost);
 
-	double cost = eih_minimize_merit(X, sigma0, U, sys, problem, output, info);
+		// optimize
+		util::Timer_tic(&forces_timer);
+		double cost = eih_minimize_merit(X, sigma0, U, sys, problem, output, info);
+		double forces_time = util::Timer_toc(&forces_timer);
 
-	LOG_DEBUG("Finished minimize merit");
+		LOG_INFO("Optimized cost: %4.5f", cost);
+		LOG_INFO("Solve time: %5.3f ms", forces_time*1000);
 
-	std::vector<mat> S(T);
-	S[0] = sigma0;
-	sys.display(X[0], S[0]);
-	for(int t=0; t < T-1; ++t) {
-		sys.belief_dynamics(X[t], S[t], U[t], INFINITY, X[t+1], S[t+1]);
-		sys.display(X[t+1], S[t+1]);
+		std::cout << "X:\n";
+		for(int t=0; t < T; ++t) {
+			std::cout << X[t].t();
+		}
+
+//		mat sigma_t = sigma0, sigma_tp1;
+//		for(int t=0; t < T-1; ++t) {
+//			sys.display(X[t], sigma_t);
+//			sys.belief_dynamics(X[t], sigma_t, U[t], INFINITY, X[t+1], sigma_tp1);
+//			sigma_t = sigma_tp1;
+//		}
+
+		// execute first control input
+		vec x_tp1_real, x_tp1_tp1;
+		mat sigma_tp1_tp1;
+		sys.execute_control_step(X_real.back(), x0, sigma0, U[0], x_tp1_real, x_tp1_tp1, sigma_tp1_tp1);
+
+		X_real.push_back(x_tp1_real);
+		S_real.push_back(sigma_tp1_tp1);
+
+		LOG_DEBUG("Display after obtaining observation, but before truncating the belief");
+		sys.display(x_tp1_tp1, sigma_tp1_tp1);
+
+		// truncate belief
+		vec obj_pos_trunc(C_DIM);
+		mat obj_sigma_trunc(C_DIM, C_DIM);
+		geometry2d::my_truncate_belief(sys.get_fov(x_tp1_tp1), x_tp1_tp1.subvec(4,5), sigma_tp1_tp1.submat(span(4,5), span(4,5)),
+				obj_pos_trunc, obj_sigma_trunc);
+
+		vec x_tp1_tp1_trunc = join_vert(x_tp1_tp1.subvec(0,J_DIM-1), obj_pos_trunc);
+		mat sigma_tp1_tp1_trunc = sigma_tp1_tp1;
+		sigma_tp1_tp1_trunc.submat(span(4,5), span(4,5)) = obj_sigma_trunc;
+
+		LOG_DEBUG("Display truncated belief");
+		sys.display(x_tp1_tp1_trunc, sigma_tp1_tp1_trunc);
+
+		// set start to the next time step
+		x0 = x_tp1_tp1_trunc;
+		sigma0 = sigma_tp1_tp1_trunc;
+
 	}
 
 }

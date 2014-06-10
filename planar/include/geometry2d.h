@@ -14,7 +14,6 @@ const boost::math::normal_distribution<> standard_normal;
 namespace py = boost::python;
 namespace np = boost::numpy;
 
-
 #include <armadillo>
 using namespace arma;
 
@@ -22,7 +21,7 @@ using namespace arma;
 
 #include "planar-utils.h"
 
-const double epsilon = 1e-4;
+const double epsilon = 1e-5;
 
 class Line;
 class Halfspace;

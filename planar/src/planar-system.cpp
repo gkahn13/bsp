@@ -11,7 +11,7 @@ PlanarSystem::PlanarSystem(const vec& camera_origin, const vec& object, bool is_
 void PlanarSystem::init(const vec& camera_origin, const vec& object, bool is_static) {
 	this->camera_origin = camera_origin;
 	camera_fov = M_PI/4;
-	camera_max_dist = 10;
+	camera_max_dist = 15;
 	this->object = object;
 	this->is_static = is_static;
 
@@ -25,8 +25,9 @@ void PlanarSystem::init(const vec& camera_origin, const vec& object, bool is_sta
 	U_DIM = 4;
 	Z_DIM = 6;
 
-	Q = 1*eye<mat>(U_DIM, U_DIM);
-	R = 5*eye<mat>(Z_DIM, Z_DIM);
+	Q = (M_PI/4)*eye<mat>(U_DIM, U_DIM);
+//	R = 10*eye<mat>(Z_DIM, Z_DIM);
+	R = diagmat(join_vert((M_PI/4)*ones<vec>(J_DIM), 5*ones<vec>(C_DIM)));
 
 	// x bound for object is sum of link_lengths
 	double max_link_length = accu(link_lengths);
@@ -47,10 +48,18 @@ void PlanarSystem::init(const vec& camera_origin, const vec& object, bool is_sta
  * Public methods
  */
 
-vec PlanarSystem::dynfunc(const vec& x, const vec& u, const vec& q) {
+vec PlanarSystem::dynfunc(const vec& x, const vec& u, const vec& q, bool enforce_limits) {
 	// TODO: should enforce joint limits?
 	vec x_new = x;
 	x_new.subvec(span(0, J_DIM-1)) += DT*(u + q);
+
+	if (enforce_limits) {
+		vec x_min, x_max, u_min, u_max;
+		get_limits(x_min, x_max, u_min, u_max);
+		x_new = arma::max(x_new, x_min);
+		x_new = arma::min(x_new, x_max);
+	}
+
 	return x_new;
 }
 
@@ -97,11 +106,10 @@ void PlanarSystem::belief_dynamics(const vec& x_t, const mat& sigma_t, const vec
 	mat A(X_DIM, X_DIM, fill::zeros), M(X_DIM, Q_DIM, fill::zeros);
 	linearize_dynfunc(x_t, u_t, zeros<vec>(Q_DIM), A, M);
 
-
 	mat sigma_tp1_bar = A*sigma_t*A.t() + M*Q*M.t();
 
 	// propagate belief through observation
-	mat H(Z_DIM, X_DIM), N(Z_DIM, R_DIM);
+	mat H(Z_DIM, X_DIM, fill::zeros), N(Z_DIM, R_DIM, fill::zeros);
 	linearize_obsfunc(x_tp1, zeros<vec>(R_DIM), H, N);
 
 	mat delta = delta_matrix(x_tp1, alpha);
@@ -109,9 +117,34 @@ void PlanarSystem::belief_dynamics(const vec& x_t, const mat& sigma_t, const vec
 	sigma_tp1 = (eye<mat>(X_DIM,X_DIM) - K*H)*sigma_tp1_bar;
 }
 
-void PlanarSystem::execute_control_step(const vec& x_t_real, const vec& x_t, const mat& sigma_t, const vec& u_t,
-		vec& x_tp1_real, vec& x_tp1, mat& sigma_tp1) {
+void PlanarSystem::execute_control_step(const vec& x_t_real, const vec& x_t_t, const mat& sigma_t_t, const vec& u_t,
+		vec& x_tp1_real, vec& x_tp1_tp1, mat& sigma_tp1_tp1) {
+	// find next real state from input + noise
+	vec control_noise = zeros<vec>(Q_DIM);// + chol(.2*Q)*randn<vec>(Q_DIM);
+	vec obs_noise = zeros<vec>(R_DIM);// + chol(.2*R)*randn<vec>(R_DIM);
+	x_tp1_real = dynfunc(x_t_real, u_t, control_noise, true);
+	vec z_tp1_real = obsfunc(x_tp1_real, this->object, obs_noise);
 
+	// now do update based on current belief (x_t, sigma_t)
+
+	// propagate belief through dynamics
+	mat A(X_DIM, X_DIM, fill::zeros), M(X_DIM, Q_DIM, fill::zeros);
+	linearize_dynfunc(x_t_t, u_t, zeros<vec>(Q_DIM), A, M);
+
+	mat sigma_tp1_t = A*sigma_t_t*A.t() + M*Q*M.t();
+	vec x_tp1_t = dynfunc(x_t_t, u_t, zeros<vec>(Q_DIM));
+
+	// propagate belief through observation
+	mat H(Z_DIM, X_DIM, fill::zeros), N(Z_DIM, R_DIM, fill::zeros);
+	linearize_obsfunc(x_tp1_t, zeros<vec>(R_DIM), H, N);
+
+	mat delta = delta_matrix(x_tp1_t, INFINITY);
+	// calculate Kalman gain
+	mat K = sigma_tp1_t*H.t()*delta*inv(delta*H*sigma_tp1_t*H.t()*delta + R)*delta;
+
+	// update based on noisy measurement
+	x_tp1_tp1 = x_tp1_t + K*(z_tp1_real - obsfunc(x_tp1_t, x_tp1_t.subvec(J_DIM, X_DIM-1), zeros<vec>(R_DIM)));
+	sigma_tp1_tp1 = (eye<mat>(X_DIM,X_DIM) - K*H)*sigma_tp1_t;
 }
 
 /**
@@ -147,6 +180,27 @@ std::vector<Beam> PlanarSystem::get_fov(const vec& x) {
 
 	return beams;
 }
+
+
+std::vector<Segment> PlanarSystem::get_link_segments(const vec& x) {
+	std::vector<Segment> link_segments;
+
+	vec p0 = robot_origin, p1;
+	double joint0 = 0, joint1;
+
+	for(int i=0; i < link_lengths.n_rows; ++i) {
+		joint1 = joint0 + x[i];
+		p1 << p0(0) + sin(joint1)*link_lengths(i) <<
+				p0(1) + cos(joint1)*link_lengths(i);
+		link_segments.push_back(Segment(p0, p1));
+
+		joint0 = joint1;
+		p0 = p1;
+	}
+
+	return link_segments;
+}
+
 
 void PlanarSystem::display(vec& x, mat& sigma, bool pause) {
 	std::vector<vec> X(1, x);
@@ -293,25 +347,6 @@ vec PlanarSystem::cost_grad(std::vector<vec>& X, const mat& sigma0, std::vector<
 /**
  * Private methods
  */
-
-std::vector<Segment> PlanarSystem::get_link_segments(const vec& x) {
-	std::vector<Segment> link_segments;
-
-	vec p0 = robot_origin, p1;
-	double joint0 = 0, joint1;
-
-	for(int i=0; i < link_lengths.n_rows; ++i) {
-		joint1 = joint0 + x[i];
-		p1 << p0(0) + sin(joint1)*link_lengths(i) <<
-				p0(1) + cos(joint1)*link_lengths(i);
-		link_segments.push_back(Segment(p0, p1));
-
-		joint0 = joint1;
-		p0 = p1;
-	}
-
-	return link_segments;
-}
 
 /**
  * \param x is X_DIM by 1

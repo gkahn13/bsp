@@ -27,21 +27,22 @@ class PlanarSystem {
 
 	const double alpha_control = .01;
 	const double alpha_belief = 1;
-	const double alpha_final_belief = 10;
+	const double alpha_final_belief = 1;
 	const double alpha_goal = 10;
 
 public:
 	PlanarSystem(const vec& camera_origin, const vec& object, bool is_static);
 
-	vec dynfunc(const vec& x, const vec& u, const vec& q);
+	vec dynfunc(const vec& x, const vec& u, const vec& q, bool enforce_limits=false);
 	vec obsfunc(const vec& x, const vec& object, const vec& r);
 	mat delta_matrix(const vec& x, const double alpha);
 
 	void belief_dynamics(const vec& x_t, const mat& sigma_t, const vec& u_t, const double alpha, vec& x_tp1, mat& sigma_tp1);
-	void execute_control_step(const vec& x_t_real, const vec& x_t, const mat& sigma_t, const vec& u_t,
-			vec& x_tp1_real, vec& x_tp1, mat& sigma_tp1);
+	void execute_control_step(const vec& x_t_real, const vec& x_t_t, const mat& sigma_t_t, const vec& u_t,
+			vec& x_tp1_real, vec& x_tp1_tp1, mat& sigma_tp1_tp1);
 
 	std::vector<Beam> get_fov(const vec& x);
+	std::vector<Segment> get_link_segments(const vec& x);
 
 	void display(vec& x, mat& sigma, bool pause=true);
 	void display(std::vector<vec>& X, mat& sigma0, std::vector<vec>& U, const double alpha, bool pause=true);
@@ -62,14 +63,12 @@ private:
 	vec link_lengths;
 
 	int X_DIM, U_DIM, Z_DIM, Q_DIM, R_DIM;
-	int J_DIM, C_DIM; // joint dimension + camera dimension = X_DIM
+	int J_DIM, C_DIM; // joint dimension + object dimension = X_DIM
 	double DT;
 	mat Q, R;
 	vec x_min, x_max, u_min, u_max;
 
 	void init(const vec& camera_origin, const vec& object, bool is_static);
-
-	std::vector<Segment> get_link_segments(const vec& x);
 
 	void linearize_dynfunc(const vec& x, const vec& u, const vec& q, mat& A, mat& M);
 	void linearize_obsfunc(const vec& x, const vec& r, mat& H, mat& N);

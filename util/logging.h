@@ -22,7 +22,7 @@ inline LogLevel GetLogLevel() {return gLogLevel;}
 #define ERROR_PREFIX "\x1b[31m[ERROR] "
 #define WARN_PREFIX "\x1b[33m[WARN] "
 #define INFO_PREFIX "[INFO] "
-#define DEBUG_PREFIX "\x1b[32m[DEBUG] "
+#define DEBUG_PREFIX "\x1b[1;32m[DEBUG] "
 #define TRACE_PREFIX "\x1b[34m[TRACE] "
 #define LOG_SUFFIX "\x1b[0m\n"
   

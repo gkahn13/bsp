@@ -25,14 +25,17 @@ void PlanarSystem::init(const vec& camera_origin, const vec& object, bool is_sta
 	U_DIM = 4;
 	Z_DIM = 6;
 
-	Q = eye<mat>(U_DIM, U_DIM);
-	R = eye<mat>(Z_DIM, Z_DIM);
+	Q = 1*eye<mat>(U_DIM, U_DIM);
+	R = 5*eye<mat>(Z_DIM, Z_DIM);
 
-	x_min = {-M_PI/2, -M_PI/2, -M_PI/2, -M_PI/2, -INFTY, -INFTY};
-	x_max = {M_PI/2, M_PI/2, M_PI/2, M_PI/2, INFTY, INFTY};
+	// x bound for object is sum of link_lengths
+	double max_link_length = accu(link_lengths);
+	x_min = {-M_PI/2, -M_PI/2, -M_PI/2, -M_PI/2, -max_link_length, -max_link_length};
+	x_max = {M_PI/2, M_PI/2, M_PI/2, M_PI/2, max_link_length, max_link_length};
 
-	u_min = {-M_PI/2, -M_PI/2, -M_PI/2, (is_static) ? 0 : -M_PI/2};
-	u_max = {M_PI/2, M_PI/2, M_PI/2, (is_static) ? 0 : M_PI/2};
+	double max_input = M_PI/6;
+	u_min = {-max_input, -max_input, -max_input, (is_static) ? 0 : -max_input};
+	u_max = {max_input, max_input, max_input, (is_static) ? 0 : max_input};
 
 	Q_DIM = Q.n_rows;
 	R_DIM = R.n_rows;
@@ -61,8 +64,27 @@ vec PlanarSystem::obsfunc(const vec& x, const vec& object, const vec& r) {
 	z(3) = x(3); // camera angle
 	z(4) = object(0) - camera_origin(0); // delta x to object
 	z(5) = object(1) - camera_origin(1); // delta y to object
-	return z;
+	return z + r;
 }
+
+mat PlanarSystem::delta_matrix(const vec& x, const double alpha) {
+	mat delta(Z_DIM, Z_DIM, fill::zeros);
+
+	for(int i=0; i < J_DIM; ++i) {
+		delta(i, i) = 1; // TODO: should this depend on SD of link segments?
+	}
+
+	std::vector<Beam> fov = get_fov(x);
+	vec object = x.subvec(J_DIM, X_DIM-1);
+	double sd = geometry2d::signed_distance(object, fov);
+	double sd_sigmoid = 1.0 - 1.0/(1.0 + exp(-alpha*sd));
+	for(int i=J_DIM; i < X_DIM; ++i) {
+		delta(i, i) = sd_sigmoid;
+	}
+
+	return delta;
+}
+
 
 /**
  * \brief Propagates belief through EKF with max-likelihood noise assumption
@@ -72,8 +94,9 @@ void PlanarSystem::belief_dynamics(const vec& x_t, const mat& sigma_t, const vec
 	x_tp1 = dynfunc(x_t, u_t, zeros<vec>(Q_DIM));
 
 	// propagate belief through dynamics
-	mat A(X_DIM, X_DIM), M(X_DIM, Q_DIM);
+	mat A(X_DIM, X_DIM, fill::zeros), M(X_DIM, Q_DIM, fill::zeros);
 	linearize_dynfunc(x_t, u_t, zeros<vec>(Q_DIM), A, M);
+
 
 	mat sigma_tp1_bar = A*sigma_t*A.t() + M*Q*M.t();
 
@@ -129,6 +152,19 @@ void PlanarSystem::display(vec& x, mat& sigma, bool pause) {
 	std::vector<vec> X(1, x);
 	std::vector<mat> S(1, sigma);
 	display(X, S);
+}
+
+void PlanarSystem::display(std::vector<vec>& X, mat& sigma0, std::vector<vec>& U, const double alpha, bool pause) {
+	int T = X.size();
+	int X_DIM = X[0].n_rows;
+
+	std::vector<mat> S(T);
+	S[0] = sigma0;
+	vec x_tp1(X_DIM);
+	for(int t=0; t < T-1; ++t) {
+		belief_dynamics(X[t], S[t], U[t], alpha, x_tp1, S[t+1]);
+	}
+	display(X, S, pause);
 }
 
 void PlanarSystem::display(std::vector<vec>& X, std::vector<mat>& S, bool pause) {
@@ -285,19 +321,27 @@ std::vector<Segment> PlanarSystem::get_link_segments(const vec& x) {
  * \param M is X_DIM by Q_DIM
  */
 void PlanarSystem::linearize_dynfunc(const vec& x, const vec& u, const vec& q, mat& A, mat& M) {
-	vec q_zero = zeros<vec>(Q_DIM);
-	vec x_p = x, x_m = x;
-	for(int i=0; i < X_DIM; ++i) {
-		x_p(i) += step; x_m(i) -= step;
-		A.submat(span(0, X_DIM-1), span(i, i)) = (dynfunc(x_p, u, q_zero) - dynfunc(x_m, u, q_zero)) / (2*step);
-		x_p(i) = x(i); x_m(i) = x(i);
+	A = eye<mat>(X_DIM, X_DIM);
+
+	for(int j=0; j < M.n_cols; ++j) {
+		for(int i=0; i < j+1; ++i) {
+			M(i, j) = 1;
+		}
 	}
 
-	vec q_p = q, q_m = q;
-	for(int i=0; i < Q_DIM; ++i) {
-		q_p(i) += step; q_m(i) -= step;
-		M.submat(span(0, X_DIM-1), span(i, i)) = (dynfunc(x, u, q_p) - dynfunc(x, u, q_m)) / (2*step);
-	}
+//	vec q_zero = zeros<vec>(Q_DIM);
+//	vec x_p = x, x_m = x;
+//	for(int i=0; i < X_DIM; ++i) {
+//		x_p(i) += step; x_m(i) -= step;
+//		A.submat(span(0, X_DIM-1), span(i, i)) = (dynfunc(x_p, u, q_zero) - dynfunc(x_m, u, q_zero)) / (2*step);
+//		x_p(i) = x(i); x_m(i) = x(i);
+//	}
+//
+//	vec q_p = q, q_m = q;
+//	for(int i=0; i < Q_DIM; ++i) {
+//		q_p(i) += step; q_m(i) -= step;
+//		M.submat(span(0, X_DIM-1), span(i, i)) = (dynfunc(x, u, q_p) - dynfunc(x, u, q_m)) / (2*step);
+//	}
 }
 
 /**
@@ -307,38 +351,24 @@ void PlanarSystem::linearize_dynfunc(const vec& x, const vec& u, const vec& q, m
  * \param N is Z_DIM by R_DIM
  */
 void PlanarSystem::linearize_obsfunc(const vec& x, const vec& r, mat& H, mat& N) {
-	vec x_p = x, x_m = x;
-	for(int i=0; i < X_DIM; ++i) {
-		x_p(i) += step; x_m(i) -= step;
-		H.submat(span(0, Z_DIM-1), span(i, i)) = (obsfunc(x_p.subvec(0, J_DIM-1), x_p.subvec(J_DIM, X_DIM-1), r) -
-				obsfunc(x_p.subvec(0, J_DIM-1), x_p.subvec(J_DIM, X_DIM-1), r)) / (2*step);
-		x_p(i) = x(i); x_m(i) = x(i);
-	}
+	H = eye<mat>(Z_DIM, X_DIM);
+	N = eye<mat>(Z_DIM, R_DIM);
 
-	vec r_p = r, r_m = r;
-	for(int i=0; i < R_DIM; ++i) {
-		r_p(i) += step; r_m(i) -= step;
-		N.submat(span(0, Z_DIM-1), span(i, i)) = (obsfunc(x.subvec(0, J_DIM-1), x.subvec(J_DIM, X_DIM-1), r_p) -
-				obsfunc(x.subvec(0, J_DIM-1), x.subvec(J_DIM, X_DIM-1), r_m)) / (2*step);
-		r_p(i) = x(i); r_m(i) = x(i);
-	}
+//	vec x_p = x, x_m = x;
+//	for(int i=0; i < X_DIM; ++i) {
+//		x_p(i) += step; x_m(i) -= step;
+//		H.submat(span(0, Z_DIM-1), span(i, i)) = (obsfunc(x_p, x_p.subvec(J_DIM, X_DIM-1), r) -
+//				obsfunc(x_m, x_m.subvec(J_DIM, X_DIM-1), r)) / (2*step);
+//		x_p(i) = x(i); x_m(i) = x(i);
+//	}
+//
+//	vec r_p = r, r_m = r;
+//	for(int i=0; i < R_DIM; ++i) {
+//		r_p(i) += step; r_m(i) -= step;
+//		N.submat(span(0, Z_DIM-1), span(i, i)) = (obsfunc(x, x.subvec(J_DIM, X_DIM-1), r_p) -
+//				obsfunc(x, x.subvec(J_DIM, X_DIM-1), r_m)) / (2*step);
+//		r_p(i) = x(i); r_m(i) = x(i);
+//	}
 }
 
-mat PlanarSystem::delta_matrix(const vec& x, const double alpha) {
-	mat delta(Z_DIM, Z_DIM, fill::zeros);
-
-	for(int i=0; i < J_DIM; ++i) {
-		delta(i, i) = 1; // TODO: should this depend on SD of link segments?
-	}
-
-	std::vector<Beam> fov = get_fov(x);
-	vec object = x.subvec(J_DIM, X_DIM-1);
-	double sd = geometry2d::signed_distance(object, fov);
-	double sd_sigmoid = 1 - 1/(1 + exp(-alpha*sd));
-	for(int i=J_DIM; i < X_DIM; ++i) {
-		delta(i, i) = sd_sigmoid;
-	}
-
-	return delta;
-}
 

@@ -6,7 +6,7 @@ extern "C" {
 planarMPC_FLOAT **H, **f, **lb, **ub, **z, **c;
 }
 
-#define TIMESTEPS 5
+#define TIMESTEPS 10
 #define DT 1.0 // Note: if you change this, must change the FORCES matlab file
 #define X_DIM 6
 #define U_DIM 4
@@ -14,14 +14,20 @@ planarMPC_FLOAT **H, **f, **lb, **ub, **z, **c;
 const int T = TIMESTEPS;
 const int TOTAL_VARS = T*X_DIM + (T-1)*U_DIM;
 
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
 const double INFTY = 1e10;
 
 namespace cfg {
-const double improve_ratio_threshold = .1;
-const double min_approx_improve = 1;
-const double min_trust_box_size = .1;
-const double trust_shrink_ratio = .5;
-const double trust_expand_ratio = 1.5;
+const double alpha_init = 1; // 1
+const double alpha_gain = 3; // 3
+const double alpha_epsilon = .001; // .001
+
+const double improve_ratio_threshold = .1; // .1
+const double min_approx_improve = 1; // 1
+const double min_trust_box_size = .1; // .1
+const double trust_shrink_ratio = .5; // .5
+const double trust_expand_ratio = 1.5; // 1.5
 }
 
 void setup_mpc_vars(planarMPC_params& problem, planarMPC_output& output) {
@@ -134,11 +140,13 @@ bool is_valid_inputs()
 		for(int i=0; i < (X_DIM+U_DIM); ++i) { if (f[t][i] > INFTY/2) { return false; } }
 		for(int i=0; i < (X_DIM+U_DIM); ++i) { if (lb[t][i] > INFTY/2) { return false; } }
 		for(int i=0; i < (X_DIM+U_DIM); ++i) {if (ub[t][i] > INFTY/2) { return false; } }
+		for(int i=0; i < (X_DIM+U_DIM); ++i) {if (ub[t][i] < lb[t][i]) { return false; } }
 	}
 	for(int i=0; i < (X_DIM); ++i) { if (H[T-1][i] > INFTY/2) { return false; } }
 	for(int i=0; i < (X_DIM); ++i) { if (f[T-1][i] > INFTY/2) { return false; } }
 	for(int i=0; i < (X_DIM); ++i) { if (lb[T-1][i] > INFTY/2) { return false; } }
 	for(int i=0; i < (X_DIM); ++i) { if (ub[T-1][i] > INFTY/2) { return false; } }
+	for(int i=0; i < (X_DIM); ++i) {if (ub[T-1][i] < lb[T-1][i]) { return false; } }
 
 	for(int i=0; i < (X_DIM); ++i) { if (c[0][i] > INFTY/2) { return false; } }
 
@@ -176,7 +184,7 @@ void L_BFGS(const std::vector<vec>& X, const std::vector<vec>& U, const vec &gra
 	hess = hess - (hess_s*hess_s.t())/(dot(s, hess_s)) + dot(r, r)/dot(s, r);
 }
 
-double eihCollocation(std::vector<vec>& X, mat& sigma0, std::vector<vec>& U, const double alpha,
+double eih_collocation(std::vector<vec>& X, mat& sigma0, std::vector<vec>& U, const double alpha,
 		PlanarSystem& sys, planarMPC_params &problem, planarMPC_output &output, planarMPC_info &info) {
 
 	int max_iter = 100;
@@ -200,7 +208,8 @@ double eihCollocation(std::vector<vec>& X, mat& sigma0, std::vector<vec>& U, con
 	bool solution_accepted = true;
 	for(int it=0; it < max_iter; ++it) {
 
-		std::cout << "\n\n";
+		LOG_DEBUG("");
+		LOG_DEBUG("");
 		LOG_DEBUG("Iter: %d", it);
 
 		// only compute gradient/hessian if P/U has been changed
@@ -212,7 +221,7 @@ double eihCollocation(std::vector<vec>& X, mat& sigma0, std::vector<vec>& U, con
 				grad = gradopt; // since L-BFGS calculation required it
 			}
 
-			mat diaghess = diagvec(hess);
+			vec diaghess = diagvec(hess);
 
 			merit = sys.cost(X, sigma0, U, alpha);
 
@@ -236,24 +245,24 @@ double eihCollocation(std::vector<vec>& X, mat& sigma0, std::vector<vec>& U, con
 			// fill in gradient
 			index = 0;
 			for(int t=0; t < T-1; ++t) {
-				mat::fixed<(X_DIM+U_DIM), 1> zbar;
-				zbar.rows(0, X_DIM-1) = X[t];
-				zbar.rows(X_DIM, (X_DIM+U_DIM)-1) = U[t];
+				vec::fixed<(X_DIM+U_DIM)> zbar;
+				zbar.subvec(0, X_DIM-1) = X[t];
+				zbar.subvec(X_DIM, (X_DIM+U_DIM)-1) = U[t];
 
 				for(int i=0; i < (X_DIM+U_DIM); ++i) {
 					hessian_constant += H[t][i]*zbar(i)*zbar(i);
-					jac_constant -= grad[index]*zbar(i);
-					f[t][i] = grad[index] - H[t][i]*zbar(i);
+					jac_constant -= grad(index)*zbar(i);
+					f[t][i] = grad(index) - H[t][i]*zbar(i);
 					index++;
 				}
 			}
 
-			mat zbar = X[T-1];
+			vec zbar = X[T-1];
 
 			for(int i=0; i < X_DIM; ++i) {
 				hessian_constant += H[T-1][i]*zbar(i)*zbar(i);
-				jac_constant -= grad[index]*zbar(i);
-				f[T-1][i] = grad[index] - H[T-1][i]*zbar(i);
+				jac_constant -= grad(index)*zbar(i);
+				f[T-1][i] = grad(index) - H[T-1][i]*zbar(i);
 				index++;
 			}
 
@@ -272,8 +281,8 @@ double eihCollocation(std::vector<vec>& X, mat& sigma0, std::vector<vec>& U, con
 		for(int t=0; t < T; ++t) {
 			index = 0;
 			for(int i=0; i < X_DIM; ++i) {
-				lb[t][index] = std::max(x_min(i), X[t](i) - Xeps);
-				ub[t][index] = std::min(x_max(i), X[t](i) + Xeps);
+				lb[t][index] = MAX(x_min(i), X[t](i) - Xeps);
+				ub[t][index] = MIN(x_max(i), X[t](i) + Xeps);
 				index++;
 			}
 
@@ -281,8 +290,8 @@ double eihCollocation(std::vector<vec>& X, mat& sigma0, std::vector<vec>& U, con
 			if (t < T-1) {
 				// set each input lower/upper bound
 				for(int i=0; i < U_DIM; ++i) {
-					lb[t][index] = std::max(u_min(i), U[t](i) - Ueps);
-					ub[t][index] = std::min(u_max(i), U[t](i) + Ueps);
+					lb[t][index] = MAX(u_min(i), U[t](i) - Ueps);
+					ub[t][index] = MIN(u_max(i), U[t](i) + Ueps);
 					index++;
 				}
 			}
@@ -291,11 +300,10 @@ double eihCollocation(std::vector<vec>& X, mat& sigma0, std::vector<vec>& U, con
 
 
 		// Verify problem inputs
-//		if (!isValidInputs()) {
+//		if (!is_valid_inputs()) {
 //			LOG_ERROR("Inputs are not valid!");
 //			exit(0);
 //		}
-
 
 		// call FORCES
 		int exitflag = planarMPC_solve(&problem, &output, &info);
@@ -320,7 +328,7 @@ double eihCollocation(std::vector<vec>& X, mat& sigma0, std::vector<vec>& U, con
 
 		model_merit = optcost + constant_cost; // need to add constant terms that were dropped
 
-		new_merit = sys.cost(X, sigma0, U, alpha);
+		new_merit = sys.cost(Xopt, sigma0, Uopt, alpha);
 
 		LOG_DEBUG("merit: %f", merit);
 		LOG_DEBUG("model_merit: %f", model_merit);
@@ -362,10 +370,48 @@ double eihCollocation(std::vector<vec>& X, mat& sigma0, std::vector<vec>& U, con
 			solution_accepted = true;
 		}
 
+//		LOG_DEBUG("Displaying Xopt");
+//		sys.display(Xopt, sigma0, Uopt, alpha);
+
 
 	}
 
 	return sys.cost(X, sigma0, U, alpha);
+}
+
+double eih_minimize_merit(std::vector<vec>& X, mat& sigma0, std::vector<vec>& U, PlanarSystem& sys,
+		planarMPC_params &problem, planarMPC_output &output, planarMPC_info &info) {
+	double alpha = cfg::alpha_init;
+	double cost = INFINITY;
+
+	while(true) {
+		LOG_DEBUG("Calling collocation with alpha = %4.2f", alpha);
+		cost = eih_collocation(X, sigma0, U, alpha, sys, problem, output, info);
+
+		double max_delta_diff = -INFINITY;
+		for(int t=0; t < T; ++t) {
+			max_delta_diff = std::max(max_delta_diff,
+					max(abs(diagvec(sys.delta_matrix(X[t], alpha)) - diagvec(sys.delta_matrix(X[t], INFINITY)))));
+		}
+
+		LOG_DEBUG("");
+		LOG_DEBUG("Max delta difference: %4.2f", max_delta_diff);
+		if (max_delta_diff < cfg::alpha_epsilon) {
+			LOG_DEBUG("Max delta difference < %4.10f, exiting minimize merit", cfg::alpha_epsilon);
+			break;
+		}
+
+		LOG_DEBUG("Increasing alpha by gain %4.10f and reintegrating the trajectory", cfg::alpha_gain);
+		alpha *= cfg::alpha_gain;
+		for(int t=0; t < T-1; ++t) {
+			X[t+1] = sys.dynfunc(X[t], U[t], zeros<vec>(U_DIM));
+		}
+
+//		LOG_DEBUG("Press enter to continue");
+//		std::cin.ignore();
+	}
+
+	return cost;
 }
 
 int main(int argc, char* argv[]) {
@@ -379,8 +425,8 @@ int main(int argc, char* argv[]) {
 	mat sigma0 = .01*eye<mat>(X_DIM, X_DIM);
 	sigma0.submat(span(4,5), span(4,5)) = 20*eye<mat>(2, 2);
 
-//	vec x0 = {M_PI/5, -M_PI/2, -M_PI/4, 0, 5, 5};
-	vec x0 = {M_PI/2, 0, 0, M_PI/4, 5, 5};
+	vec x0 = {M_PI/5, -M_PI/2+M_PI/16, -M_PI/4, 0, 5, 5};
+//	vec x0 = {M_PI/2, 0, 0, M_PI/4, 5, 5};
 
 	// initialize state and controls
 	std::vector<vec> U(T-1, zeros<vec>(U_DIM));
@@ -398,9 +444,22 @@ int main(int argc, char* argv[]) {
 	setup_mpc_vars(problem, output);
 	util::Timer forces_timer;
 
-	double init_cost = sys.cost(X, sigma0, U, INFTY);
-	LOG_DEBUG("Initial cost %4.10f", init_cost);
+//	double init_cost = sys.cost(X, sigma0, U, INFTY);
+//	LOG_DEBUG("Initial cost %4.10f", init_cost);
 
-	sys.display(x0, sigma0);
+//	LOG_DEBUG("Initial setup");
+//	sys.display(x0, sigma0);
+
+	double cost = eih_minimize_merit(X, sigma0, U, sys, problem, output, info);
+
+	LOG_DEBUG("Finished minimize merit");
+
+	std::vector<mat> S(T);
+	S[0] = sigma0;
+	sys.display(X[0], S[0]);
+	for(int t=0; t < T-1; ++t) {
+		sys.belief_dynamics(X[t], S[t], U[t], INFINITY, X[t+1], S[t+1]);
+		sys.display(X[t+1], S[t+1]);
+	}
 
 }

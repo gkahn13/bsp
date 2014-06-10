@@ -17,6 +17,7 @@ disp(strcat(rootDir,'bsp/forces'));
 N = timesteps - 1;
 nx = 6;
 nu = 4;
+DT = 1;
 stages = MultistageProblem(N+1);
 
 % first stage
@@ -45,7 +46,7 @@ params(end+1) = newParam(['ub',istr], i, 'ineq.b.ub'); % upper bound for this st
 
 %params(end+1) = newParam(['C',istr], i, 'eq.C');
 params(end+1) = newParam(['c',istr], i, 'eq.c');
-stages(i).eq.C = [eye(nx) diag([ones(1,nu) zeros(1,nx-nu)])];
+stages(i).eq.C = [eye(nx) DT*eye(nx,nu)];
 %stages(i).eq.c = zeros(nx,1);
 stages(i).eq.D = [eye(nx), zeros(nx,nu)];
 
@@ -75,7 +76,7 @@ for i = 2:N
     % equality constraints
     %params(end+1) = newParam(['C',istr], i, 'eq.C');
     %params(end+1) = newParam(['e',istr], i, 'eq.c');
-    stages(i).eq.C = [eye(nx) diag([ones(1,nu) zeros(1,nx-nu)])];
+    stages(i).eq.C = [eye(nx) DT*eye(nx,nu)];
     stages(i).eq.c = zeros(nx,1);
     stages(i).eq.D = [-eye(nx), zeros(nx,nu)]; 
 end

@@ -25,16 +25,17 @@ class PlanarSystem {
 	const double step = 0.0078125*0.0078125;
 	const double INFTY = 1e10;
 
-	const double alpha_control = 1;
+	const double alpha_control = .01;
 	const double alpha_belief = 1;
-	const double alpha_final_belief = 1;
-	const double alpha_goal = 1;
+	const double alpha_final_belief = 10;
+	const double alpha_goal = 10;
 
 public:
 	PlanarSystem(const vec& camera_origin, const vec& object, bool is_static);
 
 	vec dynfunc(const vec& x, const vec& u, const vec& q);
 	vec obsfunc(const vec& x, const vec& object, const vec& r);
+	mat delta_matrix(const vec& x, const double alpha);
 
 	void belief_dynamics(const vec& x_t, const mat& sigma_t, const vec& u_t, const double alpha, vec& x_tp1, mat& sigma_tp1);
 	void execute_control_step(const vec& x_t_real, const vec& x_t, const mat& sigma_t, const vec& u_t,
@@ -43,6 +44,7 @@ public:
 	std::vector<Beam> get_fov(const vec& x);
 
 	void display(vec& x, mat& sigma, bool pause=true);
+	void display(std::vector<vec>& X, mat& sigma0, std::vector<vec>& U, const double alpha, bool pause=true);
 	void display(std::vector<vec>& X, std::vector<mat>& S, bool pause=true);
 
 	void get_limits(vec& x_min, vec& x_max, vec& u_min, vec& u_max);
@@ -71,7 +73,6 @@ private:
 
 	void linearize_dynfunc(const vec& x, const vec& u, const vec& q, mat& A, mat& M);
 	void linearize_obsfunc(const vec& x, const vec& r, mat& H, mat& N);
-	mat delta_matrix(const vec& x, const double alpha);
 
 };
 

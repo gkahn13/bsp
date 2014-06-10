@@ -51,14 +51,23 @@ vec PlanarSystem::dynfunc(const vec& x, const vec& u, const vec& q) {
 	return x_new;
 }
 
-vec PlanarSystem::obsfunc(const vec& x_robot, const vec& x_object, const vec& r) {
-	return zeros<vec>(1);
+// For planning, object comes from state
+// For execution update, object is this->object
+vec PlanarSystem::obsfunc(const vec& x, const vec& object, const vec& r) {
+	vec z(Z_DIM);
+	z(0) = x(0); // joint 0
+	z(1) = x(1); // joint 1
+	z(2) = x(2); // joint 2
+	z(3) = x(3); // camera angle
+	z(4) = object(0) - camera_origin(0); // delta x to object
+	z(5) = object(1) - camera_origin(1); // delta y to object
+	return z;
 }
 
 /**
  * \brief Propagates belief through EKF with max-likelihood noise assumption
  */
-void PlanarSystem::belief_dynamics(const vec& x_t, const mat& sigma_t, const vec& u_t, vec& x_tp1, mat& sigma_tp1) {
+void PlanarSystem::belief_dynamics(const vec& x_t, const mat& sigma_t, const vec& u_t, const double alpha, vec& x_tp1, mat& sigma_tp1) {
 	// propagate dynamics
 	x_tp1 = dynfunc(x_t, u_t, zeros<vec>(Q_DIM));
 
@@ -72,7 +81,7 @@ void PlanarSystem::belief_dynamics(const vec& x_t, const mat& sigma_t, const vec
 	mat H(Z_DIM, X_DIM), N(Z_DIM, R_DIM);
 	linearize_obsfunc(x_tp1, zeros<vec>(R_DIM), H, N);
 
-	mat delta = delta_matrix(x_tp1);
+	mat delta = delta_matrix(x_tp1, alpha);
 	mat K = sigma_tp1_bar*H.t()*delta*inv(delta*H*sigma_tp1_bar*H.t()*delta + R)*delta;
 	sigma_tp1 = (eye<mat>(X_DIM,X_DIM) - K*H)*sigma_tp1_bar;
 }
@@ -82,6 +91,10 @@ void PlanarSystem::execute_control_step(const vec& x_t_real, const vec& x_t, con
 
 }
 
+/**
+ * \brief Creates full camera FOV, then adds occlusions
+ * (in our case only the robot links) to truncate the FOV
+ */
 std::vector<Beam> PlanarSystem::get_fov(const vec& x) {
 	std::vector<Beam> beams, new_beams;
 
@@ -132,11 +145,6 @@ void PlanarSystem::display(std::vector<vec>& X, std::vector<mat>& S, bool pause)
 	py::list beams_pylist;
 	std::vector<Beam> beams = get_fov(X.back());
 
-	// TODO: temp
-	beams.clear();
-	beams.push_back(Beam({-5, 5}, {-1, 10}, {-1, 0}));
-	beams.push_back(Beam({5, 5}, {1, 10}, {1, 0}));
-
 	for(int i=0; i < beams.size(); ++i) {
 		mat m = join_horiz(beams[i].base, join_horiz(beams[i].a, beams[i].b));
 		beams_pylist.append(planar_utils::arma_to_ndarray(m));
@@ -174,6 +182,70 @@ void PlanarSystem::get_limits(vec& x_min, vec& x_max, vec& u_min, vec& u_max) {
 	x_max = this->x_max;
 	u_min = this->u_min;
 	u_max = this->u_max;
+}
+
+double PlanarSystem::cost(const std::vector<vec>& X, const mat& sigma0, const std::vector<vec>& U, const double alpha) {
+	double cost = 0;
+	int T = X.size();
+	int X_DIM = X[0].n_rows;
+
+	vec x_tp1(X_DIM);
+	mat sigma_t = sigma0, sigma_tp1(X_DIM, X_DIM);
+	for(int t=0; t < T-1; ++t) {
+		belief_dynamics(X[t], sigma_t, U[t], alpha, x_tp1, sigma_tp1);
+		cost += alpha_control*dot(U[t], U[t]);
+		if (t < T-2) {
+			cost += alpha_belief*trace(sigma_tp1);
+		} else {
+			cost += alpha_final_belief*trace(sigma_tp1);
+		}
+		sigma_t = sigma_tp1;
+	}
+
+	vec final_ee_position = get_link_segments(x_tp1).back().p1;
+	vec goal_error = final_ee_position - x_tp1.subvec(J_DIM, X_DIM-1);
+	cost += alpha_goal*dot(goal_error, goal_error);
+
+	return cost;
+}
+
+vec PlanarSystem::cost_grad(std::vector<vec>& X, const mat& sigma0, std::vector<vec>& U, const double alpha) {
+	int T = X.size();
+	int X_DIM = X[0].n_rows;
+	int U_DIM = U[0].n_rows;
+
+	vec grad(T*X_DIM + (T-1)*U_DIM);
+	double orig, cost_p, cost_m;
+	int index = 0;
+	for(int t=0; t < T; ++t) {
+		for(int i=0; i < X_DIM; ++i) {
+			orig = X[t][i];
+
+			X[t][i] = orig + step;
+			cost_p = cost(X, sigma0, U, alpha);
+
+			X[t][i] = orig - step;
+			cost_m = cost(X, sigma0, U, alpha);
+
+			grad(index++) = (cost_p - cost_m) / (2*step);
+		}
+
+		if (t < T-1) {
+			for(int i=0; i < U_DIM; ++i) {
+				orig = U[t][i];
+
+				U[t][i] = orig + step;
+				cost_p = cost(X, sigma0, U, alpha);
+
+				U[t][i] = orig - step;
+				cost_m = cost(X, sigma0, U, alpha);
+
+				grad(index++) = (cost_p - cost_m) / (2*step);
+			}
+		}
+	}
+
+	return grad;
 }
 
 /**
@@ -246,7 +318,21 @@ void PlanarSystem::linearize_obsfunc(const vec& x, const vec& r, mat& H, mat& N)
 	}
 }
 
-mat PlanarSystem::delta_matrix(const vec& x) {
-	return zeros<mat>(1,1);
+mat PlanarSystem::delta_matrix(const vec& x, const double alpha) {
+	mat delta(Z_DIM, Z_DIM, fill::zeros);
+
+	for(int i=0; i < J_DIM; ++i) {
+		delta(i, i) = 1; // TODO: should this depend on SD of link segments?
+	}
+
+	std::vector<Beam> fov = get_fov(x);
+	vec object = x.subvec(J_DIM, X_DIM-1);
+	double sd = geometry2d::signed_distance(object, fov);
+	double sd_sigmoid = 1 - 1/(1 + exp(-alpha*sd));
+	for(int i=J_DIM; i < X_DIM; ++i) {
+		delta(i, i) = sd_sigmoid;
+	}
+
+	return delta;
 }
 

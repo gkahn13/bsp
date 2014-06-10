@@ -111,7 +111,13 @@ void my_truncate_belief(const std::vector<Beam>& beams, const vec& cur_mean, con
 void truncate_gaussian(const vec& c, double d, const vec& cur_mean, const mat& cur_cov,
 		vec& out_mean, mat& out_cov);
 
+void my_truncate_gaussian(const vec& c, double d, const vec& cur_mean, const mat& cur_cov,
+		vec& delta_mean_total, mat& delta_cov_total);
+
 void truncate_univariate_gaussian(const double x, const double cur_mean, const double cur_var,
+		double& out_mean, double& out_var);
+
+void my_truncate_univariate_gaussian(const double x, const double cur_mean, const double cur_var,
 		double& out_mean, double& out_var);
 
 void plot_beams(std::vector<Beam>& beams);

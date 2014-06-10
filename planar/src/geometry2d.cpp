@@ -370,56 +370,37 @@ void my_truncate_belief(const std::vector<Beam>& beams, const vec& cur_mean, con
 
 	// sign of normal depends on if cur_mean inside or outside
 	double n_sign = (signed_distance(zeros<vec>(DIM), shifted_beams) > 0) ? 1 : -1;
-	std::cout << "n_sign: " << n_sign << "\n";
 
 	std::vector<Segment> border = beams_border(shifted_beams);
 
 	vec mean = zeros<vec>(DIM);
 	mat cov = eye<mat>(DIM, DIM);
 
-	int t=0;
-	while(border.size() > 0) {
-		std::cout << "border size: " << border.size() << "\n";
+	vec delta_mean_total(DIM, fill::zeros);
+	mat delta_cov_total(DIM, DIM, fill::zeros);
 
+	while(border.size() > 0) {
 		// find closest point p on geometry (i.e. border) to the origin
 		// the valid space is defined by the hyperplane with normal n = -p
 		vec p;
 		double min_dist = INFINITY;
 		for(int i=0; i < border.size(); ++i) {
-//			std::cout << "i: " << i << "\n";
-//			std::cout << border[i].p0.t() << "\t" << border[i].p1.t() << "\n";
 			if (border[i].distance_to(zeros<vec>(DIM)) < min_dist) {
 				p = border[i].closest_point_to(zeros<vec>(DIM));
 				min_dist = norm(p, 2);
-//				std::cout << "new p: " << p.t();
 			}
 		}
 		vec n = -n_sign*p;
 
-//		std::cout << "closest point: " << (U*p + cur_mean).t();
-
-//		std::cout << "n: " << n.t();
-//		std::cout << "d: " << norm(n,2) << "\n";
-//		std::cout << "mean: " << mean.t();
-//		std::cout << "cov: " << cov << "\n";
-
 		// truncate gaussian w.r.t. to -n (the complement space that we want to truncate)
 		truncate_gaussian(-n, dot(n, n), mean, cov, out_mean, out_cov);
-//		std::cout << "after truncate_gaussian\n";
 		mean = out_mean;
 		cov = out_cov;
 
-//		std::cout << "out_mean: " << mean.t();
-//		std::cout << "out_cov:\n" << cov << "\n";
+//		my_truncate_gaussian(-n, dot(n, n), mean, cov, delta_mean_total, delta_cov_total);
 
-//		std::cout << "border pre-prune\n";
-//		for(int i=0; i < border.size(); ++i) {
-//			std::cout << border[i].p0.t() << border[i].p1.t() << "\n";
-//		}
-
-//		std::cout << "pruning the border\n";
 		// prune all geometry in infeasible space
-		Halfspace h(n, p);
+		Halfspace h(-p, p); // TODO: h(n, p) or h(-p, p)
 		std::vector<Segment> new_border;
 		for(int i=0; i < border.size(); ++i) {
 			Segment seg_part(zeros<vec>(DIM), zeros<vec>(DIM));
@@ -430,17 +411,14 @@ void my_truncate_belief(const std::vector<Beam>& beams, const vec& cur_mean, con
 		border = new_border;
 		// repeat while still points left
 
-//		std::cout << "border post-prune\n";
-//		for(int i=0; i < border.size(); ++i) {
-//			std::cout << border[i].p0.t() << border[i].p1.t() << "\n";
+//		if (border.size() > 0 ) {
+//			std::cout << "multiple iterations!\n";
+//			std::cin.ignore();
 //		}
-
-
-//		if (t >= 0) {
-//			exit(0);
-//		}
-//		++t;
 	}
+
+//	out_mean = U*(delta_mean_total) + cur_mean;
+//	out_cov = U*(eye<mat>(DIM,DIM) + delta_cov_total)*U.t();
 
 	out_mean = U*mean + cur_mean;
 	out_cov = U*cov*U.t();
@@ -453,6 +431,7 @@ void truncate_gaussian(const vec& c, double d, const vec& cur_mean, const mat& c
 
 	double y_new_mean, y_new_var;
 	truncate_univariate_gaussian(d, y_mean, y_var, y_new_mean, y_new_var);
+//	my_truncate_univariate_gaussian(d, y_mean, y_var, y_new_mean, y_new_var);
 
 	vec xy_cov = cur_cov*c;
 	vec L = xy_cov / y_var;
@@ -460,6 +439,24 @@ void truncate_gaussian(const vec& c, double d, const vec& cur_mean, const mat& c
 	out_mean = cur_mean + L*(y_new_mean - y_mean);
 	out_cov = cur_cov + (y_new_var/y_var - 1.0) * (L*xy_cov.t());
 }
+
+void my_truncate_gaussian(const vec& c, double d, const vec& cur_mean, const mat& cur_cov,
+		vec& delta_mean_total, mat& delta_cov_total) {
+	double y_mean = dot(c, cur_mean);
+	double y_var = trace(c.t()*cur_cov*c);
+
+	double y_new_mean, y_new_var;
+//	truncate_univariate_gaussian(d, y_mean, y_var, y_new_mean, y_new_var);
+	my_truncate_univariate_gaussian(d, y_mean, y_var, y_new_mean, y_new_var);
+
+	vec xy_cov = cur_cov*c;
+	vec L = xy_cov / y_var;
+
+	delta_mean_total += L*(y_mean - y_new_mean);
+//	delta_cov_total += (y_new_var/y_var - 1.0) * (L*xy_cov.t());
+	delta_cov_total += ((cur_cov*c) / y_var)*(y_var - y_new_var)*((c.t()*cur_cov)/ y_var);
+}
+
 
 void truncate_univariate_gaussian(const double x, const double cur_mean, const double cur_var,
 		double& out_mean, double& out_var) {
@@ -469,6 +466,16 @@ void truncate_univariate_gaussian(const double x, const double cur_mean, const d
 
 	out_mean = cur_mean - z*sd;
 	out_var = cur_var*(1.0 - y*z - z*z);
+}
+
+void my_truncate_univariate_gaussian(const double x, const double cur_mean, const double cur_var,
+		double& out_mean, double& out_var) {
+	double sd = sqrt(cur_var);
+	double alpha = (x - cur_mean) / sd;
+	double lambda = pdf(standard_normal, alpha) / cdf(standard_normal, alpha);
+
+	out_mean = cur_mean + lambda*sd;
+	out_var = cur_var*(1 - lambda*lambda + alpha*lambda);
 }
 
 void plot_beams(std::vector<Beam>& beams) {

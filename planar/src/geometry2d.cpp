@@ -252,7 +252,7 @@ std::vector<Beam> Beam::truncate(const Segment& s) {
 
 double Beam::signed_distance(const vec& x) {
 	// sd positive if outside field of view
-	bool inside = (is_inside(x)) ? -1 : 1;
+	bool inside = is_inside(x);
 
 	std::vector<Segment> segments = {right_segment(), top_segment(), left_segment()};
 	double sd = (inside) ? -INFINITY : INFINITY;

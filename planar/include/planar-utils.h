@@ -3,6 +3,8 @@
 
 #include <Python.h>
 
+#include <map>
+
 #include <boost/python.hpp>
 #include <boost/python/numeric.hpp>
 #include <boost/python/tuple.hpp>
@@ -14,6 +16,28 @@ namespace np = boost::numpy;
 
 #include <armadillo>
 using namespace arma;
+
+#include "../../util/Timer.h"
+#include "../../util/logging.h"
+
+/**
+ * Wrapper that tracks multiple timers
+ */
+class TimerCollection {
+public:
+	void start(const std::string& timer_name);
+	void stop(const std::string& timer_name);
+
+	void print_elapsed(const std::string& timer_name);
+	void print_all_elapsed();
+
+	void clear_all();
+private:
+	std::map<std::string,util::Timer> timer_dict;
+	std::map<std::string,double> timer_elapsed;
+	std::map<std::string,bool> timer_running;
+};
+
 
 namespace planar_utils {
 

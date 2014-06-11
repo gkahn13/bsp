@@ -20,6 +20,7 @@ using namespace arma;
 
 #include "../../util/logging.h"
 
+extern TimerCollection tc;
 
 class PlanarSystem {
 	const double step = 0.0078125*0.0078125;

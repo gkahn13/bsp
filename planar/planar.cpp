@@ -216,7 +216,9 @@ double eih_collocation(std::vector<vec>& X, mat& sigma0, std::vector<vec>& U, co
 		if (solution_accepted) {
 
 			if (it == 0) {
+				tc.start("cost_grad");
 				grad = sys.cost_grad(X, sigma0, U, alpha);
+				tc.stop("cost_grad");
 			} else {
 				grad = gradopt; // since L-BFGS calculation required it
 			}
@@ -363,7 +365,9 @@ double eih_collocation(std::vector<vec>& X, mat& sigma0, std::vector<vec>& U, co
 			Ueps *= cfg::trust_expand_ratio;
 			LOG_DEBUG("Accepted, Increasing trust region size to:  %2.6f %2.6f", Xeps, Ueps);
 
+			tc.start("cost_grad");
 			gradopt = sys.cost_grad(Xopt, sigma0, Uopt, alpha);
+			tc.stop("cost_grad");
 			L_BFGS(X, U, grad, Xopt, Uopt, gradopt, hess);
 
 			X = Xopt; U = Uopt;
@@ -486,6 +490,10 @@ int main(int argc, char* argv[]) {
 
 		X_real.push_back(x_tp1_real);
 		S_real.push_back(sigma_tp1_tp1);
+
+		std::cout << "TimerCollection\n";
+		tc.print_all_elapsed();
+		tc.clear_all();
 
 		LOG_DEBUG("Display after obtaining observation, but before truncating the belief");
 		sys.display(x_tp1_tp1, sigma_tp1_tp1);

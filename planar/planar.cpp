@@ -419,7 +419,7 @@ double eih_minimize_merit(std::vector<vec>& X, mat& sigma0, std::vector<vec>& U,
 
 int main(int argc, char* argv[]) {
 	vec camera = {0, 1};
-	vec object = {8, 10}; // {8, 8}
+	vec object = {8, 8}; // {8, 8}
 	bool is_static = false;
 
 	PlanarSystem sys = PlanarSystem(camera, object, is_static);
@@ -428,7 +428,7 @@ int main(int argc, char* argv[]) {
 	mat sigma0 = .01*eye<mat>(X_DIM, X_DIM);
 	sigma0.submat(span(4,5), span(4,5)) = 20*eye<mat>(2, 2);
 
-	vec x0 = {M_PI/5, -M_PI/2+M_PI/16, -M_PI/4, 0, -5, 5};
+	vec x0 = {M_PI/5, -M_PI/2+M_PI/16, -M_PI/4, 0, 5, 5};
 	vec x0_real = join_vert(x0.subvec(0, 3), object);
 
 	// initialize state and controls

@@ -82,11 +82,11 @@ def plot_cov(mu, sigma, color = 'yellow', alpha=1):
     plt.plot(z[:,0]+mu[0], z[:,1]+mu[1], color=color, alpha=alpha)
     
 def plot_camera(angle, center, fov, color='blue', alpha=1.0):
-    x_left = center[0] + 10*np.sin(angle - fov/2.0)
-    y_left = center[1] + 10*np.cos(angle - fov/2.0)
+    x_left = center[0] + 15*np.sin(angle - fov/2.0)
+    y_left = center[1] + 15*np.cos(angle - fov/2.0)
     
-    x_right = center[0] + 10*np.sin(angle + fov/2.0)
-    y_right = center[1] + 10*np.cos(angle + fov/2.0)
+    x_right = center[0] + 15*np.sin(angle + fov/2.0)
+    y_right = center[1] + 15*np.cos(angle + fov/2.0)
     
     plt.plot([center[0], x_left], [center[1], y_left], linewidth=3.0, color=color, alpha=alpha)
     plt.plot([center[0], x_right], [center[1], y_right], linewidth=3.0, color=color, alpha=alpha)

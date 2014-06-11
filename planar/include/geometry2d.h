@@ -34,7 +34,9 @@ class Beam;
 class Line {
 public:
 	Line(const vec& direction, const vec& origin) : d(direction), o(origin) { };
+	Line(const Segment& seg);
 
+	bool intersection(const Line& other, vec& intersection);
 	bool intersection(const Segment& seg, vec& intersection);
 	double distance_to(const vec& x);
 private:

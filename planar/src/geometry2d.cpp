@@ -1,8 +1,33 @@
 #include "../include/geometry2d.h"
 
 /**
+ * Line constructors
+ */
+
+Line::Line(const Segment& seg) {
+	d = seg.p1 - seg.p0;
+	o = seg.p0;
+}
+
+/**
  * Line public methods
  */
+
+bool Line::intersection(const Line& other, vec& intersection) {
+	// s*d + o = t*d_other + o_other
+	mat A = join_horiz(d, other.d); // [d d_other]
+	mat b = other.o - o;
+
+	if (fabs(det(A)) < epsilon) {
+		return false;
+	}
+
+	vec soln = solve(A, b);
+	double s = soln(0);
+
+	intersection = s*d + o;
+	return true;
+}
 
 bool Line::intersection(const Segment& seg, vec& intersection) {
 	// v = seg.p1 - seg.p0
@@ -19,10 +44,12 @@ bool Line::intersection(const Segment& seg, vec& intersection) {
 
 	vec soln = solve(A, b);
 	double s = soln(0);
+	double t = -soln(1);
 
 	intersection = s*d + o;
 
-	return seg.within_bounding_rect(intersection);
+	return ((-epsilon <= t) && (t <= 1+epsilon));
+//	return seg.within_bounding_rect(intersection);
 }
 
 double Line::distance_to(const vec& x) {
@@ -107,10 +134,12 @@ bool Segment::intersection(const Segment& other, vec& intersection) {
 
 	vec soln = solve(A, b);
 	double s = soln(0);
+	double t = -soln(1);
 
 	intersection = s*w + p0;
 
-	return (this->within_bounding_rect(intersection) && (other.within_bounding_rect(intersection)));
+	return ((-epsilon <= s) && (s <= 1+epsilon) && (-epsilon <= t) && (t <= 1+epsilon));
+//	return (this->within_bounding_rect(intersection) && (other.within_bounding_rect(intersection)));
 }
 
 vec Segment::closest_point_to(const vec& x) {
@@ -171,14 +200,16 @@ std::vector<Beam> Beam::truncate(const Segment& s) {
 	} else if (is_intersect_right) {
 		vec p_inside = (is_inside(s.p0)) ? s.p0 : s.p1;
 		vec top_projection_intersect;
-		bool should_intersect = Line(p_inside - base, base).intersection(top, top_projection_intersect);
+//		bool should_intersect = Line(p_inside - base, base).intersection(top, top_projection_intersect);
+		bool should_intersect = Line(p_inside - base, base).intersection(Line(top), top_projection_intersect);
 		assert(should_intersect);
 		new_beams.push_back(Beam(base, right_intersect, p_inside));
 		new_beams.push_back(Beam(base, top_projection_intersect, b));
 	} else if (is_intersect_top) {
 		vec p_inside = (is_inside(s.p0)) ? s.p0 : s.p1;
 		vec top_projection_intersect;
-		bool should_intersect = Line(p_inside - base, base).intersection(top, top_projection_intersect);
+//		bool should_intersect = Line(p_inside - base, base).intersection(top, top_projection_intersect);
+		bool should_intersect = Line(p_inside - base, base).intersection(Line(top), top_projection_intersect);
 		assert(should_intersect);
 		if (top_intersect(0) > p_inside(0)) {
 			new_beams.push_back(Beam(base, a, top_intersect));
@@ -192,15 +223,8 @@ std::vector<Beam> Beam::truncate(const Segment& s) {
 	} else if (is_intersect_left) {
 		vec p_inside = (is_inside(s.p0)) ? s.p0 : s.p1;
 		vec top_projection_intersect;
-		bool should_intersect = Line(p_inside - base, base).intersection(top, top_projection_intersect);
-
-		vec p_outside = (!is_inside(s.p0)) ? s.p0 : s.p1;
-		std::cout << "p_outside: " << p_outside.t();
-		std::cout << "Top:\n" << top.p0.t() << top.p1.t();
-		std::cout << "p_inside: " << p_inside.t();
-		std::cout << "Line (d, o):\n" << (p_inside - base).t() << base.t() << "\n";
-		if (!should_intersect) { new_beams.push_back(*this); return new_beams; }
-
+//		bool should_intersect = Line(p_inside - base, base).intersection(top, top_projection_intersect);
+		bool should_intersect = Line(p_inside - base, base).intersection(Line(top), top_projection_intersect);
 		assert(should_intersect);
 		new_beams.push_back(Beam(base, a, top_projection_intersect));
 		new_beams.push_back(Beam(base, p_inside, left_intersect));
@@ -209,9 +233,11 @@ std::vector<Beam> Beam::truncate(const Segment& s) {
 		vec left_pt = (s.p0(0) <= s.p1(0)) ? s.p0 : s.p1;
 
 		vec rtop_projection_intersect, ltop_projection_intersect;
-		bool should_intersect = Line(right_pt - base, base).intersection(top, rtop_projection_intersect);
+//		bool should_intersect = Line(right_pt - base, base).intersection(top, rtop_projection_intersect);
+		bool should_intersect = Line(right_pt - base, base).intersection(Line(top), rtop_projection_intersect);
 		assert(should_intersect);
-		should_intersect = Line(left_pt - base, base).intersection(top, ltop_projection_intersect);
+//		should_intersect = Line(left_pt - base, base).intersection(top, ltop_projection_intersect);
+		should_intersect = Line(left_pt - base, base).intersection(Line(top), ltop_projection_intersect);
 		assert(should_intersect);
 
 		new_beams.push_back(Beam(base, a, rtop_projection_intersect));

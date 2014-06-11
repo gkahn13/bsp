@@ -35,7 +35,7 @@ public:
 
 	vec dynfunc(const vec& x, const vec& u, const vec& q, bool enforce_limits=false);
 	vec obsfunc(const vec& x, const vec& object, const vec& r);
-	mat delta_matrix(const vec& x, const double alpha);
+	mat delta_matrix(const vec& x, const vec& object, const double alpha);
 
 	void belief_dynamics(const vec& x_t, const mat& sigma_t, const vec& u_t, const double alpha, vec& x_tp1, mat& sigma_tp1);
 	void execute_control_step(const vec& x_t_real, const vec& x_t_t, const mat& sigma_t_t, const vec& u_t,

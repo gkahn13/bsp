@@ -47,7 +47,6 @@ bool Halfspace::contains_part(const Segment& seg, Segment& seg_part) {
 	vec intersection;
 
 	if (split.intersection(seg, intersection)) {
-		std::cout << "contains_part: segment crosses half-space\n";
 		// segment crosses the half-space
 		if (contains(seg.p0)) {// && norm(seg.p1 - intersection, 2) > epsilon) {
 			seg_part = Segment(seg.p0, intersection);
@@ -60,7 +59,6 @@ bool Halfspace::contains_part(const Segment& seg, Segment& seg_part) {
 		}
 
 	} else {
-		std::cout << "contains_part: segment doesn't cross half-space\n";
 		if (contains(seg.p0)) {
 			seg_part = seg;
 			return true;
@@ -195,6 +193,14 @@ std::vector<Beam> Beam::truncate(const Segment& s) {
 		vec p_inside = (is_inside(s.p0)) ? s.p0 : s.p1;
 		vec top_projection_intersect;
 		bool should_intersect = Line(p_inside - base, base).intersection(top, top_projection_intersect);
+
+		vec p_outside = (!is_inside(s.p0)) ? s.p0 : s.p1;
+		std::cout << "p_outside: " << p_outside.t();
+		std::cout << "Top:\n" << top.p0.t() << top.p1.t();
+		std::cout << "p_inside: " << p_inside.t();
+		std::cout << "Line (d, o):\n" << (p_inside - base).t() << base.t() << "\n";
+		if (!should_intersect) { new_beams.push_back(*this); return new_beams; }
+
 		assert(should_intersect);
 		new_beams.push_back(Beam(base, a, top_projection_intersect));
 		new_beams.push_back(Beam(base, p_inside, left_intersect));
@@ -349,8 +355,13 @@ void truncate_belief(const std::vector<Beam>& beams, const vec& cur_mean, const 
 
 	// normal vector to top
 	vec c = {top_right(1) - top_left(1), top_left(0) - top_right(0)};
-	double d = dot(c, max_point);
 
+	// TODO: MY ADDITION
+//	std::vector<Beam> tmp_beams = beams;
+//	double n_sign = (signed_distance(cur_mean, tmp_beams) > 0) ? 1 : -1;
+//	c *= n_sign;
+
+	double d = dot(c, max_point);
 	truncate_gaussian(c, d, cur_mean, cur_cov, out_mean, out_cov);
 }
 
@@ -370,10 +381,15 @@ void my_truncate_belief(const std::vector<Beam>& beams, const vec& cur_mean, con
 		b.b = U_inv*(b.b - cur_mean);
 	}
 
-	// sign of normal depends on if cur_mean inside or outside
-	double n_sign = (signed_distance(zeros<vec>(DIM), shifted_beams) > 0) ? 1 : -1;
 
 	std::vector<Segment> border = beams_border(shifted_beams);
+
+//	// remove side edges
+//	std::vector<Segment> new_border;
+//	for(int i=1; i < border.size()-1; ++i) {
+//		new_border.push_back(border[i]);
+//	}
+//	border = new_border;
 
 	vec mean = zeros<vec>(DIM);
 	mat cov = eye<mat>(DIM, DIM);
@@ -382,7 +398,6 @@ void my_truncate_belief(const std::vector<Beam>& beams, const vec& cur_mean, con
 	mat delta_cov_total(DIM, DIM, fill::zeros);
 
 	while(border.size() > 0) {
-		std::cout << "border size: " << border.size() << "\n";
 		// find closest point p on geometry (i.e. border) to the origin
 		// the valid space is defined by the hyperplane with normal n = -p
 		vec p;
@@ -393,9 +408,6 @@ void my_truncate_belief(const std::vector<Beam>& beams, const vec& cur_mean, con
 				min_dist = norm(p, 2);
 			}
 		}
-		// this determines whether you truncate in or out
-//		vec n = -n_sign*p;
-//		vec n = n_sign*p;
 		vec n = -p;
 
 		// truncate gaussian w.r.t. to -n (the complement space that we want to truncate)
@@ -407,13 +419,10 @@ void my_truncate_belief(const std::vector<Beam>& beams, const vec& cur_mean, con
 
 		// prune all geometry in infeasible space
 		Halfspace h(-p, p); // TODO: h(n, p) or h(-p, p)
-		std::cout << "halfspace: " << -p.t() << "," << p.t();
 		std::vector<Segment> new_border;
 		for(int i=0; i < border.size(); ++i) {
-			std::cout << "Segment:\n" << border[i].p0.t() << border[i].p1.t() << "\n";
 			Segment seg_part(zeros<vec>(DIM), zeros<vec>(DIM));
 			if (h.contains_part(border[i], seg_part)) {
-				std::cout << "PUSHING NEW SEGMENT ON\n";
 				new_border.push_back(seg_part);
 			}
 		}

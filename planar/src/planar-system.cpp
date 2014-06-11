@@ -34,7 +34,7 @@ void PlanarSystem::init(const vec& camera_origin, const vec& object, bool is_sta
 	x_min = {-M_PI/2, -M_PI/2, -M_PI/2, -M_PI/2, -max_link_length, -max_link_length};
 	x_max = {M_PI/2, M_PI/2, M_PI/2, M_PI/2, max_link_length, max_link_length};
 
-	double max_input = M_PI/6;
+	double max_input = M_PI/12;
 	u_min = {-max_input, -max_input, -max_input, (is_static) ? 0 : -max_input};
 	u_max = {max_input, max_input, max_input, (is_static) ? 0 : max_input};
 
@@ -76,7 +76,7 @@ vec PlanarSystem::obsfunc(const vec& x, const vec& object, const vec& r) {
 	return z + r;
 }
 
-mat PlanarSystem::delta_matrix(const vec& x, const double alpha) {
+mat PlanarSystem::delta_matrix(const vec& x, const vec& object, const double alpha) {
 	mat delta(Z_DIM, Z_DIM, fill::zeros);
 
 	for(int i=0; i < J_DIM; ++i) {
@@ -84,7 +84,6 @@ mat PlanarSystem::delta_matrix(const vec& x, const double alpha) {
 	}
 
 	std::vector<Beam> fov = get_fov(x);
-	vec object = x.subvec(J_DIM, X_DIM-1);
 	double sd = geometry2d::signed_distance(object, fov);
 	double sd_sigmoid = 1.0 - 1.0/(1.0 + exp(-alpha*sd));
 	for(int i=J_DIM; i < X_DIM; ++i) {
@@ -112,7 +111,7 @@ void PlanarSystem::belief_dynamics(const vec& x_t, const mat& sigma_t, const vec
 	mat H(Z_DIM, X_DIM, fill::zeros), N(Z_DIM, R_DIM, fill::zeros);
 	linearize_obsfunc(x_tp1, zeros<vec>(R_DIM), H, N);
 
-	mat delta = delta_matrix(x_tp1, alpha);
+	mat delta = delta_matrix(x_tp1, x_tp1.subvec(J_DIM, X_DIM-1), alpha);
 	mat K = sigma_tp1_bar*H.t()*delta*inv(delta*H*sigma_tp1_bar*H.t()*delta + R)*delta;
 	sigma_tp1 = (eye<mat>(X_DIM,X_DIM) - K*H)*sigma_tp1_bar;
 }
@@ -138,7 +137,7 @@ void PlanarSystem::execute_control_step(const vec& x_t_real, const vec& x_t_t, c
 	mat H(Z_DIM, X_DIM, fill::zeros), N(Z_DIM, R_DIM, fill::zeros);
 	linearize_obsfunc(x_tp1_t, zeros<vec>(R_DIM), H, N);
 
-	mat delta = delta_matrix(x_tp1_t, INFINITY);
+	mat delta = delta_matrix(x_tp1_t, object, INFINITY);
 	// calculate Kalman gain
 	mat K = sigma_tp1_t*H.t()*delta*inv(delta*H*sigma_tp1_t*H.t()*delta + R)*delta;
 

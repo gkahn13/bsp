@@ -47,11 +47,12 @@ bool Halfspace::contains_part(const Segment& seg, Segment& seg_part) {
 	vec intersection;
 
 	if (split.intersection(seg, intersection)) {
+		std::cout << "contains_part: segment crosses half-space\n";
 		// segment crosses the half-space
-		if (contains(seg.p0) && norm(seg.p1 - intersection, 2) > epsilon) {
+		if (contains(seg.p0)) {// && norm(seg.p1 - intersection, 2) > epsilon) {
 			seg_part = Segment(seg.p0, intersection);
 			return true;
-		} else if (contains(seg.p1) && norm(seg.p0 - intersection, 2) > epsilon) {
+		} else if (contains(seg.p1)) {// && norm(seg.p0 - intersection, 2) > epsilon) {
 			seg_part = Segment(seg.p1, intersection);
 			return true;
 		} else {
@@ -59,6 +60,7 @@ bool Halfspace::contains_part(const Segment& seg, Segment& seg_part) {
 		}
 
 	} else {
+		std::cout << "contains_part: segment doesn't cross half-space\n";
 		if (contains(seg.p0)) {
 			seg_part = seg;
 			return true;
@@ -380,6 +382,7 @@ void my_truncate_belief(const std::vector<Beam>& beams, const vec& cur_mean, con
 	mat delta_cov_total(DIM, DIM, fill::zeros);
 
 	while(border.size() > 0) {
+		std::cout << "border size: " << border.size() << "\n";
 		// find closest point p on geometry (i.e. border) to the origin
 		// the valid space is defined by the hyperplane with normal n = -p
 		vec p;
@@ -390,8 +393,10 @@ void my_truncate_belief(const std::vector<Beam>& beams, const vec& cur_mean, con
 				min_dist = norm(p, 2);
 			}
 		}
-		vec n = -n_sign*p;
+		// this determines whether you truncate in or out
+//		vec n = -n_sign*p;
 //		vec n = n_sign*p;
+		vec n = -p;
 
 		// truncate gaussian w.r.t. to -n (the complement space that we want to truncate)
 		truncate_gaussian(-n, dot(n, n), mean, cov, out_mean, out_cov);
@@ -402,10 +407,13 @@ void my_truncate_belief(const std::vector<Beam>& beams, const vec& cur_mean, con
 
 		// prune all geometry in infeasible space
 		Halfspace h(-p, p); // TODO: h(n, p) or h(-p, p)
+		std::cout << "halfspace: " << -p.t() << "," << p.t();
 		std::vector<Segment> new_border;
 		for(int i=0; i < border.size(); ++i) {
+			std::cout << "Segment:\n" << border[i].p0.t() << border[i].p1.t() << "\n";
 			Segment seg_part(zeros<vec>(DIM), zeros<vec>(DIM));
 			if (h.contains_part(border[i], seg_part)) {
+				std::cout << "PUSHING NEW SEGMENT ON\n";
 				new_border.push_back(seg_part);
 			}
 		}

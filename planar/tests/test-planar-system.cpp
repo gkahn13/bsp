@@ -224,8 +224,8 @@ void test_belief_dynamics() {
 
 int main(int argc, char* argv[]) {
 //	test_display();
-	test_beams();
+//	test_beams();
 //	test_sd();
-//	test_truncate_gaussian();
+	test_truncate_gaussian();
 //	test_belief_dynamics();
 }

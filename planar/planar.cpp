@@ -506,6 +506,10 @@ int main(int argc, char* argv[]) {
 		x0 = x_tp1_tp1_trunc;
 		sigma0 = sigma_tp1_tp1_trunc;
 
+		// no truncation
+//		x0 = x_tp1_tp1;
+//		sigma0 = sigma_tp1_tp1;
+
 	}
 
 }

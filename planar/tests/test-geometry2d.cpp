@@ -164,6 +164,16 @@ void test_segment_distance_to() {
 	}
 }
 
+void test_segment_closest_point() {
+	{
+	Segment s({-.0112, -1.1158}, {1.2724, 1.983});
+	vec p = {0, 0};
+	vec c = s.closest_point_to(p);
+
+	std::cout << "closest point: " << c.t();
+	}
+}
+
 void test_halfspace() {
 	{
 	Halfspace h({1,1}, {0,0});
@@ -221,5 +231,6 @@ int main(int argc, char* argv[]) {
 //	test_scope();
 //	test_beam();
 //	test_segment_distance_to();
-	test_halfspace();
+	test_segment_closest_point();
+//	test_halfspace();
 }

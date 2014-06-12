@@ -3,8 +3,8 @@
 
 #include <Python.h>
 
-//#include "planar-utils.h"
-//#include "geometry2d.h"
+#include "planar-utils.h"
+#include "geometry2d.h"
 
 #include <boost/python.hpp>
 #include <boost/python/numeric.hpp>
@@ -35,17 +35,17 @@ typedef B<double> bdouble;
 
 #define L_DIM 3 // number of links
 
-template <size_t _dim0, size_t _dim1>
-using mat = Matrix<double, _dim0, _dim1>;
+//template <size_t _dim0, size_t _dim1>
+//using mat = Matrix<double, _dim0, _dim1>;
+//
+//template <size_t _dim>
+//using vec = Matrix<double, _dim, 1>;
 
-template <size_t _dim>
-using vec = Matrix<double, _dim, 1>;
-
-template <size_t _dim0, size_t _dim1>
-using matb = Matrix<bdouble, _dim0, _dim1>;
-
-template <size_t _dim>
-using vecb = Matrix<bdouble, _dim, 1>;
+//template <size_t _dim0, size_t _dim1>
+//using matb = Matrix<bdouble, _dim0, _dim1>;
+//
+//template <size_t _dim>
+//using vecb = Matrix<bdouble, _dim, 1>;
 
 class PlanarSystem {
 	const double step = 0.0078125*0.0078125;
@@ -57,25 +57,48 @@ class PlanarSystem {
 	const double alpha_goal = 10;
 
 public:
-	PlanarSystem(const vec<C_DIM>& camera_origin, const vec<C_DIM>& object, bool is_static);
+	PlanarSystem(const VectorXd& camera_origin, const VectorXd& object, bool is_static);
 
 //	template< template <class> class VEC, class _xDim, class _uDim, class _qDim>
-	template<
-	vec<_xDim> dynfunc(const VEC<_xDim>& x, const VEC<_uDim>& u, const VEC<_qDim>& q, bool enforce_limits=false);
+	VectorXd dynfunc(const VectorXd& x, const VectorXd& u, const VectorXd& q, bool enforce_limits=false);
+	VectorXd obsfunc(const VectorXd& x, const VectorXd& object, const VectorXd& r);
+
+	MatrixXd delta_matrix(const VectorXd& x, const VectorXd& object, const double alpha);
+
+	void belief_dynamics(const VectorXd& x_t, const MatrixXd& sigma_t, const VectorXd& u_t, const double alpha, VectorXd& x_tp1, MatrixXd& sigma_tp1);
+	void execute_control_step(const VectorXd& x_t_real, const VectorXd& x_t_t, const MatrixXd& sigma_t_t, const VectorXd& u_t,
+			VectorXd& x_tp1_real, VectorXd& x_tp1_tp1, MatrixXd& sigma_tp1_tp1);
+
+	std::vector<Beam> get_fov(const VectorXd& x);
+	std::vector<Segment> get_link_segments(const VectorXd& x);
+
+	void display(VectorXd& x, MatrixXd& sigma, bool pause=true);
+	void display(std::vector<VectorXd>& X, MatrixXd& sigma0, std::vector<VectorXd>& U, const double alpha, bool pause=true);
+	void display(std::vector<VectorXd>& X, std::vector<MatrixXd>& S, bool pause=true);
+
+	void get_limits(VectorXd& x_min, VectorXd& x_max, VectorXd& u_min, VectorXd& u_max);
+
+	double cost(const std::vector<VectorXd>& X, const MatrixXd& sigma0, const std::vector<VectorXd>& U, const double alpha);
+	VectorXd cost_grad(std::vector<VectorXd>& X, const MatrixXd& sigma0, std::vector<VectorXd>& U, const double alpha);
 
 private:
 	bool is_static;
-	vec<C_DIM> camera_origin;
+	VectorXd camera_origin;
 	double camera_fov, camera_max_dist;
-	vec<C_DIM> object;
+	VectorXd object;
 
-	vec<C_DIM> robot_origin;
-	vec<L_DIM> link_lengths;
+	VectorXd robot_origin;
+	VectorXd link_lengths;
 
-	mat<Q_DIM, Q_DIM> Q;
-	mat<R_DIM, R_DIM> R;
-	vec<X_DIM> x_min, x_max;
-	vec<U_DIM> u_min, u_max;
+	MatrixXd Q;
+	MatrixXd R;
+	VectorXd x_min, x_max;
+	VectorXd u_min, u_max;
+
+	void init(const VectorXd& camera_origin, const VectorXd& object, bool is_static);
+
+	void linearize_dynfunc(const VectorXd& x, const VectorXd& u, const VectorXd& q, MatrixXd& A, MatrixXd& M);
+	void linearize_obsfunc(const VectorXd& x, const VectorXd& r, MatrixXd& H, MatrixXd& N);
 };
 
 #endif

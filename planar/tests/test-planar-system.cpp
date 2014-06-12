@@ -226,6 +226,6 @@ int main(int argc, char* argv[]) {
 //	test_display();
 //	test_beams();
 //	test_sd();
-	test_truncate_gaussian();
-//	test_belief_dynamics();
+//	test_truncate_gaussian();
+	test_belief_dynamics();
 }

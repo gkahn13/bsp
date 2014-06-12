@@ -102,7 +102,9 @@ void test_backward_eigen() {
 
 bdouble func_matrix(const MatrixBd& m) {
 //	MatrixBd m_inv = m.inverse();
-	return (m*m).trace();
+//	return (m*m).trace();
+//	return m.sum();
+	return (m + MatrixXd::Identity(2,2).cast<bdouble>()).sum();
 }
 
 void test_matrix_func() {
@@ -177,7 +179,7 @@ void test_template() {
 int main(int argc, char* argv[]) {
 //	test_backward();
 //	test_backward_eigen();
-//	test_matrix_func();
+	test_matrix_func();
 //	test_matrix_operations();
-	test_template();
+//	test_template();
 }

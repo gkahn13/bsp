@@ -46,8 +46,7 @@ inline double uniform(double low, double high) {
 	return (high - low)*(rand() / double(RAND_MAX)) + low;
 }
 
-template<typename Derived>
-np::ndarray eigen_to_ndarray(const EigenBase<Derived>& m);
+np::ndarray eigen_to_ndarray(const MatrixXd& m);
 
 }
 

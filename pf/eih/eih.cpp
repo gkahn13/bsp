@@ -184,7 +184,7 @@ void L_BFGS(const std::vector<mat> &X, const std::vector<mat> &U, const mat &gra
 
 	mat r = theta*y + (1-theta)*hess_s;
 
-	hess = hess - (hess_s*hess_s.t())/(accu(s.t()*hess_s)) + accu(r % r)/accu(s % r);
+	hess = hess - (hess_s*hess_s.t())/(accu(s.t()*hess_s) + accu(r % r)/accu(s % r));
 }
 
 double eihCollocation(std::vector<mat> &X, std::vector<mat> &U, mat &P, EihSystem *sys,

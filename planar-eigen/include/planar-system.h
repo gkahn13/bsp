@@ -16,7 +16,6 @@ namespace py = boost::python;
 namespace np = boost::numpy;
 
 #include <Eigen/Eigen>
-//#define EIGEN_USE_NEW_STDVECTOR
 #include <Eigen/StdVector>
 using namespace Eigen;
 

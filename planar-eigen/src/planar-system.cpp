@@ -213,14 +213,14 @@ void PlanarSystem::display(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>
 
 	py::list X_pylist, S_pylist;
 	for(int t=0; t < X.size(); ++t) {
-//		X_pylist.append(planar_utils::eigen_to_ndarray(X[t]));
-//		S_pylist.append(planar_utils::eigen_to_ndarray(S[t]));
+		X_pylist.append(planar_utils::eigen_to_ndarray(X[t]));
+		S_pylist.append(planar_utils::eigen_to_ndarray(S[t]));
 	}
 
-//	np::ndarray robot_origin_ndarray = planar_utils::eigen_to_ndarray(robot_origin);
-//	np::ndarray link_lengths_ndarray = planar_utils::eigen_to_ndarray(link_lengths);
-//	np::ndarray camera_origin_ndarray = planar_utils::eigen_to_ndarray(camera_origin);
-//	np::ndarray object_ndarray = planar_utils::eigen_to_ndarray(object);
+	np::ndarray robot_origin_ndarray = planar_utils::eigen_to_ndarray(robot_origin);
+	np::ndarray link_lengths_ndarray = planar_utils::eigen_to_ndarray(link_lengths);
+	np::ndarray camera_origin_ndarray = planar_utils::eigen_to_ndarray(camera_origin);
+	np::ndarray object_ndarray = planar_utils::eigen_to_ndarray(object);
 
 	py::list beams_pylist;
 	std::vector<Beam> beams = get_fov(X.back());
@@ -228,7 +228,7 @@ void PlanarSystem::display(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>
 	for(int i=0; i < beams.size(); ++i) {
 		mat<2,3> m;
 		m << beams[i].base, beams[i].a, beams[i].b;
-//		beams_pylist.append(planar_utils::eigen_to_ndarray(m));
+		beams_pylist.append(planar_utils::eigen_to_ndarray(m));
 	}
 
 	std::string working_dir = boost::filesystem::current_path().normalize().string();
@@ -244,8 +244,8 @@ void PlanarSystem::display(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>
 		py::object plot_mod = py::import("plot_planar");
 		py::object plot_planar = plot_mod.attr("plot_planar");
 
-//		plot_planar(X_pylist, S_pylist, robot_origin_ndarray, link_lengths_ndarray,
-//				camera_origin_ndarray, camera_fov, object_ndarray, beams_pylist);
+		plot_planar(X_pylist, S_pylist, robot_origin_ndarray, link_lengths_ndarray,
+				camera_origin_ndarray, camera_fov, object_ndarray, beams_pylist);
 
 		if (pause) {
 			LOG_INFO("Press enter to continue");

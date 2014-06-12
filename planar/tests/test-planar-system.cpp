@@ -170,8 +170,6 @@ void test_truncate_gaussian() {
 }
 
 void test_belief_dynamics() {
-
-
 	vec camera = {0, 1};
 	vec object = {5, 8};
 	bool is_static = false;

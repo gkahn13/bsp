@@ -47,8 +47,7 @@ void TimerCollection::clear_all() {
 
 namespace planar_utils {
 
-template<typename Derived>
-np::ndarray eigen_to_ndarray(const EigenBase<Derived>& m) {
+np::ndarray eigen_to_ndarray(const MatrixXd& m) {
 	if (m.cols() == 1) {
 		py::tuple shape = py::make_tuple(m.rows());
 		np::dtype dtype = np::dtype::get_builtin<float>();

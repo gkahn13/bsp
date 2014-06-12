@@ -545,7 +545,7 @@ void plot_beams(std::vector<Beam>& beams) {
 		for(int i=0; i < beams.size(); ++i) {
 			Matrix<double,2,3> m;
 			m << beams[i].base, beams[i].a, beams[i].b;
-//			beams_pylist.append(planar_utils::eigen_to_ndarray(m));
+			beams_pylist.append(planar_utils::eigen_to_ndarray(m));
 		}
 
 		plot_beams(beams_pylist, true);

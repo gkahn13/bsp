@@ -10,6 +10,8 @@ if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
   add_definitions("-fno-strict-aliasing -g -Wall -Wno-sign-compare")
 endif( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
 
+add_definitions(${CMAKE_CXX_FLAGS} "-std=c++0x")
+
 #set(MY_LIBRARIES "dl")
 
 set(FADBAD_INCLUDE_DIR "/home/gkahn/source/FADBAD++")

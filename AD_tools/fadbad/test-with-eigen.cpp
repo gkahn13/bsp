@@ -13,6 +13,18 @@ typedef Eigen::Matrix<bdouble, 2, 2> MatrixB;
 typedef Eigen::Matrix<bdouble, Dynamic, Dynamic > MatrixBd;
 typedef Eigen::Matrix<bdouble, Dynamic, 1> VectorBd;
 
+template <size_t _dim0, size_t _dim1>
+using mat = Matrix<double, _dim0, _dim1>;
+
+template <size_t _dim>
+using vec = Matrix<double, _dim, 1>;
+
+template <size_t _dim0, size_t _dim1>
+using matb = Matrix<bdouble, _dim0, _dim1>;
+
+template <size_t _dim>
+using vecb = Matrix<bdouble, _dim, 1>;
+
 namespace Eigen {
 template<> struct NumTraits<bdouble >
 : NumTraits<double> // permits to get the epsilon, dummy_precision, lowest, highest functions
@@ -134,9 +146,38 @@ void test_matrix_operations() {
 //	std::cout << "m_inv:\n" << m_inv << "\n";
 }
 
+template <typename MAT, typename T>
+void func_template(const MAT& m, T &f) {
+	MAT m_inv = m.inverse();
+	f = m_inv.sum();
+}
+
+void test_template() {
+//	mat<2,2> m = 3*mat<2,2>::Identity();
+//	double f;
+//	func_template(m, f);
+//	std::cout << f << "\n";
+
+	matb<2,2> m = 3*matb<2,2>::Identity();
+	bdouble f;
+	func_template(m, f);
+
+	f.diff(0,1);        // Differentiate f (index 0 of 1)
+	double fval=f.x();  // Value of function
+	double dfd00 = m(0,0).d(0);
+	double dfd10 = m(1,0).d(0);
+	double dfd01 = m(0,1).d(0);
+	double dfd11 = m(1,1).d(0);
+
+	std::cout << "f(x,y)=" << fval << "\n";
+	std::cout << dfd00 << "\t" << dfd10 << "\n";
+	std::cout << dfd01 << "\t" << dfd11 << "\n";
+}
+
 int main(int argc, char* argv[]) {
 //	test_backward();
 //	test_backward_eigen();
 //	test_matrix_func();
-	test_matrix_operations();
+//	test_matrix_operations();
+	test_template();
 }

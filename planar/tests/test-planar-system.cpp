@@ -201,11 +201,14 @@ void test_belief_dynamics() {
 //		X[t+1] = sys.dynfunc(X[t], U[t], zeros<vec>(U_DIM));
 		sys.belief_dynamics(X[t], S[t], U[t], .1, X[t+1], S[t+1]);
 //		std::cout << "S:\n" << S[t] << "\n\n";
+//		std::cout << "trace(S): " << trace(S[t]) << "\n";
 	}
 
 	double cost = sys.cost(X, sigma0, U, alpha);
 	std::cout << "Cost: " << cost << "\n";
-//
+
+//	return;
+
 	vec grad = sys.cost_grad(X, sigma0, U, alpha);
 	int index = 0;
 	for(int t=0; t < T; ++t) {

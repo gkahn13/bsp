@@ -47,29 +47,28 @@ void TimerCollection::clear_all() {
 
 namespace planar_utils {
 
-np::ndarray eigen_to_ndarray(VectorXd& m) {
-	py::tuple shape = py::make_tuple(m.rows());
-	np::dtype dtype = np::dtype::get_builtin<float>();
-	np::ndarray n = np::zeros(shape, dtype);
-	for(int i=0; i < m.rows(); ++i) {
-		n[py::make_tuple(i)] = m(i);
-	}
-
-	return n;
-}
-
-
-np::ndarray eigen_to_ndarray(MatrixXd& m) {
-	py::tuple shape = py::make_tuple(m.rows(), m.cols());
-	np::dtype dtype = np::dtype::get_builtin<float>();
-	np::ndarray n = np::zeros(shape, dtype);
-	for(int i=0; i < m.rows(); ++i) {
-		for(int j=0; j < m.cols(); ++j) {
-			n[py::make_tuple(i,j)] = m(i,j);
+template<typename Derived>
+np::ndarray eigen_to_ndarray(const EigenBase<Derived>& m) {
+	if (m.cols() == 1) {
+		py::tuple shape = py::make_tuple(m.rows());
+		np::dtype dtype = np::dtype::get_builtin<float>();
+		np::ndarray n = np::zeros(shape, dtype);
+		for(int i=0; i < m.rows(); ++i) {
+			n[py::make_tuple(i)] = m(i);
 		}
-	}
+		return n;
+	} else {
+		py::tuple shape = py::make_tuple(m.rows(), m.cols());
+		np::dtype dtype = np::dtype::get_builtin<float>();
+		np::ndarray n = np::zeros(shape, dtype);
+		for(int i=0; i < m.rows(); ++i) {
+			for(int j=0; j < m.cols(); ++j) {
+				n[py::make_tuple(i,j)] = m(i,j);
+			}
+		}
 
-	return n;
+		return n;
+	}
 }
 
 }

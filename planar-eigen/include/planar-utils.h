@@ -4,6 +4,7 @@
 #include <Python.h>
 
 #include <map>
+#include <iostream>
 
 #include <boost/python.hpp>
 #include <boost/python/numeric.hpp>
@@ -45,8 +46,8 @@ inline double uniform(double low, double high) {
 	return (high - low)*(rand() / double(RAND_MAX)) + low;
 }
 
-np::ndarray eigen_to_ndarray(VectorXd& m);
-np::ndarray eigen_to_ndarray(MatrixXd& m);
+template<typename Derived>
+np::ndarray eigen_to_ndarray(const EigenBase<Derived>& m);
 
 }
 

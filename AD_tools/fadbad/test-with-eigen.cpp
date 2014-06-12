@@ -176,10 +176,23 @@ void test_template() {
 	std::cout << dfd01 << "\t" << dfd11 << "\n";
 }
 
+void pass_vector(std::vector<vec<2>, aligned_allocator<vec<2>>> &X) {
+	X[0] = vec<2>::Ones();
+}
+
+void test_vector() {
+	std::vector<vec<2>, aligned_allocator<vec<2>>> X;
+	X.push_back(vec<2>::Zero());
+	std::cout << X[0].transpose() << "\n";
+	pass_vector(X);
+	std::cout << X[0].transpose() << "\n";
+}
+
 int main(int argc, char* argv[]) {
 //	test_backward();
 //	test_backward_eigen();
-	test_matrix_func();
+//	test_matrix_func();
 //	test_matrix_operations();
 //	test_template();
+	test_vector();
 }

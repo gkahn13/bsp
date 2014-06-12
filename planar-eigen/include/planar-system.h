@@ -16,6 +16,8 @@ namespace py = boost::python;
 namespace np = boost::numpy;
 
 #include <Eigen/Eigen>
+//#define EIGEN_USE_NEW_STDVECTOR
+#include <Eigen/StdVector>
 using namespace Eigen;
 
 #include "badiff.h"
@@ -24,6 +26,7 @@ typedef B<double> bdouble;
 
 #include "../../util/logging.h"
 
+#define TIMESTEPS 10
 #define DT 1.0 // Note: if you change this, must change the FORCES matlab file
 #define J_DIM 4 // joint dimension (three for robot, one for camera)
 #define C_DIM 2 // object dimension
@@ -33,13 +36,16 @@ typedef B<double> bdouble;
 #define Z_DIM 6
 #define R_DIM 6
 
+#define TOTAL_VARS (TIMESTEPS*X_DIM + (TIMESTEPS-1)*U_DIM)
+
 #define L_DIM 3 // number of links
 
-//template <size_t _dim0, size_t _dim1>
-//using mat = Matrix<double, _dim0, _dim1>;
-//
-//template <size_t _dim>
-//using vec = Matrix<double, _dim, 1>;
+template <size_t _dim0, size_t _dim1>
+using mat = Matrix<double, _dim0, _dim1>;
+
+template <size_t _dim>
+using vec = Matrix<double, _dim, 1>;
+
 
 //template <size_t _dim0, size_t _dim1>
 //using matb = Matrix<bdouble, _dim0, _dim1>;
@@ -57,48 +63,49 @@ class PlanarSystem {
 	const double alpha_goal = 10;
 
 public:
-	PlanarSystem(const VectorXd& camera_origin, const VectorXd& object, bool is_static);
+	PlanarSystem(const vec<2>& camera_origin, const vec<2>& object, bool is_static);
 
 //	template< template <class> class VEC, class _xDim, class _uDim, class _qDim>
-	VectorXd dynfunc(const VectorXd& x, const VectorXd& u, const VectorXd& q, bool enforce_limits=false);
-	VectorXd obsfunc(const VectorXd& x, const VectorXd& object, const VectorXd& r);
+	vec<X_DIM> dynfunc(const vec<X_DIM>& x, const vec<U_DIM>& u, const vec<Q_DIM>& q, bool enforce_limits=false);
+	vec<Z_DIM> obsfunc(const vec<X_DIM>& x, const vec<2>& object, const vec<R_DIM>& r);
 
-	MatrixXd delta_matrix(const VectorXd& x, const VectorXd& object, const double alpha);
+	mat<Z_DIM,Z_DIM> delta_matrix(const vec<X_DIM>& x, const vec<2>& object, const double alpha);
 
-	void belief_dynamics(const VectorXd& x_t, const MatrixXd& sigma_t, const VectorXd& u_t, const double alpha, VectorXd& x_tp1, MatrixXd& sigma_tp1);
-	void execute_control_step(const VectorXd& x_t_real, const VectorXd& x_t_t, const MatrixXd& sigma_t_t, const VectorXd& u_t,
-			VectorXd& x_tp1_real, VectorXd& x_tp1_tp1, MatrixXd& sigma_tp1_tp1);
+	void belief_dynamics(const vec<X_DIM>& x_t, const mat<X_DIM,X_DIM>& sigma_t, const vec<U_DIM>& u_t, const double alpha,
+			vec<X_DIM>& x_tp1, mat<X_DIM,X_DIM>& sigma_tp1);
+	void execute_control_step(const vec<X_DIM>& x_t_real, const vec<X_DIM>& x_t_t, const mat<X_DIM,X_DIM>& sigma_t_t, const vec<U_DIM>& u_t,
+			vec<X_DIM>& x_tp1_real, vec<X_DIM>& x_tp1_tp1, mat<X_DIM,X_DIM>& sigma_tp1_tp1);
 
-	std::vector<Beam> get_fov(const VectorXd& x);
-	std::vector<Segment> get_link_segments(const VectorXd& x);
+	std::vector<Beam> get_fov(const vec<X_DIM>& x);
+	std::vector<Segment> get_link_segments(const vec<X_DIM>& x);
 
-	void display(VectorXd& x, MatrixXd& sigma, bool pause=true);
-	void display(std::vector<VectorXd>& X, MatrixXd& sigma0, std::vector<VectorXd>& U, const double alpha, bool pause=true);
-	void display(std::vector<VectorXd>& X, std::vector<MatrixXd>& S, bool pause=true);
+	void display(vec<X_DIM>& x, mat<X_DIM,X_DIM>& sigma, bool pause=true);
+	void display(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, mat<X_DIM,X_DIM>& sigma0, std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha, bool pause=true);
+	void display(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, std::vector<mat<X_DIM,X_DIM>, aligned_allocator<mat<X_DIM,X_DIM>>>& S, bool pause=true);
 
-	void get_limits(VectorXd& x_min, VectorXd& x_max, VectorXd& u_min, VectorXd& u_max);
+	void get_limits(vec<X_DIM>& x_min, vec<X_DIM>& x_max, vec<U_DIM>& u_min, vec<U_DIM>& u_max);
 
-	double cost(const std::vector<VectorXd>& X, const MatrixXd& sigma0, const std::vector<VectorXd>& U, const double alpha);
-	VectorXd cost_grad(std::vector<VectorXd>& X, const MatrixXd& sigma0, std::vector<VectorXd>& U, const double alpha);
+	double cost(const std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, const mat<X_DIM,X_DIM>& sigma0, const std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha);
+	vec<TOTAL_VARS> cost_grad(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, const mat<X_DIM,X_DIM>& sigma0, std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha);
 
 private:
 	bool is_static;
-	VectorXd camera_origin;
+	vec<2> camera_origin;
 	double camera_fov, camera_max_dist;
-	VectorXd object;
+	vec<2> object;
 
-	VectorXd robot_origin;
-	VectorXd link_lengths;
+	vec<2> robot_origin;
+	vec<L_DIM> link_lengths;
 
-	MatrixXd Q;
-	MatrixXd R;
-	VectorXd x_min, x_max;
-	VectorXd u_min, u_max;
+	mat<Q_DIM,Q_DIM> Q;
+	mat<R_DIM,R_DIM> R;
+	vec<X_DIM> x_min, x_max;
+	vec<U_DIM> u_min, u_max;
 
-	void init(const VectorXd& camera_origin, const VectorXd& object, bool is_static);
+	void init(const vec<2>& camera_origin, const vec<2>& object, bool is_static);
 
-	void linearize_dynfunc(const VectorXd& x, const VectorXd& u, const VectorXd& q, MatrixXd& A, MatrixXd& M);
-	void linearize_obsfunc(const VectorXd& x, const VectorXd& r, MatrixXd& H, MatrixXd& N);
+	void linearize_dynfunc(const vec<X_DIM>& x, const vec<U_DIM>& u, const vec<Q_DIM>& q, mat<X_DIM,X_DIM>& A, mat<X_DIM,Q_DIM>& M);
+	void linearize_obsfunc(const vec<X_DIM>& x, const vec<R_DIM>& r, mat<Z_DIM,X_DIM>& H, mat<Z_DIM,R_DIM>& N);
 };
 
 #endif

@@ -1,7 +1,5 @@
 #include "../include/planar-system.h"
 
-TimerCollection tc;
-
 /**
  * Constructors and initializers
  */
@@ -79,7 +77,6 @@ vec PlanarSystem::obsfunc(const vec& x, const vec& object, const vec& r) {
 }
 
 mat PlanarSystem::delta_matrix(const vec& x, const vec& object, const double alpha) {
-	tc.start("delta_matrix");
 	mat delta(Z_DIM, Z_DIM, fill::zeros);
 
 	for(int i=0; i < J_DIM; ++i) {
@@ -87,15 +84,12 @@ mat PlanarSystem::delta_matrix(const vec& x, const vec& object, const double alp
 	}
 
 	std::vector<Beam> fov = get_fov(x);
-	tc.start("signed_distance");
 	double sd = geometry2d::signed_distance(object, fov);
-	tc.stop("signed_distance");
 	double sd_sigmoid = 1.0 - 1.0/(1.0 + exp(-alpha*sd));
 	for(int i=J_DIM; i < X_DIM; ++i) {
 		delta(i, i) = sd_sigmoid;
 	}
 
-	tc.stop("delta_matrix");
 	return delta;
 }
 
@@ -157,7 +151,6 @@ void PlanarSystem::execute_control_step(const vec& x_t_real, const vec& x_t_t, c
  * (in our case only the robot links) to truncate the FOV
  */
 std::vector<Beam> PlanarSystem::get_fov(const vec& x) {
-	tc.start("get_fov");
 	std::vector<Beam> beams, new_beams;
 
 	// start out with full field of view
@@ -184,7 +177,6 @@ std::vector<Beam> PlanarSystem::get_fov(const vec& x) {
 		beams = new_beams;
 	}
 
-	tc.stop("get_fov");
 	return beams;
 }
 

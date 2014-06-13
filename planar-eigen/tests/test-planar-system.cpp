@@ -188,7 +188,8 @@ void test_belief_dynamics() {
 	double alpha = 1;
 
 	// initialize state and controls
-	std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>> U(T-1, vec<U_DIM>::Zero());
+	std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>> U(T-1, {.05, -.03, .01, -.02});
+	U[T-2] = vec<U_DIM>::Zero();
 	std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>> X(T);
 	std::vector<mat<X_DIM,X_DIM>, aligned_allocator<mat<X_DIM,X_DIM>>> S(T);
 	X[0] = x0;
@@ -204,7 +205,7 @@ void test_belief_dynamics() {
 	double cost = sys.cost(X, sigma0, U, alpha);
 	std::cout << "Cost: " << cost << "\n";
 
-	vec<TOTAL_VARS> grad = sys.cost_grad(X, sigma0, U, alpha);
+	vec<TOTAL_VARS> grad = sys.cost_grad(X, sigma0, U, alpha, true);
 	int index = 0;
 	for(int t=0; t < T; ++t) {
 		std::cout << "t: " << t << "\n";
@@ -216,7 +217,7 @@ void test_belief_dynamics() {
 		}
 	}
 
-	sys.display(X, S);
+//	sys.display(X, S);
 }
 
 
@@ -224,6 +225,6 @@ int main(int argc, char* argv[]) {
 //	test_display();
 //	test_beams();
 //	test_sd();
-	test_truncate_gaussian();
-//	test_belief_dynamics();
+//	test_truncate_gaussian();
+	test_belief_dynamics();
 }

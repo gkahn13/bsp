@@ -5,6 +5,7 @@
 
 #include "planar-utils.h"
 #include "geometry2d.h"
+#include "../fadbad/fadbad-planar-system.h"
 
 #include <boost/python.hpp>
 #include <boost/python/numeric.hpp>
@@ -19,9 +20,6 @@ namespace np = boost::numpy;
 #include <Eigen/StdVector>
 using namespace Eigen;
 
-#include "badiff.h"
-using namespace fadbad;
-typedef B<double> bdouble;
 
 #include "../../util/logging.h"
 
@@ -45,12 +43,6 @@ using mat = Matrix<double, _dim0, _dim1>;
 template <size_t _dim>
 using vec = Matrix<double, _dim, 1>;
 
-
-//template <size_t _dim0, size_t _dim1>
-//using matb = Matrix<bdouble, _dim0, _dim1>;
-//
-//template <size_t _dim>
-//using vecb = Matrix<bdouble, _dim, 1>;
 
 class PlanarSystem {
 	const double step = 0.0078125*0.0078125;
@@ -85,7 +77,8 @@ public:
 	void get_limits(vec<X_DIM>& x_min, vec<X_DIM>& x_max, vec<U_DIM>& u_min, vec<U_DIM>& u_max);
 
 	double cost(const std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, const mat<X_DIM,X_DIM>& sigma0, const std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha);
-	vec<TOTAL_VARS> cost_grad(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, const mat<X_DIM,X_DIM>& sigma0, std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha);
+	vec<TOTAL_VARS> cost_grad(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, const mat<X_DIM,X_DIM>& sigma0,
+			std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha, bool use_fadbad=true);
 
 private:
 	bool is_static;
@@ -100,6 +93,8 @@ private:
 	mat<R_DIM,R_DIM> R;
 	vec<X_DIM> x_min, x_max;
 	vec<U_DIM> u_min, u_max;
+
+	FadbadPlanarSystem fps;
 
 	void init(const vec<2>& camera_origin, const vec<2>& object, bool is_static);
 

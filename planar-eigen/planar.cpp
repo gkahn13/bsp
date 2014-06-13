@@ -9,6 +9,8 @@ planarMPC_FLOAT **H, **f, **lb, **ub, **z, **c;
 const int T = TIMESTEPS;
 const double INFTY = 1e10;
 
+const bool USE_FADBAD = false;
+
 namespace cfg {
 const double alpha_init = .01; // 1
 const double alpha_gain = 3; // 3
@@ -210,7 +212,7 @@ double planar_collocation(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>
 		if (solution_accepted) {
 
 			if (it == 0) {
-				grad = sys.cost_grad(X, sigma0, U, alpha);
+				grad = sys.cost_grad(X, sigma0, U, alpha, USE_FADBAD);
 			} else {
 				grad = gradopt; // since L-BFGS calculation required it
 			}
@@ -364,7 +366,7 @@ double planar_collocation(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>
 			Ueps *= cfg::trust_expand_ratio;
 			LOG_DEBUG("Accepted, Increasing trust region size to:  %2.6f %2.6f", Xeps, Ueps);
 
-			gradopt = sys.cost_grad(Xopt, sigma0, Uopt, alpha);
+			gradopt = sys.cost_grad(Xopt, sigma0, Uopt, alpha, USE_FADBAD);
 			L_BFGS(X, U, grad, Xopt, Uopt, gradopt, hess);
 
 			X = Xopt; U = Uopt;

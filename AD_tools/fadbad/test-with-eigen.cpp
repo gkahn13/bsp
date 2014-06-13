@@ -50,12 +50,12 @@ inline const bdouble& real(const bdouble& x) { return x; }
 inline bdouble imag(const bdouble&) { return 0.; }
 inline bdouble abs(const bdouble& x) { return (x < 0) ? -x : x; }
 inline bdouble abs2(const bdouble& x) { return x*x; }
-inline bdouble sqrt(const bdouble& x)  { return sqrt(x); }
-inline bdouble exp(const bdouble&  x)  { return exp(x); }
-inline bdouble log(const bdouble&  x)  { return log(x); }
-inline bdouble sin(const bdouble&  x)  { return sin(x); }
-inline bdouble cos(const bdouble&  x)  { return cos(x); }
-inline bdouble pow(const bdouble& x, bdouble y)  { return pow(x, y); }
+//inline bdouble sqrt(const bdouble& x)  { return sqrt(x); }
+//inline bdouble exp(const bdouble&  x)  { return exp(x); }
+//inline bdouble log(const bdouble& x)  { return log(x); }
+//inline bdouble sin(const bdouble&  x)  { return sin(x); }
+//inline bdouble cos(const bdouble&  x)  { return cos(x); }
+//inline bdouble pow(const bdouble& x, bdouble y)  { return pow(x, y); }
 }
 
 bdouble func(const bdouble& x, const bdouble& y) {
@@ -128,8 +128,8 @@ void test_matrix_func() {
 
 // can't invert dynamic matrix?
 void test_matrix_operations() {
-	MatrixXd m = 3*MatrixXd::Identity(2,2);
-	m.llt().solve(MatrixXd::Identity(2,2));
+//	MatrixXd m = 3*MatrixXd::Identity(2,2);
+//	m.llt().solve(MatrixXd::Identity(2,2));
 //	Eigen::LDLT<MatrixB> ldlt(m);
 //	MatrixB m_inv = ldlt.solve(MatrixB::Identity());
 //	std::cout << m_inv(0,0).x() << "\n";
@@ -146,6 +146,21 @@ void test_matrix_operations() {
 //	std::cout << "m:\n" << m << "\n";
 //	MatrixXd m_inv = m.inverse();
 //	std::cout << "m_inv:\n" << m_inv << "\n";
+
+//	VectorB v = {1, 1};
+//	std::cout << v(0).x() << " " << v(1).x() << "\n";
+//	bdouble scalar = 2;
+//	VectorB v2 = v;
+//	for(int i=0; i < v2.rows(); ++i) { v2(i) *= scalar; }
+//	std::cout << v2(0).x() << " " << v2(1).x() << "\n";
+
+	VectorB v = {.5, .5};
+	VectorB cosv = cos(v);
+	std::cout << cosv(0).x() << " " << cosv(1).x() << "\n";
+
+//	bdouble x = .5;
+//	bdouble cosx = cos(x);
+//	std::cout << x.x() << "\n";
 }
 
 template <typename MAT, typename T>
@@ -192,7 +207,7 @@ int main(int argc, char* argv[]) {
 //	test_backward();
 //	test_backward_eigen();
 //	test_matrix_func();
-//	test_matrix_operations();
+	test_matrix_operations();
 //	test_template();
-	test_vector();
+//	test_vector();
 }

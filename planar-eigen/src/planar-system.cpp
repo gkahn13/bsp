@@ -33,6 +33,8 @@ void PlanarSystem::init(const vec<2>& camera_origin, const vec<2>& object, bool 
 	double max_input = M_PI/12;
 	u_min << -max_input, -max_input, -max_input, (is_static) ? 0 : -max_input;
 	u_max << max_input, max_input, max_input, (is_static) ? 0 : max_input;
+
+	fps.init(camera_origin.cast<bdouble>(), object.cast<bdouble>(), is_static);
 }
 
 
@@ -290,40 +292,72 @@ double PlanarSystem::cost(const std::vector<vec<X_DIM>, aligned_allocator<vec<X_
 	return cost;
 }
 
-vec<TOTAL_VARS> PlanarSystem::cost_grad(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, const mat<X_DIM,X_DIM>& sigma0, std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha) {
+vec<TOTAL_VARS> PlanarSystem::cost_grad(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, const mat<X_DIM,X_DIM>& sigma0,
+		std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha, bool use_fadbad) {
 	int T = X.size();
 
 	vec<TOTAL_VARS> grad;
-	double orig, cost_p, cost_m;
-	int index = 0;
-	for(int t=0; t < T; ++t) {
-		for(int i=0; i < X_DIM; ++i) {
-			orig = X[t][i];
 
-			X[t][i] = orig + step;
-			cost_p = cost(X, sigma0, U, alpha);
+	if (use_fadbad) {
+		std::vector<vecb<X_DIM>, aligned_allocator<vecb<X_DIM>>> X_b(X.size());
+		matb<X_DIM,X_DIM> sigma0_b = sigma0.cast<bdouble>();
+		std::vector<vecb<U_DIM>, aligned_allocator<vecb<U_DIM>>> U_b(U.size());
+		bdouble alpha_b = (bdouble)alpha;
 
-			X[t][i] = orig - step;
-			cost_m = cost(X, sigma0, U, alpha);
-
-			grad(index++) = (cost_p - cost_m) / (2*step);
+		for(int t=0; t < X.size(); ++t) {
+			X_b[t] = X[t].cast<bdouble>();
+			if(t < X.size()-1) {
+				U_b[t] = U[t].cast<bdouble>();
+			}
 		}
 
-		if (t < T-1) {
-			for(int i=0; i < U_DIM; ++i) {
-				orig = U[t][i];
+		bdouble cost_b = fps.cost(X_b, sigma0_b, U_b, alpha_b);
 
-				U[t][i] = orig + step;
+		cost_b.diff(0,1);
+		int index = 0;
+		for(int t=0; t < X.size(); ++t) {
+			for(int i=0; i < X_DIM; ++i) {
+				grad(index++) = X_b[t](i).d(0);
+			}
+
+			if (t < X.size()-1) {
+				for(int i=0; i < U_DIM; ++i) {
+					grad(index++) = U_b[t](i).d(0);
+				}
+			}
+		}
+	} else {
+
+		double orig, cost_p, cost_m;
+		int index = 0;
+		for(int t=0; t < T; ++t) {
+			for(int i=0; i < X_DIM; ++i) {
+				orig = X[t][i];
+
+				X[t][i] = orig + step;
 				cost_p = cost(X, sigma0, U, alpha);
 
-				U[t][i] = orig - step;
+				X[t][i] = orig - step;
 				cost_m = cost(X, sigma0, U, alpha);
 
 				grad(index++) = (cost_p - cost_m) / (2*step);
 			}
+
+			if (t < T-1) {
+				for(int i=0; i < U_DIM; ++i) {
+					orig = U[t][i];
+
+					U[t][i] = orig + step;
+					cost_p = cost(X, sigma0, U, alpha);
+
+					U[t][i] = orig - step;
+					cost_m = cost(X, sigma0, U, alpha);
+
+					grad(index++) = (cost_p - cost_m) / (2*step);
+				}
+			}
 		}
 	}
-
 	return grad;
 }
 

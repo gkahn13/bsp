@@ -204,10 +204,9 @@ bool PlanarSystem::ik(const vec<C_DIM>& ee_goal, vec<E_DIM>& j) {
 		double alpha = error.dot(jac_jacT_error) / jac_jacT_error.dot(jac_jacT_error);
 		j += alpha*ee_pos_jac.transpose()*error;
 
-		if (iter > max_iter) {
+		if (iter++ > max_iter) {
 			return false;
 		}
-		iter++;
 	}
 
 	// check limits
@@ -219,102 +218,6 @@ bool PlanarSystem::ik(const vec<C_DIM>& ee_goal, vec<E_DIM>& j) {
 	}
 
 	return true;
-}
-
-
-void PlanarSystem::display(const vec<X_DIM>& x, const mat<X_DIM,X_DIM>& sigma, bool pause) {
-	mat<C_DIM,M_DIM> P;
-	display(x, sigma, P, pause, false);
-}
-
-void PlanarSystem::display(const std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, const mat<X_DIM,X_DIM>& sigma0,
-		const std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha, bool pause) {
-	mat<C_DIM,M_DIM> P;
-	display(X, sigma0, U, P, alpha, pause, false);
-}
-
-void PlanarSystem::display(const std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, const std::vector<mat<X_DIM,X_DIM>, aligned_allocator<mat<X_DIM,X_DIM>>>& S, bool pause) {
-	mat<C_DIM,M_DIM> P;
-	display(X, S, P, pause, false);
-}
-
-void PlanarSystem::display(const vec<X_DIM>& x, const mat<X_DIM,X_DIM>& sigma, const mat<C_DIM,M_DIM>& P, bool pause, bool plot_particles) {
-	std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>> X(1, x);
-	std::vector<mat<X_DIM,X_DIM>, aligned_allocator<mat<X_DIM,X_DIM>>> S(1, sigma);
-	display(X, S, P, pause, plot_particles);
-}
-
-void PlanarSystem::display(const std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X,
-		const mat<X_DIM,X_DIM>& sigma0, const std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const mat<C_DIM,M_DIM>& P, const double alpha, bool pause, bool plot_particles) {
-	int T = X.size();
-
-	std::vector<mat<X_DIM,X_DIM>, aligned_allocator<mat<X_DIM,X_DIM>>> S(T);
-	S[0] = sigma0;
-	vec<X_DIM> x_tp1;
-	for(int t=0; t < T-1; ++t) {
-		belief_dynamics(X[t], S[t], U[t], alpha, x_tp1, S[t+1]);
-	}
-	display(X, S, P, pause, plot_particles);
-}
-
-void PlanarSystem::display(const std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X,
-		const std::vector<mat<X_DIM,X_DIM>, aligned_allocator<mat<X_DIM,X_DIM>>>& S, const mat<C_DIM,M_DIM>& P, bool pause, bool plot_particles) {
-	Py_Initialize();
-	np::initialize();
-
-	py::numeric::array::set_module_and_type("numpy", "ndarray");
-
-	py::list X_pylist, S_pylist;
-	for(int t=0; t < X.size(); ++t) {
-		X_pylist.append(planar_utils::eigen_to_ndarray(X[t]));
-		S_pylist.append(planar_utils::eigen_to_ndarray(S[t]));
-	}
-
-	np::ndarray P_ndarray = planar_utils::eigen_to_ndarray(P);
-	np::ndarray robot_origin_ndarray = planar_utils::eigen_to_ndarray(robot_origin);
-	np::ndarray link_lengths_ndarray = planar_utils::eigen_to_ndarray(link_lengths);
-	np::ndarray camera_origin_ndarray = planar_utils::eigen_to_ndarray(camera_origin);
-	np::ndarray object_ndarray = planar_utils::eigen_to_ndarray(object);
-
-	py::list beams_pylist;
-	std::vector<Beam> beams = get_fov(X.back());
-
-	for(int i=0; i < beams.size(); ++i) {
-		mat<2,3> m;
-		m << beams[i].base, beams[i].a, beams[i].b;
-		beams_pylist.append(planar_utils::eigen_to_ndarray(m));
-	}
-
-	std::string working_dir = boost::filesystem::current_path().normalize().string();
-	std::string bsp_dir = working_dir.substr(0,working_dir.find("bsp"));
-	std::string planar_dir = bsp_dir + "bsp/planar";
-
-	try
-	{
-		py::object main_module = py::import("__main__");
-		py::object main_namespace = main_module.attr("__dict__");
-		py::exec("import sys, os", main_namespace);
-		py::exec(py::str("sys.path.append('"+planar_dir+"')"), main_namespace);
-		py::object plot_mod = py::import("plot_planar");
-		py::object plot_planar = plot_mod.attr("plot_planar");
-
-		if (plot_particles) {
-			plot_planar(X_pylist, S_pylist, P_ndarray, robot_origin_ndarray, link_lengths_ndarray,
-							camera_origin_ndarray, camera_fov, object_ndarray, beams_pylist);
-		} else {
-			plot_planar(X_pylist, S_pylist, NULL, robot_origin_ndarray, link_lengths_ndarray,
-					camera_origin_ndarray, camera_fov, object_ndarray, beams_pylist);
-		}
-
-		if (pause) {
-			LOG_INFO("Press enter to continue");
-			py::exec("raw_input()",main_namespace);
-		}
-	}
-	catch(py::error_already_set const &)
-	{
-		PyErr_Print();
-	}
 }
 
 void PlanarSystem::get_limits(vec<X_DIM>& x_min, vec<X_DIM>& x_max, vec<U_DIM>& u_min, vec<U_DIM>& u_max) {
@@ -421,6 +324,130 @@ void PlanarSystem::cost_and_cost_grad(std::vector<vec<X_DIM>, aligned_allocator<
 				}
 			}
 		}
+	}
+}
+
+bool PlanarSystem::should_reinitialize(const vec<X_DIM>& x, const mat<X_DIM,X_DIM>& sigma, const mat<C_DIM,M_DIM>& P) {
+	vec<C_DIM> obj_mean = x.segment<C_DIM>(J_DIM);
+	mat<C_DIM,C_DIM> obj_cov_inv = sigma.block<C_DIM,C_DIM>(J_DIM,J_DIM).inverse();
+
+	double sd_thresh = 1; // threshold is in terms of standard deviation
+	int num_within_thresh = 0;
+	for(int m=0; m < M_DIM; ++m) {
+		vec<C_DIM> diff = P.col(m) - obj_mean;
+		double dist = sqrt(diff.dot(obj_cov_inv*diff));
+		if (dist < sd_thresh) {
+			num_within_thresh++;
+		}
+	}
+
+	std::cout << "num_within_thresh: " << num_within_thresh << "\n";
+	return (num_within_thresh < (.01*double(M_DIM)));
+}
+
+void PlanarSystem::reinitialize(const mat<C_DIM,M_DIM>& P, vec<C_DIM>& new_mean, mat<C_DIM,C_DIM>& new_cov) {
+	new_mean = P.rowwise().mean();
+
+	mat<C_DIM,M_DIM> P_centered = P.colwise() - P.rowwise().mean();
+	new_cov = (1/(double(M_DIM)-1))*(P_centered*P_centered.transpose());
+}
+
+/**
+ * Display methods
+ */
+
+void PlanarSystem::display(const vec<X_DIM>& x, const mat<X_DIM,X_DIM>& sigma, bool pause) {
+	mat<C_DIM,M_DIM> P;
+	display(x, sigma, P, pause, false);
+}
+
+void PlanarSystem::display(const std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, const mat<X_DIM,X_DIM>& sigma0,
+		const std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha, bool pause) {
+	mat<C_DIM,M_DIM> P;
+	display(X, sigma0, U, P, alpha, pause, false);
+}
+
+void PlanarSystem::display(const std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, const std::vector<mat<X_DIM,X_DIM>, aligned_allocator<mat<X_DIM,X_DIM>>>& S, bool pause) {
+	mat<C_DIM,M_DIM> P;
+	display(X, S, P, pause, false);
+}
+
+void PlanarSystem::display(const vec<X_DIM>& x, const mat<X_DIM,X_DIM>& sigma, const mat<C_DIM,M_DIM>& P, bool pause, bool plot_particles) {
+	std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>> X(1, x);
+	std::vector<mat<X_DIM,X_DIM>, aligned_allocator<mat<X_DIM,X_DIM>>> S(1, sigma);
+	display(X, S, P, pause, plot_particles);
+}
+
+void PlanarSystem::display(const std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X,
+		const mat<X_DIM,X_DIM>& sigma0, const std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const mat<C_DIM,M_DIM>& P, const double alpha, bool pause, bool plot_particles) {
+	int T = X.size();
+
+	std::vector<mat<X_DIM,X_DIM>, aligned_allocator<mat<X_DIM,X_DIM>>> S(T);
+	S[0] = sigma0;
+	vec<X_DIM> x_tp1;
+	for(int t=0; t < T-1; ++t) {
+		belief_dynamics(X[t], S[t], U[t], alpha, x_tp1, S[t+1]);
+	}
+	display(X, S, P, pause, plot_particles);
+}
+
+void PlanarSystem::display(const std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X,
+		const std::vector<mat<X_DIM,X_DIM>, aligned_allocator<mat<X_DIM,X_DIM>>>& S, const mat<C_DIM,M_DIM>& P, bool pause, bool plot_particles) {
+	Py_Initialize();
+	np::initialize();
+
+	py::numeric::array::set_module_and_type("numpy", "ndarray");
+
+	py::list X_pylist, S_pylist;
+	for(int t=0; t < X.size(); ++t) {
+		X_pylist.append(planar_utils::eigen_to_ndarray(X[t]));
+		S_pylist.append(planar_utils::eigen_to_ndarray(S[t]));
+	}
+
+	np::ndarray P_ndarray = planar_utils::eigen_to_ndarray(P);
+	np::ndarray robot_origin_ndarray = planar_utils::eigen_to_ndarray(robot_origin);
+	np::ndarray link_lengths_ndarray = planar_utils::eigen_to_ndarray(link_lengths);
+	np::ndarray camera_origin_ndarray = planar_utils::eigen_to_ndarray(camera_origin);
+	np::ndarray object_ndarray = planar_utils::eigen_to_ndarray(object);
+
+	py::list beams_pylist;
+	std::vector<Beam> beams = get_fov(X.back());
+
+	for(int i=0; i < beams.size(); ++i) {
+		mat<2,3> m;
+		m << beams[i].base, beams[i].a, beams[i].b;
+		beams_pylist.append(planar_utils::eigen_to_ndarray(m));
+	}
+
+	std::string working_dir = boost::filesystem::current_path().normalize().string();
+	std::string bsp_dir = working_dir.substr(0,working_dir.find("bsp"));
+	std::string planar_dir = bsp_dir + "bsp/planar";
+
+	try
+	{
+		py::object main_module = py::import("__main__");
+		py::object main_namespace = main_module.attr("__dict__");
+		py::exec("import sys, os", main_namespace);
+		py::exec(py::str("sys.path.append('"+planar_dir+"')"), main_namespace);
+		py::object plot_mod = py::import("plot_planar");
+		py::object plot_planar = plot_mod.attr("plot_planar");
+
+		if (plot_particles) {
+			plot_planar(X_pylist, S_pylist, P_ndarray, robot_origin_ndarray, link_lengths_ndarray,
+							camera_origin_ndarray, camera_fov, object_ndarray, beams_pylist);
+		} else {
+			plot_planar(X_pylist, S_pylist, NULL, robot_origin_ndarray, link_lengths_ndarray,
+					camera_origin_ndarray, camera_fov, object_ndarray, beams_pylist);
+		}
+
+		if (pause) {
+			LOG_INFO("Press enter to continue");
+			py::exec("raw_input()",main_namespace);
+		}
+	}
+	catch(py::error_already_set const &)
+	{
+		PyErr_Print();
 	}
 }
 

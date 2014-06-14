@@ -353,10 +353,10 @@ double planar_collocation(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>
 		fill_col_major(b, bVec);
 
 		// Verify problem inputs
-		if (!is_valid_inputs()) {
-			LOG_ERROR("Inputs are not valid!");
-			exit(0);
-		}
+//		if (!is_valid_inputs()) {
+//			LOG_ERROR("Inputs are not valid!");
+//			exit(0);
+//		}
 
 		// call FORCES
 		int exitflag = planarMPC_solve(&problem, &output, &info);
@@ -525,6 +525,7 @@ int main(int argc, char* argv[]) {
 
 		vec<U_DIM> uinit = vec<U_DIM>::Zero();
 		uinit.segment<E_DIM>(0) = (j_goal - x0.segment<E_DIM>(0)) / (double)((T-1)*DT);
+		uinit(E_DIM) = atan((x0(X_DIM-1) - camera(1))/(x0(X_DIM-2) - camera(0))) / (double)((T-1)*DT);
 
 		X[0] = x0;
 		for(int t=0; t < T-1; ++t) {
@@ -582,14 +583,28 @@ int main(int argc, char* argv[]) {
 		LOG_DEBUG("Display truncated belief");
 		sys.display(x_tp1_tp1_trunc, sigma_tp1_tp1_trunc, pf_tracker.back());
 
+		stop_condition = sys.should_reinitialize(x_tp1_tp1_trunc, sigma_tp1_tp1_trunc, pf_tracker.back());
+		if (stop_condition) {
+			LOG_INFO("Stop condition met. Reinitializing");
+			vec<C_DIM> obj_mean_new;
+			mat<C_DIM,C_DIM> obj_cov_new;
+			sys.reinitialize(pf_tracker.back(), obj_mean_new, obj_cov_new);
+			x_tp1_tp1_trunc.segment<C_DIM>(J_DIM) = obj_mean_new;
+			sigma_tp1_tp1_trunc.block<C_DIM,C_DIM>(J_DIM,J_DIM) = obj_cov_new;
+			stop_condition = false;
+		}
+
 		// set start to the next time step
 		x0 = x_tp1_tp1_trunc;
 		sigma0 = sigma_tp1_tp1_trunc;
+
 
 		// no truncation
 		//		x0 = x_tp1_tp1;
 		//		sigma0 = sigma_tp1_tp1;
 
 	}
+
+	LOG_INFO("Stop condition met, exiting");
 
 }

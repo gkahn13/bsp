@@ -75,6 +75,18 @@ public:
 	void get_ee_pos_jac(vec<E_DIM>& j, mat<C_DIM,E_DIM>& ee_jac);
 	bool ik(const vec<C_DIM>& ee_goal, vec<E_DIM>& j);
 
+	void get_limits(vec<X_DIM>& x_min, vec<X_DIM>& x_max, vec<U_DIM>& u_min, vec<U_DIM>& u_max);
+
+	double cost(const std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, const mat<X_DIM,X_DIM>& sigma0, const std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha);
+	vec<TOTAL_VARS> cost_grad(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, const mat<X_DIM,X_DIM>& sigma0,
+			std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha);
+	void cost_and_cost_grad(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, const mat<X_DIM,X_DIM>& sigma0,
+			std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha, const bool use_fadbad,
+			double& cost, vec<TOTAL_VARS>& grad);
+
+	bool should_reinitialize(const vec<X_DIM>& x, const mat<X_DIM,X_DIM>& sigma, const mat<C_DIM,M_DIM>& P);
+	void reinitialize(const mat<C_DIM,M_DIM>& P, vec<C_DIM>& new_mean, mat<C_DIM,C_DIM>& new_cov);
+
 	void display(const vec<X_DIM>& x, const mat<X_DIM,X_DIM>& sigma, bool pause=true);
 	void display(const std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X,
 			const mat<X_DIM,X_DIM>& sigma0, const std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha, bool pause=true);
@@ -87,14 +99,6 @@ public:
 	void display(const std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X,
 			const std::vector<mat<X_DIM,X_DIM>, aligned_allocator<mat<X_DIM,X_DIM>>>& S, const mat<C_DIM,M_DIM>& P, bool pause=true, bool plot_particles=true);
 
-	void get_limits(vec<X_DIM>& x_min, vec<X_DIM>& x_max, vec<U_DIM>& u_min, vec<U_DIM>& u_max);
-
-	double cost(const std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, const mat<X_DIM,X_DIM>& sigma0, const std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha);
-	vec<TOTAL_VARS> cost_grad(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, const mat<X_DIM,X_DIM>& sigma0,
-			std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha);
-	void cost_and_cost_grad(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, const mat<X_DIM,X_DIM>& sigma0,
-			std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha, const bool use_fadbad,
-			double& cost, vec<TOTAL_VARS>& grad) ;
 
 private:
 	bool is_static;

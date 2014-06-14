@@ -479,13 +479,19 @@ int main(int argc, char* argv[]) {
 
 	PlanarSystem sys = PlanarSystem(camera, object, is_static);
 
-	// initial uncertainty about object is large
+	// initialize starting state, belief, and pf
 	mat<X_DIM,X_DIM> sigma0 = .01*mat<X_DIM,X_DIM>::Identity();
-	sigma0.block<C_DIM,C_DIM>(J_DIM, J_DIM) = 20*mat<C_DIM,C_DIM>::Identity();
+	sigma0.block<C_DIM,C_DIM>(J_DIM, J_DIM) = 20*mat<C_DIM,C_DIM>::Identity(); // uncertainty about object large
 
 	vec<X_DIM> x0, x0_real;
 	x0 << M_PI/5, -M_PI/2+M_PI/16, -M_PI/4, 0, -3, 5;
 	x0_real << x0.segment<J_DIM>(0) , object;
+
+	mat<C_DIM,M_DIM> P0;
+	for(int m=0; m < M_DIM; ++m) {
+		P0(0, m) = planar_utils::uniform(-10, 10);
+		P0(1, m) = planar_utils::uniform(0, 10);
+	}
 
 	// initialize state and controls
 	std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>> U(T-1, vec<U_DIM>::Zero());
@@ -494,6 +500,8 @@ int main(int argc, char* argv[]) {
 	// track real states/beliefs
 	std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>> X_real(1, x0_real);
 	std::vector<mat<X_DIM,X_DIM>, aligned_allocator<mat<X_DIM,X_DIM>>> S_real(1, sigma0);
+	// particle filter
+	std::vector<mat<C_DIM,M_DIM>, aligned_allocator<mat<C_DIM,M_DIM>>> pf_tracker(1, P0);
 
 	// initialize FORCES variables
 	planarMPC_params problem;
@@ -525,7 +533,7 @@ int main(int argc, char* argv[]) {
 		}
 
 		LOG_INFO("Initialized path");
-		sys.display(X, sigma0, U, 10);
+		sys.display(X, sigma0, U, pf_tracker.back(), 10);
 
 		double init_cost = sys.cost(X, sigma0, U, INFINITY);
 		LOG_INFO("Initial cost: %4.5f", init_cost);
@@ -542,18 +550,20 @@ int main(int argc, char* argv[]) {
 			X[t+1] = sys.dynfunc(X[t], U[t], vec<Q_DIM>::Zero());
 		}
 		LOG_INFO("Integrated trajectory");
-		sys.display(X, sigma0, U, INFINITY);
+		sys.display(X, sigma0, U, pf_tracker.back(), INFINITY);
 
 		// execute first control input
 		vec<X_DIM> x_tp1_real, x_tp1_tp1;
 		mat<X_DIM,X_DIM> sigma_tp1_tp1;
-		sys.execute_control_step(X_real.back(), x0, sigma0, U[0], x_tp1_real, x_tp1_tp1, sigma_tp1_tp1);
+		mat<C_DIM,M_DIM> P_tp1;
+		sys.execute_control_step(X_real.back(), x0, sigma0, U[0], pf_tracker.back(), x_tp1_real, x_tp1_tp1, sigma_tp1_tp1, P_tp1);
 
 		X_real.push_back(x_tp1_real);
 		S_real.push_back(sigma_tp1_tp1);
+		pf_tracker.push_back(P_tp1);
 
 		LOG_DEBUG("Display after obtaining observation, but before truncating the belief");
-		sys.display(x_tp1_tp1, sigma_tp1_tp1);
+		sys.display(x_tp1_tp1, sigma_tp1_tp1, pf_tracker.back());
 
 		// truncate belief
 		std::vector<Beam> fov_tp1 = sys.get_fov(x_tp1_tp1);
@@ -570,7 +580,7 @@ int main(int argc, char* argv[]) {
 		sigma_tp1_tp1_trunc.block<C_DIM,C_DIM>(J_DIM, J_DIM) = obj_sigma_trunc;
 
 		LOG_DEBUG("Display truncated belief");
-		sys.display(x_tp1_tp1_trunc, sigma_tp1_tp1_trunc);
+		sys.display(x_tp1_tp1_trunc, sigma_tp1_tp1_trunc, pf_tracker.back());
 
 		// set start to the next time step
 		x0 = x_tp1_tp1_trunc;

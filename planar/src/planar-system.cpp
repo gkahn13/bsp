@@ -102,8 +102,8 @@ void PlanarSystem::belief_dynamics(const vec<X_DIM>& x_t, const mat<X_DIM,X_DIM>
 	sigma_tp1 = (mat<X_DIM,X_DIM>::Identity() - K*H)*sigma_tp1_bar;
 }
 
-void PlanarSystem::execute_control_step(const vec<X_DIM>& x_t_real, const vec<X_DIM>& x_t_t, const mat<X_DIM,X_DIM>& sigma_t_t, const vec<U_DIM>& u_t,
-		vec<X_DIM>& x_tp1_real, vec<X_DIM>& x_tp1_tp1, mat<X_DIM,X_DIM>& sigma_tp1_tp1) {
+void PlanarSystem::execute_control_step(const vec<X_DIM>& x_t_real, const vec<X_DIM>& x_t_t, const mat<X_DIM,X_DIM>& sigma_t_t, const vec<U_DIM>& u_t, const mat<C_DIM,M_DIM>& P_t,
+			vec<X_DIM>& x_tp1_real, vec<X_DIM>& x_tp1_tp1, mat<X_DIM,X_DIM>& sigma_tp1_tp1, mat<C_DIM,M_DIM>& P_tp1) {
 	// find next real state from input + noise
 	vec<Q_DIM> control_noise = vec<Q_DIM>::Zero();// + chol(.2*Q)*randn<vec>(Q_DIM);
 	vec<R_DIM> obs_noise = vec<R_DIM>::Zero();// + chol(.2*R)*randn<vec>(R_DIM);
@@ -125,13 +125,17 @@ void PlanarSystem::execute_control_step(const vec<X_DIM>& x_t_real, const vec<X_
 	mat<Z_DIM,R_DIM> N = mat<Z_DIM,R_DIM>::Zero();
 	linearize_obsfunc(x_tp1_t, vec<R_DIM>::Zero(), H, N);
 
-	mat<Z_DIM,Z_DIM> delta = delta_matrix(x_tp1_t, object, INFINITY);
+	mat<Z_DIM,Z_DIM> delta = delta_matrix(x_tp1_real, object, INFINITY);
 	// calculate Kalman gain
 	mat<X_DIM,Z_DIM> K = sigma_tp1_t*H.transpose()*delta*(delta*H*sigma_tp1_t*H.transpose()*delta + R).inverse()*delta;
 
 	// update based on noisy measurement
 	x_tp1_tp1 = x_tp1_t + K*(z_tp1_real - obsfunc(x_tp1_t, x_tp1_t.segment<C_DIM>(J_DIM), vec<R_DIM>::Zero()));
 	sigma_tp1_tp1 = (mat<X_DIM,X_DIM>::Identity() - K*H)*sigma_tp1_t;
+
+	// and update particle filter
+	vec<C_DIM> delta_real = { delta(X_DIM-2,X_DIM-2), delta(X_DIM-1,X_DIM-1) };
+	update_particles(x_tp1_t, delta_real, P_t, P_tp1);
 }
 
 std::vector<Beam> PlanarSystem::get_fov(const vec<X_DIM>& x) {
@@ -218,13 +222,30 @@ bool PlanarSystem::ik(const vec<C_DIM>& ee_goal, vec<E_DIM>& j) {
 }
 
 
-void PlanarSystem::display(vec<X_DIM>& x, mat<X_DIM,X_DIM>& sigma, bool pause) {
-	std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>> X(1, x);
-	std::vector<mat<X_DIM,X_DIM>, aligned_allocator<mat<X_DIM,X_DIM>>> S(1, sigma);
-	display(X, S);
+void PlanarSystem::display(const vec<X_DIM>& x, const mat<X_DIM,X_DIM>& sigma, bool pause) {
+	mat<C_DIM,M_DIM> P;
+	display(x, sigma, P, pause, false);
 }
 
-void PlanarSystem::display(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, mat<X_DIM,X_DIM>& sigma0, std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha, bool pause) {
+void PlanarSystem::display(const std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, const mat<X_DIM,X_DIM>& sigma0,
+		const std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha, bool pause) {
+	mat<C_DIM,M_DIM> P;
+	display(X, sigma0, U, P, alpha, pause, false);
+}
+
+void PlanarSystem::display(const std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, const std::vector<mat<X_DIM,X_DIM>, aligned_allocator<mat<X_DIM,X_DIM>>>& S, bool pause) {
+	mat<C_DIM,M_DIM> P;
+	display(X, S, P, pause, false);
+}
+
+void PlanarSystem::display(const vec<X_DIM>& x, const mat<X_DIM,X_DIM>& sigma, const mat<C_DIM,M_DIM>& P, bool pause, bool plot_particles) {
+	std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>> X(1, x);
+	std::vector<mat<X_DIM,X_DIM>, aligned_allocator<mat<X_DIM,X_DIM>>> S(1, sigma);
+	display(X, S, P, pause, plot_particles);
+}
+
+void PlanarSystem::display(const std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X,
+		const mat<X_DIM,X_DIM>& sigma0, const std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const mat<C_DIM,M_DIM>& P, const double alpha, bool pause, bool plot_particles) {
 	int T = X.size();
 
 	std::vector<mat<X_DIM,X_DIM>, aligned_allocator<mat<X_DIM,X_DIM>>> S(T);
@@ -233,10 +254,11 @@ void PlanarSystem::display(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>
 	for(int t=0; t < T-1; ++t) {
 		belief_dynamics(X[t], S[t], U[t], alpha, x_tp1, S[t+1]);
 	}
-	display(X, S, pause);
+	display(X, S, P, pause, plot_particles);
 }
 
-void PlanarSystem::display(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, std::vector<mat<X_DIM,X_DIM>, aligned_allocator<mat<X_DIM,X_DIM>>>& S, bool pause) {
+void PlanarSystem::display(const std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X,
+		const std::vector<mat<X_DIM,X_DIM>, aligned_allocator<mat<X_DIM,X_DIM>>>& S, const mat<C_DIM,M_DIM>& P, bool pause, bool plot_particles) {
 	Py_Initialize();
 	np::initialize();
 
@@ -248,6 +270,7 @@ void PlanarSystem::display(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>
 		S_pylist.append(planar_utils::eigen_to_ndarray(S[t]));
 	}
 
+	np::ndarray P_ndarray = planar_utils::eigen_to_ndarray(P);
 	np::ndarray robot_origin_ndarray = planar_utils::eigen_to_ndarray(robot_origin);
 	np::ndarray link_lengths_ndarray = planar_utils::eigen_to_ndarray(link_lengths);
 	np::ndarray camera_origin_ndarray = planar_utils::eigen_to_ndarray(camera_origin);
@@ -275,8 +298,13 @@ void PlanarSystem::display(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>
 		py::object plot_mod = py::import("plot_planar");
 		py::object plot_planar = plot_mod.attr("plot_planar");
 
-		plot_planar(X_pylist, S_pylist, robot_origin_ndarray, link_lengths_ndarray,
-				camera_origin_ndarray, camera_fov, object_ndarray, beams_pylist);
+		if (plot_particles) {
+			plot_planar(X_pylist, S_pylist, P_ndarray, robot_origin_ndarray, link_lengths_ndarray,
+							camera_origin_ndarray, camera_fov, object_ndarray, beams_pylist);
+		} else {
+			plot_planar(X_pylist, S_pylist, NULL, robot_origin_ndarray, link_lengths_ndarray,
+					camera_origin_ndarray, camera_fov, object_ndarray, beams_pylist);
+		}
 
 		if (pause) {
 			LOG_INFO("Press enter to continue");
@@ -419,7 +447,8 @@ std::vector<Segment> PlanarSystem::get_link_segments(const vec<X_DIM>& x) {
 	return link_segments;
 }
 
-void PlanarSystem::linearize_dynfunc(const vec<X_DIM>& x, const vec<U_DIM>& u, const vec<Q_DIM>& q, mat<X_DIM,X_DIM>& A, mat<X_DIM,Q_DIM>& M) {
+void PlanarSystem::linearize_dynfunc(const vec<X_DIM>& x, const vec<U_DIM>& u, const vec<Q_DIM>& q,
+		mat<X_DIM,X_DIM>& A, mat<X_DIM,Q_DIM>& M) {
 	A = mat<X_DIM,X_DIM>::Identity();
 
 	for(int j=0; j < Q_DIM; ++j) {
@@ -462,4 +491,43 @@ void PlanarSystem::linearize_obsfunc(const vec<X_DIM>& x, const vec<R_DIM>& r, m
 //				obsfunc(x, x.segment<C_DIM>(J_DIM), r_m)) / (2*step);
 //		r_p(i) = x(i); r_m(i) = x(i);
 //	}
+}
+
+void PlanarSystem::update_particles(const vec<X_DIM>& x_tp1_t, const vec<C_DIM>& delta_real, const mat<C_DIM,M_DIM>& P_t,
+		mat<C_DIM,M_DIM>& P_tp1) {
+	vec<M_DIM> W = vec<M_DIM>::Zero();
+	mat<C_DIM,C_DIM> R_delta = .1*mat<C_DIM,C_DIM>::Identity();
+	// for each particle, weight by gauss_likelihood of that measurement given particle/agent observation
+	for(int m=0; m < M_DIM; ++m) {
+		vec<C_DIM> delta_particle = delta_matrix(x_tp1_t, P_t.col(m), INFINITY).diagonal().segment<C_DIM>(J_DIM);
+		vec<C_DIM> e = delta_particle - delta_real;
+		W(m) = gauss_likelihood(e, R_delta);
+	}
+	W = W / W.sum();
+
+	double sampling_noise = planar_utils::uniform(0, 1/double(M_DIM));
+	low_variance_sampler(P_t, W, sampling_noise, P_tp1);
+}
+
+double PlanarSystem::gauss_likelihood(const vec<C_DIM>& v, const mat<C_DIM,C_DIM>& S) {
+	mat<C_DIM,C_DIM> Sf = S.llt().matrixL();
+	vec<C_DIM> M = Sf.lu().solve(v);
+
+	double E = -0.5*M.dot(M);
+	double C = pow(2*M_PI, S.cols()/2) * Sf.diagonal().prod();
+	double w = exp(E) / C;
+
+	return w;
+}
+
+void PlanarSystem::low_variance_sampler(const mat<C_DIM,M_DIM>& P, const vec<M_DIM>& W, const double r, mat<C_DIM,M_DIM>& P_sampled) {
+	double c = W(0);
+	int i = 0;
+	for(int m=0; m < M_DIM; ++m) {
+		double u = r + m * (1/double(M_DIM));
+		while (u > c) {
+			c += W(++i);
+		}
+		P_sampled.col(m) = P.col(i);
+	}
 }

@@ -28,6 +28,8 @@ using namespace Eigen;
 #define J_DIM 4 // joint dimension (three for robot, one for camera)
 #define E_DIM 3 // joint dimension only the robot
 #define C_DIM 2 // object dimension
+#define L_DIM 3 // number of links
+
 #define X_DIM 6
 #define U_DIM 4
 #define Q_DIM 4
@@ -36,7 +38,7 @@ using namespace Eigen;
 
 #define TOTAL_VARS (TIMESTEPS*X_DIM + (TIMESTEPS-1)*U_DIM)
 
-#define L_DIM 3 // number of links
+#define M_DIM 1000 // number of particles
 
 template <size_t _dim0, size_t _dim1>
 using mat = Matrix<double, _dim0, _dim1>;
@@ -65,17 +67,25 @@ public:
 
 	void belief_dynamics(const vec<X_DIM>& x_t, const mat<X_DIM,X_DIM>& sigma_t, const vec<U_DIM>& u_t, const double alpha,
 			vec<X_DIM>& x_tp1, mat<X_DIM,X_DIM>& sigma_tp1);
-	void execute_control_step(const vec<X_DIM>& x_t_real, const vec<X_DIM>& x_t_t, const mat<X_DIM,X_DIM>& sigma_t_t, const vec<U_DIM>& u_t,
-			vec<X_DIM>& x_tp1_real, vec<X_DIM>& x_tp1_tp1, mat<X_DIM,X_DIM>& sigma_tp1_tp1);
+	void execute_control_step(const vec<X_DIM>& x_t_real, const vec<X_DIM>& x_t_t, const mat<X_DIM,X_DIM>& sigma_t_t, const vec<U_DIM>& u_t, const mat<C_DIM,M_DIM>& P_t,
+			vec<X_DIM>& x_tp1_real, vec<X_DIM>& x_tp1_tp1, mat<X_DIM,X_DIM>& sigma_tp1_tp1, mat<C_DIM,M_DIM>& P_tp1);
 
 	std::vector<Beam> get_fov(const vec<X_DIM>& x);
 	vec<C_DIM> get_ee_pos(const vec<E_DIM>& j);
 	void get_ee_pos_jac(vec<E_DIM>& j, mat<C_DIM,E_DIM>& ee_jac);
 	bool ik(const vec<C_DIM>& ee_goal, vec<E_DIM>& j);
 
-	void display(vec<X_DIM>& x, mat<X_DIM,X_DIM>& sigma, bool pause=true);
-	void display(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, mat<X_DIM,X_DIM>& sigma0, std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha, bool pause=true);
-	void display(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, std::vector<mat<X_DIM,X_DIM>, aligned_allocator<mat<X_DIM,X_DIM>>>& S, bool pause=true);
+	void display(const vec<X_DIM>& x, const mat<X_DIM,X_DIM>& sigma, bool pause=true);
+	void display(const std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X,
+			const mat<X_DIM,X_DIM>& sigma0, const std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha, bool pause=true);
+	void display(const std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X,
+			const std::vector<mat<X_DIM,X_DIM>, aligned_allocator<mat<X_DIM,X_DIM>>>& S, bool pause=true);
+
+	void display(const vec<X_DIM>& x, const mat<X_DIM,X_DIM>& sigma, const mat<C_DIM,M_DIM>& P, bool pause=true, bool plot_particles=true);
+	void display(const std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X,
+			const mat<X_DIM,X_DIM>& sigma0, const std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const mat<C_DIM,M_DIM>& P, const double alpha, bool pause=true, bool plot_particles=true);
+	void display(const std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X,
+			const std::vector<mat<X_DIM,X_DIM>, aligned_allocator<mat<X_DIM,X_DIM>>>& S, const mat<C_DIM,M_DIM>& P, bool pause=true, bool plot_particles=true);
 
 	void get_limits(vec<X_DIM>& x_min, vec<X_DIM>& x_max, vec<U_DIM>& u_min, vec<U_DIM>& u_max);
 
@@ -107,6 +117,10 @@ private:
 	std::vector<Segment> get_link_segments(const vec<X_DIM>& x);
 	void linearize_dynfunc(const vec<X_DIM>& x, const vec<U_DIM>& u, const vec<Q_DIM>& q, mat<X_DIM,X_DIM>& A, mat<X_DIM,Q_DIM>& M);
 	void linearize_obsfunc(const vec<X_DIM>& x, const vec<R_DIM>& r, mat<Z_DIM,X_DIM>& H, mat<Z_DIM,R_DIM>& N);
+
+	void update_particles(const vec<X_DIM>& x_tp1_t, const vec<C_DIM>& delta_real, const mat<C_DIM,M_DIM>& P_t, mat<C_DIM,M_DIM>& P_tp1);
+	double gauss_likelihood(const vec<C_DIM>& v, const mat<C_DIM,C_DIM>& S);
+	void low_variance_sampler(const mat<C_DIM,M_DIM>& P, const vec<M_DIM>& W, const double r, mat<C_DIM,M_DIM>& P_sampled);
 };
 
 #endif

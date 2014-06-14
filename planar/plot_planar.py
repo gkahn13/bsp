@@ -4,10 +4,11 @@ import matplotlib.pyplot as plt
 
 import IPython
 
-def plot_planar(X, S, robot_origin, link_lengths, camera_origin, camera_fov, object, beams):
+def plot_planar(X, S, P, robot_origin, link_lengths, camera_origin, camera_fov, object, beams):
     """
     @param X                 joints angles, camera angle, object position (for T timesteps)
     @param S                 covariance for X (for T timesteps)
+    @param P                 particles (or NULL if no particles)
     @param robot_origin      (x,y) position of link0
     @param link_lengths
     @param camera_origin     (x,y) position of camera
@@ -50,6 +51,11 @@ def plot_planar(X, S, robot_origin, link_lengths, camera_origin, camera_fov, obj
     
     """ plot beams for last timestep only """
     plot_beams(beams)
+    
+    """ plot particles (if P is ndarray) """
+    if type(P) is np.ndarray:
+        for m in xrange(P.shape[1]):
+            plt.plot(P[0,m], P[1,m], 'x', color='yellow')
     
     
     plt.show(block=False)
@@ -115,7 +121,7 @@ def plot_beam(beam):
     
     x = beam[0,2], beam[0,0], beam[0,1]
     y = beam[1,2], beam[1,0], beam[1,1]
-    plt.fill(x, y, color='white', edgecolor='none')
+    plt.fill(x, y, color='white', edgecolor='none', alpha=.5)
     
     
 

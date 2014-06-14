@@ -34,7 +34,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 /* SYSTEM INCLUDES FOR PRINTING ---------------------------------------- */
-
+#ifndef USEMEXPRINTS
+#include <stdio.h>
+#define PRINTTEXT printf
+#else
+#include "mex.h"
+#define PRINTTEXT mexPrintf
+#endif
 
 
 
@@ -66,12 +72,12 @@ void planarMPC_LA_INITIALIZEVECTOR_60(planarMPC_FLOAT* vec, planarMPC_FLOAT valu
 
 
 /*
- * Initializes a vector of length 192 with a value.
+ * Initializes a vector of length 196 with a value.
  */
-void planarMPC_LA_INITIALIZEVECTOR_192(planarMPC_FLOAT* vec, planarMPC_FLOAT value)
+void planarMPC_LA_INITIALIZEVECTOR_196(planarMPC_FLOAT* vec, planarMPC_FLOAT value)
 {
 	int i;
-	for( i=0; i<192; i++ )
+	for( i=0; i<196; i++ )
 	{
 		vec[i] = value;
 	}
@@ -80,12 +86,12 @@ void planarMPC_LA_INITIALIZEVECTOR_192(planarMPC_FLOAT* vec, planarMPC_FLOAT val
 
 /* 
  * Calculates a dot product and adds it to a variable: z += x'*y; 
- * This function is for vectors of length 192.
+ * This function is for vectors of length 196.
  */
-void planarMPC_LA_DOTACC_192(planarMPC_FLOAT *x, planarMPC_FLOAT *y, planarMPC_FLOAT *z)
+void planarMPC_LA_DOTACC_196(planarMPC_FLOAT *x, planarMPC_FLOAT *y, planarMPC_FLOAT *z)
 {
 	int i;
-	for( i=0; i<192; i++ ){
+	for( i=0; i<196; i++ ){
 		*z += x[i]*y[i];
 	}
 }
@@ -410,6 +416,48 @@ void planarMPC_LA_VSUBADD2_6(planarMPC_FLOAT* t, int* tidx, planarMPC_FLOAT* u, 
 }
 
 
+/* 
+ * Computes r = A*x - b + s
+ * and      y = max([norm(r,inf), y])
+ * and      z -= l'*(Ax-b)
+ * where A is stored in column major format
+ */
+void planarMPC_LA_MVSUBADD_4_6(planarMPC_FLOAT *A, planarMPC_FLOAT *x, planarMPC_FLOAT *b, planarMPC_FLOAT *s, planarMPC_FLOAT *l, planarMPC_FLOAT *r, planarMPC_FLOAT *z, planarMPC_FLOAT *y)
+{
+	int i;
+	int j;
+	int k = 0;
+	planarMPC_FLOAT Ax[4];
+	planarMPC_FLOAT Axlessb;
+	planarMPC_FLOAT norm = *y;
+	planarMPC_FLOAT lAxlessb = 0;
+
+	/* do A*x first */
+	for( i=0; i<4; i++ ){
+		Ax[i] = A[k++]*x[0];				
+	}	
+	for( j=1; j<6; j++ ){		
+		for( i=0; i<4; i++ ){
+			Ax[i] += A[k++]*x[j];
+		}
+	}
+
+	for( i=0; i<4; i++ ){
+		Axlessb = Ax[i] - b[i];
+		r[i] = Axlessb + s[i];
+		lAxlessb += l[i]*Axlessb;
+		if( r[i] > norm ){
+			norm = r[i];
+		}
+		if( -r[i] > norm ){
+			norm = -r[i];
+		}
+	}
+	*y = norm;
+	*z -= lAxlessb;
+}
+
+
 /*
  * Computes inequality constraints gradient-
  * Special function for box constraints of length 10
@@ -450,6 +498,32 @@ void planarMPC_LA_INEQ_B_GRAD_6_6_6(planarMPC_FLOAT *lu, planarMPC_FLOAT *su, pl
 	for( i=0; i<6; i++ ){
 		lubysu[i] = lu[i] / su[i];
 		grad[ubIdx[i]] += lubysu[i]*ru[i];
+	}
+}
+
+
+/*
+ * Special function for gradient of inequality constraints
+ * Calculates grad += A'*(L/S)*rI
+ */
+void planarMPC_LA_INEQ_P_4_6(planarMPC_FLOAT *A, planarMPC_FLOAT *lp, planarMPC_FLOAT *sp, planarMPC_FLOAT *rip, planarMPC_FLOAT *grad, planarMPC_FLOAT *lpbysp)
+{
+	int i;
+	int j;
+	int k = 0;
+
+	planarMPC_FLOAT lsr[4];
+	
+	/* do (L/S)*ri first */
+	for( j=0; j<4; j++ ){
+		lpbysp[j] = lp[j] / sp[j];
+		lsr[j] = lpbysp[j]*rip[j];
+	}
+
+	for( i=0; i<6; i++ ){		
+		for( j=0; j<4; j++ ){
+			grad[i] += A[k++]*lsr[j];
+		}
 	}
 }
 
@@ -590,75 +664,228 @@ void planarMPC_LA_DIAG_FORWARDSUB_10(planarMPC_FLOAT *L, planarMPC_FLOAT *b, pla
 
 
 /*
- * Special function to compute the diagonal cholesky factorization of the 
- * positive definite augmented Hessian for block size 6.
+ * Special function to compute the Dense positive definite 
+ * augmented Hessian for block size 6.
  *
  * Inputs: - H = diagonal cost Hessian in diagonal storage format
  *         - llbysl = L / S of lower bounds
  *         - lubysu = L / S of upper bounds
  *
- * Output: Phi = sqrt(H + diag(llbysl) + diag(lubysu))
- * where Phi is stored in diagonal storage format
+ * Output: Phi = H + diag(llbysl) + diag(lubysu)
+ * where Phi is stored in lower triangular row major format
  */
-void planarMPC_LA_DIAG_CHOL_ONELOOP_LBUB_6_6_6(planarMPC_FLOAT *H, planarMPC_FLOAT *llbysl, int* lbIdx, planarMPC_FLOAT *lubysu, int* ubIdx, planarMPC_FLOAT *Phi)
-
-
+void planarMPC_LA_INEQ_DENSE_DIAG_HESS_6_6_6(planarMPC_FLOAT *H, planarMPC_FLOAT *llbysl, int* lbIdx, planarMPC_FLOAT *lubysu, int* ubIdx, planarMPC_FLOAT *Phi)
 {
 	int i;
+	int j;
+	int k = 0;
 	
-	/* compute cholesky */
+	/* copy diagonal of H into PHI and set lower part of PHI = 0*/
 	for( i=0; i<6; i++ ){
-		Phi[i] = H[i] + llbysl[i] + lubysu[i];
+		for( j=0; j<i; j++ ){
+			Phi[k++] = 0;
+		}		
+		/* we are on the diagonal */
+		Phi[k++] = H[i];
+	}
 
+	/* add llbysl onto Phi where necessary */
+	for( i=0; i<6; i++ ){
+		j = lbIdx[i];
+		Phi[((j+1)*(j+2))/2-1] += llbysl[i];
+	}
+
+	/* add lubysu onto Phi where necessary */
+	for( i=0; i<6; i++){
+		j = ubIdx[i];
+		Phi[((j+1)*(j+2))/2-1] +=  lubysu[i];
+	}
+
+}
+
+
+/**
+ * Compute X = X + A'*D*A, where A is a general full matrix, D is
+ * is a diagonal matrix stored in the vector d and X is a symmetric
+ * positive definite matrix in lower triangular storage format. 
+ * A is stored in column major format and is of size [4 x 6]
+ * Phi is of size [6 x 6].
+ */
+void planarMPC_LA_DENSE_ADDMTDM_4_6(planarMPC_FLOAT *A, planarMPC_FLOAT *d, planarMPC_FLOAT *X)
+{    
+    int i,j,k,ii,di;
+    planarMPC_FLOAT x;
+    
+    di = 0; ii = 0;
+    for( i=0; i<6; i++ ){        
+        for( j=0; j<=i; j++ ){
+            x = 0;
+            for( k=0; k<4; k++ ){
+                x += A[i*4+k]*A[j*4+k]*d[k];
+            }
+            X[ii+j] += x;
+        }
+        ii += ++di;
+    }
+}
+
+
+/**
+ * Cholesky factorization as above, but working on a matrix in 
+ * lower triangular storage format of size 6.
+ */
+void planarMPC_LA_DENSE_CHOL2_6(planarMPC_FLOAT *A)
+{
+    int i, j, k, di, dj;
+	 int ii, jj;
+    planarMPC_FLOAT l;
+    planarMPC_FLOAT Mii;
+    
+	ii=0; di=0;
+    for( i=0; i<6; i++ ){
+        l = 0;
+        for( k=0; k<i; k++ ){
+            l += A[ii+k]*A[ii+k];
+        }        
+        
+        Mii = A[ii+i] - l;
+        
 #if planarMPC_SET_PRINTLEVEL > 0 && defined PRINTNUMERICALWARNINGS
-		if( Phi[i] < 1.0000000000000000E-013 )
+        if( Mii < 1.0000000000000000E-013 ){
+             PRINTTEXT("WARNING (CHOL2): small %d-th pivot in Cholesky fact. (=%3.1e < eps=%3.1e), regularizing to %3.1e\n",i,Mii,1.0000000000000000E-013,4.0000000000000002E-004);
+			 A[ii+i] = 2.0000000000000000E-002;
+		} else
 		{
-            PRINTTEXT("WARNING: small pivot in Cholesky fact. (=%3.1e < eps=%3.1e), regularizing to %3.1e\n",Phi[i],1.0000000000000000E-013,4.0000000000000002E-004);
-			Phi[i] = 2.0000000000000000E-002;
-		}
-		else
-		{
-			Phi[i] = sqrt(Phi[i]);
+			A[ii+i] = sqrt(Mii);
 		}
 #else
-		Phi[i] = Phi[i] < 1.0000000000000000E-013 ? 2.0000000000000000E-002 : sqrt(Phi[i]);
+		A[ii+i] = Mii < 1.0000000000000000E-013 ? 2.0000000000000000E-002 : sqrt(Mii);
 #endif
-	}
-	
+                    
+		jj = ((i+1)*(i+2))/2; dj = i+1;
+        for( j=i+1; j<6; j++ ){
+            l = 0;            
+            for( k=0; k<i; k++ ){
+                l += A[jj+k]*A[ii+k];
+            }
+
+			/* saturate values for numerical stability */
+			l = MIN(l,  BIGMM);
+			l = MAX(l, -BIGMM);
+
+            A[jj+i] = (A[jj+i] - l)/A[ii+i];            
+			jj += ++dj;
+        }
+		ii += ++di;
+    }
 }
 
 
 /**
  * Forward substitution for the matrix equation A*L' = B
  * where A is to be computed and is of size [6 x 6],
- * B is given and of size [6 x 6], L is a diagonal
- *  matrix of size 6 stored in diagonal 
+ * B is given and of size [6 x 6] stored in 
+ * diagzero storage format, L is a lower tri-
+ * angular matrix of size 6 stored in lower triangular 
  * storage format. Note the transpose of L!
  *
- * Result: A in diagonalzero storage format.
+ * Result: A in column major storage format.
  *
  */
-void planarMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_6_6(planarMPC_FLOAT *L, planarMPC_FLOAT *B, planarMPC_FLOAT *A)
+void planarMPC_LA_DENSE_DIAGZERO_MATRIXFORWARDSUB_6_6(planarMPC_FLOAT *L, planarMPC_FLOAT *B, planarMPC_FLOAT *A)
 {
-	int j;
-    for( j=0; j<6; j++ ){   
-		A[j] = B[j]/L[j];
-     }
+    int i,j,k,di;
+	 int ii;
+    planarMPC_FLOAT a;
+	
+	/*
+	* The matrix A has the form
+	*
+	* d u u u r r r r r 
+	* 0 d u u r r r r r 
+	* 0 0 d u r r r r r 
+	* 0 0 0 d r r r r r
+	*
+	* |Part1|| Part 2 |
+	* 
+	* d: diagonal
+	* u: upper
+	* r: right
+	*/
+	
+	
+    /* Part 1 */
+    ii=0; di=0;
+    for( j=0; j<6; j++ ){        
+        for( i=0; i<j; i++ ){
+            /* Calculate part of A which is non-zero and not diagonal "u"
+             * i < j */
+            a = 0;
+			
+            for( k=i; k<j; k++ ){
+                a -= A[k*6+i]*L[ii+k];
+            }
+            A[j*6+i] = a/L[ii+j];
+        }
+        /* do the diagonal "d"
+         * i = j */
+        A[j*6+j] = B[i]/L[ii+j];
+        
+        /* fill lower triangular part with zeros "0"
+         * n > i > j */
+        for( i=j+1     ; i < 6; i++ ){
+            A[j*6+i] = 0;
+        }
+        
+        /* increment index of L */
+        ii += ++di;	
+    }
+	
+	/* Part 2 */ 
+	for( j=6; j<6; j++ ){        
+        for( i=0; i<6; i++ ){
+            /* Calculate part of A which is non-zero and not diagonal "r" */
+            a = 0;
+			
+            for( k=i; k<j; k++ ){
+                a -= A[k*6+i]*L[ii+k];
+            }
+            A[j*6+i] = a/L[ii+j];
+        }
+        
+        /* increment index of L */
+        ii += ++di;	
+    }
+	
+	
+	
 }
 
 
 /**
  * Forward substitution to solve L*y = b where L is a
- * diagonal matrix in vector storage format.
+ * lower triangular matrix in triangular storage format.
  * 
  * The dimensions involved are 6.
  */
-void planarMPC_LA_DIAG_FORWARDSUB_6(planarMPC_FLOAT *L, planarMPC_FLOAT *b, planarMPC_FLOAT *y)
+void planarMPC_LA_DENSE_FORWARDSUB_6(planarMPC_FLOAT *L, planarMPC_FLOAT *b, planarMPC_FLOAT *y)
 {
-    int i;
-
+    int i,j,ii,di;
+    planarMPC_FLOAT yel;
+            
+    ii = 0; di = 0;
     for( i=0; i<6; i++ ){
-		y[i] = b[i]/L[i];
+        yel = b[i];        
+        for( j=0; j<i; j++ ){
+            yel -= y[j]*L[ii+j];
+        }
+
+		/* saturate for numerical stability  */
+		yel = MIN(yel, BIGM);
+		yel = MAX(yel, -BIGM);
+
+        y[i] = yel / L[ii+i];
+        ii += ++di;
     }
 }
 
@@ -755,14 +982,14 @@ void planarMPC_LA_DENSE_DIAGZERO_2MVMSUB2_6_10_10(planarMPC_FLOAT *A, planarMPC_
 /**
  * Compute L = A*A' + B*B', where L is lower triangular of size NXp1
  * and A is a dense matrix of size [6 x 10] in column
- * storage format, and B is of size [6 x 6] diagonalzero
+ * storage format, and B is of size [6 x 6] also in column
  * storage format.
  * 
  * THIS ONE HAS THE WORST ACCES PATTERN POSSIBLE. 
  * POSSIBKE FIX: PUT A AND B INTO ROW MAJOR FORMAT FIRST.
  * 
  */
-void planarMPC_LA_DENSE_DIAGZERO_MMT2_6_10_6(planarMPC_FLOAT *A, planarMPC_FLOAT *B, planarMPC_FLOAT *L)
+void planarMPC_LA_DENSE_MMT2_6_10_6(planarMPC_FLOAT *A, planarMPC_FLOAT *B, planarMPC_FLOAT *L)
 {
     int i, j, k, ii, di;
     planarMPC_FLOAT ltemp;
@@ -773,12 +1000,12 @@ void planarMPC_LA_DENSE_DIAGZERO_MMT2_6_10_6(planarMPC_FLOAT *A, planarMPC_FLOAT
             ltemp = 0; 
             for( k=0; k<10; k++ ){
                 ltemp += A[k*6+i]*A[k*6+j];
-            }		
+            }			
+			for( k=0; k<6; k++ ){
+                ltemp += B[k*6+i]*B[k*6+j];
+            }
             L[ii+j] = ltemp;
         }
-		/* work on the diagonal
-		 * there might be i == j, but j has already been incremented so it is i == j-1 */
-		L[ii+i] += B[i]*B[i];
         ii += ++di;
     }
 }
@@ -786,25 +1013,30 @@ void planarMPC_LA_DENSE_DIAGZERO_MMT2_6_10_6(planarMPC_FLOAT *A, planarMPC_FLOAT
 
 /* 
  * Computes r = b - A*x - B*u
- * where A is stored in column major format
- * and B is stored in diagzero format
+ * where A an B are stored in column major format
  */
-void planarMPC_LA_DENSE_DIAGZERO_2MVMSUB2_6_10_6(planarMPC_FLOAT *A, planarMPC_FLOAT *x, planarMPC_FLOAT *B, planarMPC_FLOAT *u, planarMPC_FLOAT *b, planarMPC_FLOAT *r)
+void planarMPC_LA_DENSE_MVMSUB2_6_10_6(planarMPC_FLOAT *A, planarMPC_FLOAT *x, planarMPC_FLOAT *B, planarMPC_FLOAT *u, planarMPC_FLOAT *b, planarMPC_FLOAT *r)
 {
 	int i;
 	int j;
 	int k = 0;
+	int m = 0;
+	int n;
 
 	for( i=0; i<6; i++ ){
-		r[i] = b[i] - A[k++]*x[0] - B[i]*u[i];
+		r[i] = b[i] - A[k++]*x[0] - B[m++]*u[0];
 	}	
-
 	for( j=1; j<10; j++ ){		
 		for( i=0; i<6; i++ ){
 			r[i] -= A[k++]*x[j];
 		}
 	}
 	
+	for( n=1; n<6; n++ ){
+		for( i=0; i<6; i++ ){
+			r[i] -= B[m++]*u[n];
+		}		
+	}
 }
 
 
@@ -869,34 +1101,6 @@ void planarMPC_LA_DENSE_CHOL_6(planarMPC_FLOAT *A, planarMPC_FLOAT *L)
         }
 		ii += ++di;
     }	
-}
-
-
-/**
- * Forward substitution to solve L*y = b where L is a
- * lower triangular matrix in triangular storage format.
- * 
- * The dimensions involved are 6.
- */
-void planarMPC_LA_DENSE_FORWARDSUB_6(planarMPC_FLOAT *L, planarMPC_FLOAT *b, planarMPC_FLOAT *y)
-{
-    int i,j,ii,di;
-    planarMPC_FLOAT yel;
-            
-    ii = 0; di = 0;
-    for( i=0; i<6; i++ ){
-        yel = b[i];        
-        for( j=0; j<i; j++ ){
-            yel -= y[j]*L[ii+j];
-        }
-
-		/* saturate for numerical stability  */
-		yel = MIN(yel, BIGM);
-		yel = MAX(yel, -BIGM);
-
-        y[i] = yel / L[ii+i];
-        ii += ++di;
-    }
 }
 
 
@@ -1064,18 +1268,49 @@ void planarMPC_LA_DIAG_FORWARDBACKWARDSUB_10(planarMPC_FLOAT *L, planarMPC_FLOAT
 
 /**
  * Forward-Backward-Substitution to solve L*L^T*x = b where L is a
- * diagonal matrix of size 6 in vector
+ * lower triangular matrix of size 6 in lower triangular
  * storage format.
  */
-void planarMPC_LA_DIAG_FORWARDBACKWARDSUB_6(planarMPC_FLOAT *L, planarMPC_FLOAT *b, planarMPC_FLOAT *x)
+void planarMPC_LA_DENSE_FORWARDBACKWARDSUB_6(planarMPC_FLOAT *L, planarMPC_FLOAT *b, planarMPC_FLOAT *x)
 {
-    int i;
+    int i, ii, di, j, jj, dj;
+    planarMPC_FLOAT y[6];
+    planarMPC_FLOAT yel,xel;
+	int start = 15;
             
-    /* solve Ly = b by forward and backward substitution */
+    /* first solve Ly = b by forward substitution */
+     ii = 0; di = 0;
     for( i=0; i<6; i++ ){
-		x[i] = b[i]/(L[i]*L[i]);
+        yel = b[i];        
+        for( j=0; j<i; j++ ){
+            yel -= y[j]*L[ii+j];
+        }
+
+		/* saturate for numerical stability */
+		yel = MIN(yel, BIGM);
+		yel = MAX(yel, -BIGM); 
+
+        y[i] = yel / L[ii+i];
+        ii += ++di;
     }
     
+    /* now solve L^T*x = y by backward substitution */
+    ii = start; di = 5;
+    for( i=5; i>=0; i-- ){        
+        xel = y[i];        
+        jj = start; dj = 5;
+        for( j=5; j>i; j-- ){
+            xel -= x[j]*L[jj+i];
+            jj -= dj--;
+        }
+
+		/* saturate for numerical stability */
+		xel = MIN(xel, BIGM);
+		xel = MAX(xel, -BIGM); 
+
+        x[i] = xel / L[ii+i];
+        ii -= di--;
+    }
 }
 
 
@@ -1155,6 +1390,39 @@ void planarMPC_LA_VSUB2_INDEXED_6(planarMPC_FLOAT *x, planarMPC_FLOAT *y, int* y
 }
 
 
+/* 
+ * Computes r = -b - A*x
+ * where A is stored in column major format
+ */
+void planarMPC_LA_DENSE_MVMSUB4_4_6(planarMPC_FLOAT *A, planarMPC_FLOAT *x, planarMPC_FLOAT *b, planarMPC_FLOAT *r)
+{
+	int i;
+	int j;
+	int k = 0;
+
+	for( i=0; i<4; i++ ){
+		r[i] = -b[i] - A[k++]*x[0];
+	}	
+	for( j=1; j<6; j++ ){		
+		for( i=0; i<4; i++ ){
+			r[i] -= A[k++]*x[j];
+		}
+	}
+}
+
+
+/*
+ * Vector subtraction x = -u.*v - w for vectors of length 4.
+ */
+void planarMPC_LA_VSUB3_4(planarMPC_FLOAT *u, planarMPC_FLOAT *v, planarMPC_FLOAT *w, planarMPC_FLOAT *x)
+{
+	int i;
+	for( i=0; i<4; i++){
+		x[i] = -u[i]*v[i] - w[i];
+	}
+}
+
+
 /**
  * Backtracking line search.
  * 
@@ -1181,7 +1449,7 @@ int planarMPC_LINESEARCH_BACKTRACKING_AFFINE(planarMPC_FLOAT *l, planarMPC_FLOAT
          * values might be in registers, so it should be cheaper.
          */
         mymu = 0;
-        for( i=0; i<192; i++ ){
+        for( i=0; i<196; i++ ){
             dltemp = l[i] + mya*dl[i];
             dstemp = s[i] + mya*ds[i];
             if( dltemp < 0 || dstemp < 0 ){
@@ -1196,7 +1464,7 @@ int planarMPC_LINESEARCH_BACKTRACKING_AFFINE(planarMPC_FLOAT *l, planarMPC_FLOAT
          * If no early termination of the for-loop above occurred, we
          * found the required value of a and we can quit the while loop.
          */
-        if( i == 192 ){
+        if( i == 196 ){
             break;
         } else {
             mya *= planarMPC_SET_LS_SCALE_AFF;
@@ -1208,19 +1476,19 @@ int planarMPC_LINESEARCH_BACKTRACKING_AFFINE(planarMPC_FLOAT *l, planarMPC_FLOAT
     
     /* return new values and iteration counter */
     *a = mya;
-    *mu_aff = mymu / (planarMPC_FLOAT)192;
+    *mu_aff = mymu / (planarMPC_FLOAT)196;
     return lsIt;
 }
 
 
 /*
  * Vector subtraction x = u.*v - a where a is a scalar
-*  and x,u,v are vectors of length 192.
+*  and x,u,v are vectors of length 196.
  */
-void planarMPC_LA_VSUB5_192(planarMPC_FLOAT *u, planarMPC_FLOAT *v, planarMPC_FLOAT a, planarMPC_FLOAT *x)
+void planarMPC_LA_VSUB5_196(planarMPC_FLOAT *u, planarMPC_FLOAT *v, planarMPC_FLOAT a, planarMPC_FLOAT *x)
 {
 	int i;
-	for( i=0; i<192; i++){
+	for( i=0; i<196; i++){
 		x[i] = u[i]*v[i] - a;
 	}
 }
@@ -1303,19 +1571,43 @@ void planarMPC_LA_VSUB6_INDEXED_6_6_6(planarMPC_FLOAT *u, planarMPC_FLOAT *su, i
 }
 
 
+/*
+ * Matrix vector multiplication z = z + A'*(x./s) where A is of size [4 x 6]
+ * and stored in column major format. Note the transpose of M!
+ */
+void planarMPC_LA_DENSE_MTVMADD2_4_6(planarMPC_FLOAT *A, planarMPC_FLOAT *x, planarMPC_FLOAT *s, planarMPC_FLOAT *z)
+{
+	int i;
+	int j;
+	int k = 0; 
+	planarMPC_FLOAT temp[4];
+
+	for( j=0; j<4; j++ ){
+		temp[j] = x[j] / s[j];
+	}
+
+	for( i=0; i<6; i++ ){
+		for( j=0; j<4; j++ ){
+			z[i] += A[k++]*temp[j];
+		}
+	}
+}
+
+
 /* 
  * Computes r = A*x + B*u
- * where A is stored in column major format
- * and B is stored in diagzero format
+ * where A an B are stored in column major format
  */
-void planarMPC_LA_DENSE_DIAGZERO_2MVMADD_6_10_6(planarMPC_FLOAT *A, planarMPC_FLOAT *x, planarMPC_FLOAT *B, planarMPC_FLOAT *u, planarMPC_FLOAT *r)
+void planarMPC_LA_DENSE_2MVMADD_6_10_6(planarMPC_FLOAT *A, planarMPC_FLOAT *x, planarMPC_FLOAT *B, planarMPC_FLOAT *u, planarMPC_FLOAT *r)
 {
 	int i;
 	int j;
 	int k = 0;
+	int m = 0;
+	int n;
 
 	for( i=0; i<6; i++ ){
-		r[i] = A[k++]*x[0] + B[i]*u[i];
+		r[i] = A[k++]*x[0] + B[m++]*u[0];
 	}	
 
 	for( j=1; j<10; j++ ){		
@@ -1324,6 +1616,11 @@ void planarMPC_LA_DENSE_DIAGZERO_2MVMADD_6_10_6(planarMPC_FLOAT *A, planarMPC_FL
 		}
 	}
 	
+	for( n=1; n<6; n++ ){
+		for( i=0; i<6; i++ ){
+			r[i] += B[m++]*u[n];
+		}		
+	}
 }
 
 
@@ -1391,13 +1688,44 @@ void planarMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_6(planarMPC_FLOAT *r, planarMPC_FLO
 }
 
 
-/*
- * Computes ds = -l.\(r + s.*dl) for vectors of length 192.
+/* 
+ * Computes r = (-b + l.*(A*x))./s
+ * where A is stored in column major format
  */
-void planarMPC_LA_VSUB7_192(planarMPC_FLOAT *l, planarMPC_FLOAT *r, planarMPC_FLOAT *s, planarMPC_FLOAT *dl, planarMPC_FLOAT *ds)
+void planarMPC_LA_DENSE_MVMSUB5_4_6(planarMPC_FLOAT *A, planarMPC_FLOAT *x, planarMPC_FLOAT *b, planarMPC_FLOAT *s, planarMPC_FLOAT *l, planarMPC_FLOAT *r)
 {
 	int i;
-	for( i=0; i<192; i++){
+	int j;
+	int k = 0;
+
+	planarMPC_FLOAT temp[4];
+
+	
+	for( i=0; i<4; i++ ){
+		temp[i] = A[k++]*x[0];
+	}
+	
+
+	for( j=1; j<6; j++ ){		
+		for( i=0; i<4; i++ ){
+			temp[i] += A[k++]*x[j];
+		}
+	}
+
+	for( i=0; i<4; i++ ){
+		r[i] = (-b[i] + l[i]*temp[i])/s[i]; 
+	}	
+	
+}
+
+
+/*
+ * Computes ds = -l.\(r + s.*dl) for vectors of length 196.
+ */
+void planarMPC_LA_VSUB7_196(planarMPC_FLOAT *l, planarMPC_FLOAT *r, planarMPC_FLOAT *s, planarMPC_FLOAT *dl, planarMPC_FLOAT *ds)
+{
+	int i;
+	for( i=0; i<196; i++){
 		ds[i] = -(r[i] + s[i]*dl[i])/l[i];
 	}
 }
@@ -1428,12 +1756,12 @@ void planarMPC_LA_VADD_60(planarMPC_FLOAT *x, planarMPC_FLOAT *y)
 
 
 /*
- * Vector addition x = x + y for vectors of length 192.
+ * Vector addition x = x + y for vectors of length 196.
  */
-void planarMPC_LA_VADD_192(planarMPC_FLOAT *x, planarMPC_FLOAT *y)
+void planarMPC_LA_VADD_196(planarMPC_FLOAT *x, planarMPC_FLOAT *y)
 {
 	int i;
-	for( i=0; i<192; i++){
+	for( i=0; i<196; i++){
 		x[i] += y[i];
 	}
 }
@@ -1455,7 +1783,7 @@ int planarMPC_LINESEARCH_BACKTRACKING_COMBINED(planarMPC_FLOAT *z, planarMPC_FLO
     while( 1 ){                        
 
         /* check whether search criterion is fulfilled */
-        for( i=0; i<192; i++ ){
+        for( i=0; i<196; i++ ){
             dltemp = l[i] + (*a)*dl[i];
             dstemp = s[i] + (*a)*ds[i];
             if( dltemp < 0 || dstemp < 0 ){
@@ -1468,7 +1796,7 @@ int planarMPC_LINESEARCH_BACKTRACKING_COMBINED(planarMPC_FLOAT *z, planarMPC_FLO
          * If no early termination of the for-loop above occurred, we
          * found the required value of a and we can quit the while loop.
          */
-        if( i == 192 ){
+        if( i == 196 ){
             break;
         } else {
             *a *= planarMPC_SET_LS_SCALE;
@@ -1493,14 +1821,14 @@ int planarMPC_LINESEARCH_BACKTRACKING_COMBINED(planarMPC_FLOAT *z, planarMPC_FLO
     
     /* inequality constraint multipliers & slacks, also update mu */
     *mu = 0;
-    for( i=0; i<192; i++ ){
+    for( i=0; i<196; i++ ){
         dltemp = l[i] + a_gamma*dl[i]; l[i] = dltemp;
         dstemp = s[i] + a_gamma*ds[i]; s[i] = dstemp;
         *mu += dltemp*dstemp;
     }
     
     *a = a_gamma;
-    *mu /= (planarMPC_FLOAT)192;
+    *mu /= (planarMPC_FLOAT)196;
     return lsIt;
 }
 
@@ -1515,16 +1843,16 @@ planarMPC_FLOAT planarMPC_dv_aff[60];
 planarMPC_FLOAT planarMPC_grad_cost[96];
 planarMPC_FLOAT planarMPC_grad_eq[96];
 planarMPC_FLOAT planarMPC_rd[96];
-planarMPC_FLOAT planarMPC_l[192];
-planarMPC_FLOAT planarMPC_s[192];
-planarMPC_FLOAT planarMPC_lbys[192];
-planarMPC_FLOAT planarMPC_dl_aff[192];
-planarMPC_FLOAT planarMPC_ds_aff[192];
+planarMPC_FLOAT planarMPC_l[196];
+planarMPC_FLOAT planarMPC_s[196];
+planarMPC_FLOAT planarMPC_lbys[196];
+planarMPC_FLOAT planarMPC_dl_aff[196];
+planarMPC_FLOAT planarMPC_ds_aff[196];
 planarMPC_FLOAT planarMPC_dz_cc[96];
 planarMPC_FLOAT planarMPC_dv_cc[60];
-planarMPC_FLOAT planarMPC_dl_cc[192];
-planarMPC_FLOAT planarMPC_ds_cc[192];
-planarMPC_FLOAT planarMPC_ccrhs[192];
+planarMPC_FLOAT planarMPC_dl_cc[196];
+planarMPC_FLOAT planarMPC_ds_cc[196];
+planarMPC_FLOAT planarMPC_ccrhs[196];
 planarMPC_FLOAT planarMPC_grad_ineq[96];
 planarMPC_FLOAT* planarMPC_z0 = planarMPC_z + 0;
 planarMPC_FLOAT* planarMPC_dzaff0 = planarMPC_dz_aff + 0;
@@ -1991,14 +2319,23 @@ planarMPC_FLOAT* planarMPC_dsubaff9 = planarMPC_ds_aff + 186;
 planarMPC_FLOAT* planarMPC_dlubcc9 = planarMPC_dl_cc + 186;
 planarMPC_FLOAT* planarMPC_dsubcc9 = planarMPC_ds_cc + 186;
 planarMPC_FLOAT* planarMPC_ccrhsub9 = planarMPC_ccrhs + 186;
-planarMPC_FLOAT planarMPC_Phi9[6];
+planarMPC_FLOAT* planarMPC_sp9 = planarMPC_s + 192;
+planarMPC_FLOAT* planarMPC_lp9 = planarMPC_l + 192;
+planarMPC_FLOAT* planarMPC_lpbysp9 = planarMPC_lbys + 192;
+planarMPC_FLOAT* planarMPC_dlp_aff9 = planarMPC_dl_aff + 192;
+planarMPC_FLOAT* planarMPC_dsp_aff9 = planarMPC_ds_aff + 192;
+planarMPC_FLOAT* planarMPC_dlp_cc9 = planarMPC_dl_cc + 192;
+planarMPC_FLOAT* planarMPC_dsp_cc9 = planarMPC_ds_cc + 192;
+planarMPC_FLOAT* planarMPC_ccrhsp9 = planarMPC_ccrhs + 192;
+planarMPC_FLOAT planarMPC_rip9[4];
+planarMPC_FLOAT planarMPC_Phi9[21];
 planarMPC_FLOAT planarMPC_D9[6] = {-1.0000000000000000E+000, 
 -1.0000000000000000E+000, 
 -1.0000000000000000E+000, 
 -1.0000000000000000E+000, 
 -1.0000000000000000E+000, 
 -1.0000000000000000E+000};
-planarMPC_FLOAT planarMPC_W9[6];
+planarMPC_FLOAT planarMPC_W9[36];
 planarMPC_FLOAT planarMPC_Ysd9[36];
 planarMPC_FLOAT planarMPC_Lsd9[36];
 planarMPC_FLOAT musigma;
@@ -2023,11 +2360,15 @@ int exitcode;
 info->it = 0;
 planarMPC_LA_INITIALIZEVECTOR_96(planarMPC_z, 0);
 planarMPC_LA_INITIALIZEVECTOR_60(planarMPC_v, 1);
-planarMPC_LA_INITIALIZEVECTOR_192(planarMPC_l, 1);
-planarMPC_LA_INITIALIZEVECTOR_192(planarMPC_s, 1);
+planarMPC_LA_INITIALIZEVECTOR_196(planarMPC_l, 1);
+planarMPC_LA_INITIALIZEVECTOR_196(planarMPC_s, 1);
 info->mu = 0;
-planarMPC_LA_DOTACC_192(planarMPC_l, planarMPC_s, &info->mu);
-info->mu /= 192;
+planarMPC_LA_DOTACC_196(planarMPC_l, planarMPC_s, &info->mu);
+info->mu /= 196;
+PRINTTEXT("This is planarMPC, a solver generated by FORCES (forces.ethz.ch).\n");
+PRINTTEXT("(c) Alexander Domahidi, Automatic Control Laboratory, ETH Zurich, 2011-2014.\n");
+PRINTTEXT("\n  #it  res_eq   res_ineq     pobj         dobj       dgap     rdgap     mu\n");
+PRINTTEXT("  ---------------------------------------------------------------------------\n");
 while( 1 ){
 info->pobj = 0;
 planarMPC_LA_DIAG_QUADFCN_10(params->H1, params->f1, planarMPC_z0, planarMPC_grad_cost0, &info->pobj);
@@ -2083,6 +2424,7 @@ planarMPC_LA_VSUBADD3_10(params->lb9, planarMPC_z8, planarMPC_lbIdx8, planarMPC_
 planarMPC_LA_VSUBADD2_10(planarMPC_z8, planarMPC_ubIdx8, params->ub9, planarMPC_lub8, planarMPC_sub8, planarMPC_riub8, &info->dgap, &info->res_ineq);
 planarMPC_LA_VSUBADD3_6(params->lb10, planarMPC_z9, planarMPC_lbIdx9, planarMPC_llb9, planarMPC_slb9, planarMPC_rilb9, &info->dgap, &info->res_ineq);
 planarMPC_LA_VSUBADD2_6(planarMPC_z9, planarMPC_ubIdx9, params->ub10, planarMPC_lub9, planarMPC_sub9, planarMPC_riub9, &info->dgap, &info->res_ineq);
+planarMPC_LA_MVSUBADD_4_6(params->A10, planarMPC_z9, params->b10, planarMPC_sp9, planarMPC_lp9, planarMPC_rip9, &info->dgap, &info->res_ineq);
 planarMPC_LA_INEQ_B_GRAD_10_10_10(planarMPC_lub0, planarMPC_sub0, planarMPC_riub0, planarMPC_llb0, planarMPC_slb0, planarMPC_rilb0, planarMPC_lbIdx0, planarMPC_ubIdx0, planarMPC_grad_ineq0, planarMPC_lubbysub0, planarMPC_llbbyslb0);
 planarMPC_LA_INEQ_B_GRAD_10_10_10(planarMPC_lub1, planarMPC_sub1, planarMPC_riub1, planarMPC_llb1, planarMPC_slb1, planarMPC_rilb1, planarMPC_lbIdx1, planarMPC_ubIdx1, planarMPC_grad_ineq1, planarMPC_lubbysub1, planarMPC_llbbyslb1);
 planarMPC_LA_INEQ_B_GRAD_10_10_10(planarMPC_lub2, planarMPC_sub2, planarMPC_riub2, planarMPC_llb2, planarMPC_slb2, planarMPC_rilb2, planarMPC_lbIdx2, planarMPC_ubIdx2, planarMPC_grad_ineq2, planarMPC_lubbysub2, planarMPC_llbbyslb2);
@@ -2093,15 +2435,19 @@ planarMPC_LA_INEQ_B_GRAD_10_10_10(planarMPC_lub6, planarMPC_sub6, planarMPC_riub
 planarMPC_LA_INEQ_B_GRAD_10_10_10(planarMPC_lub7, planarMPC_sub7, planarMPC_riub7, planarMPC_llb7, planarMPC_slb7, planarMPC_rilb7, planarMPC_lbIdx7, planarMPC_ubIdx7, planarMPC_grad_ineq7, planarMPC_lubbysub7, planarMPC_llbbyslb7);
 planarMPC_LA_INEQ_B_GRAD_10_10_10(planarMPC_lub8, planarMPC_sub8, planarMPC_riub8, planarMPC_llb8, planarMPC_slb8, planarMPC_rilb8, planarMPC_lbIdx8, planarMPC_ubIdx8, planarMPC_grad_ineq8, planarMPC_lubbysub8, planarMPC_llbbyslb8);
 planarMPC_LA_INEQ_B_GRAD_6_6_6(planarMPC_lub9, planarMPC_sub9, planarMPC_riub9, planarMPC_llb9, planarMPC_slb9, planarMPC_rilb9, planarMPC_lbIdx9, planarMPC_ubIdx9, planarMPC_grad_ineq9, planarMPC_lubbysub9, planarMPC_llbbyslb9);
+planarMPC_LA_INEQ_P_4_6(params->A10, planarMPC_lp9, planarMPC_sp9, planarMPC_rip9, planarMPC_grad_ineq9, planarMPC_lpbysp9);
 info->dobj = info->pobj - info->dgap;
 info->rdgap = info->pobj ? info->dgap / info->pobj : 1e6;
 if( info->rdgap < 0 ) info->rdgap = -info->rdgap;
+PRINTTEXT("  %3d  %3.1e  %3.1e  %+6.4e  %+6.4e  %+3.1e  %3.1e  %3.1e\n",info->it, info->res_eq, info->res_ineq, info->pobj, info->dobj, info->dgap, info->rdgap, info->mu);
 if( info->mu < planarMPC_SET_ACC_KKTCOMPL
     && (info->rdgap < planarMPC_SET_ACC_RDGAP || info->dgap < planarMPC_SET_ACC_KKTCOMPL)
     && info->res_eq < planarMPC_SET_ACC_RESEQ
     && info->res_ineq < planarMPC_SET_ACC_RESINEQ ){
+PRINTTEXT("OPTIMAL (within RESEQ=%2.1e, RESINEQ=%2.1e, (R)DGAP=(%2.1e)%2.1e, MU=%2.1e).\n",planarMPC_SET_ACC_RESEQ, planarMPC_SET_ACC_RESINEQ,planarMPC_SET_ACC_KKTCOMPL,planarMPC_SET_ACC_RDGAP,planarMPC_SET_ACC_KKTCOMPL);
 exitcode = planarMPC_OPTIMAL; break; }
 if( info->it == planarMPC_SET_MAXIT ){
+PRINTTEXT("Maximum number of iterations reached, exiting.\n");
 exitcode = planarMPC_MAXITREACHED; break; }
 planarMPC_LA_VVADD3_96(planarMPC_grad_cost, planarMPC_grad_eq, planarMPC_grad_ineq, planarMPC_rd);
 planarMPC_LA_DIAG_CHOL_ONELOOP_LBUB_10_10_10(params->H1, planarMPC_llbbyslb0, planarMPC_lbIdx0, planarMPC_lubbysub0, planarMPC_ubIdx0, planarMPC_Phi0);
@@ -2149,9 +2495,11 @@ planarMPC_LA_DIAG_MATRIXFORWARDSUB_6_10(planarMPC_Phi8, planarMPC_C0, planarMPC_
 planarMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_6_10(planarMPC_Phi8, planarMPC_D1, planarMPC_W8);
 planarMPC_LA_DENSE_DIAGZERO_MMTM_6_10_6(planarMPC_W8, planarMPC_V8, planarMPC_Ysd9);
 planarMPC_LA_DIAG_FORWARDSUB_10(planarMPC_Phi8, planarMPC_rd8, planarMPC_Lbyrd8);
-planarMPC_LA_DIAG_CHOL_ONELOOP_LBUB_6_6_6(params->H10, planarMPC_llbbyslb9, planarMPC_lbIdx9, planarMPC_lubbysub9, planarMPC_ubIdx9, planarMPC_Phi9);
-planarMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_6_6(planarMPC_Phi9, planarMPC_D9, planarMPC_W9);
-planarMPC_LA_DIAG_FORWARDSUB_6(planarMPC_Phi9, planarMPC_rd9, planarMPC_Lbyrd9);
+planarMPC_LA_INEQ_DENSE_DIAG_HESS_6_6_6(params->H10, planarMPC_llbbyslb9, planarMPC_lbIdx9, planarMPC_lubbysub9, planarMPC_ubIdx9, planarMPC_Phi9);
+planarMPC_LA_DENSE_ADDMTDM_4_6(params->A10, planarMPC_lpbysp9, planarMPC_Phi9);
+planarMPC_LA_DENSE_CHOL2_6(planarMPC_Phi9);
+planarMPC_LA_DENSE_DIAGZERO_MATRIXFORWARDSUB_6_6(planarMPC_Phi9, planarMPC_D9, planarMPC_W9);
+planarMPC_LA_DENSE_FORWARDSUB_6(planarMPC_Phi9, planarMPC_rd9, planarMPC_Lbyrd9);
 planarMPC_LA_DIAGZERO_MMT_6(planarMPC_W0, planarMPC_Yd0);
 planarMPC_LA_DIAGZERO_MVMSUB7_6(planarMPC_W0, planarMPC_Lbyrd0, planarMPC_re0, planarMPC_beta0);
 planarMPC_LA_DENSE_DIAGZERO_MMT2_6_10_10(planarMPC_V0, planarMPC_W1, planarMPC_Yd1);
@@ -2170,8 +2518,8 @@ planarMPC_LA_DENSE_DIAGZERO_MMT2_6_10_10(planarMPC_V6, planarMPC_W7, planarMPC_Y
 planarMPC_LA_DENSE_DIAGZERO_2MVMSUB2_6_10_10(planarMPC_V6, planarMPC_Lbyrd6, planarMPC_W7, planarMPC_Lbyrd7, planarMPC_re7, planarMPC_beta7);
 planarMPC_LA_DENSE_DIAGZERO_MMT2_6_10_10(planarMPC_V7, planarMPC_W8, planarMPC_Yd8);
 planarMPC_LA_DENSE_DIAGZERO_2MVMSUB2_6_10_10(planarMPC_V7, planarMPC_Lbyrd7, planarMPC_W8, planarMPC_Lbyrd8, planarMPC_re8, planarMPC_beta8);
-planarMPC_LA_DENSE_DIAGZERO_MMT2_6_10_6(planarMPC_V8, planarMPC_W9, planarMPC_Yd9);
-planarMPC_LA_DENSE_DIAGZERO_2MVMSUB2_6_10_6(planarMPC_V8, planarMPC_Lbyrd8, planarMPC_W9, planarMPC_Lbyrd9, planarMPC_re9, planarMPC_beta9);
+planarMPC_LA_DENSE_MMT2_6_10_6(planarMPC_V8, planarMPC_W9, planarMPC_Yd9);
+planarMPC_LA_DENSE_MVMSUB2_6_10_6(planarMPC_V8, planarMPC_Lbyrd8, planarMPC_W9, planarMPC_Lbyrd9, planarMPC_re9, planarMPC_beta9);
 planarMPC_LA_DENSE_CHOL_6(planarMPC_Yd0, planarMPC_Ld0);
 planarMPC_LA_DENSE_FORWARDSUB_6(planarMPC_Ld0, planarMPC_beta0, planarMPC_yy0);
 planarMPC_LA_DENSE_MATRIXTFORWARDSUB_6_6(planarMPC_Ld0, planarMPC_Ysd1, planarMPC_Lsd1);
@@ -2258,7 +2606,7 @@ planarMPC_LA_DIAG_FORWARDBACKWARDSUB_10(planarMPC_Phi5, planarMPC_rd5, planarMPC
 planarMPC_LA_DIAG_FORWARDBACKWARDSUB_10(planarMPC_Phi6, planarMPC_rd6, planarMPC_dzaff6);
 planarMPC_LA_DIAG_FORWARDBACKWARDSUB_10(planarMPC_Phi7, planarMPC_rd7, planarMPC_dzaff7);
 planarMPC_LA_DIAG_FORWARDBACKWARDSUB_10(planarMPC_Phi8, planarMPC_rd8, planarMPC_dzaff8);
-planarMPC_LA_DIAG_FORWARDBACKWARDSUB_6(planarMPC_Phi9, planarMPC_rd9, planarMPC_dzaff9);
+planarMPC_LA_DENSE_FORWARDBACKWARDSUB_6(planarMPC_Phi9, planarMPC_rd9, planarMPC_dzaff9);
 planarMPC_LA_VSUB_INDEXED_10(planarMPC_dzaff0, planarMPC_lbIdx0, planarMPC_rilb0, planarMPC_dslbaff0);
 planarMPC_LA_VSUB3_10(planarMPC_llbbyslb0, planarMPC_dslbaff0, planarMPC_llb0, planarMPC_dllbaff0);
 planarMPC_LA_VSUB2_INDEXED_10(planarMPC_riub0, planarMPC_dzaff0, planarMPC_ubIdx0, planarMPC_dsubaff0);
@@ -2299,14 +2647,17 @@ planarMPC_LA_VSUB_INDEXED_6(planarMPC_dzaff9, planarMPC_lbIdx9, planarMPC_rilb9,
 planarMPC_LA_VSUB3_6(planarMPC_llbbyslb9, planarMPC_dslbaff9, planarMPC_llb9, planarMPC_dllbaff9);
 planarMPC_LA_VSUB2_INDEXED_6(planarMPC_riub9, planarMPC_dzaff9, planarMPC_ubIdx9, planarMPC_dsubaff9);
 planarMPC_LA_VSUB3_6(planarMPC_lubbysub9, planarMPC_dsubaff9, planarMPC_lub9, planarMPC_dlubaff9);
+planarMPC_LA_DENSE_MVMSUB4_4_6(params->A10, planarMPC_dzaff9, planarMPC_rip9, planarMPC_dsp_aff9);
+planarMPC_LA_VSUB3_4(planarMPC_lpbysp9, planarMPC_dsp_aff9, planarMPC_lp9, planarMPC_dlp_aff9);
 info->lsit_aff = planarMPC_LINESEARCH_BACKTRACKING_AFFINE(planarMPC_l, planarMPC_s, planarMPC_dl_aff, planarMPC_ds_aff, &info->step_aff, &info->mu_aff);
 if( info->lsit_aff == planarMPC_NOPROGRESS ){
+PRINTTEXT("Affine line search could not proceed at iteration %d.\nThe problem might be infeasible -- exiting.\n",info->it+1);
 exitcode = planarMPC_NOPROGRESS; break;
 }
 sigma_3rdroot = info->mu_aff / info->mu;
 info->sigma = sigma_3rdroot*sigma_3rdroot*sigma_3rdroot;
 musigma = info->mu * info->sigma;
-planarMPC_LA_VSUB5_192(planarMPC_ds_aff, planarMPC_dl_aff, musigma, planarMPC_ccrhs);
+planarMPC_LA_VSUB5_196(planarMPC_ds_aff, planarMPC_dl_aff, musigma, planarMPC_ccrhs);
 planarMPC_LA_VSUB6_INDEXED_10_10_10(planarMPC_ccrhsub0, planarMPC_sub0, planarMPC_ubIdx0, planarMPC_ccrhsl0, planarMPC_slb0, planarMPC_lbIdx0, planarMPC_rd0);
 planarMPC_LA_VSUB6_INDEXED_10_10_10(planarMPC_ccrhsub1, planarMPC_sub1, planarMPC_ubIdx1, planarMPC_ccrhsl1, planarMPC_slb1, planarMPC_lbIdx1, planarMPC_rd1);
 planarMPC_LA_DIAG_FORWARDSUB_10(planarMPC_Phi0, planarMPC_rd0, planarMPC_Lbyrd0);
@@ -2352,8 +2703,9 @@ planarMPC_LA_DENSE_DIAGZERO_2MVMADD_6_10_10(planarMPC_V7, planarMPC_Lbyrd7, plan
 planarMPC_LA_DENSE_MVMSUB1_6_6(planarMPC_Lsd8, planarMPC_yy7, planarMPC_beta8, planarMPC_bmy8);
 planarMPC_LA_DENSE_FORWARDSUB_6(planarMPC_Ld8, planarMPC_bmy8, planarMPC_yy8);
 planarMPC_LA_VSUB6_INDEXED_6_6_6(planarMPC_ccrhsub9, planarMPC_sub9, planarMPC_ubIdx9, planarMPC_ccrhsl9, planarMPC_slb9, planarMPC_lbIdx9, planarMPC_rd9);
-planarMPC_LA_DIAG_FORWARDSUB_6(planarMPC_Phi9, planarMPC_rd9, planarMPC_Lbyrd9);
-planarMPC_LA_DENSE_DIAGZERO_2MVMADD_6_10_6(planarMPC_V8, planarMPC_Lbyrd8, planarMPC_W9, planarMPC_Lbyrd9, planarMPC_beta9);
+planarMPC_LA_DENSE_MTVMADD2_4_6(params->A10, planarMPC_ccrhsp9, planarMPC_sp9, planarMPC_rd9);
+planarMPC_LA_DENSE_FORWARDSUB_6(planarMPC_Phi9, planarMPC_rd9, planarMPC_Lbyrd9);
+planarMPC_LA_DENSE_2MVMADD_6_10_6(planarMPC_V8, planarMPC_Lbyrd8, planarMPC_W9, planarMPC_Lbyrd9, planarMPC_beta9);
 planarMPC_LA_DENSE_MVMSUB1_6_6(planarMPC_Lsd9, planarMPC_yy8, planarMPC_beta9, planarMPC_bmy9);
 planarMPC_LA_DENSE_FORWARDSUB_6(planarMPC_Ld9, planarMPC_bmy9, planarMPC_yy9);
 planarMPC_LA_DENSE_BACKWARDSUB_6(planarMPC_Ld9, planarMPC_yy9, planarMPC_dvcc9);
@@ -2395,7 +2747,7 @@ planarMPC_LA_DIAG_FORWARDBACKWARDSUB_10(planarMPC_Phi5, planarMPC_rd5, planarMPC
 planarMPC_LA_DIAG_FORWARDBACKWARDSUB_10(planarMPC_Phi6, planarMPC_rd6, planarMPC_dzcc6);
 planarMPC_LA_DIAG_FORWARDBACKWARDSUB_10(planarMPC_Phi7, planarMPC_rd7, planarMPC_dzcc7);
 planarMPC_LA_DIAG_FORWARDBACKWARDSUB_10(planarMPC_Phi8, planarMPC_rd8, planarMPC_dzcc8);
-planarMPC_LA_DIAG_FORWARDBACKWARDSUB_6(planarMPC_Phi9, planarMPC_rd9, planarMPC_dzcc9);
+planarMPC_LA_DENSE_FORWARDBACKWARDSUB_6(planarMPC_Phi9, planarMPC_rd9, planarMPC_dzcc9);
 planarMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_10(planarMPC_ccrhsl0, planarMPC_slb0, planarMPC_llbbyslb0, planarMPC_dzcc0, planarMPC_lbIdx0, planarMPC_dllbcc0);
 planarMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_10(planarMPC_ccrhsub0, planarMPC_sub0, planarMPC_lubbysub0, planarMPC_dzcc0, planarMPC_ubIdx0, planarMPC_dlubcc0);
 planarMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_10(planarMPC_ccrhsl1, planarMPC_slb1, planarMPC_llbbyslb1, planarMPC_dzcc1, planarMPC_lbIdx1, planarMPC_dllbcc1);
@@ -2416,13 +2768,15 @@ planarMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_10(planarMPC_ccrhsl8, planarMPC_slb8, pl
 planarMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_10(planarMPC_ccrhsub8, planarMPC_sub8, planarMPC_lubbysub8, planarMPC_dzcc8, planarMPC_ubIdx8, planarMPC_dlubcc8);
 planarMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_6(planarMPC_ccrhsl9, planarMPC_slb9, planarMPC_llbbyslb9, planarMPC_dzcc9, planarMPC_lbIdx9, planarMPC_dllbcc9);
 planarMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_6(planarMPC_ccrhsub9, planarMPC_sub9, planarMPC_lubbysub9, planarMPC_dzcc9, planarMPC_ubIdx9, planarMPC_dlubcc9);
-planarMPC_LA_VSUB7_192(planarMPC_l, planarMPC_ccrhs, planarMPC_s, planarMPC_dl_cc, planarMPC_ds_cc);
+planarMPC_LA_DENSE_MVMSUB5_4_6(params->A10, planarMPC_dzcc9, planarMPC_ccrhsp9, planarMPC_sp9, planarMPC_lp9, planarMPC_dlp_cc9);
+planarMPC_LA_VSUB7_196(planarMPC_l, planarMPC_ccrhs, planarMPC_s, planarMPC_dl_cc, planarMPC_ds_cc);
 planarMPC_LA_VADD_96(planarMPC_dz_cc, planarMPC_dz_aff);
 planarMPC_LA_VADD_60(planarMPC_dv_cc, planarMPC_dv_aff);
-planarMPC_LA_VADD_192(planarMPC_dl_cc, planarMPC_dl_aff);
-planarMPC_LA_VADD_192(planarMPC_ds_cc, planarMPC_ds_aff);
+planarMPC_LA_VADD_196(planarMPC_dl_cc, planarMPC_dl_aff);
+planarMPC_LA_VADD_196(planarMPC_ds_cc, planarMPC_ds_aff);
 info->lsit_cc = planarMPC_LINESEARCH_BACKTRACKING_COMBINED(planarMPC_z, planarMPC_v, planarMPC_l, planarMPC_s, planarMPC_dz_cc, planarMPC_dv_cc, planarMPC_dl_cc, planarMPC_ds_cc, &info->step_cc, &info->mu);
 if( info->lsit_cc == planarMPC_NOPROGRESS ){
+PRINTTEXT("Line search could not proceed at iteration %d, exiting.\n",info->it+1);
 exitcode = planarMPC_NOPROGRESS; break;
 }
 info->it++;

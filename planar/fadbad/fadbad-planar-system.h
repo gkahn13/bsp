@@ -43,7 +43,7 @@ class FadbadPlanarSystem {
 	const bdouble alpha_control = .01;
 	const bdouble alpha_belief = 1;
 	const bdouble alpha_final_belief = 1;
-	const bdouble alpha_goal = 10;
+	const bdouble alpha_goal = 0;
 
 public:
 	FadbadPlanarSystem() { };

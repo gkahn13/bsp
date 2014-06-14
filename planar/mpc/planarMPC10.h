@@ -28,7 +28,7 @@ typedef double planarMPC_FLOAT;
 /* SOLVER SETTINGS ------------------------------------------------------*/
 /* print level */
 #ifndef planarMPC_SET_PRINTLEVEL
-#define planarMPC_SET_PRINTLEVEL    (0)
+#define planarMPC_SET_PRINTLEVEL    (2)
 #endif
 
 /* timing */
@@ -206,6 +206,12 @@ typedef struct planarMPC_params
 
     /* vector of size 6 */
     planarMPC_FLOAT ub10[6];
+
+    /* matrix of size [4 x 6] (column major format) */
+    planarMPC_FLOAT A10[24];
+
+    /* vector of size 4 */
+    planarMPC_FLOAT b10[4];
 
 } planarMPC_params;
 

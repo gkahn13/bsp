@@ -3,25 +3,18 @@
 
 extern "C" {
 #include "planarMPC.h"
-planarMPC_FLOAT **H, **f, **lb, **ub, **z, **c;
+planarMPC_FLOAT **H, **f, **lb, **ub, **z, *c, *A, *b;
 }
 
-#define TIMESTEPS 10
-#define DT 1.0 // Note: if you change this, must change the FORCES matlab file
-#define J_DIM 4 // joint dimension (three for robot, one for camera)
-#define C_DIM 2 // object dimension
-#define X_DIM 6
-#define U_DIM 4
-
 const int T = TIMESTEPS;
-const int TOTAL_VARS = T*X_DIM + (T-1)*U_DIM;
-
 const double INFTY = 1e10;
+
+const bool USE_FADBAD = true;
 
 namespace cfg {
 const double alpha_init = .01; // 1
 const double alpha_gain = 3; // 3
-const double alpha_epsilon = .001; // .001
+const double alpha_epsilon = .1; // .001
 
 const double improve_ratio_threshold = 1e-1; // .1
 const double min_approx_improve = 1e-1; // 1
@@ -36,7 +29,10 @@ void setup_mpc_vars(planarMPC_params& problem, planarMPC_output& output) {
 	f = new planarMPC_FLOAT*[T];
 	lb = new planarMPC_FLOAT*[T];
 	ub = new planarMPC_FLOAT*[T];
-	c = new planarMPC_FLOAT*[1];
+
+	c = problem.c1;
+	A = problem.A10;
+	b = problem.b10;
 
 	// output
 	z = new planarMPC_FLOAT*[T];
@@ -52,7 +48,9 @@ void setup_mpc_vars(planarMPC_params& problem, planarMPC_output& output) {
 #define BOOST_PP_LOCAL_LIMITS (1, TIMESTEPS)
 #include BOOST_PP_LOCAL_ITERATE()
 
-	c[0] = problem.c1;
+	for(int i=0; i < X_DIM; ++i) { c[i] = INFTY; }
+	for(int i=0; i < (2*C_DIM)*X_DIM; ++i) { A[i] = INFTY; }
+	for(int i=0; i < (2*C_DIM); ++i) { b[i] = INFTY; }
 
 	for(int t=0; t < T-1; ++t) {
 		for(int i=0; i < (X_DIM+U_DIM); ++i) { H[t][i] = INFTY; }
@@ -67,7 +65,6 @@ void setup_mpc_vars(planarMPC_params& problem, planarMPC_output& output) {
 	for(int i=0; i < X_DIM; ++i) { ub[T-1][i] = INFTY; }
 	for(int i=0; i < X_DIM; ++i) { z[T-1][i] = INFTY; }
 
-	for(int i=0; i < X_DIM; ++i) { c[0][i] = INFTY; }
 }
 
 void cleanup_mpc_vars() {
@@ -76,7 +73,17 @@ void cleanup_mpc_vars() {
 	delete[] lb;
 	delete[] ub;
 	delete[] z;
-	delete[] c;
+	delete c;
+}
+
+template<typename Derived>
+inline void fill_col_major(double *X, const MatrixBase<Derived>& M) {
+	int index = 0;
+	for(int j=0; j < M.cols(); ++j) {
+		for(int i=0; i < M.rows(); ++i) {
+			X[index++] = M(i,j);
+		}
+	}
 }
 
 bool is_valid_inputs()
@@ -87,7 +94,7 @@ bool is_valid_inputs()
 		if (t == 0) {
 			std::cout << "\nc[0]:\n";
 			for(int i=0; i < (X_DIM); ++i) {
-				std::cout << c[0][i] << " ";
+				std::cout << c[i] << " ";
 			}
 		}
 
@@ -133,9 +140,25 @@ bool is_valid_inputs()
 		std::cout << ub[T-1][i] << " ";
 	}
 
+	std::cout << "\nA[" << T-1 << "]:\n";
+	for(int i=0; i < 2*C_DIM; ++i) {
+		for(int j=0; j < X_DIM; ++j) {
+			std::cout << A[i+j*(2*C_DIM)] << " ";
+		}
+		std::cout << "\n";
+	}
 	std::cout << "\n";
 
-	for(int i=0; i < (X_DIM); ++i) { if (c[0][i] > INFTY/2) { return false; } }
+	std::cout << "b[" << T-1 << "]: ";
+	for(int i=0; i < 2*C_DIM; ++i) {
+		std::cout << b[i] << " ";
+	}
+
+	std::cout << "\n\n";
+
+	for(int i=0; i < (X_DIM); ++i) { if (c[i] > INFTY/2) { return false; } }
+	for(int i=0; i < (2*C_DIM)*X_DIM; ++i) { if (A[i] > INFTY/2) { return false; } }
+	for(int i=0; i < (2*C_DIM); ++i) { if (b[i] > INFTY/2) { return false; } }
 
 	for(int t = 0; t < T-1; ++t) {
 		for(int i=0; i < (X_DIM+U_DIM); ++i) { if (H[t][i] > INFTY/2) { return false; } }
@@ -150,56 +173,58 @@ bool is_valid_inputs()
 	for(int i=0; i < (X_DIM); ++i) { if (ub[T-1][i] > INFTY/2) { return false; } }
 	for(int i=0; i < (X_DIM); ++i) {if (ub[T-1][i] < lb[T-1][i]) { return false; } }
 
-
 	return true;
 }
 
-void L_BFGS(const std::vector<vec>& X, const std::vector<vec>& U, const vec &grad,
-		const std::vector<vec> &Xopt, const std::vector<vec> &Uopt, const vec &gradopt,
-		mat &hess) {
-	vec s(TOTAL_VARS, fill::zeros);
+void L_BFGS(const std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X,
+		const std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const vec<TOTAL_VARS> &grad,
+		const std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>> &Xopt,
+		const std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>> &Uopt, const vec<TOTAL_VARS> &gradopt,
+		mat<TOTAL_VARS, TOTAL_VARS> &hess) {
+	vec<TOTAL_VARS> s = vec<TOTAL_VARS>::Zero();
 
 	int index = 0;
 	for(int t=0; t < T-1; ++t) {
-		s.rows(index, index+X_DIM-1) = Xopt[t] - X[t];
+		s.segment<X_DIM>(index) = Xopt[t] - X[t];
 		index += X_DIM;
-		s.rows(index, index+U_DIM-1) = Uopt[t] - U[t];
+		s.segment<U_DIM>(index) = Uopt[t] - U[t];
 		index += U_DIM;
 	}
-	s.rows(index, index+X_DIM-1) = Xopt[T-1] - X[T-1];
+	s.segment<X_DIM>(index) = Xopt[T-1] - X[T-1];
 
-	mat y = gradopt - grad;
+	vec<TOTAL_VARS> y = gradopt - grad;
 
 	double theta;
-	vec hess_s = hess*s;
+	vec<TOTAL_VARS> hess_s = hess*s;
 
-	bool decision = dot(s, y) >= .2*dot(s, hess_s);
+	bool decision = s.dot(y) >= .2*s.dot(hess_s);
 	if (decision) {
 		theta = 1;
 	} else {
-		theta = (.8*dot(s, hess_s))/(dot(s, hess_s) - dot(s, y));
+		theta = (.8*s.dot(hess_s))/(s.dot(hess_s) - s.dot(y));
 	}
 
-	vec r = theta*y + (1-theta)*hess_s;
+	vec<TOTAL_VARS> r = theta*y + (1-theta)*hess_s;
 
-	hess = hess - (hess_s*hess_s.t())/(dot(s, hess_s)) + (r*r.t())/dot(s, r);
+	hess = hess - (hess_s*hess_s.transpose())/(s.dot(hess_s)) + (r*r.transpose())/s.dot(r);
 }
 
-double planar_collocation(std::vector<vec>& X, mat& sigma0, std::vector<vec>& U, const double alpha,
+double planar_collocation(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, mat<X_DIM,X_DIM>& sigma0,
+		std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha,
 		PlanarSystem& sys, planarMPC_params &problem, planarMPC_output &output, planarMPC_info &info) {
 
 	int max_iter = 100;
 	double Xeps = .5;
 	double Ueps = .5;
 
-	double merit = 0;
+	double merit = 0, meritopt = 0;
 	double constant_cost, hessian_constant, jac_constant;
-	vec grad;
-	mat hess = eye<mat>(TOTAL_VARS, TOTAL_VARS);
+	vec<TOTAL_VARS> grad = vec<TOTAL_VARS>::Zero();
+	mat<TOTAL_VARS,TOTAL_VARS> hess = mat<TOTAL_VARS,TOTAL_VARS>::Identity();
 
-	std::vector<vec> Xopt(T, zeros<vec>(X_DIM));
-	std::vector<vec> Uopt(T-1, zeros<vec>(U_DIM));
-	vec gradopt;
+	std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>> Xopt(T, vec<X_DIM>::Zero());
+	std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>> Uopt(T-1, vec<U_DIM>::Zero());
+	vec<TOTAL_VARS> gradopt = vec<TOTAL_VARS>::Zero();
 	double optcost, model_merit, new_merit;
 	double approx_merit_improve, exact_merit_improve, merit_improve_ratio;
 
@@ -213,21 +238,19 @@ double planar_collocation(std::vector<vec>& X, mat& sigma0, std::vector<vec>& U,
 		LOG_DEBUG(" ");
 		LOG_DEBUG("Iter: %d", it);
 
-		vec x_min, x_max, u_min, u_max;
-		sys.get_limits(x_min, x_max, u_min, u_max);
-
 		// only compute gradient/hessian if P/U has been changed
 		if (solution_accepted) {
 
 			if (it == 0) {
-				grad = sys.cost_grad(X, sigma0, U, alpha);
+//				grad = sys.cost_grad(X, sigma0, U, alpha, USE_FADBAD);
+				sys.cost_and_cost_grad(X, sigma0, U, alpha, USE_FADBAD, merit, grad);
 			} else {
-				grad = gradopt; // since L-BFGS calculation required it
+				merit = meritopt; // since L-BFGS calculation required it
+				grad = gradopt;
 			}
 
-			vec diaghess = diagvec(hess);
-
-			merit = sys.cost(X, sigma0, U, alpha);
+			vec<TOTAL_VARS> diaghess = hess.diagonal();
+//			merit = sys.cost(X, sigma0, U, alpha);
 
 			constant_cost = 0;
 			hessian_constant = 0;
@@ -249,9 +272,9 @@ double planar_collocation(std::vector<vec>& X, mat& sigma0, std::vector<vec>& U,
 			// fill in gradient
 			index = 0;
 			for(int t=0; t < T-1; ++t) {
-				vec::fixed<(X_DIM+U_DIM)> zbar;
-				zbar.subvec(0, X_DIM-1) = X[t];
-				zbar.subvec(X_DIM, (X_DIM+U_DIM)-1) = U[t];
+				vec<(X_DIM+U_DIM)> zbar;
+				zbar.segment<X_DIM>(0) = X[t];
+				zbar.segment<U_DIM>(X_DIM) = U[t];
 
 				for(int i=0; i < (X_DIM+U_DIM); ++i) {
 					hessian_constant += H[t][i]*zbar(i)*zbar(i);
@@ -261,7 +284,7 @@ double planar_collocation(std::vector<vec>& X, mat& sigma0, std::vector<vec>& U,
 				}
 			}
 
-			vec zbar = X[T-1];
+			vec<X_DIM> zbar = X[T-1];
 
 			for(int i=0; i < X_DIM; ++i) {
 				hessian_constant += H[T-1][i]*zbar(i)*zbar(i);
@@ -271,13 +294,16 @@ double planar_collocation(std::vector<vec>& X, mat& sigma0, std::vector<vec>& U,
 			}
 
 			for(int i=0; i < X_DIM; ++i) {
-				c[0][i] = std::max(x_min(i), X[0](i));
-				c[0][i] = std::min(x_max(i), X[0](i));
+				c[i] = X[0](i);
 			}
 
 			constant_cost = 0.5*hessian_constant + jac_constant + merit;
 		}
 
+
+		vec<X_DIM> x_min, x_max;
+		vec<U_DIM> u_min, u_max;
+		sys.get_limits(x_min, x_max, u_min, u_max);
 
 		// set trust region bounds based on current trust region size
 		for(int t=0; t < T; ++t) {
@@ -303,15 +329,34 @@ double planar_collocation(std::vector<vec>& X, mat& sigma0, std::vector<vec>& U,
 					index++;
 				}
 			}
-
 		}
 
+		// end goal constraint on end effector
+		vec<C_DIM> goal_pos = X[T-1].segment<2>(J_DIM);
+		double goal_delta = .01;
+
+		vec<E_DIM> jT = X[T-1].segment<E_DIM>(0);
+		vec<C_DIM> ee_pos = sys.get_ee_pos(jT);
+		mat<C_DIM,E_DIM> ee_pos_jac;
+		sys.get_ee_pos_jac(jT, ee_pos_jac);
+		mat<C_DIM,X_DIM> ee_pos_jac_full = mat<C_DIM,X_DIM>::Zero();
+		ee_pos_jac_full.block<C_DIM,E_DIM>(0,0) = ee_pos_jac;
+
+		mat<2*C_DIM,X_DIM> Amat;
+		Amat.block<C_DIM,X_DIM>(0,0) = ee_pos_jac_full;
+		Amat.block<C_DIM,X_DIM>(C_DIM,0) = -ee_pos_jac_full;
+		fill_col_major(A, Amat);
+
+		vec<2*C_DIM> bVec;
+		bVec.segment<C_DIM>(0) = goal_pos - ee_pos + ee_pos_jac_full*X[T-1] + goal_delta*vec<C_DIM>::Ones();
+		bVec.segment<C_DIM>(C_DIM) = -goal_pos + ee_pos - ee_pos_jac_full*X[T-1] + goal_delta*vec<C_DIM>::Ones();
+		fill_col_major(b, bVec);
 
 		// Verify problem inputs
-//		if (!is_valid_inputs()) {
-//			LOG_ERROR("Inputs are not valid!");
-//			exit(0);
-//		}
+		if (!is_valid_inputs()) {
+			LOG_ERROR("Inputs are not valid!");
+			exit(0);
+		}
 
 		// call FORCES
 		int exitflag = planarMPC_solve(&problem, &output, &info);
@@ -371,7 +416,7 @@ double planar_collocation(std::vector<vec>& X, mat& sigma0, std::vector<vec>& U,
 			Ueps *= cfg::trust_expand_ratio;
 			LOG_DEBUG("Accepted, Increasing trust region size to:  %2.6f %2.6f", Xeps, Ueps);
 
-			gradopt = sys.cost_grad(Xopt, sigma0, Uopt, alpha);
+			sys.cost_and_cost_grad(Xopt, sigma0, Uopt, alpha, USE_FADBAD, meritopt, gradopt);
 			L_BFGS(X, U, grad, Xopt, Uopt, gradopt, hess);
 
 			X = Xopt; U = Uopt;
@@ -387,7 +432,8 @@ double planar_collocation(std::vector<vec>& X, mat& sigma0, std::vector<vec>& U,
 	return sys.cost(X, sigma0, U, alpha);
 }
 
-double planar_minimize_merit(std::vector<vec>& X, mat& sigma0, std::vector<vec>& U, PlanarSystem& sys,
+double planar_minimize_merit(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, mat<X_DIM,X_DIM>& sigma0,
+		std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, PlanarSystem& sys,
 		planarMPC_params &problem, planarMPC_output &output, planarMPC_info &info) {
 	double alpha = cfg::alpha_init;
 	double cost = INFINITY;
@@ -398,14 +444,14 @@ double planar_minimize_merit(std::vector<vec>& X, mat& sigma0, std::vector<vec>&
 
 		LOG_DEBUG("Reintegrating trajectory");
 		for(int t=0; t < T-1; ++t) {
-			X[t+1] = sys.dynfunc(X[t], U[t], zeros<vec>(U_DIM));
+			X[t+1] = sys.dynfunc(X[t], U[t], vec<U_DIM>::Zero());
 		}
 
 		double max_delta_diff = -INFINITY;
 		for(int t=0; t < T; ++t) {
-			max_delta_diff = std::max(max_delta_diff,
-					max(abs(diagvec(sys.delta_matrix(X[t], X[t].subvec(J_DIM, X_DIM-1), alpha))
-							- diagvec(sys.delta_matrix(X[t], X[t].subvec(J_DIM, X_DIM-1), INFINITY)))));
+			mat<X_DIM,X_DIM> delta_alpha = sys.delta_matrix(X[t], X[t].segment<C_DIM>(J_DIM), alpha);
+			mat<X_DIM,X_DIM> delta_inf = sys.delta_matrix(X[t], X[t].segment<C_DIM>(J_DIM), INFINITY);
+			max_delta_diff = std::max(max_delta_diff, (delta_alpha - delta_inf).array().abs().maxCoeff());
 		}
 
 		LOG_DEBUG(" ");
@@ -426,26 +472,28 @@ double planar_minimize_merit(std::vector<vec>& X, mat& sigma0, std::vector<vec>&
 }
 
 int main(int argc, char* argv[]) {
-	vec camera = {0, 1};
-	vec object = {8, 8}; // {8, 8}
+	vec<2> camera, object;
+	camera << 0, 1;
+	object << 5, 7; // 1, 12
 	bool is_static = false;
 
 	PlanarSystem sys = PlanarSystem(camera, object, is_static);
 
 	// initial uncertainty about object is large
-	mat sigma0 = .01*eye<mat>(X_DIM, X_DIM);
-	sigma0.submat(span(4,5), span(4,5)) = 20*eye<mat>(2, 2);
+	mat<X_DIM,X_DIM> sigma0 = .01*mat<X_DIM,X_DIM>::Identity();
+	sigma0.block<C_DIM,C_DIM>(J_DIM, J_DIM) = 20*mat<C_DIM,C_DIM>::Identity();
 
-	vec x0 = {M_PI/5, -M_PI/2+M_PI/16, -M_PI/4, 0, 5, 5};
-	vec x0_real = join_vert(x0.subvec(0, 3), object);
+	vec<X_DIM> x0, x0_real;
+	x0 << M_PI/5, -M_PI/2+M_PI/16, -M_PI/4, 0, -3, 5;
+	x0_real << x0.segment<J_DIM>(0) , object;
 
 	// initialize state and controls
-	std::vector<vec> U(T-1, zeros<vec>(U_DIM));
-	std::vector<vec> X(T);
+	std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>> U(T-1, vec<U_DIM>::Zero());
+	std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>> X(T);
 
 	// track real states/beliefs
-	std::vector<vec> X_real(1, x0_real);
-	std::vector<mat> S_real(1, sigma0);
+	std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>> X_real(1, x0_real);
+	std::vector<mat<X_DIM,X_DIM>, aligned_allocator<mat<X_DIM,X_DIM>>> S_real(1, sigma0);
 
 	// initialize FORCES variables
 	planarMPC_params problem;
@@ -457,12 +505,27 @@ int main(int argc, char* argv[]) {
 
 	bool stop_condition = false;
 	while(!stop_condition) {
+		// initialize straight-line trajectory
 		// integrate dynamics
+		vec<C_DIM> ee_goal = x0.segment<C_DIM>(J_DIM);
+		vec<E_DIM> j_goal = x0.segment<E_DIM>(0);
+		bool ik_success = sys.ik(ee_goal, j_goal);
+		if (!ik_success) {
+			LOG_ERROR("IK failed, exiting");
+			exit(0);
+		}
+
+		vec<U_DIM> uinit = vec<U_DIM>::Zero();
+		uinit.segment<E_DIM>(0) = (j_goal - x0.segment<E_DIM>(0)) / (double)((T-1)*DT);
+
 		X[0] = x0;
 		for(int t=0; t < T-1; ++t) {
-			U[t] = zeros<vec>(U_DIM);
-			X[t+1] = sys.dynfunc(X[t], U[t], zeros<vec>(U_DIM));
+			U[t] = uinit;
+			X[t+1] = sys.dynfunc(X[t], U[t], vec<Q_DIM>::Zero());
 		}
+
+		LOG_INFO("Initialized path");
+		sys.display(X, sigma0, U, 10);
 
 		double init_cost = sys.cost(X, sigma0, U, INFINITY);
 		LOG_INFO("Initial cost: %4.5f", init_cost);
@@ -475,21 +538,15 @@ int main(int argc, char* argv[]) {
 		LOG_INFO("Optimized cost: %4.5f", cost);
 		LOG_INFO("Solve time: %5.3f ms", forces_time*1000);
 
-		std::cout << "X:\n";
-		for(int t=0; t < T; ++t) {
-			std::cout << X[t].t();
+		for(int t=0; t < T-1; ++t) {
+			X[t+1] = sys.dynfunc(X[t], U[t], vec<Q_DIM>::Zero());
 		}
-
-//		mat sigma_t = sigma0, sigma_tp1;
-//		for(int t=0; t < T-1; ++t) {
-//			sys.display(X[t], sigma_t);
-//			sys.belief_dynamics(X[t], sigma_t, U[t], INFINITY, X[t+1], sigma_tp1);
-//			sigma_t = sigma_tp1;
-//		}
+		LOG_INFO("Integrated trajectory");
+		sys.display(X, sigma0, U, INFINITY);
 
 		// execute first control input
-		vec x_tp1_real, x_tp1_tp1;
-		mat sigma_tp1_tp1;
+		vec<X_DIM> x_tp1_real, x_tp1_tp1;
+		mat<X_DIM,X_DIM> sigma_tp1_tp1;
 		sys.execute_control_step(X_real.back(), x0, sigma0, U[0], x_tp1_real, x_tp1_tp1, sigma_tp1_tp1);
 
 		X_real.push_back(x_tp1_real);
@@ -499,14 +556,18 @@ int main(int argc, char* argv[]) {
 		sys.display(x_tp1_tp1, sigma_tp1_tp1);
 
 		// truncate belief
-		vec obj_pos_trunc(C_DIM);
-		mat obj_sigma_trunc(C_DIM, C_DIM);
-		geometry2d::my_truncate_belief(sys.get_fov(x_tp1_tp1), x_tp1_tp1.subvec(4,5), sigma_tp1_tp1.submat(span(4,5), span(4,5)),
+		std::vector<Beam> fov_tp1 = sys.get_fov(x_tp1_tp1);
+		bool received_obs = geometry2d::is_inside(object, fov_tp1);
+		vec<C_DIM> obj_pos_trunc;
+		mat<C_DIM,C_DIM> obj_sigma_trunc;
+		geometry2d::my_truncate_belief(fov_tp1, x_tp1_tp1.segment<C_DIM>(J_DIM),
+				sigma_tp1_tp1.block<C_DIM,C_DIM>(J_DIM, J_DIM), received_obs,
 				obj_pos_trunc, obj_sigma_trunc);
 
-		vec x_tp1_tp1_trunc = join_vert(x_tp1_tp1.subvec(0,J_DIM-1), obj_pos_trunc);
-		mat sigma_tp1_tp1_trunc = sigma_tp1_tp1;
-		sigma_tp1_tp1_trunc.submat(span(4,5), span(4,5)) = obj_sigma_trunc;
+		vec<X_DIM> x_tp1_tp1_trunc;
+		x_tp1_tp1_trunc << x_tp1_tp1.segment<J_DIM>(0), obj_pos_trunc;
+		mat<X_DIM,X_DIM> sigma_tp1_tp1_trunc = sigma_tp1_tp1;
+		sigma_tp1_tp1_trunc.block<C_DIM,C_DIM>(J_DIM, J_DIM) = obj_sigma_trunc;
 
 		LOG_DEBUG("Display truncated belief");
 		sys.display(x_tp1_tp1_trunc, sigma_tp1_tp1_trunc);
@@ -516,8 +577,8 @@ int main(int argc, char* argv[]) {
 		sigma0 = sigma_tp1_tp1_trunc;
 
 		// no truncation
-//		x0 = x_tp1_tp1;
-//		sigma0 = sigma_tp1_tp1;
+		//		x0 = x_tp1_tp1;
+		//		sigma0 = sigma_tp1_tp1;
 
 	}
 

@@ -4,7 +4,6 @@
 #include <Python.h>
 
 #include <map>
-#include <iostream>
 
 #include <boost/python.hpp>
 #include <boost/python/numeric.hpp>
@@ -15,8 +14,8 @@
 namespace py = boost::python;
 namespace np = boost::numpy;
 
-#include <Eigen/Eigen>
-using namespace Eigen;
+#include <armadillo>
+using namespace arma;
 
 #include "../../util/Timer.h"
 #include "../../util/logging.h"
@@ -46,7 +45,7 @@ inline double uniform(double low, double high) {
 	return (high - low)*(rand() / double(RAND_MAX)) + low;
 }
 
-np::ndarray eigen_to_ndarray(const MatrixXd& m);
+np::ndarray arma_to_ndarray(mat& m);
 
 }
 

@@ -47,21 +47,22 @@ void TimerCollection::clear_all() {
 
 namespace planar_utils {
 
-np::ndarray eigen_to_ndarray(const MatrixXd& m) {
-	if (m.cols() == 1) {
-		py::tuple shape = py::make_tuple(m.rows());
+np::ndarray arma_to_ndarray(mat& m) {
+	if (m.is_colvec()) {
+		py::tuple shape = py::make_tuple(m.n_rows);
 		np::dtype dtype = np::dtype::get_builtin<float>();
 		np::ndarray n = np::zeros(shape, dtype);
-		for(int i=0; i < m.rows(); ++i) {
+		for(int i=0; i < m.n_rows; ++i) {
 			n[py::make_tuple(i)] = m(i);
 		}
+
 		return n;
 	} else {
-		py::tuple shape = py::make_tuple(m.rows(), m.cols());
+		py::tuple shape = py::make_tuple(m.n_rows, m.n_cols);
 		np::dtype dtype = np::dtype::get_builtin<float>();
 		np::ndarray n = np::zeros(shape, dtype);
-		for(int i=0; i < m.rows(); ++i) {
-			for(int j=0; j < m.cols(); ++j) {
+		for(int i=0; i < m.n_rows; ++i) {
+			for(int j=0; j < m.n_cols; ++j) {
 				n[py::make_tuple(i,j)] = m(i,j);
 			}
 		}

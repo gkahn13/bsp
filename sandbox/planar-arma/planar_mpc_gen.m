@@ -17,7 +17,6 @@ disp(strcat(rootDir,'bsp/forces'));
 N = timesteps - 1;
 nx = 6;
 nu = 4;
-nc = 2; % 2-d
 DT = 1;
 stages = MultistageProblem(N+1);
 
@@ -106,10 +105,6 @@ params(end+1) = newParam(['ub',istr], i, 'ineq.b.ub');
 stages(i).eq.c = zeros(nx,1);
 stages(i).eq.D = -eye(nx);
 
-% affine inequality
-params(end+1) = newParam(['A',istr], i, 'ineq.p.A');
-params(end+1) = newParam(['b',istr], i, 'ineq.p.b');
-
 %--------------------------------------------------------------------------
 % define outputs of the solver
 for i=1:N
@@ -123,7 +118,7 @@ outputs(i) = newOutput(var,i,1:nx);
 % solver settings
 mpcname = 'planarMPC';
 codeoptions = getOptions(mpcname);
-codeoptions.printlevel = 2;
+codeoptions.printlevel = 0;
 codeoptions.timing=0;
 codeoptions.maxit=50;
 

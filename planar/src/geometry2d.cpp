@@ -13,36 +13,38 @@ Line::Line(const Segment& seg) {
  * Line public methods
  */
 
-bool Line::intersection(const Line& other, vec& intersection) {
+bool Line::intersection(const Line& other, Vector2d& intersection) {
 	// s*d + o = t*d_other + o_other
-	mat A = join_horiz(d, other.d); // [d d_other]
-	mat b = other.o - o;
+	Matrix2d A;
+	A << d, other.d; // [d d_other]
+	Vector2d b = other.o - o;
 
-	if (fabs(det(A)) < epsilon) {
+	if (fabs(A.determinant()) < epsilon) {
 		return false;
 	}
 
-	vec soln = solve(A, b);
+	Vector2d soln = A.lu().solve(b);
 	double s = soln(0);
 
 	intersection = s*d + o;
 	return true;
 }
 
-bool Line::intersection(const Segment& seg, vec& intersection) {
+bool Line::intersection(const Segment& seg, Vector2d& intersection) {
 	// v = seg.p1 - seg.p0
 	// s*d + o = t*v + seg.p0
 
-	vec v = seg.p1 - seg.p0;
+	Vector2d v = seg.p1 - seg.p0;
 
-	mat A = join_horiz(d, v);
-	mat b = seg.p0 - o;
+	Matrix2d A;
+	A << d, v;
+	Vector2d b = seg.p0 - o;
 
-	if (fabs(det(A)) < epsilon) {
+	if (fabs(A.determinant()) < epsilon) {
 		return false;
 	}
 
-	vec soln = solve(A, b);
+	Vector2d soln = A.lu().solve(b);
 	double s = soln(0);
 	double t = -soln(1);
 
@@ -52,26 +54,26 @@ bool Line::intersection(const Segment& seg, vec& intersection) {
 //	return seg.within_bounding_rect(intersection);
 }
 
-double Line::distance_to(const vec& x) {
+double Line::distance_to(const Vector2d& x) {
 	// y = o - x
 	// min_{t} ||t*d + y||_{2}
-	vec y = o - x;
-	double t = -dot(d, y)/dot(d, d);
+	Vector2d y = o - x;
+	double t = -d.dot(y)/d.dot(d);
 
-	return norm(t*d + y, 2);
+	return (t*d + y).norm();
 }
 
 /**
  * Halfspace public methods
  */
 
-bool Halfspace::contains(const vec& x) {
-	return (dot(n, x - o) >= epsilon);
+bool Halfspace::contains(const Vector2d& x) {
+	return (n.dot(x - o) >= epsilon);
 }
 
 bool Halfspace::contains_part(const Segment& seg, Segment& seg_part) {
 	Line split({-n(1), n(0)}, o);
-	vec intersection;
+	Vector2d intersection;
 
 	if (split.intersection(seg, intersection)) {
 		// segment crosses the half-space
@@ -99,7 +101,7 @@ bool Halfspace::contains_part(const Segment& seg, Segment& seg_part) {
  * Segment public methods
  */
 
-bool Segment::within_bounding_rect(const vec& p) const {
+bool Segment::within_bounding_rect(const Vector2d& p) const {
 	double x_min, x_max, y_min, y_max;
 	x_min = std::min(p0(0), p1(0));
 	x_max = std::max(p0(0), p1(0));
@@ -115,24 +117,25 @@ bool Segment::within_bounding_rect(const vec& p) const {
 	return within;
 }
 
-bool Segment::intersection(const Segment& other, vec& intersection) {
-	vec p0_other = other.p0, p1_other = other.p1;
+bool Segment::intersection(const Segment& other, Vector2d& intersection) {
+	Vector2d p0_other = other.p0, p1_other = other.p1;
 
 	// w = p1 - p0
 	// v = p1_other - p0_other
 	// s*w + p0 = t*v + p_other
 
-	vec w = p1 - p0;
-	vec v = p1_other - p0_other;
+	Vector2d w = p1 - p0;
+	Vector2d v = p1_other - p0_other;
 
-	mat A = join_horiz(w, v);
-	mat b = p0_other - p0;
+	Matrix2d A;
+	A << w, v;
+	Vector2d b = p0_other - p0;
 
-	if (fabs(det(A)) < epsilon) {
+	if (fabs(A.determinant()) < epsilon) {
 		return false;
 	}
 
-	vec soln = solve(A, b);
+	Vector2d soln = A.lu().solve(b);
 	double s = soln(0);
 	double t = -soln(1);
 
@@ -142,17 +145,17 @@ bool Segment::intersection(const Segment& other, vec& intersection) {
 //	return (this->within_bounding_rect(intersection) && (other.within_bounding_rect(intersection)));
 }
 
-vec Segment::closest_point_to(const vec& x) {
+Vector2d Segment::closest_point_to(const Vector2d& x) {
 	// min_{0<=t<=1} ||t*(p1-p0) + p0 - x||_{2}^{2}
-	vec v = p1 - p0;
-	vec b = p0 - x;
+	Vector2d v = p1 - p0;
+	Vector2d b = p0 - x;
 
-	double t = -trace((v.t()*b)/(v.t()*v));
+	double t = -(v.dot(b)) / v.dot(v);
 	if ((0 <= t) && (t <= 1)) {
-		vec intersection = t*(p1 - p0) + p0;
+		Vector2d intersection = t*(p1 - p0) + p0;
 		return intersection;
 	} else {
-		if (norm(x - p0, 2) < norm(x - p1, 2)) {
+		if ((x - p0).norm() < (x - p1).norm()) {
 			return p0;
 		} else {
 			return p1;
@@ -160,15 +163,16 @@ vec Segment::closest_point_to(const vec& x) {
 	}
 }
 
-double Segment::distance_to(const vec& x) {
-	return norm(closest_point_to(x) - x, 2);
+double Segment::distance_to(const Vector2d& x) {
+	return (closest_point_to(x) - x).norm();
 }
+
 
 /**
  * Beam constructor
  */
 
-Beam::Beam(const vec& base_pt, const vec& a_pt, const vec& b_pt) : base(base_pt) {
+Beam::Beam(const Vector2d& base_pt, const Vector2d& a_pt, const Vector2d& b_pt) : base(base_pt) {
 	a = (a_pt(0) > b_pt(0)) ? a_pt : b_pt;
 	b = (a_pt(0) <= b_pt(0)) ? a_pt : b_pt;
 }
@@ -182,7 +186,7 @@ std::vector<Beam> Beam::truncate(const Segment& s) {
 	Segment top = top_segment();
 	Segment right = right_segment();
 
-	vec left_intersect, top_intersect, right_intersect;
+	Vector2d left_intersect, top_intersect, right_intersect;
 
 	bool is_intersect_right = right.intersection(s, right_intersect);
 	bool is_intersect_top = top.intersection(s, top_intersect);
@@ -198,16 +202,16 @@ std::vector<Beam> Beam::truncate(const Segment& s) {
 		new_beams.push_back(Beam(base, a, top_intersect));
 		new_beams.push_back(Beam(base, top_intersect, left_intersect));
 	} else if (is_intersect_right) {
-		vec p_inside = (is_inside(s.p0)) ? s.p0 : s.p1;
-		vec top_projection_intersect;
+		Vector2d p_inside = (is_inside(s.p0)) ? s.p0 : s.p1;
+		Vector2d top_projection_intersect;
 //		bool should_intersect = Line(p_inside - base, base).intersection(top, top_projection_intersect);
 		bool should_intersect = Line(p_inside - base, base).intersection(Line(top), top_projection_intersect);
 		assert(should_intersect);
 		new_beams.push_back(Beam(base, right_intersect, p_inside));
 		new_beams.push_back(Beam(base, top_projection_intersect, b));
 	} else if (is_intersect_top) {
-		vec p_inside = (is_inside(s.p0)) ? s.p0 : s.p1;
-		vec top_projection_intersect;
+		Vector2d p_inside = (is_inside(s.p0)) ? s.p0 : s.p1;
+		Vector2d top_projection_intersect;
 //		bool should_intersect = Line(p_inside - base, base).intersection(top, top_projection_intersect);
 		bool should_intersect = Line(p_inside - base, base).intersection(Line(top), top_projection_intersect);
 		assert(should_intersect);
@@ -221,18 +225,18 @@ std::vector<Beam> Beam::truncate(const Segment& s) {
 			new_beams.push_back(Beam(base, top_intersect, b));
 		}
 	} else if (is_intersect_left) {
-		vec p_inside = (is_inside(s.p0)) ? s.p0 : s.p1;
-		vec top_projection_intersect;
+		Vector2d p_inside = (is_inside(s.p0)) ? s.p0 : s.p1;
+		Vector2d top_projection_intersect;
 //		bool should_intersect = Line(p_inside - base, base).intersection(top, top_projection_intersect);
 		bool should_intersect = Line(p_inside - base, base).intersection(Line(top), top_projection_intersect);
 		assert(should_intersect);
 		new_beams.push_back(Beam(base, a, top_projection_intersect));
 		new_beams.push_back(Beam(base, p_inside, left_intersect));
 	} else if (is_inside(s.p0) && is_inside(s.p1)) {
-		vec right_pt = (s.p0(0) > s.p1(0)) ? s.p0 : s.p1;
-		vec left_pt = (s.p0(0) <= s.p1(0)) ? s.p0 : s.p1;
+		Vector2d right_pt = (s.p0(0) > s.p1(0)) ? s.p0 : s.p1;
+		Vector2d left_pt = (s.p0(0) <= s.p1(0)) ? s.p0 : s.p1;
 
-		vec rtop_projection_intersect, ltop_projection_intersect;
+		Vector2d rtop_projection_intersect, ltop_projection_intersect;
 //		bool should_intersect = Line(right_pt - base, base).intersection(top, rtop_projection_intersect);
 		bool should_intersect = Line(right_pt - base, base).intersection(Line(top), rtop_projection_intersect);
 		assert(should_intersect);
@@ -250,7 +254,7 @@ std::vector<Beam> Beam::truncate(const Segment& s) {
 	return new_beams;
 }
 
-double Beam::signed_distance(const vec& x) {
+double Beam::signed_distance(const Vector2d& x) {
 	// sd positive if outside field of view
 	bool inside = is_inside(x);
 
@@ -267,7 +271,7 @@ double Beam::signed_distance(const vec& x) {
 	return sd;
 }
 
-bool Beam::is_inside(const vec& p) {
+bool Beam::is_inside(const Vector2d& p) {
 	double total_area = area();
 	double area0 = Beam(base, a, p).area();
 	double area1 = Beam(base, b, p).area();
@@ -291,19 +295,14 @@ double Beam::area() {
 	return fabs((base(0)*(a(1) - b(1)) + a(0)*(b(1) - base(1)) + b(0)*(base(1) - a(1))) / 2.0);
 }
 
-
 /**
  * Functions
  */
 
 namespace geometry2d {
 
-double signed_distance(const vec& p, std::vector<Beam>& beams) {
-	bool is_inside = false;
-	for(int i=0; i < beams.size(); ++i) {
-		is_inside |= beams[i].is_inside(p);
-	}
-	double sd_sign = (is_inside) ? -1 : 1;
+double signed_distance(const Vector2d& p, std::vector<Beam>& beams) {
+	double sd_sign = (is_inside(p, beams)) ? -1 : 1;
 
 	std::vector<Segment> border = beams_border(beams);
 	double dist = INFINITY;
@@ -312,6 +311,14 @@ double signed_distance(const vec& p, std::vector<Beam>& beams) {
 	}
 
 	return sd_sign*dist;
+}
+
+bool is_inside(const Vector2d& p, std::vector<Beam>& beams) {
+	bool inside = false;
+	for(int i=0; i < beams.size(); ++i) {
+		inside |= beams[i].is_inside(p);
+	}
+	return inside;
 }
 
 // NOTE: assumes beams are sorted from right to left
@@ -345,14 +352,14 @@ std::vector<Segment> beams_border(const std::vector<Beam>& beams) {
  * that is on the bottom side of the top segment
  * (serves as a conservative approximation of convex region)
  */
-void truncate_belief(const std::vector<Beam>& beams, const vec& cur_mean, const mat& cur_cov,
-		vec& out_mean, mat& out_cov) {
-	vec top_right = beams[0].a;
-	vec top_left = beams.back().b;
+void truncate_belief(const std::vector<Beam>& beams, const Vector2d& cur_mean, const Matrix2d& cur_cov,
+		Vector2d& out_mean, Matrix2d& out_cov) {
+	Vector2d top_right = beams[0].a;
+	Vector2d top_left = beams.back().b;
 	Segment top_seg(top_right, top_left);
 	Line top_line(top_right, top_left);
 
-	vec max_point = top_right;
+	Vector2d max_point = top_right;
 	double max_dist = 0.0;
 
 	if (fabs(top_right(0) - top_left(0)) < epsilon) {
@@ -361,7 +368,7 @@ void truncate_belief(const std::vector<Beam>& beams, const vec& cur_mean, const 
 		return;
 	}
 
-	vec intersection;
+	Vector2d intersection;
 	double tmp_dist = -INFINITY;
 	for(int i=0; i < beams.size(); ++i) {
 		const Beam &beam = beams[i];
@@ -380,26 +387,24 @@ void truncate_belief(const std::vector<Beam>& beams, const vec& cur_mean, const 
 	}
 
 	// normal vector to top
-	vec c = {top_right(1) - top_left(1), top_left(0) - top_right(0)};
+	Vector2d c = {top_right(1) - top_left(1), top_left(0) - top_right(0)};
 
 	// TODO: MY ADDITION
 //	std::vector<Beam> tmp_beams = beams;
 //	double n_sign = (signed_distance(cur_mean, tmp_beams) > 0) ? 1 : -1;
 //	c *= n_sign;
 
-	double d = dot(c, max_point);
+	double d = c.dot(max_point);
 	truncate_gaussian(c, d, cur_mean, cur_cov, out_mean, out_cov);
 }
 
-void my_truncate_belief(const std::vector<Beam>& beams, const vec& cur_mean, const mat& cur_cov,
-		vec& out_mean, mat& out_cov) {
-	int DIM = cur_mean.n_rows;
-
+void my_truncate_belief(std::vector<Beam>& beams, const Vector2d& cur_mean, const Matrix2d& cur_cov, const bool received_obs,
+		Vector2d& out_mean, Matrix2d& out_cov) {
 	std::vector<Beam> shifted_beams(beams);
 	// shift everything to be centered around cur_mean
 	// transform all coordinates by inv(U), where cur_cov = U*U.t() (i.e. cholesky)
-	mat U = chol(cur_cov);
-	mat U_inv = inv(U);
+	Matrix2d U = cur_cov.llt().matrixL();
+	Matrix2d U_inv = U.inverse();
 	for(int i=0; i < shifted_beams.size(); ++i) {
 		Beam& b = shifted_beams[i];
 		b.base = U_inv*(b.base - cur_mean);
@@ -410,6 +415,9 @@ void my_truncate_belief(const std::vector<Beam>& beams, const vec& cur_mean, con
 
 	std::vector<Segment> border = beams_border(shifted_beams);
 
+	bool mean_received_obs = is_inside(cur_mean, beams);
+	double n_sign = (mean_received_obs == received_obs) ? 1 : -1;
+
 //	// remove side edges
 //	std::vector<Segment> new_border;
 //	for(int i=1; i < border.size()-1; ++i) {
@@ -417,40 +425,45 @@ void my_truncate_belief(const std::vector<Beam>& beams, const vec& cur_mean, con
 //	}
 //	border = new_border;
 
-	vec mean = zeros<vec>(DIM);
-	mat cov = eye<mat>(DIM, DIM);
+	Vector2d mean = Vector2d::Zero();
+	Matrix2d cov = Matrix2d::Identity();
 
-	vec delta_mean_total(DIM, fill::zeros);
-	mat delta_cov_total(DIM, DIM, fill::zeros);
+	Vector2d delta_mean_total = Vector2d::Zero();
+	Matrix2d delta_cov_total = Matrix2d::Zero();
 
 	while(border.size() > 0) {
 		// find closest point p on geometry (i.e. border) to the origin
 		// the valid space is defined by the hyperplane with normal n = -p
-		vec p;
+		Vector2d p;
 		double min_dist = INFINITY;
 		for(int i=0; i < border.size(); ++i) {
-			if (border[i].distance_to(zeros<vec>(DIM)) < min_dist) {
-				p = border[i].closest_point_to(zeros<vec>(DIM));
-				min_dist = norm(p, 2);
+			if (border[i].distance_to(Vector2d::Zero()) < min_dist) {
+				p = border[i].closest_point_to(Vector2d::Zero());
+				min_dist = p.norm();
 			}
 		}
-		vec n = -p;
+//		Vector2d n = -p;
+		Vector2d n = (n_sign)*(-p);
 
 		// truncate gaussian w.r.t. to -n (the complement space that we want to truncate)
-		truncate_gaussian(-n, dot(n, n), mean, cov, out_mean, out_cov);
+		truncate_gaussian(-n, n.dot(n), mean, cov, out_mean, out_cov);
 		mean = out_mean;
 		cov = out_cov;
 
-//		my_truncate_gaussian(-n, dot(n, n), mean, cov, delta_mean_total, delta_cov_total);
+//		my_truncate_gaussian(-n, n.dot(n), mean, cov, delta_mean_total, delta_cov_total);
 
 		// prune all geometry in infeasible space
-		Halfspace h(-p, p); // TODO: h(n, p) or h(-p, p)
+		Halfspace h(n, p); // TODO: h(n, p) or h(-p, p)
 		std::vector<Segment> new_border;
 		for(int i=0; i < border.size(); ++i) {
-			Segment seg_part(zeros<vec>(DIM), zeros<vec>(DIM));
+			Segment seg_part(Vector2d::Zero(), Vector2d::Zero());
 			if (h.contains_part(border[i], seg_part)) {
 				new_border.push_back(seg_part);
 			}
+		}
+
+		if (border.size() == new_border.size()) {
+			break; // border should always get smaller
 		}
 		border = new_border;
 		// repeat while still points left
@@ -462,43 +475,43 @@ void my_truncate_belief(const std::vector<Beam>& beams, const vec& cur_mean, con
 	}
 
 //	out_mean = U*(delta_mean_total) + cur_mean;
-//	out_cov = U*(eye<mat>(DIM,DIM) + delta_cov_total)*U.t();
+//	out_cov = U*(Matrix2d::Identity() + delta_cov_total)*U.transpose();
 
 	out_mean = U*mean + cur_mean;
-	out_cov = U*cov*U.t();
+	out_cov = U*cov*U.transpose();
 }
 
-void truncate_gaussian(const vec& c, double d, const vec& cur_mean, const mat& cur_cov,
-		vec& out_mean, mat& out_cov) {
-	double y_mean = dot(c, cur_mean);
-	double y_var = trace(c.t()*cur_cov*c);
+void truncate_gaussian(const Vector2d& c, double d, const Vector2d& cur_mean, const Matrix2d& cur_cov,
+		Vector2d& out_mean, Matrix2d& out_cov) {
+	double y_mean = c.dot(cur_mean);
+	double y_var = c.dot(cur_cov*c);
 
 	double y_new_mean, y_new_var;
 	truncate_univariate_gaussian(d, y_mean, y_var, y_new_mean, y_new_var);
 //	my_truncate_univariate_gaussian(d, y_mean, y_var, y_new_mean, y_new_var);
 
-	vec xy_cov = cur_cov*c;
-	vec L = xy_cov / y_var;
+	Vector2d xy_cov = cur_cov*c;
+	Vector2d L = xy_cov / y_var;
 
 	out_mean = cur_mean + L*(y_new_mean - y_mean);
-	out_cov = cur_cov + (y_new_var/y_var - 1.0) * (L*xy_cov.t());
+	out_cov = cur_cov + (y_new_var/y_var - 1.0) * (L*xy_cov.transpose());
 }
 
-void my_truncate_gaussian(const vec& c, double d, const vec& cur_mean, const mat& cur_cov,
-		vec& delta_mean_total, mat& delta_cov_total) {
-	double y_mean = dot(c, cur_mean);
-	double y_var = trace(c.t()*cur_cov*c);
+void my_truncate_gaussian(const Vector2d& c, double d, const Vector2d& cur_mean, const Matrix2d& cur_cov,
+		Vector2d& delta_mean_total, Matrix2d& delta_cov_total) {
+	double y_mean = c.dot(cur_mean);
+	double y_var = c.dot(cur_cov*c);
 
 	double y_new_mean, y_new_var;
-//	truncate_univariate_gaussian(d, y_mean, y_var, y_new_mean, y_new_var);
-	my_truncate_univariate_gaussian(d, y_mean, y_var, y_new_mean, y_new_var);
+	truncate_univariate_gaussian(d, y_mean, y_var, y_new_mean, y_new_var);
+//	my_truncate_univariate_gaussian(d, y_mean, y_var, y_new_mean, y_new_var);
 
-	vec xy_cov = cur_cov*c;
-	vec L = xy_cov / y_var;
+	Vector2d xy_cov = cur_cov*c;
+	Vector2d L = xy_cov / y_var;
 
-	delta_mean_total += L*(y_mean - y_new_mean);
-//	delta_cov_total += (y_new_var/y_var - 1.0) * (L*xy_cov.t());
-	delta_cov_total += ((cur_cov*c) / y_var)*(y_var - y_new_var)*((c.t()*cur_cov)/ y_var);
+	delta_mean_total += L*(y_new_mean - y_mean);
+	delta_cov_total += (y_new_var/y_var - 1.0) * (L*xy_cov.transpose());
+//	delta_cov_total += ((cur_cov*c) / y_var)*(y_var - y_new_var)*((c.transpose()*cur_cov)/ y_var);
 }
 
 
@@ -542,9 +555,9 @@ void plot_beams(std::vector<Beam>& beams) {
 
 		py::list beams_pylist;
 		for(int i=0; i < beams.size(); ++i) {
-			mat m = join_horiz(beams[i].base, beams[i].a);
-			m = join_horiz(m, beams[i].b);
-			beams_pylist.append(planar_utils::arma_to_ndarray(m));
+			Matrix<double,2,3> m;
+			m << beams[i].base, beams[i].a, beams[i].b;
+			beams_pylist.append(planar_utils::eigen_to_ndarray(m));
 		}
 
 		plot_beams(beams_pylist, true);

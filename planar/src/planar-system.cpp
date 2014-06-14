@@ -4,69 +4,52 @@
  * Constructors and initializers
  */
 
-PlanarSystem::PlanarSystem(const vec& camera_origin, const vec& object, bool is_static) {
+PlanarSystem::PlanarSystem(const vec<C_DIM>& camera_origin, const vec<C_DIM>& object, bool is_static) {
 	init(camera_origin, object, is_static);
 }
 
-void PlanarSystem::init(const vec& camera_origin, const vec& object, bool is_static) {
+void PlanarSystem::init(const vec<C_DIM>& camera_origin, const vec<C_DIM>& object, bool is_static) {
 	this->camera_origin = camera_origin;
 	camera_fov = M_PI/4;
 	camera_max_dist = 15;
 	this->object = object;
 	this->is_static = is_static;
 
-	robot_origin = zeros<vec>(2);
-	link_lengths = {5, 5, 4};
+	robot_origin = Vector2d::Zero();
+	link_lengths << 5, 5, 4;
 
-	J_DIM = 4;
-	C_DIM = 2;
-
-	X_DIM = 6;
-	U_DIM = 4;
-	Z_DIM = 6;
-
-	Q = (M_PI/4)*eye<mat>(U_DIM, U_DIM);
+	Q = (M_PI/4)*mat<U_DIM,U_DIM>::Identity();
 //	R = 10*eye<mat>(Z_DIM, Z_DIM);
-	R = diagmat(join_vert((M_PI/4)*ones<vec>(J_DIM), 5*ones<vec>(C_DIM)));
+	vec<R_DIM> R_diag;
+	R_diag << (M_PI/4)*vec<J_DIM>::Ones(),
+			5*vec<C_DIM>::Ones();
+	R = R_diag.asDiagonal();
 
 	// x bound for object is sum of link_lengths
-	double max_link_length = accu(link_lengths);
-	x_min = {-M_PI/2, -M_PI/2, -M_PI/2, -M_PI/2, -max_link_length, -max_link_length};
-	x_max = {M_PI/2, M_PI/2, M_PI/2, M_PI/2, max_link_length, max_link_length};
+	double max_link_length = link_lengths.sum();
+	x_min << -3*M_PI/2, -3*M_PI/2, -3*M_PI/2, -M_PI/2, -max_link_length, -max_link_length;
+	x_max << 3*M_PI/2, 3*M_PI/2, 3*M_PI/2, M_PI/2, max_link_length, max_link_length;
 
 	double max_input = M_PI/12;
-	u_min = {-max_input, -max_input, -max_input, (is_static) ? 0 : -max_input};
-	u_max = {max_input, max_input, max_input, (is_static) ? 0 : max_input};
+	u_min << -max_input, -max_input, -max_input, (is_static) ? 0 : -max_input;
+	u_max << max_input, max_input, max_input, (is_static) ? 0 : max_input;
 
-	Q_DIM = Q.n_rows;
-	R_DIM = R.n_rows;
-
-	DT = 1.0;
+	fps.init(camera_origin.cast<bdouble>(), object.cast<bdouble>(), is_static);
 }
+
 
 /**
  * Public methods
  */
 
-vec PlanarSystem::dynfunc(const vec& x, const vec& u, const vec& q, bool enforce_limits) {
-	// TODO: should enforce joint limits?
-	vec x_new = x;
-	x_new.subvec(span(0, J_DIM-1)) += DT*(u + q);
-
-	if (enforce_limits) {
-		vec x_min, x_max, u_min, u_max;
-		get_limits(x_min, x_max, u_min, u_max);
-		x_new = arma::max(x_new, x_min);
-		x_new = arma::min(x_new, x_max);
-	}
-
+vec<X_DIM> PlanarSystem::dynfunc(const vec<X_DIM>& x, const vec<U_DIM>& u, const vec<Q_DIM>& q, bool enforce_limits) {
+	vec<X_DIM> x_new = x;
+	x_new.segment<J_DIM>(0) += DT*(u + q);
 	return x_new;
 }
 
-// For planning, object comes from state
-// For execution update, object is this->object
-vec PlanarSystem::obsfunc(const vec& x, const vec& object, const vec& r) {
-	vec z(Z_DIM);
+vec<Z_DIM> PlanarSystem::obsfunc(const vec<X_DIM>& x, const vec<C_DIM>& object, const vec<R_DIM>& r) {
+	vec<Z_DIM> z;
 	z(0) = x(0); // joint 0
 	z(1) = x(1); // joint 1
 	z(2) = x(2); // joint 2
@@ -76,8 +59,9 @@ vec PlanarSystem::obsfunc(const vec& x, const vec& object, const vec& r) {
 	return z + r;
 }
 
-mat PlanarSystem::delta_matrix(const vec& x, const vec& object, const double alpha) {
-	mat delta(Z_DIM, Z_DIM, fill::zeros);
+
+mat<Z_DIM,Z_DIM> PlanarSystem::delta_matrix(const vec<X_DIM>& x, const vec<C_DIM>& object, const double alpha) {
+	mat<Z_DIM,Z_DIM> delta = mat<Z_DIM,Z_DIM>::Zero();
 
 	for(int i=0; i < J_DIM; ++i) {
 		delta(i, i) = 1; // TODO: should this depend on SD of link segments?
@@ -93,70 +77,73 @@ mat PlanarSystem::delta_matrix(const vec& x, const vec& object, const double alp
 	return delta;
 }
 
-
 /**
  * \brief Propagates belief through EKF with max-likelihood noise assumption
  */
-void PlanarSystem::belief_dynamics(const vec& x_t, const mat& sigma_t, const vec& u_t, const double alpha, vec& x_tp1, mat& sigma_tp1) {
+void PlanarSystem::belief_dynamics(const vec<X_DIM>& x_t, const mat<X_DIM,X_DIM>& sigma_t, const vec<U_DIM>& u_t, const double alpha,
+		vec<X_DIM>& x_tp1, mat<X_DIM,X_DIM>& sigma_tp1) {
 	// propagate dynamics
-	x_tp1 = dynfunc(x_t, u_t, zeros<vec>(Q_DIM));
+	x_tp1 = dynfunc(x_t, u_t, vec<Q_DIM>::Zero());
 
 	// propagate belief through dynamics
-	mat A(X_DIM, X_DIM, fill::zeros), M(X_DIM, Q_DIM, fill::zeros);
-	linearize_dynfunc(x_t, u_t, zeros<vec>(Q_DIM), A, M);
+	mat<X_DIM,X_DIM> A = mat<X_DIM,X_DIM>::Zero();
+	mat<X_DIM,Q_DIM> M = mat<X_DIM,Q_DIM>::Zero();
+	linearize_dynfunc(x_t, u_t, vec<Q_DIM>::Zero(), A, M);
 
-	mat sigma_tp1_bar = A*sigma_t*A.t() + M*Q*M.t();
+	mat<X_DIM,X_DIM> sigma_tp1_bar = A*sigma_t*A.transpose() + M*Q*M.transpose();
 
 	// propagate belief through observation
-	mat H(Z_DIM, X_DIM, fill::zeros), N(Z_DIM, R_DIM, fill::zeros);
-	linearize_obsfunc(x_tp1, zeros<vec>(R_DIM), H, N);
+	mat<Z_DIM,X_DIM> H = mat<Z_DIM,X_DIM>::Zero();
+	mat<Z_DIM,R_DIM> N = mat<Z_DIM,R_DIM>::Zero();
+	linearize_obsfunc(x_tp1, vec<R_DIM>::Zero(), H, N);
 
-	mat delta = delta_matrix(x_tp1, x_tp1.subvec(J_DIM, X_DIM-1), alpha);
-	mat K = sigma_tp1_bar*H.t()*delta*inv(delta*H*sigma_tp1_bar*H.t()*delta + R)*delta;
-	sigma_tp1 = (eye<mat>(X_DIM,X_DIM) - K*H)*sigma_tp1_bar;
+	mat<Z_DIM,Z_DIM> delta = delta_matrix(x_tp1, x_tp1.segment<C_DIM>(J_DIM), alpha);
+	mat<X_DIM,Z_DIM> K = sigma_tp1_bar*H.transpose()*delta*(delta*H*sigma_tp1_bar*H.transpose()*delta + R).inverse()*delta;
+	sigma_tp1 = (mat<X_DIM,X_DIM>::Identity() - K*H)*sigma_tp1_bar;
 }
 
-void PlanarSystem::execute_control_step(const vec& x_t_real, const vec& x_t_t, const mat& sigma_t_t, const vec& u_t,
-		vec& x_tp1_real, vec& x_tp1_tp1, mat& sigma_tp1_tp1) {
+void PlanarSystem::execute_control_step(const vec<X_DIM>& x_t_real, const vec<X_DIM>& x_t_t, const mat<X_DIM,X_DIM>& sigma_t_t, const vec<U_DIM>& u_t,
+		vec<X_DIM>& x_tp1_real, vec<X_DIM>& x_tp1_tp1, mat<X_DIM,X_DIM>& sigma_tp1_tp1) {
 	// find next real state from input + noise
-	vec control_noise = zeros<vec>(Q_DIM);// + chol(.2*Q)*randn<vec>(Q_DIM);
-	vec obs_noise = zeros<vec>(R_DIM);// + chol(.2*R)*randn<vec>(R_DIM);
+	vec<Q_DIM> control_noise = vec<Q_DIM>::Zero();// + chol(.2*Q)*randn<vec>(Q_DIM);
+	vec<R_DIM> obs_noise = vec<R_DIM>::Zero();// + chol(.2*R)*randn<vec>(R_DIM);
 	x_tp1_real = dynfunc(x_t_real, u_t, control_noise, true);
-	vec z_tp1_real = obsfunc(x_tp1_real, this->object, obs_noise);
+	vec<Z_DIM> z_tp1_real = obsfunc(x_tp1_real, this->object, obs_noise);
 
 	// now do update based on current belief (x_t, sigma_t)
 
 	// propagate belief through dynamics
-	mat A(X_DIM, X_DIM, fill::zeros), M(X_DIM, Q_DIM, fill::zeros);
-	linearize_dynfunc(x_t_t, u_t, zeros<vec>(Q_DIM), A, M);
+	mat<X_DIM,X_DIM> A = mat<X_DIM,X_DIM>::Zero();
+	mat<X_DIM,Q_DIM> M = mat<X_DIM,Q_DIM>::Zero();
+	linearize_dynfunc(x_t_t, u_t, vec<Q_DIM>::Zero(), A, M);
 
-	mat sigma_tp1_t = A*sigma_t_t*A.t() + M*Q*M.t();
-	vec x_tp1_t = dynfunc(x_t_t, u_t, zeros<vec>(Q_DIM));
+	mat<X_DIM,X_DIM> sigma_tp1_t = A*sigma_t_t*A.transpose() + M*Q*M.transpose();
+	vec<X_DIM> x_tp1_t = dynfunc(x_t_t, u_t, vec<Q_DIM>::Zero());
 
 	// propagate belief through observation
-	mat H(Z_DIM, X_DIM, fill::zeros), N(Z_DIM, R_DIM, fill::zeros);
-	linearize_obsfunc(x_tp1_t, zeros<vec>(R_DIM), H, N);
+	mat<Z_DIM,X_DIM> H = mat<Z_DIM,X_DIM>::Zero();
+	mat<Z_DIM,R_DIM> N = mat<Z_DIM,R_DIM>::Zero();
+	linearize_obsfunc(x_tp1_t, vec<R_DIM>::Zero(), H, N);
 
-	mat delta = delta_matrix(x_tp1_t, object, INFINITY);
+	mat<Z_DIM,Z_DIM> delta = delta_matrix(x_tp1_t, object, INFINITY);
 	// calculate Kalman gain
-	mat K = sigma_tp1_t*H.t()*delta*inv(delta*H*sigma_tp1_t*H.t()*delta + R)*delta;
+	mat<X_DIM,Z_DIM> K = sigma_tp1_t*H.transpose()*delta*(delta*H*sigma_tp1_t*H.transpose()*delta + R).inverse()*delta;
 
 	// update based on noisy measurement
-	x_tp1_tp1 = x_tp1_t + K*(z_tp1_real - obsfunc(x_tp1_t, x_tp1_t.subvec(J_DIM, X_DIM-1), zeros<vec>(R_DIM)));
-	sigma_tp1_tp1 = (eye<mat>(X_DIM,X_DIM) - K*H)*sigma_tp1_t;
+	x_tp1_tp1 = x_tp1_t + K*(z_tp1_real - obsfunc(x_tp1_t, x_tp1_t.segment<C_DIM>(J_DIM), vec<R_DIM>::Zero()));
+	sigma_tp1_tp1 = (mat<X_DIM,X_DIM>::Identity() - K*H)*sigma_tp1_t;
 }
 
-/**
- * \brief Creates full camera FOV, then adds occlusions
- * (in our case only the robot links) to truncate the FOV
- */
-std::vector<Beam> PlanarSystem::get_fov(const vec& x) {
+std::vector<Beam> PlanarSystem::get_fov(const vec<X_DIM>& x) {
 	std::vector<Beam> beams, new_beams;
 
 	// start out with full field of view
 	double angle = x(J_DIM-1);
-	vec dir_right = {sin(angle+camera_fov/2.0), cos(angle+camera_fov/2.0)};
-	vec dir_left = {sin(angle-camera_fov/2.0), cos(angle-camera_fov/2.0)};
+	vec<C_DIM> dir_right, dir_left;
+	dir_right << sin(angle+camera_fov/2.0),
+			cos(angle+camera_fov/2.0);
+	dir_left << sin(angle-camera_fov/2.0),
+			cos(angle-camera_fov/2.0);
 	beams.push_back(Beam(camera_origin,
 			camera_origin + camera_max_dist*dir_right,
 			camera_origin + camera_max_dist*dir_left));
@@ -180,47 +167,76 @@ std::vector<Beam> PlanarSystem::get_fov(const vec& x) {
 	return beams;
 }
 
+vec<C_DIM> PlanarSystem::get_ee_pos(const vec<E_DIM>& j) {
+	vec<X_DIM> x = vec<X_DIM>::Zero();
+	x.segment<E_DIM>(0) = j;
+	return get_link_segments(x).back().p1;
+}
 
-std::vector<Segment> PlanarSystem::get_link_segments(const vec& x) {
-	std::vector<Segment> link_segments;
+void PlanarSystem::get_ee_pos_jac(vec<E_DIM>& j, mat<C_DIM,E_DIM>& ee_jac) {
+	vec<E_DIM> j_p = j, j_m = j;
+	for(int i=0; i < E_DIM; ++i) {
+		j_p(i) = j(i) + step;
+		j_m(i) = j(i) - step;
+		ee_jac.block<C_DIM,1>(0, i) = (get_ee_pos(j_p) - get_ee_pos(j_m)) / (2*step);
+		j_p(i) = j(i);
+		j_m(i) = j(i);
+	}
+}
 
-	vec p0 = robot_origin, p1;
-	double joint0 = 0, joint1;
+bool PlanarSystem::ik(const vec<C_DIM>& ee_goal, vec<E_DIM>& j) {
+	vec<C_DIM> ee_pos, error, jac_jacT_error;
+	mat<C_DIM,E_DIM> ee_pos_jac;
 
-	for(int i=0; i < link_lengths.n_rows; ++i) {
-		joint1 = joint0 + x[i];
-		p1 << p0(0) + sin(joint1)*link_lengths(i) <<
-				p0(1) + cos(joint1)*link_lengths(i);
-		link_segments.push_back(Segment(p0, p1));
+	int iter = 0, max_iter = 1000;
+	while((ee_goal - get_ee_pos(j)).norm() > epsilon) {
+		ee_pos = get_ee_pos(j);
+		get_ee_pos_jac(j, ee_pos_jac);
 
-		joint0 = joint1;
-		p0 = p1;
+		error = ee_goal - ee_pos;
+
+//		// x += alpha*jac.T*error
+		jac_jacT_error = ee_pos_jac*ee_pos_jac.transpose()*error;
+		double alpha = error.dot(jac_jacT_error) / jac_jacT_error.dot(jac_jacT_error);
+		j += alpha*ee_pos_jac.transpose()*error;
+
+		if (iter > max_iter) {
+			return false;
+		}
+		iter++;
 	}
 
-	return link_segments;
+	// check limits
+	for(int i=0; i < E_DIM; ++i) {
+		if ((j(i) < x_min(i)) || (j(i) > x_max(i))) {
+			LOG_ERROR("IK failed: solution outside of limits")
+			return false;
+		}
+	}
+
+	return true;
 }
 
 
-void PlanarSystem::display(vec& x, mat& sigma, bool pause) {
-	std::vector<vec> X(1, x);
-	std::vector<mat> S(1, sigma);
+void PlanarSystem::display(vec<X_DIM>& x, mat<X_DIM,X_DIM>& sigma, bool pause) {
+	std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>> X(1, x);
+	std::vector<mat<X_DIM,X_DIM>, aligned_allocator<mat<X_DIM,X_DIM>>> S(1, sigma);
 	display(X, S);
 }
 
-void PlanarSystem::display(std::vector<vec>& X, mat& sigma0, std::vector<vec>& U, const double alpha, bool pause) {
+void PlanarSystem::display(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, mat<X_DIM,X_DIM>& sigma0, std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha, bool pause) {
 	int T = X.size();
-	int X_DIM = X[0].n_rows;
 
-	std::vector<mat> S(T);
+	std::vector<mat<X_DIM,X_DIM>, aligned_allocator<mat<X_DIM,X_DIM>>> S(T);
 	S[0] = sigma0;
-	vec x_tp1(X_DIM);
+	vec<X_DIM> x_tp1;
 	for(int t=0; t < T-1; ++t) {
 		belief_dynamics(X[t], S[t], U[t], alpha, x_tp1, S[t+1]);
 	}
 	display(X, S, pause);
 }
 
-void PlanarSystem::display(std::vector<vec>& X, std::vector<mat>& S, bool pause) {
+void PlanarSystem::display(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, std::vector<mat<X_DIM,X_DIM>, aligned_allocator<mat<X_DIM,X_DIM>>>& S, bool pause) {
 	Py_Initialize();
 	np::initialize();
 
@@ -228,21 +244,22 @@ void PlanarSystem::display(std::vector<vec>& X, std::vector<mat>& S, bool pause)
 
 	py::list X_pylist, S_pylist;
 	for(int t=0; t < X.size(); ++t) {
-		X_pylist.append(planar_utils::arma_to_ndarray(X[t]));
-		S_pylist.append(planar_utils::arma_to_ndarray(S[t]));
+		X_pylist.append(planar_utils::eigen_to_ndarray(X[t]));
+		S_pylist.append(planar_utils::eigen_to_ndarray(S[t]));
 	}
 
-	np::ndarray robot_origin_ndarray = planar_utils::arma_to_ndarray(robot_origin);
-	np::ndarray link_lengths_ndarray = planar_utils::arma_to_ndarray(link_lengths);
-	np::ndarray camera_origin_ndarray = planar_utils::arma_to_ndarray(camera_origin);
-	np::ndarray object_ndarray = planar_utils::arma_to_ndarray(object);
+	np::ndarray robot_origin_ndarray = planar_utils::eigen_to_ndarray(robot_origin);
+	np::ndarray link_lengths_ndarray = planar_utils::eigen_to_ndarray(link_lengths);
+	np::ndarray camera_origin_ndarray = planar_utils::eigen_to_ndarray(camera_origin);
+	np::ndarray object_ndarray = planar_utils::eigen_to_ndarray(object);
 
 	py::list beams_pylist;
 	std::vector<Beam> beams = get_fov(X.back());
 
 	for(int i=0; i < beams.size(); ++i) {
-		mat m = join_horiz(beams[i].base, join_horiz(beams[i].a, beams[i].b));
-		beams_pylist.append(planar_utils::arma_to_ndarray(m));
+		mat<2,3> m;
+		m << beams[i].base, beams[i].a, beams[i].b;
+		beams_pylist.append(planar_utils::eigen_to_ndarray(m));
 	}
 
 	std::string working_dir = boost::filesystem::current_path().normalize().string();
@@ -272,44 +289,44 @@ void PlanarSystem::display(std::vector<vec>& X, std::vector<mat>& S, bool pause)
 	}
 }
 
-void PlanarSystem::get_limits(vec& x_min, vec& x_max, vec& u_min, vec& u_max) {
+void PlanarSystem::get_limits(vec<X_DIM>& x_min, vec<X_DIM>& x_max, vec<U_DIM>& u_min, vec<U_DIM>& u_max) {
 	x_min = this->x_min;
 	x_max = this->x_max;
 	u_min = this->u_min;
 	u_max = this->u_max;
 }
 
-double PlanarSystem::cost(const std::vector<vec>& X, const mat& sigma0, const std::vector<vec>& U, const double alpha) {
+double PlanarSystem::cost(const std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, const mat<X_DIM,X_DIM>& sigma0,
+		const std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha) {
 	double cost = 0;
 	int T = X.size();
-	int X_DIM = X[0].n_rows;
 
-	vec x_tp1(X_DIM);
-	mat sigma_t = sigma0, sigma_tp1(X_DIM, X_DIM);
+	vec<X_DIM> x_tp1 = vec<X_DIM>::Zero();
+	mat<X_DIM,X_DIM> sigma_t = sigma0, sigma_tp1 = mat<X_DIM,X_DIM>::Zero();
 	for(int t=0; t < T-1; ++t) {
 		belief_dynamics(X[t], sigma_t, U[t], alpha, x_tp1, sigma_tp1);
-		cost += alpha_control*dot(U[t], U[t]);
+		cost += alpha_control*U[t].dot(U[t]);
 		if (t < T-2) {
-			cost += alpha_belief*trace(sigma_tp1);
+			cost += alpha_belief*sigma_tp1.trace();
 		} else {
-			cost += alpha_final_belief*trace(sigma_tp1);
+			cost += alpha_final_belief*sigma_tp1.trace();
 		}
 		sigma_t = sigma_tp1;
 	}
 
-	vec final_ee_position = get_link_segments(x_tp1).back().p1;
-	vec goal_error = final_ee_position - x_tp1.subvec(J_DIM, X_DIM-1);
-	cost += alpha_goal*dot(goal_error, goal_error);
+	vec<C_DIM> final_ee_position = get_link_segments(x_tp1).back().p1;
+	vec<C_DIM> goal_error = final_ee_position - x_tp1.segment<C_DIM>(J_DIM);
+	cost += alpha_goal*goal_error.dot(goal_error);
 
 	return cost;
 }
 
-vec PlanarSystem::cost_grad(std::vector<vec>& X, const mat& sigma0, std::vector<vec>& U, const double alpha) {
+vec<TOTAL_VARS> PlanarSystem::cost_grad(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, const mat<X_DIM,X_DIM>& sigma0,
+		std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha) {
 	int T = X.size();
-	int X_DIM = X[0].n_rows;
-	int U_DIM = U[0].n_rows;
 
-	vec grad(T*X_DIM + (T-1)*U_DIM);
+	vec<TOTAL_VARS> grad;
+
 	double orig, cost_p, cost_m;
 	int index = 0;
 	for(int t=0; t < T; ++t) {
@@ -339,70 +356,110 @@ vec PlanarSystem::cost_grad(std::vector<vec>& X, const mat& sigma0, std::vector<
 			}
 		}
 	}
-
 	return grad;
+}
+
+void PlanarSystem::cost_and_cost_grad(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, const mat<X_DIM,X_DIM>& sigma0,
+		std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha, const bool use_fadbad,
+		double& cost, vec<TOTAL_VARS>& grad) {
+	if (!use_fadbad) {
+		cost = this->cost(X, sigma0, U, alpha);
+		grad = this->cost_grad(X, sigma0, U, alpha);
+	} else {
+		std::vector<vecb<X_DIM>, aligned_allocator<vecb<X_DIM>>> X_b(X.size());
+		matb<X_DIM,X_DIM> sigma0_b = sigma0.cast<bdouble>();
+		std::vector<vecb<U_DIM>, aligned_allocator<vecb<U_DIM>>> U_b(U.size());
+		bdouble alpha_b = (bdouble)alpha;
+
+		for(int t=0; t < X.size(); ++t) {
+			X_b[t] = X[t].cast<bdouble>();
+			if(t < X.size()-1) {
+				U_b[t] = U[t].cast<bdouble>();
+			}
+		}
+
+		bdouble cost_b = fps.cost(X_b, sigma0_b, U_b, alpha_b);
+		cost = cost_b.x();
+		cost_b.diff(0,1);
+		int index = 0;
+		for(int t=0; t < X.size(); ++t) {
+			for(int i=0; i < X_DIM; ++i) {
+				grad(index++) = X_b[t](i).d(0);
+			}
+
+			if (t < X.size()-1) {
+				for(int i=0; i < U_DIM; ++i) {
+					grad(index++) = U_b[t](i).d(0);
+				}
+			}
+		}
+	}
 }
 
 /**
  * Private methods
  */
 
-/**
- * \param x is X_DIM by 1
- * \param u is U_DIM by 1
- * \param q is Q_DIM by 1
- * \param A is X_DIM by X_DIM
- * \param M is X_DIM by Q_DIM
- */
-void PlanarSystem::linearize_dynfunc(const vec& x, const vec& u, const vec& q, mat& A, mat& M) {
-	A = eye<mat>(X_DIM, X_DIM);
+std::vector<Segment> PlanarSystem::get_link_segments(const vec<X_DIM>& x) {
+	std::vector<Segment> link_segments;
 
-	for(int j=0; j < M.n_cols; ++j) {
+	vec<C_DIM> p0 = robot_origin, p1;
+	double joint0 = 0, joint1;
+
+	for(int i=0; i < link_lengths.rows(); ++i) {
+		joint1 = joint0 + x[i];
+		p1 << p0(0) + sin(joint1)*link_lengths(i),
+				p0(1) + cos(joint1)*link_lengths(i);
+		link_segments.push_back(Segment(p0, p1));
+
+		joint0 = joint1;
+		p0 = p1;
+	}
+
+	return link_segments;
+}
+
+void PlanarSystem::linearize_dynfunc(const vec<X_DIM>& x, const vec<U_DIM>& u, const vec<Q_DIM>& q, mat<X_DIM,X_DIM>& A, mat<X_DIM,Q_DIM>& M) {
+	A = mat<X_DIM,X_DIM>::Identity();
+
+	for(int j=0; j < Q_DIM; ++j) {
 		for(int i=0; i < j+1; ++i) {
 			M(i, j) = 1;
 		}
 	}
 
-//	vec q_zero = zeros<vec>(Q_DIM);
-//	vec x_p = x, x_m = x;
+//	VectorXd q_zero = VectorXd::Zero(Q_DIM);
+//	VectorXd x_p = x, x_m = x;
 //	for(int i=0; i < X_DIM; ++i) {
 //		x_p(i) += step; x_m(i) -= step;
-//		A.submat(span(0, X_DIM-1), span(i, i)) = (dynfunc(x_p, u, q_zero) - dynfunc(x_m, u, q_zero)) / (2*step);
+//		A.block<X_DIM,1>(0, i) = (dynfunc(x_p, u, q_zero) - dynfunc(x_m, u, q_zero)) / (2*step);
 //		x_p(i) = x(i); x_m(i) = x(i);
 //	}
 //
-//	vec q_p = q, q_m = q;
+//	VectorXd q_p = q, q_m = q;
 //	for(int i=0; i < Q_DIM; ++i) {
 //		q_p(i) += step; q_m(i) -= step;
-//		M.submat(span(0, X_DIM-1), span(i, i)) = (dynfunc(x, u, q_p) - dynfunc(x, u, q_m)) / (2*step);
+//		M.block<X_DIM,1>(0, i) = (dynfunc(x, u, q_p) - dynfunc(x, u, q_m)) / (2*step);
 //	}
 }
 
-/**
- * \param x is X_DIM by 1
- * \param r is R_DIM by 1
- * \param H is Z_DIM by X_DIM
- * \param N is Z_DIM by R_DIM
- */
-void PlanarSystem::linearize_obsfunc(const vec& x, const vec& r, mat& H, mat& N) {
-	H = eye<mat>(Z_DIM, X_DIM);
-	N = eye<mat>(Z_DIM, R_DIM);
+void PlanarSystem::linearize_obsfunc(const vec<X_DIM>& x, const vec<R_DIM>& r, mat<Z_DIM,X_DIM>& H, mat<Z_DIM,R_DIM>& N) {
+	H = mat<Z_DIM,X_DIM>::Identity();
+	N = mat<Z_DIM,R_DIM>::Identity();
 
-//	vec x_p = x, x_m = x;
+//	VectorXd x_p = x, x_m = x;
 //	for(int i=0; i < X_DIM; ++i) {
 //		x_p(i) += step; x_m(i) -= step;
-//		H.submat(span(0, Z_DIM-1), span(i, i)) = (obsfunc(x_p, x_p.subvec(J_DIM, X_DIM-1), r) -
-//				obsfunc(x_m, x_m.subvec(J_DIM, X_DIM-1), r)) / (2*step);
+//		H.block<Z_DIM,1>(0, i) = (obsfunc(x_p, x_p.segment<C_DIM>(J_DIM), r) -
+//				obsfunc(x_m, x_m.segment<C_DIM>(J_DIM), r)) / (2*step);
 //		x_p(i) = x(i); x_m(i) = x(i);
 //	}
 //
-//	vec r_p = r, r_m = r;
+//	VectorXd r_p = r, r_m = r;
 //	for(int i=0; i < R_DIM; ++i) {
 //		r_p(i) += step; r_m(i) -= step;
-//		N.submat(span(0, Z_DIM-1), span(i, i)) = (obsfunc(x, x.subvec(J_DIM, X_DIM-1), r_p) -
-//				obsfunc(x, x.subvec(J_DIM, X_DIM-1), r_m)) / (2*step);
+//		N.block<Z_DIM,1>(0, i) = (obsfunc(x, x.segment<C_DIM>(J_DIM), r_p) -
+//				obsfunc(x, x.segment<C_DIM>(J_DIM), r_m)) / (2*step);
 //		r_p(i) = x(i); r_m(i) = x(i);
 //	}
 }
-
-

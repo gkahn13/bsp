@@ -1,14 +1,17 @@
+import random
+
 import numpy as np
 
 import matplotlib.pyplot as plt
 
 import IPython
 
-def plot_planar(X, S, P, robot_origin, link_lengths, camera_origin, camera_fov, object, beams):
+def plot_planar(X, S, P, P_sd, robot_origin, link_lengths, camera_origin, camera_fov, object, beams):
     """
     @param X                 joints angles, camera angle, object position (for T timesteps)
     @param S                 covariance for X (for T timesteps)
     @param P                 particles (or NULL if no particles)
+    @param P_sd              particles signed distance (or NULL if no particles)
     @param robot_origin      (x,y) position of link0
     @param link_lengths
     @param camera_origin     (x,y) position of camera
@@ -54,6 +57,11 @@ def plot_planar(X, S, P, robot_origin, link_lengths, camera_origin, camera_fov, 
     
     """ plot particles (if P is ndarray) """
     if type(P) is np.ndarray:
+        M_DIM = P.shape[1]
+        ee_pos = np.reshape(arm_joint_positions(X[-1][:3], robot_origin, link_lengths)[:,-1], (2,1))
+        P_ee_dist = np.linalg.norm(P - np.repeat(ee_pos, M_DIM, axis=1), axis=0)
+        #initialize_gaussian(P, P_sd, P_ee_dist)
+        
         for m in xrange(P.shape[1]):
             plt.plot(P[0,m], P[1,m], 'x', color='yellow')
     
@@ -61,17 +69,31 @@ def plot_planar(X, S, P, robot_origin, link_lengths, camera_origin, camera_fov, 
     plt.show(block=False)
     
 def plot_arm(joints, robot_origin, link_lengths, color='red', alpha=1.0):
+    joint_positions = arm_joint_positions(joints, robot_origin, link_lengths)
+    for i in xrange(joint_positions.shape[1] - 1):
+        plt.plot(joint_positions[0,i:i+2], joint_positions[1,i:i+2], '-o', color=color, alpha=alpha, markersize=10.0, linewidth=3.0)
+        
+def arm_joint_positions(joints, robot_origin, link_lengths):
+    """ return 2d position of each link, starting from robot_origin """
+    joint_positions = np.zeros((2, 1+link_lengths.shape[0]))
+    joint_positions[:,0] = robot_origin
+    
     x0, y0 = tuple(robot_origin)
     joint0 = 0
     
+    index = 1
     for joint, link_length in zip(tuple(joints), tuple(link_lengths)):
         joint1 = joint0 + joint 
         x1 = x0 + np.sin(joint1)*link_length
         y1 = y0 + np.cos(joint1)*link_length
         
-        plt.plot([x0, x1], [y0, y1], '-o', color=color, alpha=alpha, markersize=10.0, linewidth=3.0)
+        joint_positions[:,index] = np.array([x1,y1])
+        index += 1
         
         x0, y0, joint0 = x1, y1, joint1
+        
+    return joint_positions
+
     
     
 def plot_cov(mu, sigma, color = 'yellow', alpha=1):
@@ -124,5 +146,76 @@ def plot_beam(beam):
     plt.fill(x, y, color='white', edgecolor='none', alpha=.5)
     
     
+    
+"""
+TEMPORARY code for Gaussian reinitialization
+i.e. get it to work in Python then port to C++
+"""
 
+def initialize_gaussian(P, P_sd, P_ee_dist):
+    #W = 1/(1*P_sd + 1*P_ee_dist)
+    W = 1/P_sd.clip(.01) + 100/P_ee_dist
+    W = W / np.sum(W)
+    P_weighted = low_variance_sampler(P, W)
+    
+    #plt.plot(P_weighted[0,:], P_weighted[1,:], 'x', color='yellow')
+    #return
+    
+    mode_particles_list = sorted(find_modes(P_weighted), key=lambda x: len(x[1]))
+    colors = list(plt.cm.Accent(np.linspace(0, 1, len(mode_particles_list)-1))) + ['yellow']
+    for mode_particles, color in zip(mode_particles_list, colors):
+        mode, particles = mode_particles
+        particles_array = np.array(particles).T
+        plt.plot(particles_array[0,:], particles_array[1,:], 'x', color=color)
+        
+    mode, particles = mode_particles_list[-1]
+    particles_array = np.array(particles).T
+    #plt.plot(particles_array[0,:], particles_array[1,:], 'x', color='yellow')
+    
+    
+def low_variance_sampler(P, W):
+    M_DIM = W.shape[0]
+    r = (1/float(M_DIM))*random.random()
+    
+    P_sampled = np.zeros(P.shape)
+    
+    c = W[0]
+    i = 0
+    for m in xrange(M_DIM):
+        u = r + m*(1/float(M_DIM))
+        while (u > c):
+            i += 1
+            c += W[i]
+        P_sampled[:,m] = P[:,i]
+        
+    return P_sampled
+
+def find_modes(P):
+    M_DIM = P.shape[1]
+    
+    mode_particles_list = list()
+    for m in xrange(M_DIM):
+        p = P[:,m]
+        nearest_mode = find_nearest_mode(p, P)
+        for mode, particles in mode_particles_list:
+            if np.linalg.norm(mode - nearest_mode) < .05:
+                particles.append(p)
+                break
+        else:
+            mode_particles_list.append([nearest_mode, [p]])
+            
+    return mode_particles_list
+
+def find_nearest_mode(p, P):
+    M_DIM = P.shape[1]
+    new_mean, mean = p.reshape((2,1)), np.inf*np.ones((2,1))
+    
+    while np.linalg.norm(mean - new_mean) > 1e-3:
+        mean = new_mean
+        mean_rep = np.repeat(mean, M_DIM, axis=1)
+        kernel_weight = np.exp(-np.linalg.norm(mean_rep - P, axis=0)/0.5).reshape((1,M_DIM))
+        new_mean = np.sum(kernel_weight.repeat(2, axis=0) * P, axis=1) / np.sum(kernel_weight)
+        new_mean = new_mean.reshape((2,1))
+        
+    return mean
     

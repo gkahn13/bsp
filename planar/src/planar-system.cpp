@@ -345,11 +345,66 @@ bool PlanarSystem::should_reinitialize(const vec<X_DIM>& x, const mat<X_DIM,X_DI
 	return (num_within_thresh < (.01*double(M_DIM)));
 }
 
-void PlanarSystem::reinitialize(const mat<C_DIM,M_DIM>& P, vec<C_DIM>& new_mean, mat<C_DIM,C_DIM>& new_cov) {
-	new_mean = P.rowwise().mean();
+void PlanarSystem::reinitialize(const vec<X_DIM>& x, const mat<C_DIM,M_DIM>& P,
+		vec<C_DIM>& new_mean, mat<C_DIM,C_DIM>& new_cov) {
+	// compute particle signed distance
+	std::vector<Beam> fov = get_fov(x);
+	vec<M_DIM> P_sd;
+	for(int m=0; m < M_DIM; ++m) {
+		P_sd(m) = geometry2d::signed_distance(P.col(m), fov);
+		P_sd(m) = std::max(P_sd(m), .01);
+	}
 
-	mat<C_DIM,M_DIM> P_centered = P.colwise() - P.rowwise().mean();
-	new_cov = (1/(double(M_DIM)-1))*(P_centered*P_centered.transpose());
+	// compute particle distance to end effector
+	vec<C_DIM> ee_pos = get_ee_pos(x.segment<E_DIM>(0));
+	vec<M_DIM> P_ee_dist = (P - ee_pos.replicate(1,M_DIM)).colwise().norm();
+
+	// compute weight as linear combination of sd and EE dist
+	vec<M_DIM> W = 1*P_sd.cwiseInverse() + 100*P_ee_dist.cwiseInverse();
+	W = W / W.sum();
+
+	// resample
+	mat<C_DIM,M_DIM> P_weighted;
+	low_variance_sampler(P, W, P_weighted);
+
+	// find modes and associated particles
+	std::vector<vec<C_DIM>, aligned_allocator<vec<C_DIM>>> modes;
+	std::vector<std::vector<int>> mode_particle_indices;
+	find_modes(P_weighted, modes, mode_particle_indices);
+
+	std::cout << "number of modes found: " << modes.size() << "\n";
+	std::cout << "mode_particle_indices.size(): " << mode_particle_indices.size() << "\n";
+
+	int largest_mode_size = -1;
+	int largest_mode_index = -1;
+	for(int i=0; i < mode_particle_indices.size(); ++i) {
+		std::cout << "mode group " << i << " size: " << mode_particle_indices[i].size() << "\n";
+		if (int(mode_particle_indices[i].size()) > largest_mode_size) {
+			largest_mode_size = mode_particle_indices[i].size();
+			largest_mode_index = i;
+		}
+	}
+
+	std::cout << "largest_mode_index: " << largest_mode_index << "\n";
+	std::cout << "largest_mode_size : " << largest_mode_size << "\n";
+
+	std::cout << "Forming P_weighted_largest\n";
+	MatrixXd P_weighted_largest(C_DIM, largest_mode_size);
+	for(int m=0; m < largest_mode_size; ++m) {
+		P_weighted_largest.col(m) = P_weighted.col(mode_particle_indices[largest_mode_index][m]);
+	}
+
+	std::cout << "Computing new_mean\n";
+	new_mean = P_weighted_largest.rowwise().mean();
+
+	std::cout << "Computing new_cov\n";
+	MatrixXd P_weighted_largest_centered = P_weighted_largest.colwise() - P_weighted_largest.rowwise().mean();
+	new_cov = (1/(double(largest_mode_size)-1))*(P_weighted_largest_centered*P_weighted_largest_centered.transpose());
+
+//	new_mean = P.rowwise().mean();
+//
+//	mat<C_DIM,M_DIM> P_centered = P.colwise() - P.rowwise().mean();
+//	new_cov = (1/(double(M_DIM)-1))*(P_centered*P_centered.transpose());
 }
 
 /**
@@ -404,7 +459,6 @@ void PlanarSystem::display(const std::vector<vec<X_DIM>, aligned_allocator<vec<X
 		S_pylist.append(planar_utils::eigen_to_ndarray(S[t]));
 	}
 
-	np::ndarray P_ndarray = planar_utils::eigen_to_ndarray(P);
 	np::ndarray robot_origin_ndarray = planar_utils::eigen_to_ndarray(robot_origin);
 	np::ndarray link_lengths_ndarray = planar_utils::eigen_to_ndarray(link_lengths);
 	np::ndarray camera_origin_ndarray = planar_utils::eigen_to_ndarray(camera_origin);
@@ -433,10 +487,17 @@ void PlanarSystem::display(const std::vector<vec<X_DIM>, aligned_allocator<vec<X
 		py::object plot_planar = plot_mod.attr("plot_planar");
 
 		if (plot_particles) {
-			plot_planar(X_pylist, S_pylist, P_ndarray, robot_origin_ndarray, link_lengths_ndarray,
+			np::ndarray P_ndarray = planar_utils::eigen_to_ndarray(P);
+			vec<M_DIM> P_sd;
+			for(int m=0; m < M_DIM; ++m) {
+				P_sd(m) = geometry2d::signed_distance(P.col(m), beams);
+			}
+			np::ndarray P_sd_ndarray = planar_utils::eigen_to_ndarray(P_sd);
+
+			plot_planar(X_pylist, S_pylist, P_ndarray, P_sd_ndarray, robot_origin_ndarray, link_lengths_ndarray,
 							camera_origin_ndarray, camera_fov, object_ndarray, beams_pylist);
 		} else {
-			plot_planar(X_pylist, S_pylist, NULL, robot_origin_ndarray, link_lengths_ndarray,
+			plot_planar(X_pylist, S_pylist, NULL, NULL, robot_origin_ndarray, link_lengths_ndarray,
 					camera_origin_ndarray, camera_fov, object_ndarray, beams_pylist);
 		}
 
@@ -532,8 +593,7 @@ void PlanarSystem::update_particles(const vec<X_DIM>& x_tp1_t, const vec<C_DIM>&
 	}
 	W = W / W.sum();
 
-	double sampling_noise = planar_utils::uniform(0, 1/double(M_DIM));
-	low_variance_sampler(P_t, W, sampling_noise, P_tp1);
+	low_variance_sampler(P_t, W, P_tp1);
 }
 
 double PlanarSystem::gauss_likelihood(const vec<C_DIM>& v, const mat<C_DIM,C_DIM>& S) {
@@ -547,7 +607,8 @@ double PlanarSystem::gauss_likelihood(const vec<C_DIM>& v, const mat<C_DIM,C_DIM
 	return w;
 }
 
-void PlanarSystem::low_variance_sampler(const mat<C_DIM,M_DIM>& P, const vec<M_DIM>& W, const double r, mat<C_DIM,M_DIM>& P_sampled) {
+void PlanarSystem::low_variance_sampler(const mat<C_DIM,M_DIM>& P, const vec<M_DIM>& W, mat<C_DIM,M_DIM>& P_sampled) {
+	double r = planar_utils::uniform(0, 1/double(M_DIM));
 	double c = W(0);
 	int i = 0;
 	for(int m=0; m < M_DIM; ++m) {
@@ -557,4 +618,40 @@ void PlanarSystem::low_variance_sampler(const mat<C_DIM,M_DIM>& P, const vec<M_D
 		}
 		P_sampled.col(m) = P.col(i);
 	}
+}
+
+void PlanarSystem::find_modes(const mat<C_DIM,M_DIM>& P,
+		std::vector<vec<C_DIM>, aligned_allocator<vec<C_DIM>>>& modes,
+		std::vector<std::vector<int>>& mode_particle_indices) {
+	for(int m=0; m < M_DIM; ++m) {
+		std::cout << "find nearest mode: " << m << "\n";
+		vec<C_DIM> nearest_mode = find_nearest_mode(P.col(m), P);
+
+		bool nearest_mode_exists = false;
+		for(int i=0; i < modes.size(); ++i) {
+			if ((modes[i] - nearest_mode).norm() < .05) {
+				mode_particle_indices[i].push_back(m);
+				nearest_mode_exists = true;
+				break;
+			}
+		}
+
+		if (!nearest_mode_exists) {
+			modes.push_back(nearest_mode);
+			mode_particle_indices.push_back(std::vector<int>());
+		}
+	}
+}
+
+vec<C_DIM> PlanarSystem::find_nearest_mode(const vec<C_DIM>& p, const mat<C_DIM,M_DIM>& P) {
+	vec<C_DIM> new_mean = p, mean = INFINITY*vec<C_DIM>::Ones();
+
+	while((mean - new_mean).norm() > 1e-3) {
+		mean = new_mean;
+		mat<C_DIM,M_DIM> mean_rep = mean.replicate(1, M_DIM);
+		vec<M_DIM> kernel_weight = (-(1/0.5)*(mean_rep - P).colwise().norm()).array().exp();
+		new_mean = kernel_weight.transpose().replicate(2,1).cwiseProduct(P).rowwise().sum() / kernel_weight.sum();
+	}
+
+	return mean;
 }

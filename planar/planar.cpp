@@ -493,6 +493,15 @@ int main(int argc, char* argv[]) {
 		P0(1, m) = planar_utils::uniform(0, 10);
 	}
 
+	vec<C_DIM> new_mean;
+	mat<C_DIM,C_DIM> new_cov;
+	sys.reinitialize(x0, P0, new_mean, new_cov);
+	x0.segment<C_DIM>(J_DIM) = new_mean;
+	sigma0.block<C_DIM,C_DIM>(J_DIM,J_DIM) = new_cov;
+
+	LOG_INFO("Initial state");
+	sys.display(x0, sigma0, P0);
+
 	// initialize state and controls
 	std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>> U(T-1, vec<U_DIM>::Zero());
 	std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>> X(T);
@@ -533,8 +542,8 @@ int main(int argc, char* argv[]) {
 			X[t+1] = sys.dynfunc(X[t], U[t], vec<Q_DIM>::Zero());
 		}
 
-		LOG_INFO("Initialized path");
-		sys.display(X, sigma0, U, pf_tracker.back(), 10);
+//		LOG_INFO("Initialized path");
+//		sys.display(X, sigma0, U, pf_tracker.back(), 10);
 
 		double init_cost = sys.cost(X, sigma0, U, INFINITY);
 		LOG_INFO("Initial cost: %4.5f", init_cost);
@@ -550,8 +559,8 @@ int main(int argc, char* argv[]) {
 		for(int t=0; t < T-1; ++t) {
 			X[t+1] = sys.dynfunc(X[t], U[t], vec<Q_DIM>::Zero());
 		}
-		LOG_INFO("Integrated trajectory");
-		sys.display(X, sigma0, U, pf_tracker.back(), INFINITY);
+//		LOG_INFO("Integrated trajectory");
+//		sys.display(X, sigma0, U, pf_tracker.back(), INFINITY);
 
 		// execute first control input
 		vec<X_DIM> x_tp1_real, x_tp1_tp1;
@@ -563,8 +572,8 @@ int main(int argc, char* argv[]) {
 		S_real.push_back(sigma_tp1_tp1);
 		pf_tracker.push_back(P_tp1);
 
-		LOG_DEBUG("Display after obtaining observation, but before truncating the belief");
-		sys.display(x_tp1_tp1, sigma_tp1_tp1, pf_tracker.back());
+//		LOG_DEBUG("Display after obtaining observation, but before truncating the belief");
+//		sys.display(x_tp1_tp1, sigma_tp1_tp1, pf_tracker.back());
 
 		// truncate belief
 		std::vector<Beam> fov_tp1 = sys.get_fov(x_tp1_tp1);
@@ -583,16 +592,23 @@ int main(int argc, char* argv[]) {
 		LOG_DEBUG("Display truncated belief");
 		sys.display(x_tp1_tp1_trunc, sigma_tp1_tp1_trunc, pf_tracker.back());
 
-		stop_condition = sys.should_reinitialize(x_tp1_tp1_trunc, sigma_tp1_tp1_trunc, pf_tracker.back());
-		if (stop_condition) {
-			LOG_INFO("Stop condition met. Reinitializing");
-			vec<C_DIM> obj_mean_new;
-			mat<C_DIM,C_DIM> obj_cov_new;
-			sys.reinitialize(pf_tracker.back(), obj_mean_new, obj_cov_new);
-			x_tp1_tp1_trunc.segment<C_DIM>(J_DIM) = obj_mean_new;
-			sigma_tp1_tp1_trunc.block<C_DIM,C_DIM>(J_DIM,J_DIM) = obj_cov_new;
-			stop_condition = false;
-		}
+//		stop_condition = sys.should_reinitialize(x_tp1_tp1_trunc, sigma_tp1_tp1_trunc, pf_tracker.back());
+//		if (stop_condition) {
+//			LOG_INFO("Stop condition met. Reinitializing");
+//			vec<C_DIM> obj_mean_new;
+//			mat<C_DIM,C_DIM> obj_cov_new;
+//			sys.reinitialize(pf_tracker.back(), obj_mean_new, obj_cov_new);
+//			x_tp1_tp1_trunc.segment<C_DIM>(J_DIM) = obj_mean_new;
+//			sigma_tp1_tp1_trunc.block<C_DIM,C_DIM>(J_DIM,J_DIM) = obj_cov_new;
+//			stop_condition = false;
+//		}
+
+		sys.reinitialize(x_tp1_tp1_trunc, pf_tracker.back(), new_mean, new_cov);
+		x_tp1_tp1_trunc.segment<C_DIM>(J_DIM) = new_mean;
+		sigma_tp1_tp1_trunc.block<C_DIM,C_DIM>(J_DIM,J_DIM) = new_cov;
+
+		LOG_DEBUG("Display reinitialized belief");
+		sys.display(x_tp1_tp1_trunc, sigma_tp1_tp1_trunc, pf_tracker.back());
 
 		// set start to the next time step
 		x0 = x_tp1_tp1_trunc;

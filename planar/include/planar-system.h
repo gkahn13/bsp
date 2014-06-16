@@ -85,7 +85,7 @@ public:
 			double& cost, vec<TOTAL_VARS>& grad);
 
 	bool should_reinitialize(const vec<X_DIM>& x, const mat<X_DIM,X_DIM>& sigma, const mat<C_DIM,M_DIM>& P);
-	void reinitialize(const mat<C_DIM,M_DIM>& P, vec<C_DIM>& new_mean, mat<C_DIM,C_DIM>& new_cov);
+	void reinitialize(const vec<X_DIM>& x, const mat<C_DIM,M_DIM>& P, vec<C_DIM>& new_mean, mat<C_DIM,C_DIM>& new_cov);
 
 	void display(const vec<X_DIM>& x, const mat<X_DIM,X_DIM>& sigma, bool pause=true);
 	void display(const std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X,
@@ -124,7 +124,12 @@ private:
 
 	void update_particles(const vec<X_DIM>& x_tp1_t, const vec<C_DIM>& delta_real, const mat<C_DIM,M_DIM>& P_t, mat<C_DIM,M_DIM>& P_tp1);
 	double gauss_likelihood(const vec<C_DIM>& v, const mat<C_DIM,C_DIM>& S);
-	void low_variance_sampler(const mat<C_DIM,M_DIM>& P, const vec<M_DIM>& W, const double r, mat<C_DIM,M_DIM>& P_sampled);
+	void low_variance_sampler(const mat<C_DIM,M_DIM>& P, const vec<M_DIM>& W, mat<C_DIM,M_DIM>& P_sampled);
+
+	void find_modes(const mat<C_DIM,M_DIM>& P,
+			std::vector<vec<C_DIM>, aligned_allocator<vec<C_DIM>>>& modes,
+			std::vector<std::vector<int>>& mode_particle_indices);
+	vec<C_DIM> find_nearest_mode(const vec<C_DIM>& p, const mat<C_DIM,M_DIM>& P);
 };
 
 #endif

@@ -495,7 +495,7 @@ int main(int argc, char* argv[]) {
 
 	vec<C_DIM> new_mean;
 	mat<C_DIM,C_DIM> new_cov;
-	sys.reinitialize(x0, P0, new_mean, new_cov);
+	sys.reinitialize(x0, sigma0, P0, new_mean, new_cov);
 	x0.segment<C_DIM>(J_DIM) = new_mean;
 	sigma0.block<C_DIM,C_DIM>(J_DIM,J_DIM) = new_cov;
 
@@ -603,7 +603,7 @@ int main(int argc, char* argv[]) {
 //			stop_condition = false;
 //		}
 
-		sys.reinitialize(x_tp1_tp1_trunc, pf_tracker.back(), new_mean, new_cov);
+		sys.reinitialize(x_tp1_tp1_trunc, sigma_tp1_tp1_trunc, pf_tracker.back(), new_mean, new_cov);
 		x_tp1_tp1_trunc.segment<C_DIM>(J_DIM) = new_mean;
 		sigma_tp1_tp1_trunc.block<C_DIM,C_DIM>(J_DIM,J_DIM) = new_cov;
 

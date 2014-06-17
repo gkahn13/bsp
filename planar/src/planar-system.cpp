@@ -345,23 +345,57 @@ bool PlanarSystem::should_reinitialize(const vec<X_DIM>& x, const mat<X_DIM,X_DI
 	return (num_within_thresh < (.01*double(M_DIM)));
 }
 
-void PlanarSystem::reinitialize(const vec<X_DIM>& x, const mat<C_DIM,M_DIM>& P,
+void PlanarSystem::reinitialize(const vec<X_DIM>& x, const mat<X_DIM,X_DIM>& sigma, const mat<C_DIM,M_DIM>& P,
 		vec<C_DIM>& new_mean, mat<C_DIM,C_DIM>& new_cov) {
-	// compute particle signed distance
-	std::vector<Beam> fov = get_fov(x);
-	vec<M_DIM> P_sd;
+
+	// cost(X, sigma0, U, alpha)
+	vec<X_DIM> x_p = x, x_p_tp1;
+	mat<X_DIM,X_DIM> sigma_p = sigma, sigma_p_tp1;
+	int alpha = 10;
+	vec<C_DIM> ee_position = get_ee_pos(x.segment<E_DIM>(0));
+
+	vec<M_DIM> P_cost;
 	for(int m=0; m < M_DIM; ++m) {
-		P_sd(m) = geometry2d::signed_distance(P.col(m), fov);
-		P_sd(m) = std::max(P_sd(m), .01);
+		x_p.segment<C_DIM>(J_DIM) = P.col(m);
+		belief_dynamics(x_p, sigma_p, vec<U_DIM>::Zero(), alpha, x_p_tp1, sigma_p_tp1);
+		P_cost(m) = alpha_belief*sigma_p_tp1.block<C_DIM,C_DIM>(J_DIM,J_DIM).trace() +
+				alpha_goal*(ee_position - x_p_tp1.segment<C_DIM>(J_DIM)).squaredNorm();
 	}
+	vec<M_DIM> W = P_cost / P_cost.sum();
 
-	// compute particle distance to end effector
-	vec<C_DIM> ee_pos = get_ee_pos(x.segment<E_DIM>(0));
-	vec<M_DIM> P_ee_dist = (P - ee_pos.replicate(1,M_DIM)).colwise().norm();
+//	vec<X_DIM> x_tp1 = vec<X_DIM>::Zero();
+//	mat<X_DIM,X_DIM> sigma_t = sigma0, sigma_tp1 = mat<X_DIM,X_DIM>::Zero();
+//	for(int t=0; t < T-1; ++t) {
+//		belief_dynamics(X[t], sigma_t, U[t], alpha, x_tp1, sigma_tp1);
+//		cost += alpha_control*U[t].dot(U[t]);
+//		if (t < T-2) {
+//			cost += alpha_belief*sigma_tp1.trace();
+//		} else {
+//			cost += alpha_final_belief*sigma_tp1.trace();
+//		}
+//		sigma_t = sigma_tp1;
+//	}
+//
+//	vec<C_DIM> final_ee_position = get_link_segments(x_tp1).back().p1;
+//	vec<C_DIM> goal_error = final_ee_position - x_tp1.segment<C_DIM>(J_DIM);
+//	cost += alpha_goal*goal_error.dot(goal_error);
 
-	// compute weight as linear combination of sd and EE dist
-	vec<M_DIM> W = 1*P_sd.cwiseInverse() + 100*P_ee_dist.cwiseInverse();
-	W = W / W.sum();
+	// below methods is hand-coded re-weighting scheme
+//	// compute particle signed distance
+//	std::vector<Beam> fov = get_fov(x);
+//	vec<M_DIM> P_sd;
+//	for(int m=0; m < M_DIM; ++m) {
+//		P_sd(m) = geometry2d::signed_distance(P.col(m), fov);
+//		P_sd(m) = std::max(P_sd(m), .01);
+//	}
+//
+//	// compute particle distance to end effector
+//	vec<C_DIM> ee_pos = get_ee_pos(x.segment<E_DIM>(0));
+//	vec<M_DIM> P_ee_dist = (P - ee_pos.replicate(1,M_DIM)).colwise().norm();
+//
+//	// compute weight as linear combination of sd and EE dist
+//	vec<M_DIM> W = 1*P_sd.cwiseInverse() + 100*P_ee_dist.cwiseInverse();
+//	W = W / W.sum();
 
 	// resample
 	mat<C_DIM,M_DIM> P_weighted;
@@ -401,6 +435,15 @@ void PlanarSystem::reinitialize(const vec<X_DIM>& x, const mat<C_DIM,M_DIM>& P,
 	MatrixXd P_weighted_largest_centered = P_weighted_largest.colwise() - P_weighted_largest.rowwise().mean();
 	new_cov = (1/(double(largest_mode_size)-1))*(P_weighted_largest_centered*P_weighted_largest_centered.transpose());
 
+//	vec<X_DIM> x_new = x;
+//	mat<X_DIM,X_DIM> sigma_new = sigma;
+//
+//	x_new.segment<C_DIM>(J_DIM) = new_mean;
+//	sigma_new.block<C_DIM,C_DIM>(J_DIM,J_DIM) = new_cov;
+//
+//	LOG_INFO("Initial state in reinitialize");
+//	display(x_new, sigma_new, P_weighted);
+//	exit(0);
 //	new_mean = P.rowwise().mean();
 //
 //	mat<C_DIM,M_DIM> P_centered = P.colwise() - P.rowwise().mean();
@@ -624,7 +667,7 @@ void PlanarSystem::find_modes(const mat<C_DIM,M_DIM>& P,
 		std::vector<vec<C_DIM>, aligned_allocator<vec<C_DIM>>>& modes,
 		std::vector<std::vector<int>>& mode_particle_indices) {
 	for(int m=0; m < M_DIM; ++m) {
-		std::cout << "find nearest mode: " << m << "\n";
+//		std::cout << "find nearest mode: " << m << "\n";
 		vec<C_DIM> nearest_mode = find_nearest_mode(P.col(m), P);
 
 		bool nearest_mode_exists = false;

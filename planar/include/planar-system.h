@@ -85,7 +85,8 @@ public:
 			double& cost, vec<TOTAL_VARS>& grad);
 
 	bool should_reinitialize(const vec<X_DIM>& x, const mat<X_DIM,X_DIM>& sigma, const mat<C_DIM,M_DIM>& P);
-	void reinitialize(const vec<X_DIM>& x, const mat<C_DIM,M_DIM>& P, vec<C_DIM>& new_mean, mat<C_DIM,C_DIM>& new_cov);
+	void reinitialize(const vec<X_DIM>& x, const mat<X_DIM,X_DIM>& sigma, const mat<C_DIM,M_DIM>& P,
+			vec<C_DIM>& new_mean, mat<C_DIM,C_DIM>& new_cov);
 
 	void display(const vec<X_DIM>& x, const mat<X_DIM,X_DIM>& sigma, bool pause=true);
 	void display(const std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X,

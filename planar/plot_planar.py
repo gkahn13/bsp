@@ -6,7 +6,76 @@ import matplotlib.pyplot as plt
 
 import IPython
 
-def plot_planar(X, S, P, P_sd, robot_origin, link_lengths, camera_origin, camera_fov, object, beams):
+def plot_planar_gmm(J, obj_means, obj_covs, obj_particles, robot_origin, link_lengths, camera_origin, camera_fov, object, beams, pause=True):
+    """
+    @param J                joints (robot + camera)
+    @param obj_means        object means
+    @param obj_covs         object covariances
+    @param obj_particles    particle groups for each object
+    @param robot_origin     (x,y) position of link0
+    @param link_lengths
+    @param camera_origin     (x,y) position of camera
+    @param camera_fov angle  (in radians) of camera field-of-view
+    @param object            actual position of the object
+    @param beams             list of size (3,) arrays of triangles representing the FOV
+    """
+    plt.clf()
+    plt.cla()
+    
+    fig = plt.figure(1)
+    ax = fig.axes[0]
+    ax.set_axis_bgcolor('black')
+    ax.set_aspect('equal')
+    
+    T = len(J)
+    
+    max_length = np.sum(link_lengths)
+    ax.axis([-max_length, max_length, -2, max_length])
+    
+    for t in xrange(T):
+        """ plot robot arm """
+        plot_arm(J[t][:3], robot_origin, link_lengths, alpha=(t+1)/float(T))
+    
+        """plot camera angle """
+        plot_camera(J[t][3], camera_origin, camera_fov, alpha=(t+1)/float(T))
+    
+        """ plot object(s) mean, covariance, and particles """
+        if obj_means is not None and obj_covs is not None and obj_particles is not None:
+            num_objs = len(obj_means)
+            colors = list(plt.cm.hsv(np.linspace(0, 1, num_objs)))
+            for obj_mean, obj_cov, obj_p, color in zip(obj_means, obj_covs, obj_particles, tuple(colors)):
+                plt.plot(obj_mean[0], obj_mean[1], 's', markersize=10.0, color=color)
+                plot_cov(obj_mean, obj_cov, color=color)
+                
+                plt.plot(obj_p[0,:], obj_p[1,:], 'x', color=color)
+                
+        
+    """ plot object position """
+    plt.plot(object[0], object[1], 's', markersize=10.0, color='green')
+    
+    """ plot beams for last timestep only """
+    plot_beams(beams)
+    
+    plt.show(block=False)
+    
+    if (pause):
+        print('Press enter to continue')
+        raw_input()
+
+def plot_planar(J, robot_origin, link_lengths, camera_origin, camera_fov, object, beams, pause=True):
+    """
+    @param J                joints (robot + camera)
+    @param robot_origin     (x,y) position of link0
+    @param link_lengths
+    @param camera_origin     (x,y) position of camera
+    @param camera_fov angle  (in radians) of camera field-of-view
+    @param object            actual position of the object
+    @param beams             list of size (3,) arrays of triangles representing the FOV
+    """
+    plot_planar_gmm(J, None, None, None, robot_origin, link_lengths, camera_origin, camera_fov, object, beams, pause)
+
+
+def plot_planar_old(X, S, P, P_sd, robot_origin, link_lengths, camera_origin, camera_fov, object, beams, pause=False):
     """
     @param X                 joints angles, camera angle, object position (for T timesteps)
     @param S                 covariance for X (for T timesteps)
@@ -67,6 +136,10 @@ def plot_planar(X, S, P, P_sd, robot_origin, link_lengths, camera_origin, camera
     
     
     plt.show(block=False)
+    
+    if (pause):
+        print('Press enter to continue')
+        raw_input()
     
 def plot_arm(joints, robot_origin, link_lengths, color='red', alpha=1.0):
     joint_positions = arm_joint_positions(joints, robot_origin, link_lengths)

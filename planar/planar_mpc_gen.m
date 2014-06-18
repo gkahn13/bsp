@@ -15,7 +15,7 @@ disp(strcat(rootDir,'bsp/forces'));
 
 % problem setup
 N = timesteps - 1;
-nx = 6;
+nx = 4;
 nu = 4;
 nc = 2; % 2-d
 DT = 1;
@@ -123,7 +123,7 @@ outputs(i) = newOutput(var,i,1:nx);
 % solver settings
 mpcname = 'planarMPC';
 codeoptions = getOptions(mpcname);
-codeoptions.printlevel = 2;
+codeoptions.printlevel = 0;
 codeoptions.timing=0;
 codeoptions.maxit=50;
 

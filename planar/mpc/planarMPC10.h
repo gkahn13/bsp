@@ -28,7 +28,7 @@ typedef double planarMPC_FLOAT;
 /* SOLVER SETTINGS ------------------------------------------------------*/
 /* print level */
 #ifndef planarMPC_SET_PRINTLEVEL
-#define planarMPC_SET_PRINTLEVEL    (2)
+#define planarMPC_SET_PRINTLEVEL    (0)
 #endif
 
 /* timing */
@@ -84,131 +84,131 @@ typedef double planarMPC_FLOAT;
 /* fill this with data before calling the solver! */
 typedef struct planarMPC_params
 {
-    /* diagonal matrix of size [10 x 10] (only the diagonal is stored) */
-    planarMPC_FLOAT H1[10];
+    /* diagonal matrix of size [8 x 8] (only the diagonal is stored) */
+    planarMPC_FLOAT H1[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT f1[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT f1[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT lb1[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT lb1[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT ub1[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT ub1[8];
 
-    /* vector of size 6 */
-    planarMPC_FLOAT c1[6];
+    /* vector of size 4 */
+    planarMPC_FLOAT c1[4];
 
-    /* diagonal matrix of size [10 x 10] (only the diagonal is stored) */
-    planarMPC_FLOAT H2[10];
+    /* diagonal matrix of size [8 x 8] (only the diagonal is stored) */
+    planarMPC_FLOAT H2[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT f2[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT f2[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT lb2[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT lb2[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT ub2[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT ub2[8];
 
-    /* diagonal matrix of size [10 x 10] (only the diagonal is stored) */
-    planarMPC_FLOAT H3[10];
+    /* diagonal matrix of size [8 x 8] (only the diagonal is stored) */
+    planarMPC_FLOAT H3[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT f3[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT f3[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT lb3[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT lb3[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT ub3[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT ub3[8];
 
-    /* diagonal matrix of size [10 x 10] (only the diagonal is stored) */
-    planarMPC_FLOAT H4[10];
+    /* diagonal matrix of size [8 x 8] (only the diagonal is stored) */
+    planarMPC_FLOAT H4[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT f4[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT f4[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT lb4[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT lb4[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT ub4[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT ub4[8];
 
-    /* diagonal matrix of size [10 x 10] (only the diagonal is stored) */
-    planarMPC_FLOAT H5[10];
+    /* diagonal matrix of size [8 x 8] (only the diagonal is stored) */
+    planarMPC_FLOAT H5[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT f5[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT f5[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT lb5[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT lb5[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT ub5[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT ub5[8];
 
-    /* diagonal matrix of size [10 x 10] (only the diagonal is stored) */
-    planarMPC_FLOAT H6[10];
+    /* diagonal matrix of size [8 x 8] (only the diagonal is stored) */
+    planarMPC_FLOAT H6[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT f6[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT f6[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT lb6[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT lb6[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT ub6[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT ub6[8];
 
-    /* diagonal matrix of size [10 x 10] (only the diagonal is stored) */
-    planarMPC_FLOAT H7[10];
+    /* diagonal matrix of size [8 x 8] (only the diagonal is stored) */
+    planarMPC_FLOAT H7[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT f7[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT f7[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT lb7[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT lb7[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT ub7[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT ub7[8];
 
-    /* diagonal matrix of size [10 x 10] (only the diagonal is stored) */
-    planarMPC_FLOAT H8[10];
+    /* diagonal matrix of size [8 x 8] (only the diagonal is stored) */
+    planarMPC_FLOAT H8[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT f8[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT f8[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT lb8[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT lb8[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT ub8[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT ub8[8];
 
-    /* diagonal matrix of size [10 x 10] (only the diagonal is stored) */
-    planarMPC_FLOAT H9[10];
+    /* diagonal matrix of size [8 x 8] (only the diagonal is stored) */
+    planarMPC_FLOAT H9[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT f9[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT f9[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT lb9[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT lb9[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT ub9[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT ub9[8];
 
-    /* diagonal matrix of size [6 x 6] (only the diagonal is stored) */
-    planarMPC_FLOAT H10[6];
+    /* diagonal matrix of size [4 x 4] (only the diagonal is stored) */
+    planarMPC_FLOAT H10[4];
 
-    /* vector of size 6 */
-    planarMPC_FLOAT f10[6];
+    /* vector of size 4 */
+    planarMPC_FLOAT f10[4];
 
-    /* vector of size 6 */
-    planarMPC_FLOAT lb10[6];
+    /* vector of size 4 */
+    planarMPC_FLOAT lb10[4];
 
-    /* vector of size 6 */
-    planarMPC_FLOAT ub10[6];
+    /* vector of size 4 */
+    planarMPC_FLOAT ub10[4];
 
-    /* matrix of size [4 x 6] (column major format) */
-    planarMPC_FLOAT A10[24];
+    /* matrix of size [4 x 4] (column major format) */
+    planarMPC_FLOAT A10[16];
 
     /* vector of size 4 */
     planarMPC_FLOAT b10[4];
@@ -220,35 +220,35 @@ typedef struct planarMPC_params
 /* the desired variables are put here by the solver */
 typedef struct planarMPC_output
 {
-    /* vector of size 10 */
-    planarMPC_FLOAT z1[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT z1[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT z2[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT z2[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT z3[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT z3[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT z4[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT z4[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT z5[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT z5[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT z6[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT z6[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT z7[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT z7[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT z8[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT z8[8];
 
-    /* vector of size 10 */
-    planarMPC_FLOAT z9[10];
+    /* vector of size 8 */
+    planarMPC_FLOAT z9[8];
 
-    /* vector of size 6 */
-    planarMPC_FLOAT z10[6];
+    /* vector of size 4 */
+    planarMPC_FLOAT z10[4];
 
 } planarMPC_output;
 

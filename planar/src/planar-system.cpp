@@ -6,6 +6,7 @@
 
 PlanarSystem::PlanarSystem(const vec<C_DIM>& camera_origin, const vec<C_DIM>& object, bool is_static) {
 	init(camera_origin, object, is_static);
+	init_display();
 }
 
 void PlanarSystem::init(const vec<C_DIM>& camera_origin, const vec<C_DIM>& object, bool is_static) {
@@ -34,7 +35,26 @@ void PlanarSystem::init(const vec<C_DIM>& camera_origin, const vec<C_DIM>& objec
 	u_min << -max_input, -max_input, -max_input, (is_static) ? 0 : -max_input;
 	u_max << max_input, max_input, max_input, (is_static) ? 0 : max_input;
 
-	fps.init(camera_origin.cast<bdouble>(), object.cast<bdouble>(), is_static);
+//	fps.init(camera_origin.cast<bdouble>(), object.cast<bdouble>(), is_static);
+}
+
+void PlanarSystem::init_display() {
+	Py_Initialize();
+	np::initialize();
+	py::numeric::array::set_module_and_type("numpy", "ndarray");
+
+	std::string working_dir = boost::filesystem::current_path().normalize().string();
+	std::string bsp_dir = working_dir.substr(0,working_dir.find("bsp"));
+	std::string planar_dir = bsp_dir + "bsp/planar";
+
+	py::object main_module = py::import("__main__");
+	py::object main_namespace = main_module.attr("__dict__");
+	py::exec("import sys, os", main_namespace);
+	py::exec(py::str("sys.path.append('"+planar_dir+"')"), main_namespace);
+	py::object plot_mod = py::import("plot_planar");
+
+	plot_planar = plot_mod.attr("plot_planar");
+	plot_planar_gmm = plot_mod.attr("plot_planar_gmm");
 }
 
 
@@ -42,10 +62,8 @@ void PlanarSystem::init(const vec<C_DIM>& camera_origin, const vec<C_DIM>& objec
  * Public methods
  */
 
-vec<X_DIM> PlanarSystem::dynfunc(const vec<X_DIM>& x, const vec<U_DIM>& u, const vec<Q_DIM>& q, bool enforce_limits) {
-	vec<X_DIM> x_new = x;
-	x_new.segment<J_DIM>(0) += DT*(u + q);
-	return x_new;
+vec<J_DIM> PlanarSystem::dynfunc(const vec<J_DIM>& j, const vec<U_DIM>& u, const vec<Q_DIM>& q, bool enforce_limits) {
+	return (j + DT*(u + q));
 }
 
 vec<Z_DIM> PlanarSystem::obsfunc(const vec<X_DIM>& x, const vec<C_DIM>& object, const vec<R_DIM>& r) {
@@ -67,7 +85,7 @@ mat<Z_DIM,Z_DIM> PlanarSystem::delta_matrix(const vec<X_DIM>& x, const vec<C_DIM
 		delta(i, i) = 1; // TODO: should this depend on SD of link segments?
 	}
 
-	std::vector<Beam> fov = get_fov(x);
+	std::vector<Beam> fov = get_fov(x.segment<J_DIM>(0));
 	double sd = geometry2d::signed_distance(object, fov);
 	double sd_sigmoid = 1.0 - 1.0/(1.0 + exp(-alpha*sd));
 	for(int i=J_DIM; i < X_DIM; ++i) {
@@ -83,7 +101,8 @@ mat<Z_DIM,Z_DIM> PlanarSystem::delta_matrix(const vec<X_DIM>& x, const vec<C_DIM
 void PlanarSystem::belief_dynamics(const vec<X_DIM>& x_t, const mat<X_DIM,X_DIM>& sigma_t, const vec<U_DIM>& u_t, const double alpha,
 		vec<X_DIM>& x_tp1, mat<X_DIM,X_DIM>& sigma_tp1) {
 	// propagate dynamics
-	x_tp1 = dynfunc(x_t, u_t, vec<Q_DIM>::Zero());
+	x_tp1 = x_t;
+	x_tp1.segment<J_DIM>(0) = dynfunc(x_t.segment<J_DIM>(0), u_t, vec<Q_DIM>::Zero());
 
 	// propagate belief through dynamics
 	mat<X_DIM,X_DIM> A = mat<X_DIM,X_DIM>::Zero();
@@ -107,7 +126,8 @@ void PlanarSystem::execute_control_step(const vec<X_DIM>& x_t_real, const vec<X_
 	// find next real state from input + noise
 	vec<Q_DIM> control_noise = vec<Q_DIM>::Zero();// + chol(.2*Q)*randn<vec>(Q_DIM);
 	vec<R_DIM> obs_noise = vec<R_DIM>::Zero();// + chol(.2*R)*randn<vec>(R_DIM);
-	x_tp1_real = dynfunc(x_t_real, u_t, control_noise, true);
+	x_tp1_real = x_t_real;
+	x_tp1_real.segment<J_DIM>(0) = dynfunc(x_t_real.segment<J_DIM>(0), u_t, control_noise, true);
 	vec<Z_DIM> z_tp1_real = obsfunc(x_tp1_real, this->object, obs_noise);
 
 	// now do update based on current belief (x_t, sigma_t)
@@ -118,7 +138,8 @@ void PlanarSystem::execute_control_step(const vec<X_DIM>& x_t_real, const vec<X_
 	linearize_dynfunc(x_t_t, u_t, vec<Q_DIM>::Zero(), A, M);
 
 	mat<X_DIM,X_DIM> sigma_tp1_t = A*sigma_t_t*A.transpose() + M*Q*M.transpose();
-	vec<X_DIM> x_tp1_t = dynfunc(x_t_t, u_t, vec<Q_DIM>::Zero());
+	vec<X_DIM> x_tp1_t = x_t_t;
+	x_tp1_t.segment<J_DIM>(0) = dynfunc(x_t_t.segment<J_DIM>(0), u_t, vec<Q_DIM>::Zero());
 
 	// propagate belief through observation
 	mat<Z_DIM,X_DIM> H = mat<Z_DIM,X_DIM>::Zero();
@@ -138,11 +159,11 @@ void PlanarSystem::execute_control_step(const vec<X_DIM>& x_t_real, const vec<X_
 	update_particles(x_tp1_t, delta_real, P_t, P_tp1);
 }
 
-std::vector<Beam> PlanarSystem::get_fov(const vec<X_DIM>& x) {
+std::vector<Beam> PlanarSystem::get_fov(const vec<J_DIM>& j) {
 	std::vector<Beam> beams, new_beams;
 
 	// start out with full field of view
-	double angle = x(J_DIM-1);
+	double angle = j(J_DIM-1);
 	vec<C_DIM> dir_right, dir_left;
 	dir_right << sin(angle+camera_fov/2.0),
 			cos(angle+camera_fov/2.0);
@@ -152,7 +173,7 @@ std::vector<Beam> PlanarSystem::get_fov(const vec<X_DIM>& x) {
 			camera_origin + camera_max_dist*dir_right,
 			camera_origin + camera_max_dist*dir_left));
 
-	std::vector<Segment> link_segments = get_link_segments(x);
+	std::vector<Segment> link_segments = get_link_segments(j.segment<E_DIM>(0));
 
 	for(int l=0; l < link_segments.size(); ++l) {
 		new_beams.clear();
@@ -172,9 +193,7 @@ std::vector<Beam> PlanarSystem::get_fov(const vec<X_DIM>& x) {
 }
 
 vec<C_DIM> PlanarSystem::get_ee_pos(const vec<E_DIM>& j) {
-	vec<X_DIM> x = vec<X_DIM>::Zero();
-	x.segment<E_DIM>(0) = j;
-	return get_link_segments(x).back().p1;
+	return get_link_segments(j).back().p1;
 }
 
 void PlanarSystem::get_ee_pos_jac(vec<E_DIM>& j, mat<C_DIM,E_DIM>& ee_jac) {
@@ -227,15 +246,16 @@ void PlanarSystem::get_limits(vec<X_DIM>& x_min, vec<X_DIM>& x_max, vec<U_DIM>& 
 	u_max = this->u_max;
 }
 
-double PlanarSystem::cost(const std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, const mat<X_DIM,X_DIM>& sigma0,
-		const std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha) {
+double PlanarSystem::cost(const std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J, const vec<C_DIM>& obj,
+		const mat<X_DIM,X_DIM>& sigma0, const std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha) {
 	double cost = 0;
-	int T = X.size();
+	int T = J.size();
 
-	vec<X_DIM> x_tp1 = vec<X_DIM>::Zero();
+	vec<X_DIM> x_t, x_tp1 = vec<X_DIM>::Zero();
 	mat<X_DIM,X_DIM> sigma_t = sigma0, sigma_tp1 = mat<X_DIM,X_DIM>::Zero();
 	for(int t=0; t < T-1; ++t) {
-		belief_dynamics(X[t], sigma_t, U[t], alpha, x_tp1, sigma_tp1);
+		x_t << J[t], obj;
+		belief_dynamics(x_t, sigma_t, U[t], alpha, x_tp1, sigma_tp1);
 		cost += alpha_control*U[t].dot(U[t]);
 		if (t < T-2) {
 			cost += alpha_belief*sigma_tp1.trace();
@@ -245,30 +265,36 @@ double PlanarSystem::cost(const std::vector<vec<X_DIM>, aligned_allocator<vec<X_
 		sigma_t = sigma_tp1;
 	}
 
-	vec<C_DIM> final_ee_position = get_link_segments(x_tp1).back().p1;
-	vec<C_DIM> goal_error = final_ee_position - x_tp1.segment<C_DIM>(J_DIM);
-	cost += alpha_goal*goal_error.dot(goal_error);
-
 	return cost;
 }
 
-vec<TOTAL_VARS> PlanarSystem::cost_grad(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, const mat<X_DIM,X_DIM>& sigma0,
-		std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha) {
-	int T = X.size();
+double PlanarSystem::cost_gmm(const std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J,
+		const std::vector<vec<C_DIM>, aligned_allocator<vec<C_DIM>>>& objs,
+		const mat<X_DIM,X_DIM>& sigma0, const std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha) {
+	double cost_gmm = 0;
+	for(int i=0; i < objs.size(); ++i) {
+		cost_gmm += cost(J, objs[i], sigma0, U, alpha);
+	}
+	return cost_gmm;
+}
+
+vec<TOTAL_VARS> PlanarSystem::cost_grad(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J, const vec<C_DIM>& obj,
+		const mat<X_DIM,X_DIM>& sigma0, std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha) {
+	int T = J.size();
 
 	vec<TOTAL_VARS> grad;
 
 	double orig, cost_p, cost_m;
 	int index = 0;
 	for(int t=0; t < T; ++t) {
-		for(int i=0; i < X_DIM; ++i) {
-			orig = X[t][i];
+		for(int i=0; i < J_DIM; ++i) {
+			orig = J[t][i];
 
-			X[t][i] = orig + step;
-			cost_p = cost(X, sigma0, U, alpha);
+			J[t][i] = orig + step;
+			cost_p = cost(J, obj, sigma0, U, alpha);
 
-			X[t][i] = orig - step;
-			cost_m = cost(X, sigma0, U, alpha);
+			J[t][i] = orig - step;
+			cost_m = cost(J, obj, sigma0, U, alpha);
 
 			grad(index++) = (cost_p - cost_m) / (2*step);
 		}
@@ -278,10 +304,10 @@ vec<TOTAL_VARS> PlanarSystem::cost_grad(std::vector<vec<X_DIM>, aligned_allocato
 				orig = U[t][i];
 
 				U[t][i] = orig + step;
-				cost_p = cost(X, sigma0, U, alpha);
+				cost_p = cost(J, obj, sigma0, U, alpha);
 
 				U[t][i] = orig - step;
-				cost_m = cost(X, sigma0, U, alpha);
+				cost_m = cost(J, obj, sigma0, U, alpha);
 
 				grad(index++) = (cost_p - cost_m) / (2*step);
 			}
@@ -290,42 +316,82 @@ vec<TOTAL_VARS> PlanarSystem::cost_grad(std::vector<vec<X_DIM>, aligned_allocato
 	return grad;
 }
 
-void PlanarSystem::cost_and_cost_grad(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, const mat<X_DIM,X_DIM>& sigma0,
-		std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha, const bool use_fadbad,
-		double& cost, vec<TOTAL_VARS>& grad) {
-	if (!use_fadbad) {
-		cost = this->cost(X, sigma0, U, alpha);
-		grad = this->cost_grad(X, sigma0, U, alpha);
-	} else {
-		std::vector<vecb<X_DIM>, aligned_allocator<vecb<X_DIM>>> X_b(X.size());
-		matb<X_DIM,X_DIM> sigma0_b = sigma0.cast<bdouble>();
-		std::vector<vecb<U_DIM>, aligned_allocator<vecb<U_DIM>>> U_b(U.size());
-		bdouble alpha_b = (bdouble)alpha;
+vec<TOTAL_VARS> PlanarSystem::cost_gmm_grad(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J,
+		const std::vector<vec<C_DIM>, aligned_allocator<vec<C_DIM>>>& objs,
+		const mat<X_DIM,X_DIM>& sigma0, std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha) {
+	int T = J.size();
 
-		for(int t=0; t < X.size(); ++t) {
-			X_b[t] = X[t].cast<bdouble>();
-			if(t < X.size()-1) {
-				U_b[t] = U[t].cast<bdouble>();
-			}
+	vec<TOTAL_VARS> grad;
+
+	double orig, cost_p, cost_m;
+	int index = 0;
+	for(int t=0; t < T; ++t) {
+		for(int i=0; i < J_DIM; ++i) {
+			orig = J[t][i];
+
+			J[t][i] = orig + step;
+			cost_p = cost_gmm(J, objs, sigma0, U, alpha);
+
+			J[t][i] = orig - step;
+			cost_m = cost_gmm(J, objs, sigma0, U, alpha);
+
+			grad(index++) = (cost_p - cost_m) / (2*step);
 		}
 
-		bdouble cost_b = fps.cost(X_b, sigma0_b, U_b, alpha_b);
-		cost = cost_b.x();
-		cost_b.diff(0,1);
-		int index = 0;
-		for(int t=0; t < X.size(); ++t) {
-			for(int i=0; i < X_DIM; ++i) {
-				grad(index++) = X_b[t](i).d(0);
-			}
+		if (t < T-1) {
+			for(int i=0; i < U_DIM; ++i) {
+				orig = U[t][i];
 
-			if (t < X.size()-1) {
-				for(int i=0; i < U_DIM; ++i) {
-					grad(index++) = U_b[t](i).d(0);
-				}
+				U[t][i] = orig + step;
+				cost_p = cost_gmm(J, objs, sigma0, U, alpha);
+
+				U[t][i] = orig - step;
+				cost_m = cost_gmm(J, objs, sigma0, U, alpha);
+
+				grad(index++) = (cost_p - cost_m) / (2*step);
 			}
 		}
 	}
+	return grad;
 }
+
+
+//void PlanarSystem::cost_and_cost_grad(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, const mat<X_DIM,X_DIM>& sigma0,
+//		std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha, const bool use_fadbad,
+//		double& cost, vec<TOTAL_VARS>& grad) {
+//	if (!use_fadbad) {
+//		cost = this->cost(X, sigma0, U, alpha);
+//		grad = this->cost_grad(X, sigma0, U, alpha);
+//	} else {
+//		std::vector<vecb<X_DIM>, aligned_allocator<vecb<X_DIM>>> X_b(X.size());
+//		matb<X_DIM,X_DIM> sigma0_b = sigma0.cast<bdouble>();
+//		std::vector<vecb<U_DIM>, aligned_allocator<vecb<U_DIM>>> U_b(U.size());
+//		bdouble alpha_b = (bdouble)alpha;
+//
+//		for(int t=0; t < X.size(); ++t) {
+//			X_b[t] = X[t].cast<bdouble>();
+//			if(t < X.size()-1) {
+//				U_b[t] = U[t].cast<bdouble>();
+//			}
+//		}
+//
+//		bdouble cost_b = fps.cost(X_b, sigma0_b, U_b, alpha_b);
+//		cost = cost_b.x();
+//		cost_b.diff(0,1);
+//		int index = 0;
+//		for(int t=0; t < X.size(); ++t) {
+//			for(int i=0; i < X_DIM; ++i) {
+//				grad(index++) = X_b[t](i).d(0);
+//			}
+//
+//			if (t < X.size()-1) {
+//				for(int i=0; i < U_DIM; ++i) {
+//					grad(index++) = U_b[t](i).d(0);
+//				}
+//			}
+//		}
+//	}
+//}
 
 bool PlanarSystem::should_reinitialize(const vec<X_DIM>& x, const mat<X_DIM,X_DIM>& sigma, const mat<C_DIM,M_DIM>& P) {
 	vec<C_DIM> obj_mean = x.segment<C_DIM>(J_DIM);
@@ -347,64 +413,10 @@ bool PlanarSystem::should_reinitialize(const vec<X_DIM>& x, const mat<X_DIM,X_DI
 
 void PlanarSystem::reinitialize(const vec<X_DIM>& x, const mat<X_DIM,X_DIM>& sigma, const mat<C_DIM,M_DIM>& P,
 		vec<C_DIM>& new_mean, mat<C_DIM,C_DIM>& new_cov) {
-
-	// cost(X, sigma0, U, alpha)
-	vec<X_DIM> x_p = x, x_p_tp1;
-	mat<X_DIM,X_DIM> sigma_p = sigma, sigma_p_tp1;
-	int alpha = 10;
-	vec<C_DIM> ee_position = get_ee_pos(x.segment<E_DIM>(0));
-
-	vec<M_DIM> P_cost;
-	for(int m=0; m < M_DIM; ++m) {
-		x_p.segment<C_DIM>(J_DIM) = P.col(m);
-		belief_dynamics(x_p, sigma_p, vec<U_DIM>::Zero(), alpha, x_p_tp1, sigma_p_tp1);
-		P_cost(m) = alpha_belief*sigma_p_tp1.block<C_DIM,C_DIM>(J_DIM,J_DIM).trace() +
-				alpha_goal*(ee_position - x_p_tp1.segment<C_DIM>(J_DIM)).squaredNorm();
-	}
-	vec<M_DIM> W = P_cost / P_cost.sum();
-
-//	vec<X_DIM> x_tp1 = vec<X_DIM>::Zero();
-//	mat<X_DIM,X_DIM> sigma_t = sigma0, sigma_tp1 = mat<X_DIM,X_DIM>::Zero();
-//	for(int t=0; t < T-1; ++t) {
-//		belief_dynamics(X[t], sigma_t, U[t], alpha, x_tp1, sigma_tp1);
-//		cost += alpha_control*U[t].dot(U[t]);
-//		if (t < T-2) {
-//			cost += alpha_belief*sigma_tp1.trace();
-//		} else {
-//			cost += alpha_final_belief*sigma_tp1.trace();
-//		}
-//		sigma_t = sigma_tp1;
-//	}
-//
-//	vec<C_DIM> final_ee_position = get_link_segments(x_tp1).back().p1;
-//	vec<C_DIM> goal_error = final_ee_position - x_tp1.segment<C_DIM>(J_DIM);
-//	cost += alpha_goal*goal_error.dot(goal_error);
-
-	// below methods is hand-coded re-weighting scheme
-//	// compute particle signed distance
-//	std::vector<Beam> fov = get_fov(x);
-//	vec<M_DIM> P_sd;
-//	for(int m=0; m < M_DIM; ++m) {
-//		P_sd(m) = geometry2d::signed_distance(P.col(m), fov);
-//		P_sd(m) = std::max(P_sd(m), .01);
-//	}
-//
-//	// compute particle distance to end effector
-//	vec<C_DIM> ee_pos = get_ee_pos(x.segment<E_DIM>(0));
-//	vec<M_DIM> P_ee_dist = (P - ee_pos.replicate(1,M_DIM)).colwise().norm();
-//
-//	// compute weight as linear combination of sd and EE dist
-//	vec<M_DIM> W = 1*P_sd.cwiseInverse() + 100*P_ee_dist.cwiseInverse();
-//	W = W / W.sum();
-
-	// resample
-	mat<C_DIM,M_DIM> P_weighted;
-	low_variance_sampler(P, W, P_weighted);
-
 	// find modes and associated particles
 	std::vector<vec<C_DIM>, aligned_allocator<vec<C_DIM>>> modes;
 	std::vector<std::vector<int>> mode_particle_indices;
-	find_modes(P_weighted, modes, mode_particle_indices);
+	find_modes(P, modes, mode_particle_indices);
 
 	std::cout << "number of modes found: " << modes.size() << "\n";
 	std::cout << "mode_particle_indices.size(): " << mode_particle_indices.size() << "\n";
@@ -423,36 +435,130 @@ void PlanarSystem::reinitialize(const vec<X_DIM>& x, const mat<X_DIM,X_DIM>& sig
 	std::cout << "largest_mode_size : " << largest_mode_size << "\n";
 
 	std::cout << "Forming P_weighted_largest\n";
-	MatrixXd P_weighted_largest(C_DIM, largest_mode_size);
+	MatrixXd P_largest(C_DIM, largest_mode_size);
 	for(int m=0; m < largest_mode_size; ++m) {
-		P_weighted_largest.col(m) = P_weighted.col(mode_particle_indices[largest_mode_index][m]);
+		P_largest.col(m) = P.col(mode_particle_indices[largest_mode_index][m]);
 	}
 
 	std::cout << "Computing new_mean\n";
-	new_mean = P_weighted_largest.rowwise().mean();
+	new_mean = P_largest.rowwise().mean();
 
 	std::cout << "Computing new_cov\n";
-	MatrixXd P_weighted_largest_centered = P_weighted_largest.colwise() - P_weighted_largest.rowwise().mean();
-	new_cov = (1/(double(largest_mode_size)-1))*(P_weighted_largest_centered*P_weighted_largest_centered.transpose());
+	MatrixXd P_largest_centered = P_largest.colwise() - P_largest.rowwise().mean();
+	new_cov = (1/(double(largest_mode_size)-1))*(P_largest_centered*P_largest_centered.transpose());
+}
 
-//	vec<X_DIM> x_new = x;
-//	mat<X_DIM,X_DIM> sigma_new = sigma;
-//
-//	x_new.segment<C_DIM>(J_DIM) = new_mean;
-//	sigma_new.block<C_DIM,C_DIM>(J_DIM,J_DIM) = new_cov;
-//
-//	LOG_INFO("Initial state in reinitialize");
-//	display(x_new, sigma_new, P_weighted);
-//	exit(0);
-//	new_mean = P.rowwise().mean();
-//
-//	mat<C_DIM,M_DIM> P_centered = P.colwise() - P.rowwise().mean();
-//	new_cov = (1/(double(M_DIM)-1))*(P_centered*P_centered.transpose());
+void PlanarSystem::fit_gaussians_to_pf(const mat<C_DIM,M_DIM>& P,
+		std::vector<vec<C_DIM>, aligned_allocator<vec<C_DIM>>>& obj_means,
+		std::vector<mat<C_DIM,C_DIM>, aligned_allocator<mat<C_DIM,C_DIM>>>& obj_covs) {
+	// find modes and associated particles
+	obj_means.clear();
+	std::vector<std::vector<int>> mode_particle_indices;
+	find_modes(P, obj_means, mode_particle_indices);
+
+	std::cout << "number of modes found: " << obj_means.size() << "\n";
+	std::cout << "mode_particle_indices.size(): " << mode_particle_indices.size() << "\n";
+
+	// create matrices from associated mode_particle_indices
+	// and then calculate covariance
+	obj_covs.clear();
+	for(int i=0; i < mode_particle_indices.size(); ++i) {
+		int num_mode_particles = mode_particle_indices[i].size();
+		MatrixXd P_i = MatrixXd::Zero(C_DIM, num_mode_particles);
+		for(int m=0; m < num_mode_particles; ++m) {
+			P_i.col(m) = P.col(mode_particle_indices[i][m]);
+		}
+		MatrixXd P_i_centered = P_i.colwise() - P_i.rowwise().mean();
+		MatrixXd obj_cov_i = (1/(double(num_mode_particles)-1))*(P_i_centered*P_i_centered.transpose());
+		obj_covs.push_back(obj_cov_i);
+	}
 }
 
 /**
  * Display methods
  */
+
+void PlanarSystem::display(const vec<J_DIM>& j, bool pause) {
+	std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>> J(1, j);
+	display(J, pause);
+}
+
+void PlanarSystem::display(const std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J, bool pause) {
+	py::list J_pylist;
+	for(int t=0; t < J.size(); ++t) {
+		J_pylist.append(planar_utils::eigen_to_ndarray(J[t]));
+	}
+
+	np::ndarray robot_origin_ndarray = planar_utils::eigen_to_ndarray(robot_origin);
+	np::ndarray link_lengths_ndarray = planar_utils::eigen_to_ndarray(link_lengths);
+	np::ndarray camera_origin_ndarray = planar_utils::eigen_to_ndarray(camera_origin);
+	np::ndarray object_ndarray = planar_utils::eigen_to_ndarray(object);
+
+	py::list beams_pylist;
+	std::vector<Beam> beams = get_fov(J.back());
+
+	for(int i=0; i < beams.size(); ++i) {
+		mat<2,3> m;
+		m << beams[i].base, beams[i].a, beams[i].b;
+		beams_pylist.append(planar_utils::eigen_to_ndarray(m));
+	}
+
+	try {
+		plot_planar(J_pylist, robot_origin_ndarray, link_lengths_ndarray, camera_origin_ndarray, camera_fov, object_ndarray, beams_pylist, pause);
+	}
+	catch(py::error_already_set const &)
+	{
+		PyErr_Print();
+	}
+}
+
+void PlanarSystem::display(const vec<J_DIM>& j,
+		std::vector<VectorXd> obj_means, std::vector<MatrixXd> obj_covs, std::vector<MatrixXd> obj_particles,
+		bool pause) {
+	std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>> J(1, j);
+	display(J, obj_means, obj_covs, obj_particles, pause);
+}
+
+void PlanarSystem::display(const std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J,
+		std::vector<VectorXd> obj_means, std::vector<MatrixXd> obj_covs, std::vector<MatrixXd> obj_particles,
+		bool pause) {
+	py::list J_pylist;
+	for(int t=0; t < J.size(); ++t) {
+		J_pylist.append(planar_utils::eigen_to_ndarray(J[t]));
+	}
+
+	np::ndarray robot_origin_ndarray = planar_utils::eigen_to_ndarray(robot_origin);
+	np::ndarray link_lengths_ndarray = planar_utils::eigen_to_ndarray(link_lengths);
+	np::ndarray camera_origin_ndarray = planar_utils::eigen_to_ndarray(camera_origin);
+	np::ndarray object_ndarray = planar_utils::eigen_to_ndarray(object);
+
+	py::list beams_pylist;
+	std::vector<Beam> beams = get_fov(J.back());
+
+	for(int i=0; i < beams.size(); ++i) {
+		mat<2,3> m;
+		m << beams[i].base, beams[i].a, beams[i].b;
+		beams_pylist.append(planar_utils::eigen_to_ndarray(m));
+	}
+
+	py::list obj_means_list, obj_covs_list, obj_particles_list;
+	for(int i=0; i < obj_means.size(); ++i) {
+		obj_means_list.append(planar_utils::eigen_to_ndarray(obj_means[i]));
+		obj_covs_list.append(planar_utils::eigen_to_ndarray(obj_covs[i]));
+		obj_particles_list.append(planar_utils::eigen_to_ndarray(obj_particles[i]));
+	}
+
+	try {
+		plot_planar_gmm(J_pylist, obj_means_list, obj_covs_list, obj_particles_list,
+				robot_origin_ndarray, link_lengths_ndarray, camera_origin_ndarray, camera_fov, object_ndarray, beams_pylist, pause);
+	}
+	catch(py::error_already_set const &)
+	{
+		PyErr_Print();
+	}
+}
+
+
 
 void PlanarSystem::display(const vec<X_DIM>& x, const mat<X_DIM,X_DIM>& sigma, bool pause) {
 	mat<C_DIM,M_DIM> P;
@@ -491,11 +597,6 @@ void PlanarSystem::display(const std::vector<vec<X_DIM>, aligned_allocator<vec<X
 
 void PlanarSystem::display(const std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X,
 		const std::vector<mat<X_DIM,X_DIM>, aligned_allocator<mat<X_DIM,X_DIM>>>& S, const mat<C_DIM,M_DIM>& P, bool pause, bool plot_particles) {
-	Py_Initialize();
-	np::initialize();
-
-	py::numeric::array::set_module_and_type("numpy", "ndarray");
-
 	py::list X_pylist, S_pylist;
 	for(int t=0; t < X.size(); ++t) {
 		X_pylist.append(planar_utils::eigen_to_ndarray(X[t]));
@@ -508,7 +609,7 @@ void PlanarSystem::display(const std::vector<vec<X_DIM>, aligned_allocator<vec<X
 	np::ndarray object_ndarray = planar_utils::eigen_to_ndarray(object);
 
 	py::list beams_pylist;
-	std::vector<Beam> beams = get_fov(X.back());
+	std::vector<Beam> beams = get_fov(X.back().segment<J_DIM>(0));
 
 	for(int i=0; i < beams.size(); ++i) {
 		mat<2,3> m;
@@ -516,19 +617,7 @@ void PlanarSystem::display(const std::vector<vec<X_DIM>, aligned_allocator<vec<X
 		beams_pylist.append(planar_utils::eigen_to_ndarray(m));
 	}
 
-	std::string working_dir = boost::filesystem::current_path().normalize().string();
-	std::string bsp_dir = working_dir.substr(0,working_dir.find("bsp"));
-	std::string planar_dir = bsp_dir + "bsp/planar";
-
-	try
-	{
-		py::object main_module = py::import("__main__");
-		py::object main_namespace = main_module.attr("__dict__");
-		py::exec("import sys, os", main_namespace);
-		py::exec(py::str("sys.path.append('"+planar_dir+"')"), main_namespace);
-		py::object plot_mod = py::import("plot_planar");
-		py::object plot_planar = plot_mod.attr("plot_planar");
-
+	try {
 		if (plot_particles) {
 			np::ndarray P_ndarray = planar_utils::eigen_to_ndarray(P);
 			vec<M_DIM> P_sd;
@@ -538,15 +627,10 @@ void PlanarSystem::display(const std::vector<vec<X_DIM>, aligned_allocator<vec<X
 			np::ndarray P_sd_ndarray = planar_utils::eigen_to_ndarray(P_sd);
 
 			plot_planar(X_pylist, S_pylist, P_ndarray, P_sd_ndarray, robot_origin_ndarray, link_lengths_ndarray,
-							camera_origin_ndarray, camera_fov, object_ndarray, beams_pylist);
+							camera_origin_ndarray, camera_fov, object_ndarray, beams_pylist, pause);
 		} else {
 			plot_planar(X_pylist, S_pylist, NULL, NULL, robot_origin_ndarray, link_lengths_ndarray,
-					camera_origin_ndarray, camera_fov, object_ndarray, beams_pylist);
-		}
-
-		if (pause) {
-			LOG_INFO("Press enter to continue");
-			py::exec("raw_input()",main_namespace);
+					camera_origin_ndarray, camera_fov, object_ndarray, beams_pylist, pause);
 		}
 	}
 	catch(py::error_already_set const &)
@@ -559,14 +643,14 @@ void PlanarSystem::display(const std::vector<vec<X_DIM>, aligned_allocator<vec<X
  * Private methods
  */
 
-std::vector<Segment> PlanarSystem::get_link_segments(const vec<X_DIM>& x) {
+std::vector<Segment> PlanarSystem::get_link_segments(const vec<E_DIM>& j) {
 	std::vector<Segment> link_segments;
 
 	vec<C_DIM> p0 = robot_origin, p1;
 	double joint0 = 0, joint1;
 
 	for(int i=0; i < link_lengths.rows(); ++i) {
-		joint1 = joint0 + x[i];
+		joint1 = joint0 + j[i];
 		p1 << p0(0) + sin(joint1)*link_lengths(i),
 				p0(1) + cos(joint1)*link_lengths(i);
 		link_segments.push_back(Segment(p0, p1));

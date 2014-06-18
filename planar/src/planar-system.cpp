@@ -157,7 +157,6 @@ void PlanarSystem::execute_control_step(const vec<X_DIM>& x_t_real, const vec<X_
 	// and update particle filter
 	vec<C_DIM> delta_real = delta.diagonal().segment<C_DIM>(J_DIM);
 	update_particles(x_tp1_t.segment<J_DIM>(0), delta_real(0), z_tp1_real, P_t, P_tp1);
-//	update_particles(x_tp1_t.segment<J_DIM>(0), delta_real, P_t, P_tp1);
 }
 
 void PlanarSystem::execute_control_step(const vec<J_DIM>& j_t_real, const vec<J_DIM>& j_t, const vec<U_DIM>& u_t, const mat<C_DIM,M_DIM>& P_t,
@@ -174,7 +173,6 @@ void PlanarSystem::execute_control_step(const vec<J_DIM>& j_t_real, const vec<J_
 	mat<Z_DIM,Z_DIM> delta = delta_matrix(j_tp1_real, object, INFINITY); // TODO: not correct, needs to factor in noise
 	vec<C_DIM> delta_real = delta.diagonal().segment<C_DIM>(J_DIM);
 	update_particles(j_tp1, delta_real(0), z_tp1_real, P_t, P_tp1);
-//	update_particles(j_tp1, delta_real, P_t, P_tp1);
 }
 
 std::vector<Beam> PlanarSystem::get_fov(const vec<J_DIM>& j) {
@@ -697,28 +695,13 @@ void PlanarSystem::linearize_obsfunc(const vec<X_DIM>& x, const vec<R_DIM>& r, m
 
 void PlanarSystem::update_particles(const vec<J_DIM>& j_tp1_t, const double delta_fov_real, const vec<Z_DIM>& z_tp1_real, const mat<C_DIM,M_DIM>& P_t,
 		mat<C_DIM,M_DIM>& P_tp1) {
-	double alpha = INFINITY; // TODO: what value?
 
 	vec<C_DIM> z_obj_real = z_tp1_real.segment<C_DIM>(J_DIM);
 	std::vector<Beam> fov = get_fov(j_tp1_t);
-//	double sd = geometry2d::signed_distance(object, fov);
-//	double sd_sigmoid = 1.0 - 1.0/(1.0 + exp(-alpha*sd));
 
 	vec<M_DIM> W = vec<M_DIM>::Zero();
-//	mat<Z_DIM+1,Z_DIM+1> R_with_delta = mat<Z_DIM+1,Z_DIM+1>::Zero();
-//	R_with_delta(0,0) = 1e4;
-//	R_with_delta.block<R_DIM,R_DIM>(1,1) = R;
 	// for each particle, weight by gauss_likelihood of that measurement given particle/agent observation
 	for(int m=0; m < M_DIM; ++m) {
-//		double sd_m = geometry2d::signed_distance(P_t.col(m), fov);
-//		double delta_fov_m = 1.0 - 1.0/(1.0 + exp(-alpha*sd_m));
-//
-//		vec<Z_DIM> z_m = obsfunc(j_tp1_t, P_t.col(m), vec<R_DIM>::Zero());
-//
-//		vec<Z_DIM+1> e;
-//		e << delta_fov_m - delta_fov_real, z_m - z_tp1_real;
-//		W(m) = gauss_likelihood(e, R_with_delta);
-
 		bool inside = geometry2d::is_inside(P_t.col(m), fov);
 		if (delta_fov_real < epsilon) {
 			W(m) = (inside) ? 0 : 1;
@@ -737,21 +720,6 @@ void PlanarSystem::update_particles(const vec<J_DIM>& j_tp1_t, const double delt
 	low_variance_sampler(P_t, W, P_tp1);
 }
 
-
-//void PlanarSystem::update_particles(const vec<J_DIM>& j_tp1_t, const vec<C_DIM>& delta_real, const mat<C_DIM,M_DIM>& P_t,
-//		mat<C_DIM,M_DIM>& P_tp1) {
-//	vec<M_DIM> W = vec<M_DIM>::Zero();
-//	mat<C_DIM,C_DIM> R_delta = .1*mat<C_DIM,C_DIM>::Identity();
-//	// for each particle, weight by gauss_likelihood of that measurement given particle/agent observation
-//	for(int m=0; m < M_DIM; ++m) {
-//		vec<C_DIM> delta_particle = delta_matrix(j_tp1_t, P_t.col(m), INFINITY).diagonal().segment<C_DIM>(J_DIM);
-//		vec<C_DIM> e = delta_particle - delta_real;
-//		W(m) = gauss_likelihood(e, R_delta);
-//	}
-//	W = W / W.sum();
-//
-//	low_variance_sampler(P_t, W, P_tp1);
-//}
 
 double PlanarSystem::gauss_likelihood(const vec<C_DIM>& v, const mat<C_DIM,C_DIM>& S) {
 	mat<C_DIM,C_DIM> Sf = S.llt().matrixL();

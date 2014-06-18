@@ -536,10 +536,6 @@ int main(int argc, char* argv[]) {
 	std::vector<vec<C_DIM>, aligned_allocator<vec<C_DIM>>> obj_means;
 	std::vector<mat<C_DIM,C_DIM>, aligned_allocator<mat<C_DIM,C_DIM>>> obj_covs;
 	std::vector<MatrixXd> obj_particles;
-	sys.fit_gaussians_to_pf(P0, obj_means, obj_covs, obj_particles);
-
-	LOG_INFO("Initial");
-	sys.display(j0, obj_means, obj_covs, obj_particles, true);
 
 	// initialize state and controls
 	std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>> U(T-1, vec<U_DIM>::Zero());
@@ -562,6 +558,9 @@ int main(int argc, char* argv[]) {
 	while(!stop_condition) {
 		init_collocation(j0, P0, sys,
 				J, U, obj_means, obj_covs, obj_particles);
+
+		LOG_INFO("Current state");
+		sys.display(j0, obj_means, obj_covs, obj_particles);
 
 		std::cout << "obj_means:\n";
 		for(int i=0; i < obj_means.size(); ++i) {
@@ -593,9 +592,6 @@ int main(int argc, char* argv[]) {
 
 		J_real.push_back(j_tp1_real);
 		pf_tracker.push_back(P_tp1);
-
-		LOG_INFO("After execute control step (joints changed, not particles)");
-		sys.display(j_tp1, obj_means, obj_covs, obj_particles);
 
 		// set start to the next time step
 		j0 = j_tp1;

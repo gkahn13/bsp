@@ -52,10 +52,9 @@ class PlanarSystem {
 	const double step = 0.0078125*0.0078125;
 	const double INFTY = 1e10;
 
-	const double alpha_control = .01;
-	const double alpha_belief = 1;
-	const double alpha_final_belief = 1;
-	const double alpha_goal = 0;
+	const double alpha_control = .01; // .01
+	const double alpha_belief = 1; // 1
+	const double alpha_final_belief = 1; // 0
 
 public:
 	PlanarSystem(const vec<C_DIM>& camera_origin, const vec<C_DIM>& object, bool is_static);
@@ -155,7 +154,6 @@ private:
 
 	void update_particles(const vec<J_DIM>& j_tp1_t, const double delta_fov_real, const vec<Z_DIM>& z_tp1_real, const mat<C_DIM,M_DIM>& P_t,
 			mat<C_DIM,M_DIM>& P_tp1);
-//	void update_particles(const vec<J_DIM>& j_tp1_t, const vec<C_DIM>& delta_real, const mat<C_DIM,M_DIM>& P_t, mat<C_DIM,M_DIM>& P_tp1);
 	double gauss_likelihood(const vec<C_DIM>& v, const mat<C_DIM,C_DIM>& S);
 	void low_variance_sampler(const mat<C_DIM,M_DIM>& P, const vec<M_DIM>& W, mat<C_DIM,M_DIM>& P_sampled);
 

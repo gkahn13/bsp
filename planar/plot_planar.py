@@ -39,15 +39,15 @@ def plot_planar_gmm(J, obj_means, obj_covs, obj_particles, robot_origin, link_le
         """plot camera angle """
         plot_camera(J[t][3], camera_origin, camera_fov, alpha=(t+1)/float(T))
     
-        """ plot object(s) mean, covariance, and particles """
-        if obj_means is not None and obj_covs is not None and obj_particles is not None:
-            num_objs = len(obj_means)
-            colors = list(plt.cm.hsv(np.linspace(0, 1, num_objs)))
-            for obj_mean, obj_cov, obj_p, color in zip(obj_means, obj_covs, obj_particles, tuple(colors)):
-                plt.plot(obj_mean[0], obj_mean[1], 's', markersize=10.0, color=color)
-                plot_cov(obj_mean, obj_cov, color=color)
-                
-                plt.plot(obj_p[0,:], obj_p[1,:], 'x', color=color)
+    """ plot object(s) mean, covariance, and particles """
+    if obj_means is not None and obj_covs is not None and obj_particles is not None:
+        num_objs = len(obj_means)
+        colors = list(plt.cm.rainbow(np.linspace(0, 1, num_objs)))
+        for obj_mean, obj_cov, obj_p, color in zip(obj_means, obj_covs, obj_particles, tuple(colors)):
+            plt.plot(obj_mean[0], obj_mean[1], 's', markersize=10.0, color=color)
+            plot_cov(obj_mean, obj_cov, color=color)
+            
+            plt.plot(obj_p[0,:], obj_p[1,:], 'x', color=color)
                 
         
     """ plot object position """

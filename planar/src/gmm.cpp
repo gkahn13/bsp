@@ -5,15 +5,16 @@ namespace gmm {
 void fit_gaussians_to_pf(const MatrixXd& P, std::vector<VectorXd>& obj_means, std::vector<MatrixXd>& obj_covs,
 		std::vector<MatrixXd>& obj_particles) {
 	// find modes and associated particles
-	obj_means.clear();
+	std::vector<VectorXd> modes;
 	std::vector<std::vector<int>> mode_particle_indices;
-	find_modes(P, obj_means, mode_particle_indices);
+	find_modes(P, modes, mode_particle_indices);
 
 	std::cout << "number of modes found: " << obj_means.size() << "\n";
 	std::cout << "mode_particle_indices.size(): " << mode_particle_indices.size() << "\n";
 
 	// create matrices from associated mode_particle_indices
 	// and then calculate covariance
+	obj_means.clear();
 	obj_covs.clear();
 	obj_particles.clear();
 	for(int i=0; i < mode_particle_indices.size(); ++i) {
@@ -23,6 +24,7 @@ void fit_gaussians_to_pf(const MatrixXd& P, std::vector<VectorXd>& obj_means, st
 		for(int m=0; m < num_mode_particles; ++m) {
 			P_i.col(m) = P.col(mode_particle_indices[i][m]);
 		}
+		obj_means.push_back(P_i.rowwise().mean());
 		obj_particles.push_back(P_i);
 		MatrixXd P_i_centered = P_i.colwise() - P_i.rowwise().mean();
 		MatrixXd obj_cov_i = (1/(double(num_mode_particles)-1))*(P_i_centered*P_i_centered.transpose());
@@ -57,7 +59,7 @@ VectorXd find_nearest_mode(const VectorXd& p, const MatrixXd& P) {
 
 	while((mean - new_mean).norm() > 1e-3) {
 		mean = new_mean;
-		VectorXd kernel_weight = (-(1/2)*(P.colwise() - mean).colwise().norm()).array().exp(); // TODO: window size
+		VectorXd kernel_weight = (-(1/1)*(P.colwise() - mean).colwise().norm()).array().exp(); // TODO: window size
 		new_mean = kernel_weight.transpose().replicate(2,1).cwiseProduct(P).rowwise().sum() / kernel_weight.sum();
 	}
 

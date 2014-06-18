@@ -210,10 +210,13 @@ void L_BFGS(const std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J,
 	hess = hess - (hess_s*hess_s.transpose())/(s.dot(hess_s)) + (r*r.transpose())/s.dot(r);
 }
 
-double planar_collocation(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J, vec<C_DIM>& obj, mat<X_DIM,X_DIM>& sigma0,
-		std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha,
+double planar_collocation(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J,
+		std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U,
+		const mat<J_DIM,J_DIM>& j_sigma0,
+		const std::vector<vec<C_DIM>, aligned_allocator<vec<C_DIM>>>& obj_means,
+		const std::vector<mat<C_DIM,C_DIM>, aligned_allocator<mat<C_DIM,C_DIM>>>& obj_covs,
+		const double alpha,
 		PlanarSystem& sys, planarMPC_params &problem, planarMPC_output &output, planarMPC_info &info) {
-
 	int max_iter = 100;
 	double Xeps = .5;
 	double Ueps = .5;
@@ -229,7 +232,7 @@ double planar_collocation(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>
 	double optcost, model_merit, new_merit;
 	double approx_merit_improve, exact_merit_improve, merit_improve_ratio;
 
-	LOG_DEBUG("Initial trajectory cost: %4.10f", sys.cost(J, obj, sigma0, U, alpha));
+	LOG_DEBUG("Initial trajectory cost: %4.10f", sys.cost_gmm(J, j_sigma0, obj_means, obj_covs, U, alpha));
 
 	int index = 0;
 	bool solution_accepted = true;
@@ -243,17 +246,14 @@ double planar_collocation(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>
 		if (solution_accepted) {
 
 			if (it == 0) {
-				merit = sys.cost(J, obj, sigma0, U, alpha);
-				grad = sys.cost_grad(J, obj, sigma0, U, alpha);
+				merit = sys.cost_gmm(J, j_sigma0, obj_means, obj_covs, U, alpha);
+				grad = sys.cost_gmm_grad(J, j_sigma0, obj_means, obj_covs, U, alpha);
 
 //				sys.cost_and_cost_grad(X, sigma0, U, alpha, USE_FADBAD, merit, grad);
 			} else {
 				merit = meritopt; // since L-BFGS calculation required it
 				grad = gradopt;
 			}
-
-//			std::cout << "grad:\n" << grad << "\n";
-//			exit(0);
 
 			vec<TOTAL_VARS> diaghess = hess.diagonal();
 
@@ -337,7 +337,7 @@ double planar_collocation(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>
 		}
 
 		// end goal constraint on end effector
-		vec<C_DIM> goal_pos = obj;
+		vec<C_DIM> goal_pos = obj_means[0];
 		double goal_delta = .01;
 
 		vec<E_DIM> ee_jT = J[T-1].segment<E_DIM>(0);
@@ -386,7 +386,7 @@ double planar_collocation(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>
 
 		model_merit = optcost + constant_cost; // need to add constant terms that were dropped
 
-		new_merit = sys.cost(Jopt, obj, sigma0, Uopt, alpha);
+		new_merit = sys.cost_gmm(Jopt, j_sigma0, obj_means, obj_covs, Uopt, alpha);
 
 		LOG_DEBUG("merit: %f", merit);
 		LOG_DEBUG("model_merit: %f", model_merit);
@@ -409,7 +409,7 @@ double planar_collocation(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>
 			LOG_DEBUG("Converged: improvement small enough");
 			J = Jopt; U = Uopt;
 			solution_accepted = true;
-			return sys.cost(J, obj, sigma0, U, alpha);
+			return sys.cost_gmm(J, j_sigma0, obj_means, obj_covs, U, alpha);
 		} else if ((exact_merit_improve < 0) || (merit_improve_ratio < cfg::improve_ratio_threshold)) {
 			Xeps *= cfg::trust_shrink_ratio;
 			Ueps *= cfg::trust_shrink_ratio;
@@ -421,8 +421,8 @@ double planar_collocation(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>
 			Ueps *= cfg::trust_expand_ratio;
 			LOG_DEBUG("Accepted, Increasing trust region size to:  %2.6f %2.6f", Xeps, Ueps);
 
-			meritopt = sys.cost(Jopt, obj, sigma0, Uopt, alpha);
-			gradopt = sys.cost_grad(Jopt, obj, sigma0, Uopt, alpha);
+			meritopt = sys.cost_gmm(Jopt, j_sigma0, obj_means, obj_covs, Uopt, alpha);
+			gradopt = sys.cost_gmm_grad(J, j_sigma0, obj_means, obj_covs, U, alpha);
 //			sys.cost_and_cost_grad(Xopt, sigma0, Uopt, alpha, USE_FADBAD, meritopt, gradopt);
 			L_BFGS(J, U, grad, Jopt, Uopt, gradopt, hess);
 
@@ -430,26 +430,23 @@ double planar_collocation(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>
 			solution_accepted = true;
 		}
 
-//		std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>> Xopt(T);
-//		for(int t=0; t < T; ++t) { Xopt[t] << Jopt[t], obj; }
-//		LOG_DEBUG("Displaying Xopt");
-//		sys.display(Xopt, sigma0, Uopt, alpha);
-
-
 	}
 
-	return sys.cost(J, obj, sigma0, U, alpha);
+	return sys.cost_gmm(J, j_sigma0, obj_means, obj_covs, U, alpha);
 }
 
-double planar_minimize_merit(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J, vec<C_DIM>& obj, mat<X_DIM,X_DIM>& sigma0,
-		std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, PlanarSystem& sys,
-		planarMPC_params &problem, planarMPC_output &output, planarMPC_info &info) {
+double planar_minimize_merit(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J,
+		std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U,
+		const mat<J_DIM,J_DIM>& j_sigma0,
+		const std::vector<vec<C_DIM>, aligned_allocator<vec<C_DIM>>>& obj_means,
+		const std::vector<mat<C_DIM,C_DIM>, aligned_allocator<mat<C_DIM,C_DIM>>>& obj_covs,
+		PlanarSystem& sys, planarMPC_params &problem, planarMPC_output &output, planarMPC_info &info) {
 	double alpha = cfg::alpha_init;
 	double cost = INFINITY;
 
 	while(true) {
 		LOG_DEBUG("Calling collocation with alpha = %4.2f", alpha);
-		cost = planar_collocation(J, obj, sigma0, U, alpha, sys, problem, output, info);
+		cost = planar_collocation(J, U, j_sigma0, obj_means, obj_covs, alpha, sys, problem, output, info);
 
 		LOG_DEBUG("Reintegrating trajectory");
 		for(int t=0; t < T-1; ++t) {
@@ -458,10 +455,8 @@ double planar_minimize_merit(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM
 
 		double max_delta_diff = -INFINITY;
 		for(int t=0; t < T; ++t) {
-			vec<X_DIM> x;
-			x << J[t], obj;
-			std::vector<Beam> fov = sys.get_fov(x.segment<J_DIM>(0));
-			double sd = geometry2d::signed_distance(obj, fov);
+			std::vector<Beam> fov = sys.get_fov(J[t]);
+			double sd = geometry2d::signed_distance(obj_means[0], fov);
 			double delta_alpha = 1.0 - 1.0/(1.0 + exp(-alpha*sd));
 			double delta_inf = (sd > 0) ? 0 : 1;
 			max_delta_diff = std::max(max_delta_diff, fabs(delta_alpha - delta_inf));
@@ -481,6 +476,42 @@ double planar_minimize_merit(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM
 	return cost;
 }
 
+void init_collocation(const vec<J_DIM>& j0, const mat<C_DIM,M_DIM>& P, PlanarSystem& sys,
+		std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J,
+		std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U,
+		std::vector<vec<C_DIM>, aligned_allocator<vec<C_DIM>>>& obj_means,
+		std::vector<mat<C_DIM,C_DIM>, aligned_allocator<mat<C_DIM,C_DIM>>>& obj_covs,
+		std::vector<MatrixXd>& obj_particles) {
+	// re-initialize GMM from PF
+	sys.fit_gaussians_to_pf(P, obj_means, obj_covs, obj_particles);
+
+	// find Gaussian with most particles
+	// by construction of fit_gaussians_to_pf, is the first one
+	vec<C_DIM> max_obj_mean = obj_means[0];
+
+	// search for IK soln j_goal to get to max_obj_mean
+	// starting with initial guess at j0
+	vec<E_DIM> j_goal = j0.segment<E_DIM>(0);
+	bool ik_success = sys.ik(max_obj_mean, j_goal);
+	if (!ik_success) {
+		LOG_ERROR("IK failed, exiting");
+		exit(0);
+	}
+
+	vec<C_DIM> camera = sys.get_camera();
+	// set straight-line trajectory (in joint space)
+	vec<U_DIM> uinit = vec<U_DIM>::Zero();
+	uinit.segment<E_DIM>(0) = (j_goal - j0.segment<E_DIM>(0)) / (double)((T-1)*DT);
+	uinit(E_DIM) = atan((max_obj_mean(1) - camera(1))/(max_obj_mean(0) - camera(0))) / (double)((T-1)*DT);
+
+	// integrate trajectory
+	J[0] = j0;
+	for(int t=0; t < T-1; ++t) {
+		U[t] = uinit;
+		J[t+1] = sys.dynfunc(J[t], U[t], vec<Q_DIM>::Zero());
+	}
+}
+
 int main(int argc, char* argv[]) {
 	vec<2> camera, object;
 	camera << 0, 1;
@@ -490,12 +521,11 @@ int main(int argc, char* argv[]) {
 	PlanarSystem sys = PlanarSystem(camera, object, is_static);
 
 	// initialize starting state, belief, and pf
-	mat<X_DIM,X_DIM> sigma0 = .01*mat<X_DIM,X_DIM>::Identity();
-	sigma0.block<C_DIM,C_DIM>(J_DIM, J_DIM) = 20*mat<C_DIM,C_DIM>::Identity(); // uncertainty about object large
+	mat<J_DIM,J_DIM> j_sigma0 = .01*mat<J_DIM,J_DIM>::Identity();
 
-	vec<X_DIM> x0, x0_real;
-	x0 << M_PI/5, -M_PI/2+M_PI/16, -M_PI/4, 0, -3, 5;
-	x0_real << x0.segment<J_DIM>(0) , object;
+	vec<J_DIM> j0, j0_real;
+	j0 << M_PI/5, -M_PI/2+M_PI/16, -M_PI/4, 0;
+	j0_real = j0; // TODO: have them be different
 
 	mat<C_DIM,M_DIM> P0;
 	for(int m=0; m < M_DIM; ++m) {
@@ -503,33 +533,20 @@ int main(int argc, char* argv[]) {
 		P0(1, m) = planar_utils::uniform(0, 10);
 	}
 
-	std::vector<VectorXd> obj_means;
-	std::vector<MatrixXd> obj_covs;
+	std::vector<vec<C_DIM>, aligned_allocator<vec<C_DIM>>> obj_means;
+	std::vector<mat<C_DIM,C_DIM>, aligned_allocator<mat<C_DIM,C_DIM>>> obj_covs;
 	std::vector<MatrixXd> obj_particles;
-	std::cout << "fit_gaussians_to_pf\n";
-	gmm::fit_gaussians_to_pf(P0, obj_means, obj_covs, obj_particles);
+	sys.fit_gaussians_to_pf(P0, obj_means, obj_covs, obj_particles);
 
-	sys.display(x0.segment<J_DIM>(0), obj_means, obj_covs, obj_particles, true);
-	exit(0);
-
-
-	vec<C_DIM> new_mean;
-	mat<C_DIM,C_DIM> new_cov;
-	sys.reinitialize(x0, sigma0, P0, new_mean, new_cov);
-	x0.segment<C_DIM>(J_DIM) = new_mean;
-	sigma0.block<C_DIM,C_DIM>(J_DIM,J_DIM) = new_cov;
-
-	LOG_INFO("Initial state");
-	sys.display(x0, sigma0, P0);
-	exit(0);
+	LOG_INFO("Initial");
+	sys.display(j0, obj_means, obj_covs, obj_particles, true);
 
 	// initialize state and controls
 	std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>> U(T-1, vec<U_DIM>::Zero());
 	std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>> J(T);
 
-	// track real states/beliefs
-	std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>> X_real(1, x0_real);
-	std::vector<mat<X_DIM,X_DIM>, aligned_allocator<mat<X_DIM,X_DIM>>> S_real(1, sigma0);
+	// track real states
+	std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>> J_real(1, j0_real);
 	// particle filter
 	std::vector<mat<C_DIM,M_DIM>, aligned_allocator<mat<C_DIM,M_DIM>>> pf_tracker(1, P0);
 
@@ -543,44 +560,20 @@ int main(int argc, char* argv[]) {
 
 	bool stop_condition = false;
 	while(!stop_condition) {
-		// initialize straight-line trajectory
-		// integrate dynamics
-		vec<C_DIM> ee_goal = x0.segment<C_DIM>(J_DIM);
-		vec<E_DIM> j_goal = x0.segment<E_DIM>(0);
-		bool ik_success = sys.ik(ee_goal, j_goal);
-		if (!ik_success) {
-			LOG_ERROR("IK failed, exiting");
-			exit(0);
+		init_collocation(j0, P0, sys,
+				J, U, obj_means, obj_covs, obj_particles);
+
+		std::cout << "obj_means:\n";
+		for(int i=0; i < obj_means.size(); ++i) {
+			std::cout << obj_means[i].transpose() << "\n";
 		}
 
-		vec<U_DIM> uinit = vec<U_DIM>::Zero();
-		uinit.segment<E_DIM>(0) = (j_goal - x0.segment<E_DIM>(0)) / (double)((T-1)*DT);
-		uinit(E_DIM) = atan((x0(X_DIM-1) - camera(1))/(x0(X_DIM-2) - camera(0))) / (double)((T-1)*DT);
-
-		J[0] = x0.segment<J_DIM>(0);
-		for(int t=0; t < T-1; ++t) {
-			U[t] = uinit;
-			J[t+1] = sys.dynfunc(J[t], U[t], vec<Q_DIM>::Zero());
-		}
-
-		std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>> X(T);
-		for(int t=0; t < T; ++t) { X[t] << J[t], x0.segment<C_DIM>(J_DIM); }
-		LOG_INFO("Initialized path");
-		sys.display(X, sigma0, U, pf_tracker.back(), 10);
-
-		double init_cost = sys.cost(J, x0.segment<C_DIM>(J_DIM), sigma0, U, INFINITY);
-		LOG_INFO("Initial cost: %4.5f", init_cost);
-
-		std::vector<vec<C_DIM>, aligned_allocator<vec<C_DIM>>> objs(1,x0.segment<C_DIM>(J_DIM));
-		double init_gmm_cost = sys.cost_gmm(J, objs, sigma0, U, INFINITY);
-		LOG_INFO("Initial gmm cost: %4.5f", init_gmm_cost);
-
-		exit(0);
+		LOG_INFO("Straight-line initial trajectory to Gaussian with most particles")
+		sys.display(J, obj_means, obj_covs, obj_particles);
 
 		// optimize
 		util::Timer_tic(&forces_timer);
-		vec<C_DIM> x_obj = x0.segment<C_DIM>(J_DIM);
-		double cost = planar_minimize_merit(J, x_obj, sigma0, U, sys, problem, output, info);
+		double cost = planar_minimize_merit(J, U, j_sigma0, obj_means, obj_covs, sys, problem, output, info);
 		double forces_time = util::Timer_toc(&forces_timer);
 
 		LOG_INFO("Optimized cost: %4.5f", cost);
@@ -589,73 +582,24 @@ int main(int argc, char* argv[]) {
 		for(int t=0; t < T-1; ++t) {
 			J[t+1] = sys.dynfunc(J[t], U[t], vec<Q_DIM>::Zero());
 		}
-//		LOG_INFO("Integrated trajectory");
-//		sys.display(X, sigma0, U, pf_tracker.back(), INFINITY);
 
-		for(int t=0; t < T; ++t) { X[t] << J[t], x0.segment<C_DIM>(J_DIM); }
-		LOG_DEBUG("Displaying X");
-		sys.display(X, sigma0, U, pf_tracker.back(), 10);
+		LOG_INFO("Post-optimization");
+		sys.display(J, obj_means, obj_covs, obj_particles);
 
-
-		// execute first control input
-		vec<X_DIM> x_tp1_real, x_tp1_tp1;
-		mat<X_DIM,X_DIM> sigma_tp1_tp1;
+		vec<J_DIM> j_tp1_real, j_tp1;
 		mat<C_DIM,M_DIM> P_tp1;
-		sys.execute_control_step(X_real.back(), x0, sigma0, U[0], pf_tracker.back(), x_tp1_real, x_tp1_tp1, sigma_tp1_tp1, P_tp1);
+		sys.execute_control_step(J_real.back(), j0, U[0], P0,
+				j_tp1_real, j_tp1, P_tp1);
 
-		X_real.push_back(x_tp1_real);
-		S_real.push_back(sigma_tp1_tp1);
+		J_real.push_back(j_tp1_real);
 		pf_tracker.push_back(P_tp1);
 
-//		LOG_DEBUG("Display after obtaining observation, but before truncating the belief");
-//		sys.display(x_tp1_tp1, sigma_tp1_tp1, pf_tracker.back());
-
-		// truncate belief
-		std::vector<Beam> fov_tp1 = sys.get_fov(x_tp1_tp1.segment<J_DIM>(0));
-		bool received_obs = geometry2d::is_inside(object, fov_tp1);
-		vec<C_DIM> obj_pos_trunc;
-		mat<C_DIM,C_DIM> obj_sigma_trunc;
-		geometry2d::my_truncate_belief(fov_tp1, x_tp1_tp1.segment<C_DIM>(J_DIM),
-				sigma_tp1_tp1.block<C_DIM,C_DIM>(J_DIM, J_DIM), received_obs,
-				obj_pos_trunc, obj_sigma_trunc);
-
-		vec<X_DIM> x_tp1_tp1_trunc;
-		x_tp1_tp1_trunc << x_tp1_tp1.segment<J_DIM>(0), obj_pos_trunc;
-		mat<X_DIM,X_DIM> sigma_tp1_tp1_trunc = sigma_tp1_tp1;
-		sigma_tp1_tp1_trunc.block<C_DIM,C_DIM>(J_DIM, J_DIM) = obj_sigma_trunc;
-
-		LOG_DEBUG("Display truncated belief");
-		sys.display(x_tp1_tp1_trunc, sigma_tp1_tp1_trunc, pf_tracker.back());
-
-//		stop_condition = sys.should_reinitialize(x_tp1_tp1_trunc, sigma_tp1_tp1_trunc, pf_tracker.back());
-//		if (stop_condition) {
-//			LOG_INFO("Stop condition met. Reinitializing");
-//			vec<C_DIM> obj_mean_new;
-//			mat<C_DIM,C_DIM> obj_cov_new;
-//			sys.reinitialize(pf_tracker.back(), obj_mean_new, obj_cov_new);
-//			x_tp1_tp1_trunc.segment<C_DIM>(J_DIM) = obj_mean_new;
-//			sigma_tp1_tp1_trunc.block<C_DIM,C_DIM>(J_DIM,J_DIM) = obj_cov_new;
-//			stop_condition = false;
-//		}
-
-		sys.reinitialize(x_tp1_tp1_trunc, sigma_tp1_tp1_trunc, pf_tracker.back(), new_mean, new_cov);
-		x_tp1_tp1_trunc.segment<C_DIM>(J_DIM) = new_mean;
-		sigma_tp1_tp1_trunc.block<C_DIM,C_DIM>(J_DIM,J_DIM) = new_cov;
-
-		LOG_DEBUG("Display reinitialized belief");
-		sys.display(x_tp1_tp1_trunc, sigma_tp1_tp1_trunc, pf_tracker.back());
+		LOG_INFO("After execute control step (joints changed, not particles)");
+		sys.display(j_tp1, obj_means, obj_covs, obj_particles);
 
 		// set start to the next time step
-		x0 = x_tp1_tp1_trunc;
-		sigma0 = sigma_tp1_tp1_trunc;
-
-
-		// no truncation
-		//		x0 = x_tp1_tp1;
-		//		sigma0 = sigma_tp1_tp1;
-
+		j0 = j_tp1;
+		P0 = P_tp1;
 	}
-
-	LOG_INFO("Stop condition met, exiting");
 
 }

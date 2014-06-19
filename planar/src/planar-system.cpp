@@ -28,8 +28,8 @@ void PlanarSystem::init(const vec<C_DIM>& camera_origin, const vec<C_DIM>& objec
 
 	// x bound for object is sum of link_lengths
 	double max_link_length = link_lengths.sum();
-	x_min << -3*M_PI/2, -3*M_PI/2, -3*M_PI/2, -M_PI/2, -max_link_length, -max_link_length;
-	x_max << 3*M_PI/2, 3*M_PI/2, 3*M_PI/2, M_PI/2, max_link_length, max_link_length;
+	x_min << -3*M_PI/2, -3*M_PI/2, -3*M_PI/2, -3*M_PI/2, -max_link_length, -max_link_length;
+	x_max << 3*M_PI/2, 3*M_PI/2, 3*M_PI/2, 3*M_PI/2, max_link_length, max_link_length;
 
 	double max_input = M_PI/12;
 	u_min << -max_input, -max_input, -max_input, (is_static) ? 0 : -max_input;
@@ -298,6 +298,7 @@ double PlanarSystem::cost_gmm(const std::vector<vec<J_DIM>, aligned_allocator<ve
 	for(int i=0; i < planar_gmm.size(); ++i) {
 		sigma0.block<C_DIM,C_DIM>(J_DIM,J_DIM) = planar_gmm[i].obj_cov;
 		cost_gmm += planar_gmm[i].pct*cost(J, planar_gmm[i].obj_mean, sigma0, U, alpha);
+//		cost_gmm += cost(J, planar_gmm[i].obj_mean, sigma0, U, alpha); // TODO: weight by pct?
 	}
 	return cost_gmm;
 }
@@ -421,7 +422,7 @@ vec<TOTAL_VARS> PlanarSystem::cost_gmm_grad(std::vector<vec<J_DIM>, aligned_allo
  * First index of planar_gmm contains the most particles
  */
 void PlanarSystem::fit_gaussians_to_pf(const mat<C_DIM,M_DIM>& P,
-			std::vector<PlanarGaussian>& planar_gmm) {
+		std::vector<PlanarGaussian>& planar_gmm) {
 	planar_gmm.clear();
 
 	// fit Gaussians
@@ -460,6 +461,113 @@ void PlanarSystem::fit_gaussians_to_pf(const mat<C_DIM,M_DIM>& P,
 	}
 }
 
+void PlanarSystem::fit_gaussians_to_pf_figtree(const mat<C_DIM,M_DIM>& P,
+		std::vector<PlanarGaussian>& planar_gmm) {
+	util::Timer figtree_timer;
+	util::Timer_tic(&figtree_timer);
+
+	int d = C_DIM;						 // dimension
+	int M = M_DIM; 						 // number of targets
+	int N = M_DIM; 						 // number of sources
+	double h = sqrt(2)*3; 				 // bandwith (h = sqrt(2)*sigma)
+	double epsilon = .1; 				 // 1e-2
+	double *x = new double[d*N]; 		 // source array
+	double *y = new double[d*M]; 		 // target array
+	int W = C_DIM+1; 					 // C_DIM for weighted sum, +1 for the normalization
+	double *q = new double[W*N]; 		 // weighting array
+	double *output = new double[W*M]; 	 // output FGT
+
+	// source and weights always constant
+
+	for(int j=0; j < N; ++j) {
+		for(int i=0; i < d; ++i) {
+			x[j*d+i] = P(i,j);
+		}
+	}
+
+	for(int i=0; i < d; ++i) {
+		for(int j=0; j < N; ++j) {
+			q[i*N+j] = P(i,j);
+		}
+	}
+	for(int j=0; j < N; ++j) {
+		q[d*N+j] = 1;
+	}
+
+	mat<C_DIM,M_DIM> means = P, new_means;
+	double max_diff = INFINITY;
+	while(max_diff > 1e-3) {
+		for(int j=0; j < M; ++j) {
+			for(int i=0; i < d; ++i) {
+				y[j*d+i] = means(i,j);
+			}
+		}
+
+		memset(output, 0, sizeof(double)*W*M );
+
+		figtree(d, N, M, W, x, h, q, y, epsilon, output);
+
+		for(int j=0; j < M; ++j) {
+			for(int i=0; i < d; ++i) {
+				new_means(i,j) = output[i*M+j] / output[d*M+j];
+			}
+		}
+
+		max_diff = (means - new_means).colwise().norm().maxCoeff();
+		means = new_means;
+	}
+
+	std::vector<vec<C_DIM>, aligned_allocator<vec<C_DIM>>> modes;
+	std::vector<std::vector<int>> mode_particle_indices;
+	for(int m=0; m < M_DIM; ++m) {
+		bool is_new_mode = true;
+		for(int i=0; i < modes.size(); ++i) {
+			if ((means.col(m) - modes[i]).norm() < .05) {
+				is_new_mode = false;
+				mode_particle_indices[i].push_back(m);
+				break;
+			}
+		}
+
+		if (is_new_mode) {
+			modes.push_back(means.col(m));
+			mode_particle_indices.push_back(std::vector<int>(1, m));
+		}
+	}
+
+	// create PlanarGaussian vector
+	planar_gmm.clear();
+
+	vec<C_DIM> obj_mean;
+	mat<C_DIM,C_DIM> obj_cov;
+	MatrixXd obj_particles;
+	for(int i=0; i < mode_particle_indices.size(); ++i) {
+		int num_mode_particles = mode_particle_indices[i].size();
+		obj_particles = MatrixXd::Zero(C_DIM, num_mode_particles);
+		for(int m=0; m < num_mode_particles; ++m) {
+			obj_particles.col(m) = P.col(mode_particle_indices[i][m]);
+		}
+
+		obj_mean = obj_particles.rowwise().mean();
+
+		MatrixXd obj_particles_centered = obj_particles.colwise() - obj_particles.rowwise().mean();
+		obj_cov = (1/(double(num_mode_particles)-1))*(obj_particles_centered*obj_particles_centered.transpose());
+
+		planar_gmm.push_back(PlanarGaussian(obj_mean, obj_cov, obj_particles, num_mode_particles/double(M_DIM)));
+	}
+
+	// make the first PlanarGaussian in planar_gmm have the largest pct
+	for(int i=1; i < planar_gmm.size(); ++i) {
+		if (planar_gmm[0].pct < planar_gmm[i].pct) {
+			PlanarGaussian tmp = planar_gmm[i];
+			planar_gmm[i] = planar_gmm[0];
+			planar_gmm[0] = tmp;
+		}
+	}
+
+	double figtree_time = util::Timer_toc(&figtree_timer);
+	LOG_ERROR("Figtree time: %4.4f", figtree_time);
+}
 
 /**
  * Display methods
@@ -711,7 +819,7 @@ void PlanarSystem::update_particles(const vec<J_DIM>& j_tp1_t, const double delt
 			if (inside) {
 				vec<C_DIM> z_obj_m = obsfunc(j_tp1_t, P_t.col(m), vec<R_DIM>::Zero()).segment<C_DIM>(J_DIM);
 				vec<C_DIM> e = z_obj_real - z_obj_m;
-				W(m) = gauss_likelihood(e, R.block<C_DIM,C_DIM>(J_DIM,J_DIM));
+				W(m) = gauss_likelihood(e, .1*R.block<C_DIM,C_DIM>(J_DIM,J_DIM));
 			} else {
 				W(m) = 0;
 			}

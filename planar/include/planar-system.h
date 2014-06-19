@@ -8,6 +8,8 @@
 //#include "../fadbad/fadbad-planar-system.h"
 #include "gmm.h"
 
+#include "figtree.h"
+
 #include <boost/python.hpp>
 #include <boost/python/numeric.hpp>
 #include <boost/python/tuple.hpp>
@@ -104,6 +106,8 @@ public:
 //			double& cost, vec<TOTAL_VARS>& grad);
 
 	void fit_gaussians_to_pf(const mat<C_DIM,M_DIM>& P,
+			std::vector<PlanarGaussian>& planar_gmm);
+	void fit_gaussians_to_pf_figtree(const mat<C_DIM,M_DIM>& P,
 			std::vector<PlanarGaussian>& planar_gmm);
 
 

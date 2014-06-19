@@ -123,9 +123,9 @@ outputs(i) = newOutput(var,i,1:nx);
 % solver settings
 mpcname = 'planarMPC';
 codeoptions = getOptions(mpcname);
-codeoptions.printlevel = 0;
+codeoptions.printlevel = 1;
 codeoptions.timing=0;
-codeoptions.maxit=50;
+codeoptions.maxit=100;
 
 % generate code
 generateCode(stages,params,codeoptions,outputs);

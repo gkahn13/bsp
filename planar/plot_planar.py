@@ -1,4 +1,6 @@
 import random
+import os
+import time
 
 import numpy as np
 
@@ -57,6 +59,9 @@ def plot_planar_gmm(J, obj_means, obj_covs, obj_particles, robot_origin, link_le
     plot_beams(beams)
     
     plt.show(block=False)
+    plt.pause(.1)
+    
+    save('../figures/full_runs/fig{0}'.format(time.time()), ext="png", close=False, verbose=False)
     
     if (pause):
         print('Press enter to continue')
@@ -219,76 +224,53 @@ def plot_beam(beam):
     plt.fill(x, y, color='white', edgecolor='none', alpha=.5)
     
     
-    
-"""
-TEMPORARY code for Gaussian reinitialization
-i.e. get it to work in Python then port to C++
-"""
-
-def initialize_gaussian(P, P_sd, P_ee_dist):
-    #W = 1/(1*P_sd + 1*P_ee_dist)
-    W = 1/P_sd.clip(.01) + 100/P_ee_dist
-    W = W / np.sum(W)
-    P_weighted = low_variance_sampler(P, W)
-    
-    #plt.plot(P_weighted[0,:], P_weighted[1,:], 'x', color='yellow')
-    #return
-    
-    mode_particles_list = sorted(find_modes(P_weighted), key=lambda x: len(x[1]))
-    colors = list(plt.cm.Accent(np.linspace(0, 1, len(mode_particles_list)-1))) + ['yellow']
-    for mode_particles, color in zip(mode_particles_list, colors):
-        mode, particles = mode_particles
-        particles_array = np.array(particles).T
-        plt.plot(particles_array[0,:], particles_array[1,:], 'x', color=color)
-        
-    mode, particles = mode_particles_list[-1]
-    particles_array = np.array(particles).T
-    #plt.plot(particles_array[0,:], particles_array[1,:], 'x', color='yellow')
-    
-    
-def low_variance_sampler(P, W):
-    M_DIM = W.shape[0]
-    r = (1/float(M_DIM))*random.random()
-    
-    P_sampled = np.zeros(P.shape)
-    
-    c = W[0]
-    i = 0
-    for m in xrange(M_DIM):
-        u = r + m*(1/float(M_DIM))
-        while (u > c):
-            i += 1
-            c += W[i]
-        P_sampled[:,m] = P[:,i]
-        
-    return P_sampled
-
-def find_modes(P):
-    M_DIM = P.shape[1]
-    
-    mode_particles_list = list()
-    for m in xrange(M_DIM):
-        p = P[:,m]
-        nearest_mode = find_nearest_mode(p, P)
-        for mode, particles in mode_particles_list:
-            if np.linalg.norm(mode - nearest_mode) < .05:
-                particles.append(p)
-                break
-        else:
-            mode_particles_list.append([nearest_mode, [p]])
-            
-    return mode_particles_list
-
-def find_nearest_mode(p, P):
-    M_DIM = P.shape[1]
-    new_mean, mean = p.reshape((2,1)), np.inf*np.ones((2,1))
-    
-    while np.linalg.norm(mean - new_mean) > 1e-3:
-        mean = new_mean
-        mean_rep = np.repeat(mean, M_DIM, axis=1)
-        kernel_weight = np.exp(-np.linalg.norm(mean_rep - P, axis=0)/0.5).reshape((1,M_DIM))
-        new_mean = np.sum(kernel_weight.repeat(2, axis=0) * P, axis=1) / np.sum(kernel_weight)
-        new_mean = new_mean.reshape((2,1))
-        
-    return mean
+def save(path, ext='png', close=True, verbose=True):
+    """Save a figure from pyplot.
+     
+    Parameters
+    ----------
+    path : string
+    The path (and filename, without the extension) to save the
+    figure to.
+     
+    ext : string (default='png')
+    The file extension. This must be supported by the active
+    matplotlib backend (see matplotlib.backends module). Most
+    backends support 'png', 'pdf', 'ps', 'eps', and 'svg'.
+     
+    close : boolean (default=True)
+    Whether to close the figure after saving. If you want to save
+    the figure multiple times (e.g., to multiple formats), you
+    should NOT close it in between saves or you will have to
+    re-plot it.
+     
+    verbose : boolean (default=True)
+    Whether to print information about when and where the image
+    has been saved.
+     
+    """
+    # Extract the directory and filename from the given path
+    directory = os.path.split(path)[0]
+    filename = "%s.%s" % (os.path.split(path)[1], ext)
+    if directory == '':
+        directory = '.'
+     
+    # If the directory does not exist, create it
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+     
+    # The final path to save to
+    savepath = os.path.join(directory, filename)
+     
+    if verbose:
+        print("Saving figure to '%s'..." % savepath),
+     
+    # Actually save the figure
+    plt.savefig(savepath)
+    # Close it
+    if close:
+        plt.close()
+     
+    if verbose:
+        print("Done")
     

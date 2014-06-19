@@ -34,9 +34,9 @@ link_directories(${Boost_LIBRARY_DIRS} ${PYTHON_LIBRARIES} ${FIGTREE_LIBRARIES_D
 
 add_executable(planar planar.cpp planarMPC.c
                       src/planar-system.cpp src/planar-utils.cpp src/geometry2d.cpp src/gmm.cpp
-                      fadbad/fadbad-planar-system.cpp fadbad/fadbad-geometry2d.cpp
+                      #fadbad/fadbad-planar-system.cpp fadbad/fadbad-geometry2d.cpp
                       ../util/logging.cpp)
-target_link_libraries(planar ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} ${MY_LIBRARIES}) 
+target_link_libraries(planar ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} ${MY_LIBRARIES} ${FIGTREE_LIBRARIES}) 
 
 
 add_executable(test-planar-system tests/test-planar-system.cpp

@@ -28,7 +28,7 @@ typedef double planarMPC_FLOAT;
 /* SOLVER SETTINGS ------------------------------------------------------*/
 /* print level */
 #ifndef planarMPC_SET_PRINTLEVEL
-#define planarMPC_SET_PRINTLEVEL    (0)
+#define planarMPC_SET_PRINTLEVEL    (1)
 #endif
 
 /* timing */
@@ -40,7 +40,7 @@ typedef double planarMPC_FLOAT;
 /* #define PRINTNUMERICALWARNINGS */
 
 /* maximum number of iterations  */
-#define planarMPC_SET_MAXIT         (50)	
+#define planarMPC_SET_MAXIT         (100)	
 
 /* scaling factor of line search (affine direction) */
 #define planarMPC_SET_LS_SCALE_AFF  (0.9)      

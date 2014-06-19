@@ -16,6 +16,7 @@ namespace cfg {
 const double alpha_init = .01; // 1
 const double alpha_gain = 3; // 3
 const double alpha_epsilon = .1; // .001
+const double alpha_max_increases = 10; // 10
 
 const double improve_ratio_threshold = 1e-1; // .1
 const double min_approx_improve = 1e-1; // 1
@@ -89,75 +90,78 @@ inline void fill_col_major(double *X, const MatrixBase<Derived>& M) {
 
 bool is_valid_inputs()
 {
-	for(int t = 0; t < T-1; ++t) {
-		std::cout << "\n\nt: " << t << "\n";
-
-		if (t == 0) {
-			std::cout << "\nc[0]:\n";
-			for(int i=0; i < (J_DIM); ++i) {
-				std::cout << c[i] << " ";
-			}
-		}
-
-		std::cout << "\nH[" << t << "]: ";
-		for(int i=0; i < (J_DIM+U_DIM); ++i) {
-			std::cout << H[t][i] << " ";
-		}
-
-		std::cout << "\nf[" << t << "]: ";
-		for(int i=0; i < (J_DIM+U_DIM); ++i) {
-			std::cout << f[t][i] << " ";
-		}
-
-		std::cout << "\nlb[" << t << "]: ";
-		for(int i=0; i < (J_DIM+U_DIM); ++i) {
-			std::cout << lb[t][i] << " ";
-		}
-
-		std::cout << "\nub[" << t << "]: ";
-		for(int i=0; i < (J_DIM+U_DIM); ++i) {
-			std::cout << ub[t][i] << " ";
-		}
-	}
-	std::cout << "\n\nt: " << T-1 << "\n";
-
-	std::cout << "\nH[" << T-1 << "]: ";
-	for(int i=0; i < (J_DIM); ++i) {
-		std::cout << H[T-1][i] << " ";
-	}
-
-	std::cout << "\nf[" << T-1 << "]: ";
-	for(int i=0; i < (J_DIM); ++i) {
-		std::cout << f[T-1][i] << " ";
-	}
-
-	std::cout << "\nlb[" << T-1 << "]: ";
-	for(int i=0; i < (J_DIM); ++i) {
-		std::cout << lb[T-1][i] << " ";
-	}
-
-	std::cout << "\nub[" << T-1 << "]: ";
-	for(int i=0; i < (J_DIM); ++i) {
-		std::cout << ub[T-1][i] << " ";
-	}
-
-	std::cout << "\nA[" << T-1 << "]:\n";
-	for(int i=0; i < 2*C_DIM; ++i) {
-		for(int j=0; j < J_DIM; ++j) {
-			std::cout << A[i+j*(2*C_DIM)] << " ";
-		}
-		std::cout << "\n";
-	}
-	std::cout << "\n";
-
-	std::cout << "b[" << T-1 << "]: ";
-	for(int i=0; i < 2*C_DIM; ++i) {
-		std::cout << b[i] << " ";
-	}
-
-	std::cout << "\n\n";
+//	for(int t = 0; t < T-1; ++t) {
+//		std::cout << "\n\nt: " << t << "\n";
+//
+//		if (t == 0) {
+//			std::cout << "\nc[0]:\n";
+//			for(int i=0; i < (J_DIM); ++i) {
+//				std::cout << c[i] << " ";
+//			}
+//		}
+//
+//		std::cout << "\nH[" << t << "]: ";
+//		for(int i=0; i < (J_DIM+U_DIM); ++i) {
+//			std::cout << H[t][i] << " ";
+//		}
+//
+//		std::cout << "\nf[" << t << "]: ";
+//		for(int i=0; i < (J_DIM+U_DIM); ++i) {
+//			std::cout << f[t][i] << " ";
+//		}
+//
+//		std::cout << "\nlb[" << t << "]: ";
+//		for(int i=0; i < (J_DIM+U_DIM); ++i) {
+//			std::cout << lb[t][i] << " ";
+//		}
+//
+//		std::cout << "\nub[" << t << "]: ";
+//		for(int i=0; i < (J_DIM+U_DIM); ++i) {
+//			std::cout << ub[t][i] << " ";
+//		}
+//	}
+//	std::cout << "\n\nt: " << T-1 << "\n";
+//
+//	std::cout << "\nH[" << T-1 << "]: ";
+//	for(int i=0; i < (J_DIM); ++i) {
+//		std::cout << H[T-1][i] << " ";
+//	}
+//
+//	std::cout << "\nf[" << T-1 << "]: ";
+//	for(int i=0; i < (J_DIM); ++i) {
+//		std::cout << f[T-1][i] << " ";
+//	}
+//
+//	std::cout << "\nlb[" << T-1 << "]: ";
+//	for(int i=0; i < (J_DIM); ++i) {
+//		std::cout << lb[T-1][i] << " ";
+//	}
+//
+//	std::cout << "\nub[" << T-1 << "]: ";
+//	for(int i=0; i < (J_DIM); ++i) {
+//		std::cout << ub[T-1][i] << " ";
+//	}
+//
+//	std::cout << "\nA[" << T-1 << "]:\n";
+//	for(int i=0; i < 2*C_DIM; ++i) {
+//		for(int j=0; j < J_DIM; ++j) {
+//			std::cout << A[i+j*(2*C_DIM)] << " ";
+//		}
+//		std::cout << "\n";
+//	}
+//	std::cout << "\n";
+//
+//	std::cout << "b[" << T-1 << "]: ";
+//	for(int i=0; i < 2*C_DIM; ++i) {
+//		std::cout << b[i] << " ";
+//	}
+//
+//	std::cout << "\n\n";
 
 	for(int i=0; i < (J_DIM); ++i) { if (c[i] > INFTY/2) { return false; } }
+	for(int i=0; i < (J_DIM); ++i) { if (c[i] < lb[0][i]) { return false; } }
+	for(int i=0; i < (J_DIM); ++i) { if (c[i] > ub[0][i]) { return false; } }
+
 	for(int i=0; i < (2*C_DIM)*J_DIM; ++i) { if (A[i] > INFTY/2) { return false; } }
 	for(int i=0; i < (2*C_DIM); ++i) { if (b[i] > INFTY/2) { return false; } }
 
@@ -357,10 +361,10 @@ double planar_collocation(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>
 		fill_col_major(b, bVec);
 
 		// Verify problem inputs
-//		if (!is_valid_inputs()) {
-//			LOG_ERROR("Inputs are not valid!");
-//			exit(0);
-//		}
+		if (!is_valid_inputs()) {
+			LOG_ERROR("Inputs are not valid!");
+			exit(0);
+		}
 
 		// call FORCES
 		int exitflag = planarMPC_solve(&problem, &output, &info);
@@ -380,7 +384,10 @@ double planar_collocation(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>
 			}
 		} else {
 			LOG_FATAL("Some problem in solver");
-			exit(-1);
+			sys.display(J, planar_gmm);
+//			exit(-1);
+			LOG_FATAL("Continuing");
+			return INFINITY;
 		}
 
 		model_merit = optcost + constant_cost; // need to add constant terms that were dropped
@@ -400,10 +407,14 @@ double planar_collocation(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>
 		LOG_DEBUG("exact_merit_improve: %f", exact_merit_improve);
 		LOG_DEBUG("merit_improve_ratio: %f", merit_improve_ratio);
 
-		if (approx_merit_improve < -1e-5) {
+		if (approx_merit_improve < -1) {
 			LOG_ERROR("Approximate merit function got worse: %f", approx_merit_improve);
-			LOG_ERROR("Failure!");
-			return INFTY;
+			LOG_DEBUG("Shrinking trust region");
+
+			Xeps *= cfg::trust_shrink_ratio;
+			Ueps *= cfg::trust_shrink_ratio;
+			solution_accepted = false;
+//			return INFTY;
 		} else if (approx_merit_improve < cfg::min_approx_improve) {
 			LOG_DEBUG("Converged: improvement small enough");
 			J = Jopt; U = Uopt;
@@ -442,7 +453,7 @@ double planar_minimize_merit(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM
 	double alpha = cfg::alpha_init;
 	double cost = INFINITY;
 
-	while(true) {
+	for(int num_alpha_increases=0; num_alpha_increases < cfg::alpha_max_increases; ++num_alpha_increases) {
 		LOG_DEBUG("Calling collocation with alpha = %4.2f", alpha);
 		cost = planar_collocation(J, U, j_sigma0, planar_gmm, alpha, sys, problem, output, info);
 
@@ -479,7 +490,8 @@ void init_collocation(const vec<J_DIM>& j0, const mat<C_DIM,M_DIM>& P, PlanarSys
 		std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U,
 		std::vector<PlanarGaussian>& planar_gmm) {
 	// re-initialize GMM from PF
-	sys.fit_gaussians_to_pf(P, planar_gmm);
+//	sys.fit_gaussians_to_pf(P, planar_gmm);
+	sys.fit_gaussians_to_pf_figtree(P, planar_gmm);
 
 	// find Gaussian with most particles
 	// by construction of fit_gaussians_to_pf, is the first one
@@ -498,7 +510,7 @@ void init_collocation(const vec<J_DIM>& j0, const mat<C_DIM,M_DIM>& P, PlanarSys
 	// set straight-line trajectory (in joint space)
 	vec<U_DIM> uinit = vec<U_DIM>::Zero();
 	uinit.segment<E_DIM>(0) = (j_goal - j0.segment<E_DIM>(0)) / (double)((T-1)*DT);
-	uinit(E_DIM) = atan((max_obj_mean(1) - camera(1))/(max_obj_mean(0) - camera(0))) / (double)((T-1)*DT);
+	uinit(E_DIM) = (atan((max_obj_mean(0) - camera(0))/(max_obj_mean(1) - camera(1))) - j0(E_DIM)) / (double)((T-1)*DT);
 
 	// integrate trajectory
 	J[0] = j0;
@@ -509,9 +521,11 @@ void init_collocation(const vec<J_DIM>& j0, const mat<C_DIM,M_DIM>& P, PlanarSys
 }
 
 int main(int argc, char* argv[]) {
+	srand(time(0));
+
 	vec<2> camera, object;
 	camera << 0, 1;
-	object << 5, 7; // 1, 12
+	object << -7, 3; // 5, 7
 	bool is_static = false;
 
 	PlanarSystem sys = PlanarSystem(camera, object, is_static);
@@ -526,7 +540,7 @@ int main(int argc, char* argv[]) {
 	mat<C_DIM,M_DIM> P0;
 	for(int m=0; m < M_DIM; ++m) {
 		P0(0, m) = planar_utils::uniform(-10, 10);
-		P0(1, m) = planar_utils::uniform(0, 10);
+		P0(1, m) = planar_utils::uniform(2, 12);
 	}
 
 	std::vector<PlanarGaussian> planar_gmm;
@@ -554,14 +568,10 @@ int main(int argc, char* argv[]) {
 				J, U, planar_gmm);
 
 		LOG_INFO("Current state");
-		sys.display(j0, planar_gmm);
+		sys.display(j0, planar_gmm, false);
 
-		for(int i=0; i < planar_gmm.size(); ++i) {
-			std::cout << "pct[" << i << "]: " << planar_gmm[i].pct << "\n";
-		}
-
-		LOG_INFO("Straight-line initial trajectory to Gaussian with most particles")
-		sys.display(J, planar_gmm);
+//		LOG_INFO("Straight-line initial trajectory to Gaussian with most particles")
+//		sys.display(J, planar_gmm);
 
 		// optimize
 		util::Timer_tic(&forces_timer);
@@ -575,8 +585,8 @@ int main(int argc, char* argv[]) {
 			J[t+1] = sys.dynfunc(J[t], U[t], vec<Q_DIM>::Zero());
 		}
 
-		LOG_INFO("Post-optimization");
-		sys.display(J, planar_gmm);
+//		LOG_INFO("Post-optimization");
+//		sys.display(J, planar_gmm);
 
 		vec<J_DIM> j_tp1_real, j_tp1;
 		mat<C_DIM,M_DIM> P_tp1;
@@ -589,6 +599,14 @@ int main(int argc, char* argv[]) {
 		// set start to the next time step
 		j0 = j_tp1;
 		P0 = P_tp1;
+
+		std::cout << "max obj_cov trace: " << planar_gmm[0].obj_cov.trace() << "\n";
+		if ((planar_gmm[0].pct == 1) && (planar_gmm[0].obj_cov.trace() < 2)) {
+			stop_condition = true;
+		}
 	}
+
+	LOG_INFO("Found object");
+	sys.display(j0, planar_gmm);
 
 }

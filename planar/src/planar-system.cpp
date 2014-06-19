@@ -284,17 +284,20 @@ double PlanarSystem::cost(const std::vector<vec<J_DIM>, aligned_allocator<vec<J_
 	return cost;
 }
 
+/**
+ * \brief Propagate each Gaussian in planar_gmm through cost function
+ * and add weighted sum
+ */
 double PlanarSystem::cost_gmm(const std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J, const mat<J_DIM,J_DIM>& j_sigma0,
-			const std::vector<vec<C_DIM>, aligned_allocator<vec<C_DIM>>>& obj_means,
-			const std::vector<mat<C_DIM,C_DIM>, aligned_allocator<mat<C_DIM,C_DIM>>>& obj_covs,
-			const std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha) {
+			const std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U,
+			const std::vector<PlanarGaussian>& planar_gmm, const double alpha) {
 	double cost_gmm = 0;
 
 	mat<X_DIM,X_DIM> sigma0 = mat<X_DIM,X_DIM>::Zero();
 	sigma0.block<J_DIM,J_DIM>(0,0) = j_sigma0;
-	for(int i=0; i < obj_means.size(); ++i) {
-		sigma0.block<C_DIM,C_DIM>(J_DIM,J_DIM) = obj_covs[i];
-		cost_gmm += cost(J, obj_means[i], sigma0, U, alpha);
+	for(int i=0; i < planar_gmm.size(); ++i) {
+		sigma0.block<C_DIM,C_DIM>(J_DIM,J_DIM) = planar_gmm[i].obj_cov;
+		cost_gmm += planar_gmm[i].pct*cost(J, planar_gmm[i].obj_mean, sigma0, U, alpha);
 	}
 	return cost_gmm;
 }
@@ -338,9 +341,8 @@ vec<TOTAL_VARS> PlanarSystem::cost_grad(std::vector<vec<J_DIM>, aligned_allocato
 }
 
 vec<TOTAL_VARS> PlanarSystem::cost_gmm_grad(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J, const mat<J_DIM,J_DIM>& j_sigma0,
-		const std::vector<vec<C_DIM>, aligned_allocator<vec<C_DIM>>>& obj_means,
-		const std::vector<mat<C_DIM,C_DIM>, aligned_allocator<mat<C_DIM,C_DIM>>>& obj_covs,
-		std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha) {
+		std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U,
+		const std::vector<PlanarGaussian>& planar_gmm, const double alpha) {
 	int T = J.size();
 
 	vec<TOTAL_VARS> grad;
@@ -352,10 +354,10 @@ vec<TOTAL_VARS> PlanarSystem::cost_gmm_grad(std::vector<vec<J_DIM>, aligned_allo
 			orig = J[t][i];
 
 			J[t][i] = orig + step;
-			cost_p = cost_gmm(J, j_sigma0, obj_means, obj_covs, U, alpha);
+			cost_p = cost_gmm(J, j_sigma0, U, planar_gmm, alpha);
 
 			J[t][i] = orig - step;
-			cost_m = cost_gmm(J, j_sigma0, obj_means, obj_covs, U, alpha);
+			cost_m = cost_gmm(J, j_sigma0, U, planar_gmm, alpha);
 
 			grad(index++) = (cost_p - cost_m) / (2*step);
 		}
@@ -365,10 +367,10 @@ vec<TOTAL_VARS> PlanarSystem::cost_gmm_grad(std::vector<vec<J_DIM>, aligned_allo
 				orig = U[t][i];
 
 				U[t][i] = orig + step;
-				cost_p = cost_gmm(J, j_sigma0, obj_means, obj_covs, U, alpha);
+				cost_p = cost_gmm(J, j_sigma0, U, planar_gmm, alpha);
 
 				U[t][i] = orig - step;
-				cost_m = cost_gmm(J, j_sigma0, obj_means, obj_covs, U, alpha);
+				cost_m = cost_gmm(J, j_sigma0, U, planar_gmm, alpha);
 
 				grad(index++) = (cost_p - cost_m) / (2*step);
 			}
@@ -416,16 +418,13 @@ vec<TOTAL_VARS> PlanarSystem::cost_gmm_grad(std::vector<vec<J_DIM>, aligned_allo
 //}
 
 /**
- * First entry of obj_means/obj_covs/obj_particles contains the most particles
+ * First index of planar_gmm contains the most particles
  */
 void PlanarSystem::fit_gaussians_to_pf(const mat<C_DIM,M_DIM>& P,
-			std::vector<vec<C_DIM>, aligned_allocator<vec<C_DIM>>>& obj_means,
-			std::vector<mat<C_DIM,C_DIM>, aligned_allocator<mat<C_DIM,C_DIM>>>& obj_covs,
-			std::vector<MatrixXd>& obj_particles) {
-	obj_means.clear();
-	obj_covs.clear();
-	obj_particles.clear();
+			std::vector<PlanarGaussian>& planar_gmm) {
+	planar_gmm.clear();
 
+	// fit Gaussians
 	std::vector<VectorXd> obj_means_dyn;
 	std::vector<MatrixXd> obj_covs_dyn;
 	std::vector<MatrixXd> obj_particles_tmp;
@@ -441,15 +440,22 @@ void PlanarSystem::fit_gaussians_to_pf(const mat<C_DIM,M_DIM>& P,
 		}
 	}
 
-	obj_means.push_back(obj_means_dyn[max_obj_index]);
-	obj_covs.push_back(obj_covs_dyn[max_obj_index]);
-	obj_particles.push_back(obj_particles_tmp[max_obj_index]);
+	// create structs and push
+	vec<C_DIM> obj_mean;
+	mat<C_DIM,C_DIM> obj_cov;
+
+	obj_mean = obj_means_dyn[max_obj_index];
+	obj_cov = obj_covs_dyn[max_obj_index];
+	planar_gmm.push_back(PlanarGaussian(obj_mean, obj_cov,
+			obj_particles_tmp[max_obj_index], obj_particles_tmp[max_obj_index].cols()/double(M_DIM)));
 
 	for(int i=0; i < obj_means_dyn.size(); ++i) {
-		if (i != max_obj_index) {
-			obj_means.push_back(obj_means_dyn[i]);
-			obj_covs.push_back(obj_covs_dyn[i]);
-			obj_particles.push_back(obj_particles_tmp[i]);
+		int num_particles = obj_particles_tmp[i].cols();
+		if ((i != max_obj_index) && (num_particles > 1)) {
+			obj_mean = obj_means_dyn[i];
+			obj_cov = obj_covs_dyn[i];
+			planar_gmm.push_back(PlanarGaussian(obj_mean, obj_cov,
+					obj_particles_tmp[i], num_particles/double(M_DIM)));
 		}
 	}
 }
@@ -494,18 +500,14 @@ void PlanarSystem::display(const std::vector<vec<J_DIM>, aligned_allocator<vec<J
 }
 
 void PlanarSystem::display(const vec<J_DIM>& j,
-		std::vector<vec<C_DIM>, aligned_allocator<vec<C_DIM>>>& obj_means,
-		std::vector<mat<C_DIM,C_DIM>, aligned_allocator<mat<C_DIM,C_DIM>>>& obj_covs,
-		std::vector<MatrixXd>& obj_particles,
+		const std::vector<PlanarGaussian>& planar_gmm,
 		bool pause) {
 	std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>> J(1, j);
-	display(J, obj_means, obj_covs, obj_particles, pause);
+	display(J, planar_gmm, pause);
 }
 
 void PlanarSystem::display(const std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J,
-		std::vector<vec<C_DIM>, aligned_allocator<vec<C_DIM>>>& obj_means,
-		std::vector<mat<C_DIM,C_DIM>, aligned_allocator<mat<C_DIM,C_DIM>>>& obj_covs,
-		std::vector<MatrixXd>& obj_particles,
+		const std::vector<PlanarGaussian>& planar_gmm,
 		bool pause) {
 	py::list J_pylist;
 	for(int t=0; t < J.size(); ++t) {
@@ -527,10 +529,10 @@ void PlanarSystem::display(const std::vector<vec<J_DIM>, aligned_allocator<vec<J
 	}
 
 	py::list obj_means_list, obj_covs_list, obj_particles_list;
-	for(int i=0; i < obj_means.size(); ++i) {
-		obj_means_list.append(planar_utils::eigen_to_ndarray(obj_means[i]));
-		obj_covs_list.append(planar_utils::eigen_to_ndarray(obj_covs[i]));
-		obj_particles_list.append(planar_utils::eigen_to_ndarray(obj_particles[i]));
+	for(int i=0; i < planar_gmm.size(); ++i) {
+		obj_means_list.append(planar_utils::eigen_to_ndarray(planar_gmm[i].obj_mean));
+		obj_covs_list.append(planar_utils::eigen_to_ndarray(planar_gmm[i].obj_cov));
+		obj_particles_list.append(planar_utils::eigen_to_ndarray(planar_gmm[i].obj_particles));
 	}
 
 	try {

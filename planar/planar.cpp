@@ -213,8 +213,7 @@ void L_BFGS(const std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J,
 double planar_collocation(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J,
 		std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U,
 		const mat<J_DIM,J_DIM>& j_sigma0,
-		const std::vector<vec<C_DIM>, aligned_allocator<vec<C_DIM>>>& obj_means,
-		const std::vector<mat<C_DIM,C_DIM>, aligned_allocator<mat<C_DIM,C_DIM>>>& obj_covs,
+		const std::vector<PlanarGaussian>& planar_gmm,
 		const double alpha,
 		PlanarSystem& sys, planarMPC_params &problem, planarMPC_output &output, planarMPC_info &info) {
 	int max_iter = 100;
@@ -232,7 +231,7 @@ double planar_collocation(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>
 	double optcost, model_merit, new_merit;
 	double approx_merit_improve, exact_merit_improve, merit_improve_ratio;
 
-	LOG_DEBUG("Initial trajectory cost: %4.10f", sys.cost_gmm(J, j_sigma0, obj_means, obj_covs, U, alpha));
+	LOG_DEBUG("Initial trajectory cost: %4.10f", sys.cost_gmm(J, j_sigma0, U, planar_gmm, alpha));
 
 	int index = 0;
 	bool solution_accepted = true;
@@ -246,8 +245,8 @@ double planar_collocation(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>
 		if (solution_accepted) {
 
 			if (it == 0) {
-				merit = sys.cost_gmm(J, j_sigma0, obj_means, obj_covs, U, alpha);
-				grad = sys.cost_gmm_grad(J, j_sigma0, obj_means, obj_covs, U, alpha);
+				merit = sys.cost_gmm(J, j_sigma0, U, planar_gmm, alpha);
+				grad = sys.cost_gmm_grad(J, j_sigma0, U, planar_gmm, alpha);
 
 //				sys.cost_and_cost_grad(X, sigma0, U, alpha, USE_FADBAD, merit, grad);
 			} else {
@@ -337,7 +336,7 @@ double planar_collocation(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>
 		}
 
 		// end goal constraint on end effector
-		vec<C_DIM> goal_pos = obj_means[0];
+		vec<C_DIM> goal_pos = planar_gmm[0].obj_mean;
 		double goal_delta = .01;
 
 		vec<E_DIM> ee_jT = J[T-1].segment<E_DIM>(0);
@@ -386,7 +385,7 @@ double planar_collocation(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>
 
 		model_merit = optcost + constant_cost; // need to add constant terms that were dropped
 
-		new_merit = sys.cost_gmm(Jopt, j_sigma0, obj_means, obj_covs, Uopt, alpha);
+		new_merit = sys.cost_gmm(Jopt, j_sigma0, Uopt, planar_gmm, alpha);
 
 		LOG_DEBUG("merit: %f", merit);
 		LOG_DEBUG("model_merit: %f", model_merit);
@@ -409,7 +408,7 @@ double planar_collocation(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>
 			LOG_DEBUG("Converged: improvement small enough");
 			J = Jopt; U = Uopt;
 			solution_accepted = true;
-			return sys.cost_gmm(J, j_sigma0, obj_means, obj_covs, U, alpha);
+			return sys.cost_gmm(J, j_sigma0, U, planar_gmm, alpha);
 		} else if ((exact_merit_improve < 0) || (merit_improve_ratio < cfg::improve_ratio_threshold)) {
 			Xeps *= cfg::trust_shrink_ratio;
 			Ueps *= cfg::trust_shrink_ratio;
@@ -421,8 +420,8 @@ double planar_collocation(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>
 			Ueps *= cfg::trust_expand_ratio;
 			LOG_DEBUG("Accepted, Increasing trust region size to:  %2.6f %2.6f", Xeps, Ueps);
 
-			meritopt = sys.cost_gmm(Jopt, j_sigma0, obj_means, obj_covs, Uopt, alpha);
-			gradopt = sys.cost_gmm_grad(J, j_sigma0, obj_means, obj_covs, U, alpha);
+			meritopt = sys.cost_gmm(Jopt, j_sigma0, Uopt, planar_gmm, alpha);
+			gradopt = sys.cost_gmm_grad(Jopt, j_sigma0, Uopt, planar_gmm, alpha);
 //			sys.cost_and_cost_grad(Xopt, sigma0, Uopt, alpha, USE_FADBAD, meritopt, gradopt);
 			L_BFGS(J, U, grad, Jopt, Uopt, gradopt, hess);
 
@@ -432,21 +431,20 @@ double planar_collocation(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>
 
 	}
 
-	return sys.cost_gmm(J, j_sigma0, obj_means, obj_covs, U, alpha);
+	return sys.cost_gmm(J, j_sigma0, U, planar_gmm, alpha);
 }
 
 double planar_minimize_merit(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J,
 		std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U,
 		const mat<J_DIM,J_DIM>& j_sigma0,
-		const std::vector<vec<C_DIM>, aligned_allocator<vec<C_DIM>>>& obj_means,
-		const std::vector<mat<C_DIM,C_DIM>, aligned_allocator<mat<C_DIM,C_DIM>>>& obj_covs,
+		const std::vector<PlanarGaussian>& planar_gmm,
 		PlanarSystem& sys, planarMPC_params &problem, planarMPC_output &output, planarMPC_info &info) {
 	double alpha = cfg::alpha_init;
 	double cost = INFINITY;
 
 	while(true) {
 		LOG_DEBUG("Calling collocation with alpha = %4.2f", alpha);
-		cost = planar_collocation(J, U, j_sigma0, obj_means, obj_covs, alpha, sys, problem, output, info);
+		cost = planar_collocation(J, U, j_sigma0, planar_gmm, alpha, sys, problem, output, info);
 
 		LOG_DEBUG("Reintegrating trajectory");
 		for(int t=0; t < T-1; ++t) {
@@ -456,7 +454,7 @@ double planar_minimize_merit(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM
 		double max_delta_diff = -INFINITY;
 		for(int t=0; t < T; ++t) {
 			std::vector<Beam> fov = sys.get_fov(J[t]);
-			double sd = geometry2d::signed_distance(obj_means[0], fov);
+			double sd = geometry2d::signed_distance(planar_gmm[0].obj_mean, fov);
 			double delta_alpha = 1.0 - 1.0/(1.0 + exp(-alpha*sd));
 			double delta_inf = (sd > 0) ? 0 : 1;
 			max_delta_diff = std::max(max_delta_diff, fabs(delta_alpha - delta_inf));
@@ -479,15 +477,13 @@ double planar_minimize_merit(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM
 void init_collocation(const vec<J_DIM>& j0, const mat<C_DIM,M_DIM>& P, PlanarSystem& sys,
 		std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J,
 		std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U,
-		std::vector<vec<C_DIM>, aligned_allocator<vec<C_DIM>>>& obj_means,
-		std::vector<mat<C_DIM,C_DIM>, aligned_allocator<mat<C_DIM,C_DIM>>>& obj_covs,
-		std::vector<MatrixXd>& obj_particles) {
+		std::vector<PlanarGaussian>& planar_gmm) {
 	// re-initialize GMM from PF
-	sys.fit_gaussians_to_pf(P, obj_means, obj_covs, obj_particles);
+	sys.fit_gaussians_to_pf(P, planar_gmm);
 
 	// find Gaussian with most particles
 	// by construction of fit_gaussians_to_pf, is the first one
-	vec<C_DIM> max_obj_mean = obj_means[0];
+	vec<C_DIM> max_obj_mean = planar_gmm[0].obj_mean;
 
 	// search for IK soln j_goal to get to max_obj_mean
 	// starting with initial guess at j0
@@ -533,9 +529,7 @@ int main(int argc, char* argv[]) {
 		P0(1, m) = planar_utils::uniform(0, 10);
 	}
 
-	std::vector<vec<C_DIM>, aligned_allocator<vec<C_DIM>>> obj_means;
-	std::vector<mat<C_DIM,C_DIM>, aligned_allocator<mat<C_DIM,C_DIM>>> obj_covs;
-	std::vector<MatrixXd> obj_particles;
+	std::vector<PlanarGaussian> planar_gmm;
 
 	// initialize state and controls
 	std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>> U(T-1, vec<U_DIM>::Zero());
@@ -557,22 +551,21 @@ int main(int argc, char* argv[]) {
 	bool stop_condition = false;
 	while(!stop_condition) {
 		init_collocation(j0, P0, sys,
-				J, U, obj_means, obj_covs, obj_particles);
+				J, U, planar_gmm);
 
 		LOG_INFO("Current state");
-		sys.display(j0, obj_means, obj_covs, obj_particles);
+		sys.display(j0, planar_gmm);
 
-		std::cout << "obj_means:\n";
-		for(int i=0; i < obj_means.size(); ++i) {
-			std::cout << obj_means[i].transpose() << "\n";
+		for(int i=0; i < planar_gmm.size(); ++i) {
+			std::cout << "pct[" << i << "]: " << planar_gmm[i].pct << "\n";
 		}
 
 		LOG_INFO("Straight-line initial trajectory to Gaussian with most particles")
-		sys.display(J, obj_means, obj_covs, obj_particles);
+		sys.display(J, planar_gmm);
 
 		// optimize
 		util::Timer_tic(&forces_timer);
-		double cost = planar_minimize_merit(J, U, j_sigma0, obj_means, obj_covs, sys, problem, output, info);
+		double cost = planar_minimize_merit(J, U, j_sigma0, planar_gmm, sys, problem, output, info);
 		double forces_time = util::Timer_toc(&forces_timer);
 
 		LOG_INFO("Optimized cost: %4.5f", cost);
@@ -583,7 +576,7 @@ int main(int argc, char* argv[]) {
 		}
 
 		LOG_INFO("Post-optimization");
-		sys.display(J, obj_means, obj_covs, obj_particles);
+		sys.display(J, planar_gmm);
 
 		vec<J_DIM> j_tp1_real, j_tp1;
 		mat<C_DIM,M_DIM> P_tp1;

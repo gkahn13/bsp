@@ -9,9 +9,6 @@ void fit_gaussians_to_pf(const MatrixXd& P, std::vector<VectorXd>& obj_means, st
 	std::vector<std::vector<int>> mode_particle_indices;
 	find_modes(P, modes, mode_particle_indices);
 
-	std::cout << "number of modes found: " << obj_means.size() << "\n";
-	std::cout << "mode_particle_indices.size(): " << mode_particle_indices.size() << "\n";
-
 	// create matrices from associated mode_particle_indices
 	// and then calculate covariance
 	obj_means.clear();
@@ -19,7 +16,6 @@ void fit_gaussians_to_pf(const MatrixXd& P, std::vector<VectorXd>& obj_means, st
 	obj_particles.clear();
 	for(int i=0; i < mode_particle_indices.size(); ++i) {
 		int num_mode_particles = mode_particle_indices[i].size();
-		std::cout << "P_i size: " << num_mode_particles << "\n";
 		MatrixXd P_i = MatrixXd::Zero(P.rows(), num_mode_particles);
 		for(int m=0; m < num_mode_particles; ++m) {
 			P_i.col(m) = P.col(mode_particle_indices[i][m]);

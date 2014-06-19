@@ -47,6 +47,16 @@ using mat = Matrix<double, _dim0, _dim1>;
 template <size_t _dim>
 using vec = Matrix<double, _dim, 1>;
 
+struct PlanarGaussian {
+	vec<C_DIM> obj_mean;
+	mat<C_DIM,C_DIM> obj_cov;
+	MatrixXd obj_particles;
+	double pct;
+
+	PlanarGaussian(vec<C_DIM>& m, mat<C_DIM,C_DIM>& c, MatrixXd& P, double p) :
+		obj_mean(m), obj_cov(c), obj_particles(P), pct(p) { };
+};
+
 
 class PlanarSystem {
 	const double step = 0.0078125*0.0078125;
@@ -82,36 +92,28 @@ public:
 	double cost(const std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J, const vec<C_DIM>& obj, const mat<X_DIM,X_DIM>& sigma0,
 			const std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha);
 	double cost_gmm(const std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J, const mat<J_DIM,J_DIM>& j_sigma0,
-			const std::vector<vec<C_DIM>, aligned_allocator<vec<C_DIM>>>& obj_means,
-			const std::vector<mat<C_DIM,C_DIM>, aligned_allocator<mat<C_DIM,C_DIM>>>& obj_covs,
-			const std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha);
+			const std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U,
+			const std::vector<PlanarGaussian>& planar_gmm, const double alpha);
 	vec<TOTAL_VARS> cost_grad(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J, const vec<C_DIM>& obj,
 			const mat<X_DIM,X_DIM>& sigma0, std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha);
 	vec<TOTAL_VARS> cost_gmm_grad(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J, const mat<J_DIM,J_DIM>& j_sigma0,
-			const std::vector<vec<C_DIM>, aligned_allocator<vec<C_DIM>>>& obj_means,
-			const std::vector<mat<C_DIM,C_DIM>, aligned_allocator<mat<C_DIM,C_DIM>>>& obj_covs,
-			std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha);
+			std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U,
+			const std::vector<PlanarGaussian>& planar_gmm, const double alpha);
 //	void cost_and_cost_grad(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, const mat<X_DIM,X_DIM>& sigma0,
 //			std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha, const bool use_fadbad,
 //			double& cost, vec<TOTAL_VARS>& grad);
 
 	void fit_gaussians_to_pf(const mat<C_DIM,M_DIM>& P,
-			std::vector<vec<C_DIM>, aligned_allocator<vec<C_DIM>>>& obj_means,
-			std::vector<mat<C_DIM,C_DIM>, aligned_allocator<mat<C_DIM,C_DIM>>>& obj_covs,
-			std::vector<MatrixXd>& obj_particles);
+			std::vector<PlanarGaussian>& planar_gmm);
 
 
 	void display(const vec<J_DIM>& j, bool pause=true);
 	void display(const std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J, bool pause=true);
 	void display(const vec<J_DIM>& j,
-			std::vector<vec<C_DIM>, aligned_allocator<vec<C_DIM>>>& obj_means,
-			std::vector<mat<C_DIM,C_DIM>, aligned_allocator<mat<C_DIM,C_DIM>>>& obj_covs,
-			std::vector<MatrixXd>& obj_particles,
+			const std::vector<PlanarGaussian>& planar_gmm,
 			bool pause=true);
 	void display(const std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J,
-			std::vector<vec<C_DIM>, aligned_allocator<vec<C_DIM>>>& obj_means,
-			std::vector<mat<C_DIM,C_DIM>, aligned_allocator<mat<C_DIM,C_DIM>>>& obj_covs,
-			std::vector<MatrixXd>& obj_particles,
+			const std::vector<PlanarGaussian>& planar_gmm,
 			bool pause=true);
 
 //	void display(const vec<X_DIM>& x, const mat<X_DIM,X_DIM>& sigma, bool pause=true);

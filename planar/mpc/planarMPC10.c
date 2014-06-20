@@ -34,13 +34,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 /* SYSTEM INCLUDES FOR PRINTING ---------------------------------------- */
-#ifndef USEMEXPRINTS
-#include <stdio.h>
-#define PRINTTEXT printf
-#else
-#include "mex.h"
-#define PRINTTEXT mexPrintf
-#endif
+
 
 
 
@@ -2420,10 +2414,8 @@ if( info->mu < planarMPC_SET_ACC_KKTCOMPL
     && (info->rdgap < planarMPC_SET_ACC_RDGAP || info->dgap < planarMPC_SET_ACC_KKTCOMPL)
     && info->res_eq < planarMPC_SET_ACC_RESEQ
     && info->res_ineq < planarMPC_SET_ACC_RESINEQ ){
-PRINTTEXT("OPTIMAL (within RESEQ=%2.1e, RESINEQ=%2.1e, (R)DGAP=(%2.1e)%2.1e, MU=%2.1e).\n",planarMPC_SET_ACC_RESEQ, planarMPC_SET_ACC_RESINEQ,planarMPC_SET_ACC_KKTCOMPL,planarMPC_SET_ACC_RDGAP,planarMPC_SET_ACC_KKTCOMPL);
 exitcode = planarMPC_OPTIMAL; break; }
 if( info->it == planarMPC_SET_MAXIT ){
-PRINTTEXT("Maximum number of iterations reached, exiting.\n");
 exitcode = planarMPC_MAXITREACHED; break; }
 planarMPC_LA_VVADD3_76(planarMPC_grad_cost, planarMPC_grad_eq, planarMPC_grad_ineq, planarMPC_rd);
 planarMPC_LA_DIAG_CHOL_ONELOOP_LBUB_8_8_8(params->H1, planarMPC_llbbyslb0, planarMPC_lbIdx0, planarMPC_lubbysub0, planarMPC_ubIdx0, planarMPC_Phi0);
@@ -2627,7 +2619,6 @@ planarMPC_LA_DENSE_MVMSUB4_4_4(params->A10, planarMPC_dzaff9, planarMPC_rip9, pl
 planarMPC_LA_VSUB3_4(planarMPC_lpbysp9, planarMPC_dsp_aff9, planarMPC_lp9, planarMPC_dlp_aff9);
 info->lsit_aff = planarMPC_LINESEARCH_BACKTRACKING_AFFINE(planarMPC_l, planarMPC_s, planarMPC_dl_aff, planarMPC_ds_aff, &info->step_aff, &info->mu_aff);
 if( info->lsit_aff == planarMPC_NOPROGRESS ){
-PRINTTEXT("Affine line search could not proceed at iteration %d.\nThe problem might be infeasible -- exiting.\n",info->it+1);
 exitcode = planarMPC_NOPROGRESS; break;
 }
 sigma_3rdroot = info->mu_aff / info->mu;
@@ -2752,7 +2743,6 @@ planarMPC_LA_VADD_156(planarMPC_dl_cc, planarMPC_dl_aff);
 planarMPC_LA_VADD_156(planarMPC_ds_cc, planarMPC_ds_aff);
 info->lsit_cc = planarMPC_LINESEARCH_BACKTRACKING_COMBINED(planarMPC_z, planarMPC_v, planarMPC_l, planarMPC_s, planarMPC_dz_cc, planarMPC_dv_cc, planarMPC_dl_cc, planarMPC_ds_cc, &info->step_cc, &info->mu);
 if( info->lsit_cc == planarMPC_NOPROGRESS ){
-PRINTTEXT("Line search could not proceed at iteration %d, exiting.\n",info->it+1);
 exitcode = planarMPC_NOPROGRESS; break;
 }
 info->it++;

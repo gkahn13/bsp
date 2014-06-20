@@ -2,6 +2,8 @@
 #include "include/gmm.h"
 #include "../util/Timer.h"
 
+//#define USE_GMM_COST
+
 extern "C" {
 #include "planarMPC.h"
 planarMPC_FLOAT **H, **f, **lb, **ub, **z, *c, *A, *b;
@@ -16,7 +18,7 @@ namespace cfg {
 const double alpha_init = .01; // 1
 const double alpha_gain = 3; // 3
 const double alpha_epsilon = .1; // .001
-const double alpha_max_increases = 10; // 10
+const double alpha_max_increases = 5; // 10
 
 const double improve_ratio_threshold = 1e-1; // .1
 const double min_approx_improve = 1e-1; // 1
@@ -158,25 +160,25 @@ bool is_valid_inputs()
 //
 //	std::cout << "\n\n";
 
-	for(int i=0; i < (J_DIM); ++i) { if (c[i] > INFTY/2) { return false; } }
-	for(int i=0; i < (J_DIM); ++i) { if (c[i] < lb[0][i]) { return false; } }
-	for(int i=0; i < (J_DIM); ++i) { if (c[i] > ub[0][i]) { return false; } }
+	for(int i=0; i < (J_DIM); ++i) { if (c[i] > INFTY/2) { LOG_ERROR("isValid0"); return false; } }
+	for(int i=0; i < (J_DIM); ++i) { if (c[i] < lb[0][i]) { LOG_ERROR("isValid1"); return false; } }
+	for(int i=0; i < (J_DIM); ++i) { if (c[i] > ub[0][i]) { LOG_ERROR("isValid2"); return false; } }
 
-	for(int i=0; i < (2*C_DIM)*J_DIM; ++i) { if (A[i] > INFTY/2) { return false; } }
-	for(int i=0; i < (2*C_DIM); ++i) { if (b[i] > INFTY/2) { return false; } }
+	for(int i=0; i < (2*C_DIM)*J_DIM; ++i) { if (A[i] > INFTY/2) { LOG_ERROR("isValid3"); return false; } }
+	for(int i=0; i < (2*C_DIM); ++i) { if (b[i] > INFTY/2) { LOG_ERROR("isValid4"); return false; } }
 
 	for(int t = 0; t < T-1; ++t) {
-		for(int i=0; i < (J_DIM+U_DIM); ++i) { if (H[t][i] > INFTY/2) { return false; } }
-		for(int i=0; i < (J_DIM+U_DIM); ++i) { if (f[t][i] > INFTY/2) { return false; } }
-		for(int i=0; i < (J_DIM+U_DIM); ++i) { if (lb[t][i] > INFTY/2) { return false; } }
-		for(int i=0; i < (J_DIM+U_DIM); ++i) {if (ub[t][i] > INFTY/2) { return false; } }
-		for(int i=0; i < (J_DIM+U_DIM); ++i) {if (ub[t][i] < lb[t][i]) { return false; } }
+		for(int i=0; i < (J_DIM+U_DIM); ++i) { if (H[t][i] > INFTY/2) { LOG_ERROR("isValid5"); return false; } }
+		for(int i=0; i < (J_DIM+U_DIM); ++i) { if (f[t][i] > INFTY/2) { LOG_ERROR("isValid6"); return false; } }
+		for(int i=0; i < (J_DIM+U_DIM); ++i) { if (lb[t][i] > INFTY/2) { LOG_ERROR("isValid7"); return false; } }
+		for(int i=0; i < (J_DIM+U_DIM); ++i) {if (ub[t][i] > INFTY/2) { LOG_ERROR("isValid8"); return false; } }
+		for(int i=0; i < (J_DIM+U_DIM); ++i) {if (ub[t][i] < lb[t][i]) { LOG_ERROR("isValid9"); return false; } }
 	}
-	for(int i=0; i < (J_DIM); ++i) { if (H[T-1][i] > INFTY/2) { return false; } }
-	for(int i=0; i < (J_DIM); ++i) { if (f[T-1][i] > INFTY/2) { return false; } }
-	for(int i=0; i < (J_DIM); ++i) { if (lb[T-1][i] > INFTY/2) { return false; } }
-	for(int i=0; i < (J_DIM); ++i) { if (ub[T-1][i] > INFTY/2) { return false; } }
-	for(int i=0; i < (J_DIM); ++i) {if (ub[T-1][i] < lb[T-1][i]) { return false; } }
+	for(int i=0; i < (J_DIM); ++i) { if (H[T-1][i] > INFTY/2) { LOG_ERROR("isValid10"); return false; } }
+	for(int i=0; i < (J_DIM); ++i) { if (f[T-1][i] > INFTY/2) { LOG_ERROR("isValid11"); return false; } }
+	for(int i=0; i < (J_DIM); ++i) { if (lb[T-1][i] > INFTY/2) { LOG_ERROR("isValid12"); return false; } }
+	for(int i=0; i < (J_DIM); ++i) { if (ub[T-1][i] > INFTY/2) { LOG_ERROR("isValid13"); return false; } }
+	for(int i=0; i < (J_DIM); ++i) {if (ub[T-1][i] < lb[T-1][i]) { LOG_ERROR("isValid14"); return false; } }
 
 	return true;
 }
@@ -217,7 +219,7 @@ void L_BFGS(const std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J,
 double planar_collocation(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J,
 		std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U,
 		const mat<J_DIM,J_DIM>& j_sigma0,
-		const std::vector<PlanarGaussian>& planar_gmm,
+		const std::vector<PlanarGaussian>& planar_gmm, const mat<C_DIM,M_DIM>& P,
 		const double alpha,
 		PlanarSystem& sys, planarMPC_params &problem, planarMPC_output &output, planarMPC_info &info) {
 	int max_iter = 100;
@@ -249,8 +251,13 @@ double planar_collocation(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>
 		if (solution_accepted) {
 
 			if (it == 0) {
+#ifdef USE_GMM_COST
 				merit = sys.cost_gmm(J, j_sigma0, U, planar_gmm, alpha);
 				grad = sys.cost_gmm_grad(J, j_sigma0, U, planar_gmm, alpha);
+#else
+				merit = sys.cost_entropy(J, U, P, alpha);
+				grad = sys.cost_entropy_grad(J, U, P, alpha);
+#endif
 
 //				sys.cost_and_cost_grad(X, sigma0, U, alpha, USE_FADBAD, merit, grad);
 			} else {
@@ -353,11 +360,13 @@ double planar_collocation(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>
 		mat<2*C_DIM,J_DIM> Amat;
 		Amat.block<C_DIM,J_DIM>(0,0) = ee_pos_jac_full;
 		Amat.block<C_DIM,J_DIM>(C_DIM,0) = -ee_pos_jac_full;
+		Amat.setZero(); // TODO: tmp
 		fill_col_major(A, Amat);
 
 		vec<2*C_DIM> bVec;
 		bVec.segment<C_DIM>(0) = goal_pos - ee_pos + ee_pos_jac_full*J[T-1] + goal_delta*vec<C_DIM>::Ones();
 		bVec.segment<C_DIM>(C_DIM) = -goal_pos + ee_pos - ee_pos_jac_full*J[T-1] + goal_delta*vec<C_DIM>::Ones();
+		bVec.setZero(); // TODO: tmp
 		fill_col_major(b, bVec);
 
 		// Verify problem inputs
@@ -384,15 +393,19 @@ double planar_collocation(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>
 			}
 		} else {
 			LOG_FATAL("Some problem in solver");
-			sys.display(J, planar_gmm);
-//			exit(-1);
 			LOG_FATAL("Continuing");
+//			sys.display(J, planar_gmm);
+//			exit(-1);
 			return INFINITY;
 		}
 
 		model_merit = optcost + constant_cost; // need to add constant terms that were dropped
 
+#ifdef USE_GMM_COST
 		new_merit = sys.cost_gmm(Jopt, j_sigma0, Uopt, planar_gmm, alpha);
+#else
+		new_merit = sys.cost_entropy(Jopt, Uopt, P, alpha);
+#endif
 
 		LOG_DEBUG("merit: %f", merit);
 		LOG_DEBUG("model_merit: %f", model_merit);
@@ -431,8 +444,13 @@ double planar_collocation(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>
 			Ueps *= cfg::trust_expand_ratio;
 			LOG_DEBUG("Accepted, Increasing trust region size to:  %2.6f %2.6f", Xeps, Ueps);
 
+#ifdef USE_GMM_COST
 			meritopt = sys.cost_gmm(Jopt, j_sigma0, Uopt, planar_gmm, alpha);
 			gradopt = sys.cost_gmm_grad(Jopt, j_sigma0, Uopt, planar_gmm, alpha);
+#else
+			meritopt = sys.cost_entropy(Jopt, Uopt, P, alpha);
+			gradopt = sys.cost_entropy_grad(Jopt, Uopt, P, alpha);
+#endif
 //			sys.cost_and_cost_grad(Xopt, sigma0, Uopt, alpha, USE_FADBAD, meritopt, gradopt);
 			L_BFGS(J, U, grad, Jopt, Uopt, gradopt, hess);
 
@@ -448,14 +466,14 @@ double planar_collocation(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>
 double planar_minimize_merit(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J,
 		std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U,
 		const mat<J_DIM,J_DIM>& j_sigma0,
-		const std::vector<PlanarGaussian>& planar_gmm,
+		const std::vector<PlanarGaussian>& planar_gmm, const mat<C_DIM,M_DIM>& P,
 		PlanarSystem& sys, planarMPC_params &problem, planarMPC_output &output, planarMPC_info &info) {
 	double alpha = cfg::alpha_init;
 	double cost = INFINITY;
 
 	for(int num_alpha_increases=0; num_alpha_increases < cfg::alpha_max_increases; ++num_alpha_increases) {
 		LOG_DEBUG("Calling collocation with alpha = %4.2f", alpha);
-		cost = planar_collocation(J, U, j_sigma0, planar_gmm, alpha, sys, problem, output, info);
+		cost = planar_collocation(J, U, j_sigma0, planar_gmm, P, alpha, sys, problem, output, info);
 
 		LOG_DEBUG("Reintegrating trajectory");
 		for(int t=0; t < T-1; ++t) {
@@ -495,22 +513,24 @@ void init_collocation(const vec<J_DIM>& j0, const mat<C_DIM,M_DIM>& P, PlanarSys
 
 	// find Gaussian with most particles
 	// by construction of fit_gaussians_to_pf, is the first one
-	vec<C_DIM> max_obj_mean = planar_gmm[0].obj_mean;
+//	vec<C_DIM> obj_mean = planar_gmm[0].obj_mean;
+	// try last one instead
+	vec<C_DIM> obj_mean = planar_gmm.back().obj_mean;
 
 	// search for IK soln j_goal to get to max_obj_mean
 	// starting with initial guess at j0
 	vec<E_DIM> j_goal = j0.segment<E_DIM>(0);
-	bool ik_success = sys.ik(max_obj_mean, j_goal);
+	bool ik_success = sys.ik(obj_mean, j_goal);
 	if (!ik_success) {
-		LOG_ERROR("IK failed, exiting");
-		exit(0);
+		LOG_ERROR("IK failed, continuing anyways");
+//		exit(0);
 	}
 
 	vec<C_DIM> camera = sys.get_camera();
 	// set straight-line trajectory (in joint space)
 	vec<U_DIM> uinit = vec<U_DIM>::Zero();
 	uinit.segment<E_DIM>(0) = (j_goal - j0.segment<E_DIM>(0)) / (double)((T-1)*DT);
-	uinit(E_DIM) = (atan((max_obj_mean(0) - camera(0))/(max_obj_mean(1) - camera(1))) - j0(E_DIM)) / (double)((T-1)*DT);
+	uinit(E_DIM) = (atan((obj_mean(0) - camera(0))/(obj_mean(1) - camera(1))) - j0(E_DIM)) / (double)((T-1)*DT);
 
 	// integrate trajectory
 	J[0] = j0;
@@ -521,11 +541,12 @@ void init_collocation(const vec<J_DIM>& j0, const mat<C_DIM,M_DIM>& P, PlanarSys
 }
 
 int main(int argc, char* argv[]) {
-	srand(time(0));
+//	srand(time(0));
 
 	vec<2> camera, object;
 	camera << 0, 1;
-	object << -7, 3; // 5, 7
+	object << 8, 3; // 5, 7
+//	object << planar_utils::uniform(-10, 10) , planar_utils::uniform(2, 11);
 	bool is_static = false;
 
 	PlanarSystem sys = PlanarSystem(camera, object, is_static);
@@ -535,12 +556,19 @@ int main(int argc, char* argv[]) {
 
 	vec<J_DIM> j0, j0_real;
 	j0 << M_PI/5, -M_PI/2+M_PI/16, -M_PI/4, 0;
+//	j0 << planar_utils::uniform(-M_PI/3, M_PI/3),
+//			planar_utils::uniform(-M_PI/3, M_PI/3),
+//			planar_utils::uniform(-M_PI/3, M_PI/3),
+//			planar_utils::uniform(-M_PI/3, M_PI/3);
 	j0_real = j0; // TODO: have them be different
+
+	std::cout << "object: " << object.transpose() << "\n";
+	std::cout << "j0: " << j0.transpose() << "\n";
 
 	mat<C_DIM,M_DIM> P0;
 	for(int m=0; m < M_DIM; ++m) {
 		P0(0, m) = planar_utils::uniform(-10, 10);
-		P0(1, m) = planar_utils::uniform(2, 12);
+		P0(1, m) = planar_utils::uniform(2, 11);
 	}
 
 	std::vector<PlanarGaussian> planar_gmm;
@@ -570,12 +598,12 @@ int main(int argc, char* argv[]) {
 		LOG_INFO("Current state");
 		sys.display(j0, planar_gmm, false);
 
-//		LOG_INFO("Straight-line initial trajectory to Gaussian with most particles")
-//		sys.display(J, planar_gmm);
+		LOG_INFO("Straight-line initial trajectory to Gaussian with most particles")
+		sys.display(J, planar_gmm);
 
 		// optimize
 		util::Timer_tic(&forces_timer);
-		double cost = planar_minimize_merit(J, U, j_sigma0, planar_gmm, sys, problem, output, info);
+		double cost = planar_minimize_merit(J, U, j_sigma0, planar_gmm, P0, sys, problem, output, info);
 		double forces_time = util::Timer_toc(&forces_timer);
 
 		LOG_INFO("Optimized cost: %4.5f", cost);
@@ -585,8 +613,8 @@ int main(int argc, char* argv[]) {
 			J[t+1] = sys.dynfunc(J[t], U[t], vec<Q_DIM>::Zero());
 		}
 
-//		LOG_INFO("Post-optimization");
-//		sys.display(J, planar_gmm);
+		LOG_INFO("Post-optimization");
+		sys.display(J, planar_gmm);
 
 		vec<J_DIM> j_tp1_real, j_tp1;
 		mat<C_DIM,M_DIM> P_tp1;
@@ -600,10 +628,20 @@ int main(int argc, char* argv[]) {
 		j0 = j_tp1;
 		P0 = P_tp1;
 
-		std::cout << "max obj_cov trace: " << planar_gmm[0].obj_cov.trace() << "\n";
-		if ((planar_gmm[0].pct == 1) && (planar_gmm[0].obj_cov.trace() < 2)) {
+
+		double max_obj_cov_trace = planar_gmm[0].obj_cov.trace();
+		double min_goal_error = INFINITY;
+		for(int i=0; i < planar_gmm.size(); ++i) {
+			double goal_error = (sys.get_ee_pos(j0.segment<E_DIM>(0)) - planar_gmm[i].obj_mean).norm();
+			min_goal_error = std::min(min_goal_error, goal_error);
+		}
+
+		if ((planar_gmm[0].pct == 1) && (max_obj_cov_trace < 2) && (min_goal_error < 1.5)) {
 			stop_condition = true;
 		}
+
+		std::cout << "max obj_cov trace: " << max_obj_cov_trace << "\n";
+		std::cout << "min goal error: " << min_goal_error << "\n";
 	}
 
 	LOG_INFO("Found object");

@@ -123,7 +123,7 @@ outputs(i) = newOutput(var,i,1:nx);
 % solver settings
 mpcname = 'planarMPC';
 codeoptions = getOptions(mpcname);
-codeoptions.printlevel = 1;
+codeoptions.printlevel = 0;
 codeoptions.timing=0;
 codeoptions.maxit=100;
 

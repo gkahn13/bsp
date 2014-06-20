@@ -1,0 +1,160 @@
+<!-- pr2 robot with simulated sensors and controllers attached -->
+<robot file="pr2-beta-static.zae">
+  <attachedsensor name="l_forearm_cam">
+    <link>l_forearm_cam_optical_frame</link>
+    <sensor type="BaseCamera" args="">
+      <KK>772.55 772.55 320.5 240.5</KK>
+      <width>640</width>
+      <height>480</height>
+      <framerate>5</framerate>
+      <color>0.5 1 0.5</color>
+      <power>0</power>
+    </sensor>
+  </attachedsensor>
+  <attachedsensor name="r_forearm_cam">
+    <link>r_forearm_cam_optical_frame</link>
+    <sensor type="BaseCamera" args="">
+      <KK>772.55 772.55 320.5 240.5</KK>
+      <width>640</width>
+      <height>480</height>
+      <framerate>5</framerate>
+      <color>0.5 1 0.5</color>
+      <power>0</power>
+    </sensor>
+  </attachedsensor>
+  <attachedsensor name="narrow_stereo_cam">
+    <link>narrow_stereo_optical_frame</link>
+    <sensor type="BaseCamera" args="">
+      <KK>772.55 772.55 320.5 240.5</KK>
+      <width>640</width>
+      <height>480</height>
+      <framerate>5</framerate>
+      <color>0.5 0.5 1</color>
+      <power>0</power>
+    </sensor>
+  </attachedsensor>
+  <attachedsensor name="wide_stereo_cam">
+    <link>wide_stereo_optical_frame</link>
+    <sensor type="BaseCamera" args="">
+      <KK>320 320 320.5 240.5</KK>
+      <width>640</width>
+      <height>480</height>
+      <framerate>5</framerate>
+      <color>1 0.5 0</color>
+      <power>0</power>
+    </sensor>
+  </attachedsensor>
+  <attachedsensor name="head_cam">
+    <link>wide_stereo_optical_frame</link>
+    <translation>0 0 0.05</translation>
+    <sensor type="BaseCamera" args="">
+      <KK>320 320 320.5 240.5</KK>
+      <width>640</width>
+      <height>480</height>
+      <framerate>5</framerate>
+      <color>1 0.5 0</color>
+      <power>0</power>
+    </sensor>
+  </attachedsensor>
+  <attachedsensor name="head_depth">
+    <link>wide_stereo_optical_frame</link>
+    <translation>0 0 0.05</translation>
+    <rotationaxis>0 1 0 0</rotationaxis>
+    <sensor type="BaseFlashLidar3D">
+      <minrange>.5</minrange>
+      <maxrange>5</maxrange>
+      <time_scan>0.2</time_scan>
+      <KK>8 6 8 6</KK>
+      <width>16</width>
+      <height>12</height>
+      <color>1 1 0</color>
+    </sensor>
+  </attachedsensor>
+  
+  <attachedsensor name="r_gripper_cam">
+    <link>r_gripper_tool_frame</link>
+    <translation>0 0 0.05</translation>
+    <rotationmat>0 0 1 -1 0 0 0 -1 0</rotationmat>
+    <sensor type="BaseCamera" args="">
+      <KK>128 96 32.5 24.5</KK>
+      <width>64</width>
+      <height>48</height>
+      <framerate>5</framerate>
+      <color>1 0.5 0</color>
+      <power>0</power>
+    </sensor>
+  </attachedsensor>
+  <attachedsensor name="r_gripper_depth">
+    <link>r_gripper_tool_frame</link>
+    <translation>0 0 0.05</translation>
+    <rotationmat>0 0 1 -1 0 0 0 -1 0</rotationmat>
+    <sensor type="BaseFlashLidar3D">
+      <minrange>.5</minrange>
+      <maxrange>5</maxrange>
+      <time_scan>0.2</time_scan>
+      <KK>128 96 32 24</KK>
+      <width>64</width>
+      <height>48</height>
+      <color>1 1 0</color>
+    </sensor>
+  </attachedsensor>
+  
+  <attachedsensor name="l_gripper_cam">
+    <link>l_gripper_tool_frame</link>
+    <translation>0 0 0.05</translation>
+    <rotationmat>0 0 1 -1 0 0 0 -1 0</rotationmat>
+    <sensor type="BaseCamera" args="">
+      <KK>128 96 32.5 24.5</KK>
+      <width>64</width>
+      <height>48</height>
+      <framerate>5</framerate>
+      <color>1 0.5 0</color>
+      <power>0</power>
+    </sensor>
+  </attachedsensor>
+  <attachedsensor name="l_gripper_depth">
+    <link>l_gripper_tool_frame</link>
+    <translation>0 0 0.05</translation>
+    <rotationmat>0 0 1 -1 0 0 0 -1 0</rotationmat>
+    <sensor type="BaseFlashLidar3D">
+      <minrange>.5</minrange>
+      <maxrange>5</maxrange>
+      <time_scan>0.2</time_scan>
+      <KK>128 96 32 24</KK>
+      <width>64</width>
+      <height>48</height>
+      <color>1 1 0</color>
+    </sensor>
+  </attachedsensor>
+</robot>
+
+
+<!--
+  <attachedsensor name="wide_stereo_cam">
+    <link>wide_stereo_optical_frame</link>
+    <sensor type="BaseCamera" args="">
+      <KK>320 320 320.5 240.5</KK>
+      <width>640</width>
+      <height>480</height>
+      <framerate>5</framerate>
+      <color>1 0.5 0</color>
+      <power>0</power>
+    </sensor>
+  </attachedsensor>
+-->
+
+<!--
+<attachedsensor name="flashlidar3d">
+    <link>wide_stereo_link</link>
+    <translation>0.05 0 0</translation>
+    <rotationaxis>0 1 0 90</rotationaxis>
+    <sensor type="BaseFlashLidar3D">
+      <maxrange>5</maxrange>
+      <time_scan>0.2</time_scan>
+      <KK>32 24 32 24</KK>
+      <width>64</width>
+      <height>48</height>
+      <color>1 1 0</color>
+    </sensor>
+  </attachedsensor>
+-->

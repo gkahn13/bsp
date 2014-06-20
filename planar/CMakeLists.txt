@@ -40,10 +40,10 @@ target_link_libraries(planar ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} ${MY_LIBRARI
 
 
 add_executable(test-planar-system tests/test-planar-system.cpp
-                                  src/planar-system.cpp src/geometry2d.cpp src/planar-utils.cpp
-                                  fadbad/fadbad-planar-system.cpp fadbad/fadbad-geometry2d.cpp
+                                  src/planar-system.cpp src/geometry2d.cpp src/planar-utils.cpp src/gmm.cpp
+                                  #fadbad/fadbad-planar-system.cpp fadbad/fadbad-geometry2d.cpp
                                   ../util/logging.cpp)
-target_link_libraries(test-planar-system ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} ${MY_LIBRARIES})
+target_link_libraries(test-planar-system ${Boost_LIBRARIES} ${PYTHON_LIBRARIES} ${MY_LIBRARIES} ${FIGTREE_LIBRARIES})
 
 add_executable(test-geometry2d    tests/test-geometry2d.cpp
                                   src/geometry2d.cpp src/planar-utils.cpp

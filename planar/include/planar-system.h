@@ -66,7 +66,8 @@ class PlanarSystem {
 
 	const double alpha_control = .01; // .01
 	const double alpha_belief = 1; // 1
-	const double alpha_final_belief = 1; // 0
+	const double alpha_final_belief = 1; // 1
+	const double alpha_goal = .5; // 10
 
 public:
 	PlanarSystem(const vec<C_DIM>& camera_origin, const vec<C_DIM>& object, bool is_static);
@@ -84,6 +85,8 @@ public:
 			vec<J_DIM>& j_tp1_real, vec<J_DIM>& j_tp1, mat<C_DIM,M_DIM>& P_tp1);
 
 	std::vector<Beam> get_fov(const vec<J_DIM>& j);
+	std::vector<Segment> get_link_segments(const vec<E_DIM>& j);
+
 	vec<C_DIM> get_ee_pos(const vec<E_DIM>& j);
 	void get_ee_pos_jac(vec<E_DIM>& j, mat<C_DIM,E_DIM>& ee_jac);
 	bool ik(const vec<C_DIM>& ee_goal, vec<E_DIM>& j);
@@ -96,11 +99,19 @@ public:
 	double cost_gmm(const std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J, const mat<J_DIM,J_DIM>& j_sigma0,
 			const std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U,
 			const std::vector<PlanarGaussian>& planar_gmm, const double alpha);
+	double cost_entropy(const std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J,
+			const std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U,
+			const mat<C_DIM,M_DIM>& P, const double alpha);
+
 	vec<TOTAL_VARS> cost_grad(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J, const vec<C_DIM>& obj,
 			const mat<X_DIM,X_DIM>& sigma0, std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha);
 	vec<TOTAL_VARS> cost_gmm_grad(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J, const mat<J_DIM,J_DIM>& j_sigma0,
 			std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U,
 			const std::vector<PlanarGaussian>& planar_gmm, const double alpha);
+	vec<TOTAL_VARS> cost_entropy_grad(std::vector<vec<J_DIM>, aligned_allocator<vec<J_DIM>>>& J,
+			std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U,
+			const mat<C_DIM,M_DIM>& P, const double alpha);
+
 //	void cost_and_cost_grad(std::vector<vec<X_DIM>, aligned_allocator<vec<X_DIM>>>& X, const mat<X_DIM,X_DIM>& sigma0,
 //			std::vector<vec<U_DIM>, aligned_allocator<vec<U_DIM>>>& U, const double alpha, const bool use_fadbad,
 //			double& cost, vec<TOTAL_VARS>& grad);
@@ -154,7 +165,6 @@ private:
 	void init(const vec<C_DIM>& camera_origin, const vec<C_DIM>& object, bool is_static);
 	void init_display();
 
-	std::vector<Segment> get_link_segments(const vec<E_DIM>& j);
 	void linearize_dynfunc(const vec<X_DIM>& x, const vec<U_DIM>& u, const vec<Q_DIM>& q, mat<X_DIM,X_DIM>& A, mat<X_DIM,Q_DIM>& M);
 	void linearize_obsfunc(const vec<X_DIM>& x, const vec<R_DIM>& r, mat<Z_DIM,X_DIM>& H, mat<Z_DIM,R_DIM>& N);
 

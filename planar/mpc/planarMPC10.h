@@ -28,7 +28,7 @@ typedef double planarMPC_FLOAT;
 /* SOLVER SETTINGS ------------------------------------------------------*/
 /* print level */
 #ifndef planarMPC_SET_PRINTLEVEL
-#define planarMPC_SET_PRINTLEVEL    (1)
+#define planarMPC_SET_PRINTLEVEL    (0)
 #endif
 
 /* timing */

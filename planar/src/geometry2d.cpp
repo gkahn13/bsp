@@ -173,8 +173,19 @@ double Segment::distance_to(const Vector2d& x) {
  */
 
 Beam::Beam(const Vector2d& base_pt, const Vector2d& a_pt, const Vector2d& b_pt) : base(base_pt) {
-	a = (a_pt(0) > b_pt(0)) ? a_pt : b_pt;
-	b = (a_pt(0) <= b_pt(0)) ? a_pt : b_pt;
+	double a_angle = atan((a_pt(1) - base_pt(1))/(a_pt(0) - base_pt(0)));
+	double b_angle = atan((b_pt(1) - base_pt(1))/(b_pt(0) - base_pt(0)));
+
+	if (a_angle < b_angle) {
+		a = a_pt;
+		b = b_pt;
+	} else {
+		a = b_pt;
+		b = a_pt;
+	}
+
+//	a = (a_pt(0) > b_pt(0)) ? a_pt : b_pt;
+//	b = (a_pt(0) <= b_pt(0)) ? a_pt : b_pt;
 }
 
 /**
@@ -192,6 +203,10 @@ std::vector<Beam> Beam::truncate(const Segment& s) {
 	bool is_intersect_top = top.intersection(s, top_intersect);
 	bool is_intersect_left = left.intersection(s, left_intersect);
 
+//	std::cout << "is_intersect_right: " << is_intersect_right << "\n";
+//	std::cout << "is_intersect_top: " << is_intersect_top << "\n";
+//	std::cout << "is_intersect_left: " << is_intersect_left << "\n\n";
+
 	std::vector<Beam> new_beams;
 	if (is_intersect_right && is_intersect_left) {
 		new_beams.push_back(Beam(base, right_intersect, left_intersect));
@@ -202,7 +217,17 @@ std::vector<Beam> Beam::truncate(const Segment& s) {
 		new_beams.push_back(Beam(base, a, top_intersect));
 		new_beams.push_back(Beam(base, top_intersect, left_intersect));
 	} else if (is_intersect_right) {
-		Vector2d p_inside = (is_inside(s.p0)) ? s.p0 : s.p1;
+//		Vector2d p_inside = (is_inside(s.p0)) ? s.p0 : s.p1;
+		Vector2d p_inside;
+		if (is_inside(s.p0)) {
+			p_inside = s.p0;
+		} else if (is_inside(s.p1)) {
+			p_inside = s.p1;
+		} else {
+			p_inside = (right.distance_to(s.p0) < right.distance_to(s.p1)) ? s.p0 : s.p1;
+		}
+
+
 		Vector2d top_projection_intersect;
 //		bool should_intersect = Line(p_inside - base, base).intersection(top, top_projection_intersect);
 		bool should_intersect = Line(p_inside - base, base).intersection(Line(top), top_projection_intersect);
@@ -210,7 +235,16 @@ std::vector<Beam> Beam::truncate(const Segment& s) {
 		new_beams.push_back(Beam(base, right_intersect, p_inside));
 		new_beams.push_back(Beam(base, top_projection_intersect, b));
 	} else if (is_intersect_top) {
-		Vector2d p_inside = (is_inside(s.p0)) ? s.p0 : s.p1;
+//		Vector2d p_inside = (is_inside(s.p0)) ? s.p0 : s.p1;
+		Vector2d p_inside;
+		if (is_inside(s.p0)) {
+			p_inside = s.p0;
+		} else if (is_inside(s.p1)) {
+			p_inside = s.p1;
+		} else {
+			p_inside = (top.distance_to(s.p0) < top.distance_to(s.p1)) ? s.p0 : s.p1;
+		}
+
 		Vector2d top_projection_intersect;
 //		bool should_intersect = Line(p_inside - base, base).intersection(top, top_projection_intersect);
 		bool should_intersect = Line(p_inside - base, base).intersection(Line(top), top_projection_intersect);
@@ -225,7 +259,16 @@ std::vector<Beam> Beam::truncate(const Segment& s) {
 			new_beams.push_back(Beam(base, top_intersect, b));
 		}
 	} else if (is_intersect_left) {
-		Vector2d p_inside = (is_inside(s.p0)) ? s.p0 : s.p1;
+//		Vector2d p_inside = (is_inside(s.p0)) ? s.p0 : s.p1;
+		Vector2d p_inside;
+		if (is_inside(s.p0)) {
+			p_inside = s.p0;
+		} else if (is_inside(s.p1)) {
+			p_inside = s.p1;
+		} else {
+			p_inside = (left.distance_to(s.p0) < left.distance_to(s.p1)) ? s.p0 : s.p1;
+		}
+
 		Vector2d top_projection_intersect;
 //		bool should_intersect = Line(p_inside - base, base).intersection(top, top_projection_intersect);
 		bool should_intersect = Line(p_inside - base, base).intersection(Line(top), top_projection_intersect);
@@ -285,6 +328,8 @@ bool Beam::is_inside(const Vector2d& p) {
 	bool is_away_from_side = min_dist_to_side > epsilon;
 
 	return (is_correct_area && is_away_from_side);
+
+//	return is_correct_area;
 }
 
 /**

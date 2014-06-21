@@ -24,6 +24,19 @@ bool Beam3d::is_inside(const Vector3d& p) {
 	return inside;
 }
 
+void Beam3d::plot(rave::EnvironmentBasePtr env) {
+	Vector3d color(1,0,0);
+//	rave_utils::plot_segment(env, base, a, color);
+//	rave_utils::plot_segment(env, base, b, color);
+//	rave_utils::plot_segment(env, base, c, color);
+//	rave_utils::plot_segment(env, base, d, color);
+
+	rave_utils::plot_segment(env, a, b, color);
+	rave_utils::plot_segment(env, b, c, color);
+	rave_utils::plot_segment(env, c, d, color);
+	rave_utils::plot_segment(env, d, a, color);
+}
+
 /**
  * Triangle3d public methods
  */

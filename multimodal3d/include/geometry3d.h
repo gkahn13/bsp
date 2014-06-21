@@ -1,6 +1,7 @@
 #ifndef __GEOMETRY3D_H__
 #define __GEOMETRY3D_H__
 
+#include "rave_utils.h"
 #include "geometry2d.h"
 
 #include <math.h>
@@ -14,10 +15,13 @@ class Beam3d {
 public:
 	Vector3d base, a, b, c, d;
 
+	Beam3d() { };
 	Beam3d(const Vector3d& base_tmp, const Vector3d& a_tmp, const Vector3d& b_tmp, const Vector3d& c_tmp, const Vector3d& d_tmp) :
 		base(base_tmp), a(a_tmp), b(b_tmp), c(c_tmp), d(d_tmp) { };
 
 	bool is_inside(const Vector3d& p);
+
+	void plot(rave::EnvironmentBasePtr env);
 };
 
 class Triangle3d {

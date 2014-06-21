@@ -73,7 +73,9 @@ class FOV:
  
             direction = np.array(p_world_pos) - np.array(origin_world_pos)
             directions[i,:] = direction
- 
+            
+            #handles += utils.plot_segment(self.robot.GetEnv(), origin_world_pos, origin_world_pos + direction)
+
         
         return directions
     
@@ -212,6 +214,10 @@ def test_FOV(M=10):
     fov = FOV(robot, cam_geom.KK, height, width, F, max_range)
         
     cam_pose = tfx.pose([0,0,0.05], frame='wide_stereo_optical_frame')
+    
+    fov.directions(cam_pose)
+    IPython.embed()
+    return
     
     start = time.time()
     beams = fov.get_beams(cam_pose)

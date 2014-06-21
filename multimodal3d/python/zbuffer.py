@@ -128,7 +128,9 @@ class FOV:
         return beams
     
     def get_border(self, beams):
-        # border == list of triangles
+        """
+        @return border - a list of Triangles
+        """
         border = list()
         
         rows, cols = beams.shape
@@ -137,26 +139,10 @@ class FOV:
             border += beams[i,0].get_side('left')
             border += beams[i,cols-1].get_side('right')
             
-            """
-            if i < rows-1:
-                border += [Triangle(beams[i,0].c, beams[i,0].d, beams[i+1,0].b),
-                           Triangle(beams[i,0].d, beams[i+1,0].b, beams[i+1,0].a)]
-                border += [Triangle(beams[i,cols-1].c, beams[i,cols-1].d, beams[i+1,cols-1].b),
-                           Triangle(beams[i,cols-1].d, beams[i+1,cols-1].b, beams[i+1,cols-1].a)]
-            """
-                
         # deal with top and bottom border rows
         for j in xrange(cols):
             border += beams[0,j].get_side('top')
             border += beams[rows-1,j].get_side('bottom')
-            
-            """
-            if j < cols-1:
-                border += [Triangle(beams[0,j].a, beams[0,j].d, beams[0,j+1].b),
-                           Triangle(beams[0,j].d, beams[0,j+1].b, beams[0,j+1].c)]
-                border += [Triangle(beams[rows-1,j].a, beams[rows-1,j].d, beams[rows-1,j+1].b),
-                           Triangle(beams[rows-1,j].d, beams[rows-1,j+1].b, beams[rows-1,j+1].c)]
-            """
                 
         # connect with left and top
         for i in xrange(rows):
@@ -179,6 +165,10 @@ class FOV:
         return pruned_border
         
     def signed_distance(self, p, beams, border):
+        """
+        Determines if p is in beams (to determine the sign)
+        then computes shortest distance to border
+        """
         is_inside = False
         beams_vec = beams.reshape((np.prod(beams.shape),))
         for beam in beams_vec:
@@ -205,7 +195,7 @@ def random_within(lower, upper):
         
 def test_FOV(M=10):
     env = rave.Environment()
-    env.Load('envs/pr2-test.env.xml')
+    env.Load('../envs/pr2-test.env.xml')
     env.SetViewer('qtcoin')
     env.GetViewer().SendCommand('SetFiguresInCamera 1') # also shows the figures in the image
     time.sleep(1)
@@ -277,7 +267,7 @@ def test_FOV(M=10):
 
 def test_image_rays():
     env = rave.Environment()
-    env.Load('envs/pr2-test.env.xml')
+    env.Load('../envs/pr2-test.env.xml')
     env.SetViewer('qtcoin')
     env.GetViewer().SendCommand('SetFiguresInCamera 1') # also shows the figures in the image
     time.sleep(1)
@@ -393,7 +383,7 @@ def closest_collisions(env, origin, directions, plot=False):
 
 def test_collision():
     env = rave.Environment()
-    env.Load('envs/pr2-test.env.xml')
+    env.Load('../envs/pr2-test.env.xml')
     env.SetViewer('qtcoin')
     time.sleep(1)
     robot = env.GetRobots()[0]

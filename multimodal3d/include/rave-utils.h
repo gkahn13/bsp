@@ -18,11 +18,11 @@ void cart_to_joint(rave::RobotBase::ManipulatorPtr manip, const rave::Transform 
 rave::Transform transform_relative_pose_for_ik(rave::RobotBase::ManipulatorPtr manip,
 		const rave::Transform &matrix4, const std::string &ref_frame, const std::string &targ_frame);
 
-void clear_plots();
+void clear_plots(int num=-1);
 
 void plot_point(rave::EnvironmentBasePtr env, rave::Vector pos, rave::Vector color, float size=.01);
 
-void plot_point(rave::EnvironmentBasePtr env, Vector3d pos, Vector3d color, float size);
+void plot_point(rave::EnvironmentBasePtr env, Vector3d pos, Vector3d color, float size=.01);
 
 void plot_segment(rave::EnvironmentBasePtr env, const Vector3d& p0, const Vector3d& p1, Vector3d& color);
 

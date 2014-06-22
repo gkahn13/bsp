@@ -1,4 +1,4 @@
-#include "../include/rave_utils.h"
+#include "../include/rave-utils.h"
 
 std::vector<rave::GraphHandlePtr> handles;
 
@@ -60,8 +60,12 @@ rave::Transform transform_relative_pose_for_ik(rave::RobotBase::ManipulatorPtr m
 	return world_from_EE_new;
 }
 
-void clear_plots() {
-	handles.clear();
+void clear_plots(int num) {
+	if ((num < 0) || (num > handles.size())) {
+		handles.clear();
+	} else {
+		handles = std::vector<rave::GraphHandlePtr>(handles.begin(), handles.end()-num);
+	}
 }
 
 void plot_point(rave::EnvironmentBasePtr env, rave::Vector pos, rave::Vector color, float size) {

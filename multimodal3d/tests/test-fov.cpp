@@ -1,65 +1,80 @@
-#include "../include/camera.h"
+//#include "../include/camera.h"
+#include "../include/pr2-sim.h"
 #include "../include/geometry3d.h"
-#include "../include/rave_utils.h"
+#include "../include/rave-utils.h"
+#include "../include/mm-utils.h"
 #include "../../util/Timer.h"
 
 #include <openrave-core.h>
 namespace rave = OpenRAVE;
 
-void SetViewer(rave::EnvironmentBasePtr penv, const std::string& viewername) {
-    rave::ViewerBasePtr viewer = rave::RaveCreateViewer(penv,viewername);
-    BOOST_ASSERT(!!viewer);
+#define M 1000
 
-    // attach it to the environment:
-    penv->Add(viewer);
+TimerCollection tc;
 
-    // finally call the viewer's infinite loop (this is why a separate thread is needed)
-    bool showgui = true;
-    viewer->main(showgui);
-}
-
-void test_fov() {
-	std::cout << "Initializing OpenRAVE\n";
-	rave::RaveInitialize(true, rave::Level_Info);
-	rave::EnvironmentBasePtr env = rave::RaveCreateEnvironment();
-	std::cout << "Loading environment";
-
-	std::string env_file = "/home/gkahn/Research/bsp/multimodal3d/envs/pr2-test.env.xml";
-	env->Load(env_file);
-
-	rave::RobotBasePtr robot = env->GetRobot("Brett");
-
-	boost::shared_ptr<boost::thread> viewer_thread(new boost::thread(boost::bind(SetViewer, env, "qtcoin")));
+void test_fov(bool view=true) {
+	PR2 brett(view);
+	rave::EnvironmentBasePtr env = brett.get_env();
 	sleep(2);
 
-	rave::SensorBasePtr sensor;
-	std::vector<rave::RobotBase::AttachedSensorPtr> sensors = robot->GetAttachedSensors();
-	for(int i=0; i < sensors.size(); ++i) {
-		if (sensors[i]->GetName() == "head_cam") {
-			sensor = sensors[i]->GetSensor();
-		}
+	// choose any camera
+	brett.rarm->set_posture(Arm::Posture::mantis);
+	Camera* cam = brett.rcam;
+
+	// setup particles
+	rave::KinBodyPtr table = env->GetKinBody("table");
+	rave::KinBody::LinkPtr base = table->GetLink("base");
+	rave::Vector extents = base->GetGeometry(0)->GetBoxExtents();
+
+	rave::Vector table_pos = table->GetTransform().trans;
+	double x_min, x_max, y_min, y_max, z_min, z_max;
+	x_min = table_pos.x - extents.x;
+	x_max = table_pos.x + extents.x;
+	y_min = table_pos.y - extents.y;
+	y_max = table_pos.y + extents.y;
+	z_min = table_pos.z + extents.z - .1;
+	z_max = table_pos.z + extents.z + .1;
+
+	Matrix<double, 3, M> P;
+	for(int m=0; m < M; ++m) {
+		P(0,m) = mm_utils::uniform(x_min, x_max);
+		P(1,m) = mm_utils::uniform(y_min, y_max);
+		P(2,m) = mm_utils::uniform(z_min, z_max);
+//		rave_utils::plot_point(env, P.col(m), {0,1,0});
 	}
-
-//	Vector3d color(1,0,0);
-//	Vector3d start(0,0,0), end(1,0,0);
-//	rave_utils::plot_segment(env, start, end, color);
-//	rave::GraphHandlePtr h = rave_utils::plot_point(env, sensor->GetTransform().trans, rave::Vector(1,0,0), .1);
-
-	double max_range = 5;
-	Camera cam(robot, sensor, max_range);
-//	cam.get_directions();
 
 	util::Timer beams_timer;
 	util::Timer_tic(&beams_timer);
-	std::vector<std::vector<Beam3d> > beams = cam.get_beams();
-	double beams_time = util::Timer_toc(&beams_timer);
-	std::cout << "beams_time: " << beams_time << "\n";
+	tc.start("beams");
+	std::vector<std::vector<Beam3d> > beams = cam->get_beams();
+	tc.stop("beams");
 
-	for(int i=0; i < beams.size(); ++i) {
-		for(int j=0; j < beams[i].size(); ++j) {
-			beams[i][j].plot(env);
-		}
+	tc.start("border");
+	std::vector<Triangle3d> border = cam->get_border(beams);
+	tc.stop("border");
+
+//	for(int i=0; i < beams.size(); ++i) {
+//		for(int j=0; j < beams[i].size(); ++j) {
+//			beams[i][j].plot(env);
+//		}
+//	}
+
+	for(int i=0; i < border.size(); ++i) {
+		border[i].plot(env);
 	}
+
+	tc.start("sd");
+	Matrix<double,M,1> sd;
+	for(int m=0; m < M; ++m) {
+		sd(m) = cam->signed_distance(P.col(m), beams, border);
+//		std::cout << "sd: " << sd(m) << "\n";
+//		rave_utils::plot_point(env, P.col(m), {0,1,0});
+//		std::cin.ignore();
+//		rave_utils::clear_plots(3);
+	}
+	tc.stop("sd");
+
+	tc.print_all_elapsed();
 
 	std::cin.ignore();
 }

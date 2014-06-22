@@ -1,7 +1,7 @@
 #ifndef __GEOMETRY3D_H__
 #define __GEOMETRY3D_H__
 
-#include "rave_utils.h"
+#include "rave-utils.h"
 #include "geometry2d.h"
 
 #include <math.h>
@@ -25,14 +25,18 @@ public:
 };
 
 class Triangle3d {
+public:
 	Vector3d a, b, c;
 
+	Triangle3d() { };
 	Triangle3d(const Vector3d& a_tmp, const Vector3d& b_tmp, const Vector3d& c_tmp) :
 		a(a_tmp), b(b_tmp), c(c_tmp) { };
 
 	Vector3d closest_point_to(const Vector3d& p);
 	inline double distance_to(const Vector3d& p) { return (closest_point_to(p) - p).norm(); }
 	double area();
+
+	void plot(rave::EnvironmentBasePtr env);
 
 private:
 	Matrix3d rotation_to_align_with(const Vector3d& target);

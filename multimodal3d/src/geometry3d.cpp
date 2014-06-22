@@ -15,11 +15,11 @@ inline bool halfplane_contains_point(const Vector3d& origin, const Vector3d& nor
 bool Beam3d::is_inside(const Vector3d& p) {
 	bool inside = true;
 
-	inside &= halfplane_contains_point(base, -(a-base).cross(d-base), p);
-	inside &= halfplane_contains_point(base, -(b-base).cross(a-base), p);
-	inside &= halfplane_contains_point(base, -(c-base).cross(b-base), p);
-	inside &= halfplane_contains_point(base, -(d-base).cross(c-base), p);
-	inside &= halfplane_contains_point(a, -(b-a).cross(d-a), p);
+	inside &= halfplane_contains_point(base, (a-base).cross(d-base), p);
+	inside &= halfplane_contains_point(base, (b-base).cross(a-base), p);
+	inside &= halfplane_contains_point(base, (c-base).cross(b-base), p);
+	inside &= halfplane_contains_point(base, (d-base).cross(c-base), p);
+	inside &= halfplane_contains_point(a, (b-a).cross(d-a), p);
 
 	return inside;
 }
@@ -82,6 +82,13 @@ double Triangle3d::area() {
 	return triangle_area((rotation*a).segment<2>(0),
 			(rotation*b).segment<2>(0),
 			(rotation*c).segment<2>(0));
+}
+
+void Triangle3d::plot(rave::EnvironmentBasePtr env) {
+	Vector3d color(1,0,0);
+	rave_utils::plot_segment(env, a, b, color);
+	rave_utils::plot_segment(env, b, c, color);
+	rave_utils::plot_segment(env, c, a, color);
 }
 
 /**

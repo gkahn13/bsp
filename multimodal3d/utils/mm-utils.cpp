@@ -1,4 +1,4 @@
-#include "../include/mm-utils.h"
+#include "mm-utils.h"
 
 /**
  * TimerCollection public methods

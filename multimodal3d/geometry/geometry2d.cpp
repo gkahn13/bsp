@@ -1,4 +1,4 @@
-#include "../include/geometry2d.h"
+#include "geometry2d.h"
 
 /**
  * General functions

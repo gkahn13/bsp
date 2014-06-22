@@ -13,9 +13,9 @@ using namespace Eigen;
 #include <openrave-core.h>
 namespace rave = OpenRAVE;
 
-#include "geometry3d.h"
-#include "rave-utils.h"
-#include "utils.h"
+#include "../geometry/geometry3d.h"
+#include "../utils/rave-utils.h"
+#include "../utils/utils.h"
 #include "../../util/Timer.h"
 
 #define ARM_DIM 7

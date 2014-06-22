@@ -1,7 +1,7 @@
 #ifndef __GEOMETRY3D_H__
 #define __GEOMETRY3D_H__
 
-#include "rave-utils.h"
+#include "../utils/rave-utils.h"
 #include "geometry2d.h"
 
 #include <math.h>

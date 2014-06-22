@@ -1,8 +1,7 @@
-//#include "../include/camera.h"
-#include "../include/pr2-sim.h"
-#include "../include/geometry3d.h"
-#include "../include/rave-utils.h"
-#include "../include/mm-utils.h"
+#include "../pr2/pr2-sim.h"
+#include "../geometry/geometry3d.h"
+#include "../utils/rave-utils.h"
+#include "../utils/mm-utils.h"
 #include "../../util/Timer.h"
 
 #include <openrave-core.h>
@@ -43,8 +42,6 @@ void test_fov(bool view=true) {
 //		rave_utils::plot_point(env, P.col(m), {0,1,0});
 	}
 
-	util::Timer beams_timer;
-	util::Timer_tic(&beams_timer);
 	tc.start("beams");
 	std::vector<std::vector<Beam3d> > beams = cam->get_beams();
 	tc.stop("beams");

@@ -1,4 +1,4 @@
-#include "../include/pr2-sim.h"
+#include "pr2-sim.h"
 
 /**
  * PR2 Constructors/Destructors

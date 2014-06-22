@@ -23,7 +23,9 @@ endif()
 link_directories(${OpenRAVE_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS} ${PYTHON_LIBRARIES})
 
 add_executable(test-fov tests/test-fov.cpp
-                        src/geometry2d.cpp src/geometry3d.cpp src/camera.cpp src/rave-utils.cpp src/mm-utils.cpp src/pr2-sim.cpp
+						geometry/geometry2d.cpp geometry/geometry3d.cpp
+						pr2/pr2-sim.cpp
+						utils/mm-utils.cpp utils/rave-utils.cpp
                         ../util/logging.cpp)
 set_target_properties(test-fov PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
 set_target_properties(test-fov PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")

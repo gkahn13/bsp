@@ -24,7 +24,7 @@ link_directories(${OpenRAVE_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS} ${PYTHON_LIBRARI
 
 add_executable(test-fov tests/test-fov.cpp
 						geometry/geometry2d.cpp geometry/geometry3d.cpp
-						pr2/pr2-sim.cpp
+						pr2/pr2-sim.cpp pr2/pr2-system.cpp
 						utils/mm-utils.cpp utils/rave-utils.cpp
                         ../util/logging.cpp)
 set_target_properties(test-fov PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")

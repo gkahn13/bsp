@@ -96,19 +96,25 @@ void plot_segment(rave::EnvironmentBasePtr env, const Vector3d& p0, const Vector
 	handles.push_back(env->drawlinestrip(points, 2, sizeof(float)*3, 1.0f, c));
 }
 
-//void plot_transform(rave::EnvironmentBasePtr env, rave::Transform T, std::vector<rave::GraphHandlePtr> &handles) {
-//	fmat M = conv_to<fmat>::from(rave_transform_to_mat(T));
-//
-//	fmat o = M.submat(span(0, 2), span(3, 3));
-//	fmat I = join_vert(eye<fmat>(3,3), eye<fmat>(3,3));
-//	fmat ppoints(6,1);
-//	ppoints.submat(span(0,2), span(0,0)) = o;
-//	for(int i=0; i < 3; ++i) {
-//		ppoints.submat(span(3,5), span(0, 0)) = o + 0.1 * M.submat(span(0, 2), span(i, i));
-//		fmat color = I.submat(span(0, 5), span(i, i));
-//		handles.push_back(env->drawlinestrip(ppoints.colptr(0), 2, sizeof(float)*3, 1.0f, color.colptr(0)));
-//	}
-//}
+void plot_transform(rave::EnvironmentBasePtr env, rave::Transform T) {
+	Matrix4d M = rave_to_eigen(T);
+
+	Vector3d o = M.block<3,1>(0,3);
+	Matrix<double,6,3> I;
+	I << Matrix3d::Identity(), Matrix3d::Identity();
+
+	float ppoints[6];
+	for(int i=0; i < 3; ++i) { ppoints[i] = o(i); }
+	float colors[6];
+	for(int i=0; i < 3; ++i) {
+		Vector3d endpt = o + 0.1*M.block<3,1>(0,i);
+		for(int i=0; i < 3; ++i) { ppoints[i+3] = endpt(i); }
+
+		Matrix<double,6,1> c = I.block<6,1>(0,i);
+		for(int i=0; i < 6; ++i) { colors[i] = c(i); }
+		handles.push_back(env->drawlinestrip(ppoints, 2, sizeof(float)*3, 10.0f, colors));
+	}
+}
 
 void save_view(rave::ViewerBasePtr viewer, std::string file_name) {
 	std::string input = "SetFiguresInCamera 1", output = "";

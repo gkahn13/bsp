@@ -1,8 +1,8 @@
-#include "../pr2/pr2-sim.h"
-#include "../pr2/pr2-system.h"
+#include "../system/pr2-sim.h"
+#include "../system/pr2-system.h"
 #include "../geometry/geometry3d.h"
 #include "../utils/rave-utils.h"
-#include "../utils/mm-utils.h"
+#include "../utils/pr2-utils.h"
 #include "../../util/Timer.h"
 
 #include <openrave-core.h>

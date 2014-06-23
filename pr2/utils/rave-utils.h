@@ -26,7 +26,7 @@ void plot_point(rave::EnvironmentBasePtr env, Vector3d pos, Vector3d color, floa
 
 void plot_segment(rave::EnvironmentBasePtr env, const Vector3d& p0, const Vector3d& p1, Vector3d& color);
 
-//void plot_transform(rave::EnvironmentBasePtr env, rave::Transform T, std::vector<rave::GraphHandlePtr> &handles);
+void plot_transform(rave::EnvironmentBasePtr env, rave::Transform T);
 
 void save_view(rave::ViewerBasePtr viewer, std::string file_name);
 

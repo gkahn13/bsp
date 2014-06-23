@@ -7,7 +7,7 @@
 PR2::PR2(bool view) {
 	std::string working_dir = boost::filesystem::current_path().normalize().string();
 	std::string bsp_dir = working_dir.substr(0,working_dir.find("bsp"));
-	std::string env_file = bsp_dir + "bsp/multimodal3d/envs/pr2-test.env.xml";
+	std::string env_file = bsp_dir + "bsp/pr2/envs/pr2-test.env.xml";
 
 	std::string robot_name = "Brett";
 
@@ -108,7 +108,7 @@ rave::Transform Arm::get_pose() {
 	return manip->GetEndEffectorTransform();
 }
 
-void Arm::set_joint_values(Matrix<double,ARM_DIM,1>& j) {
+void Arm::set_joint_values(const Matrix<double,ARM_DIM,1>& j) {
 	std::vector<double> joint_values_vec(ARM_DIM);
 	for(int i=0; i < num_joints; ++i) {
 		joint_values_vec[i] = std::min(j(i), upper(i));
@@ -334,27 +334,27 @@ Camera::Camera(rave::RobotBasePtr r, std::string camera_name, double mr) : robot
  * Camera public methods
  */
 
-Matrix<double,N,3> Camera::get_directions() {
+Matrix<double,N_SUB,3> Camera::get_directions() {
 	Matrix<double,H_SUB,W_SUB> height_grid = Matrix<double,H_SUB,1>::LinSpaced(H_SUB, -H/2.0, H/2.0).replicate(1,W_SUB);
 	Matrix<double,H_SUB,W_SUB> width_grid = Matrix<double,1,W_SUB>::LinSpaced(W_SUB, -W/2.0, W/2.0).replicate(H_SUB,1);
 
-	Matrix<double,N,1> height_grid_vec(height_grid.data());
-	Matrix<double,N,1> width_grid_vec(width_grid.data());
-	Matrix<double,N,1> z_grid = Matrix<double,N,1>::Zero();
+	Matrix<double,N_SUB,1> height_grid_vec(height_grid.data());
+	Matrix<double,N_SUB,1> width_grid_vec(width_grid.data());
+	Matrix<double,N_SUB,1> z_grid = Matrix<double,N_SUB,1>::Zero();
 
-	Matrix<double,N,3> offsets;
+	Matrix<double,N_SUB,3> offsets;
 	offsets << width_grid_vec, height_grid_vec, z_grid;
 
-	Matrix<double,N,3> points_cam = RowVector3d(0,0,max_range).replicate(N,1) + (max_range/F)*offsets;
+	Matrix<double,N_SUB,3> points_cam = RowVector3d(0,0,max_range).replicate(N_SUB,1) + (max_range/F)*offsets;
 
 	Matrix4d ref_from_world = rave_utils::rave_to_eigen(sensor->GetTransform());
 	Vector3d origin_world_pos = ref_from_world.block<3,1>(0,3);
 
-	Matrix<double,N,3> directions;
+	Matrix<double,N_SUB,3> directions;
 
 	Matrix4d point_cam = Matrix4d::Identity();
 	Vector3d point_world;
-	for(int i=0; i < N; ++i) {
+	for(int i=0; i < N_SUB; ++i) {
 		point_cam.block<3,1>(0,3) = points_cam.row(i);
 		point_world = (ref_from_world*point_cam).block<3,1>(0,3);
 
@@ -369,15 +369,15 @@ std::vector<std::vector<Beam3d> > Camera::get_beams() {
 
 	RowVector3d origin_pos = rave_utils::rave_to_eigen(sensor->GetTransform().trans);
 
-	Matrix<double,N,3> dirs = get_directions();
+	Matrix<double,N_SUB,3> dirs = get_directions();
 
-	Matrix<double,N,3> hits;
+	Matrix<double,N_SUB,3> hits;
 
 	rave::EnvironmentBasePtr env = robot->GetEnv();
 	rave::RAY ray;
 	ray.pos = sensor->GetTransform().trans;
 	rave::CollisionReportPtr report(new rave::CollisionReport());
-	for(int i=0; i < N; ++i) {
+	for(int i=0; i < N_SUB; ++i) {
 		ray.dir.x = dirs(i,0);
 		ray.dir.y = dirs(i,1);
 		ray.dir.z = dirs(i,2);
@@ -444,19 +444,23 @@ std::vector<Triangle3d> Camera::get_border(const std::vector<std::vector<Beam3d>
 	return pruned_border;
 }
 
-double Camera::signed_distance(const Vector3d& p, std::vector<std::vector<Beam3d> >& beams, std::vector<Triangle3d>& border) {
-	bool is_inside = false;
+bool Camera::is_inside(const Vector3d& p, std::vector<std::vector<Beam3d> >& beams) {
+	bool inside = false;
 	for(int i=0; i < beams.size(); ++i) {
 		for(int j=0; j < beams[i].size(); ++j) {
 			if (beams[i][j].is_inside(p)) {
-				is_inside = true;
+				inside = true;
 				break;
 			}
 		}
-		if (is_inside) { break; }
+		if (inside) { break; }
 	}
 
-	double sd_sign = (is_inside) ? -1 : 1;
+	return inside;
+}
+
+double Camera::signed_distance(const Vector3d& p, std::vector<std::vector<Beam3d> >& beams, std::vector<Triangle3d>& border) {
+	double sd_sign = (is_inside(p, beams)) ? -1 : 1;
 
 	double sd = INFINITY;
 	for(int i=0; i < border.size(); ++i) {
@@ -466,4 +470,30 @@ double Camera::signed_distance(const Vector3d& p, std::vector<std::vector<Beam3d
 	return (sd_sign*sd);
 }
 
+void Camera::plot_fov(std::vector<std::vector<Beam3d> >& beams) {
+	Vector3d color(0,1,0);
+	// plot the ends
+	for(int i=0; i < beams.size(); ++i) {
+		for(int j=0; j < beams[i].size(); ++j) {
+			beams[i][j].plot(sensor->GetEnv());
+		}
+	}
 
+	int rows = beams.size(), cols = beams[0].size();
+	// plot the left and right
+	for(int i=0; i < rows; ++i) {
+		rave_utils::plot_segment(sensor->GetEnv(), beams[i][0].base, beams[i][0].b, color);
+		rave_utils::plot_segment(sensor->GetEnv(), beams[i][0].base, beams[i][0].c, color);
+
+		rave_utils::plot_segment(sensor->GetEnv(), beams[i][cols-1].base, beams[i][cols-1].a, color);
+		rave_utils::plot_segment(sensor->GetEnv(), beams[i][cols-1].base, beams[i][cols-1].d, color);
+	}
+	// plot the top and bottom
+	for(int j=0; j < cols; ++j) {
+		rave_utils::plot_segment(sensor->GetEnv(), beams[0][j].base, beams[0][j].a, color);
+		rave_utils::plot_segment(sensor->GetEnv(), beams[0][j].base, beams[0][j].b, color);
+
+		rave_utils::plot_segment(sensor->GetEnv(), beams[rows-1][j].base, beams[rows-1][j].c, color);
+		rave_utils::plot_segment(sensor->GetEnv(), beams[rows-1][j].base, beams[rows-1][j].d, color);
+	}
+}

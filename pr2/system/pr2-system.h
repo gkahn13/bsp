@@ -2,7 +2,9 @@
 #define __PR2_SYSTEM_H__
 
 #include "pr2-sim.h"
-//#include "figtree.h"
+#include "../utils/pr2-utils.h"
+#include "../utils/utils.h"
+#include "figtree.h"
 
 #include <Eigen/Eigen>
 #include <Eigen/StdVector>
@@ -10,7 +12,7 @@ using namespace Eigen;
 
 #include "../../util/logging.h"
 
-#define TIMESTEPS 10
+#define TIMESTEPS 5
 #define DT 1.0 // Note: if you change this, must change the FORCES matlab file
 
 #define X_DIM (ARM_DIM+3)	// arm + object
@@ -45,6 +47,7 @@ typedef Matrix<double,3,M_DIM> MatrixP;
 typedef std::vector<VectorX, aligned_allocator<VectorX>> StdVectorX;
 typedef std::vector<VectorJ, aligned_allocator<VectorJ>> StdVectorJ;
 typedef std::vector<VectorU, aligned_allocator<VectorU>> StdVectorU;
+typedef std::vector<Vector3d, aligned_allocator<Vector3d>> StdVector3d;
 
 struct ParticleGaussian {
 	Vector3d mean;
@@ -52,11 +55,14 @@ struct ParticleGaussian {
 	MatrixXd particles;
 	double pct;
 
-	ParticleGaussian(Vector3d& m, Matrix3d& c, MatrixXd& P, double p) :
+	ParticleGaussian(const Vector3d& m, const Matrix3d& c, const MatrixXd& P, double p) :
 		mean(m), cov(c), particles(P), pct(p) { };
 };
 
-class Pr2System {
+/**
+ * NOTE: all coordinates are with respect to OpenRAVE 'world' frame
+ */
+class PR2System {
 	const double step = 0.0078125*0.0078125;
 	const double INFTY = 1e10;
 
@@ -66,41 +72,57 @@ class Pr2System {
 	const double alpha_goal = .5; // 10
 
 public:
-	Pr2System(Vector3d& object);
-	Pr2System(Vector3d& object, Arm::ArmType arm_type);
-	Pr2System(Vector3d& object, Arm::ArmType arm_type, std::string env_file, std::string robot_name, bool view);
+	PR2System(Vector3d& object);
+	PR2System(Vector3d& object, Arm::ArmType arm_type, bool view);
+	PR2System(Vector3d& object, Arm::ArmType arm_type, std::string env_file, std::string robot_name, bool view);
 
 	VectorJ dynfunc(const VectorJ& j, const VectorU& u, const VectorQ& q, bool enforce_limits=false);
-	VectorZ obsfunc(const VectorX& x, const Vector3d& object, const VectorR& r);
+	VectorZ obsfunc(const VectorJ& j, const Vector3d& object, const VectorR& r);
 
 	MatrixZ delta_matrix(const VectorJ& j, const Vector3d& object, const double alpha);
 
 	void belief_dynamics(const VectorX& x_t, const MatrixX& sigma_t, const VectorU& u_t, const double alpha,
 			VectorX& x_tp1, MatrixX& sigma_tp1);
-//	void execute_control_step(const VectorX& x_t_real, const VectorX& x_t_t, const MatrixX& sigma_t_t, const VectorU& u_t, const MatrixP& P_t,
-//			VectorX& x_tp1_real, VectorX& x_tp1_tp1, MatrixX& sigma_tp1_tp1, MatrixP& P_tp1);
+	void execute_control_step(const VectorJ& j_t_real, const VectorJ& j_t, const VectorU& u_t, const MatrixP& P_t,
+				VectorJ& j_tp1_real, VectorJ& j_tp1, MatrixP& P_tp1);
 
 	void get_limits(VectorJ& j_min, VectorJ& j_max, VectorU& u_min, VectorU& u_max);
 
-	double cost(const StdVectorJ& J, const Vector3d& obj, const MatrixX& sigma, const StdVectorU& U, const double alpha);
+	double cost(const StdVectorJ& J, const Vector3d& obj, const MatrixX& sigma0, const StdVectorU& U, const double alpha);
 	double cost_gmm(const StdVectorJ& J, const MatrixJ& j_sigma0, const StdVectorU& U,
 				const std::vector<ParticleGaussian>& particle_gmm, const double alpha);
 
-	VectorTOTAL cost_grad(StdVectorJ& J, const Vector3d& obj, const MatrixX& sigma0, StdVectorU& U, const double alpha);
+//	VectorTOTAL cost_grad(StdVectorJ& J, const Vector3d& obj, const MatrixX& sigma0, StdVectorU& U, const double alpha);
 	VectorTOTAL cost_gmm_grad(StdVectorJ& J, const MatrixJ& j_sigma0, StdVectorU& U,
 			const std::vector<ParticleGaussian>& particle_gmm, const double alpha);
 
 	// use figtree
 	void fit_gaussians_to_pf(const MatrixP& P, std::vector<ParticleGaussian>& particle_gmm);
 
+	void display(const VectorJ& j, bool pause=true);
+	void display(const StdVectorJ& J, bool pause=true);
+	void display(const VectorJ& j, const std::vector<ParticleGaussian>& particle_gmm, bool pause=true);
+	void display(const StdVectorJ& J, const std::vector<ParticleGaussian>& particle_gmm, bool pause=true);
+
+	PR2* get_brett() { return brett; }
+	Arm* get_arm() { return arm; }
+
 private:
 	PR2* brett;
 	Arm* arm;
+	Camera* cam;
+
+	Vector3d object;
+	VectorJ j_min, j_max, u_min, u_max;
+	MatrixQ Q;
+	MatrixR R;
+
+	void init();
 
 	void linearize_dynfunc(const VectorX& x, const VectorU& u, const VectorQ& q,
 			Matrix<double,X_DIM,X_DIM>& A, Matrix<double,X_DIM,Q_DIM>& M);
-//	void linearize_obsfunc(const VectorX& x, const VectorR& r,
-//			Matrix<double,Z_DIM,X_DIM>& H, Matrix<double,Z_DIM,R_DIM>& N);
+	void linearize_obsfunc(const VectorX& x, const VectorR& r,
+			Matrix<double,Z_DIM,X_DIM>& H, Matrix<double,Z_DIM,R_DIM>& N);
 
 	void update_particles(const VectorJ& j_tp1_t, const double delta_fov_real, const VectorZ& z_tp1_real, const MatrixP& P_t,
 			MatrixP& P_tp1);

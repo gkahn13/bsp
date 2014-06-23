@@ -23,7 +23,7 @@ namespace rave = OpenRAVE;
 
 #define H_SUB 48
 #define W_SUB 64
-#define N (H_SUB*W_SUB)
+#define N_SUB (H_SUB*W_SUB)
 
 // forward declarations
 class Arm;
@@ -63,7 +63,7 @@ public:
 	void get_limits(Matrix<double,ARM_DIM,1>& lower, Matrix<double,ARM_DIM,1>& upper);
 	rave::Transform get_pose();
 
-	void set_joint_values(Matrix<double,ARM_DIM,1>& j);
+	void set_joint_values(const Matrix<double,ARM_DIM,1>& j);
 	void set_pose(const rave::Transform &pose, std::string ref_frame="world");
 	void set_posture(Posture posture);
 
@@ -107,10 +107,17 @@ class Camera {
 public:
 	Camera(rave::RobotBasePtr r, std::string camera_name, double mr);
 
-	Matrix<double,N,3> get_directions();
+	Matrix<double,N_SUB,3> get_directions();
 	std::vector<std::vector<Beam3d> > get_beams();
 	std::vector<Triangle3d> get_border(const std::vector<std::vector<Beam3d> >& beams);
+
+	bool is_inside(const Vector3d& p, std::vector<std::vector<Beam3d> >& beams);
 	double signed_distance(const Vector3d& p, std::vector<std::vector<Beam3d> >& beams, std::vector<Triangle3d>& border);
+
+	void plot_fov(std::vector<std::vector<Beam3d> >& beams);
+
+	inline Vector3d get_position() { return rave_utils::rave_to_eigen(sensor->GetTransform().trans); }
+	inline rave::Transform get_pose() { return sensor->GetTransform(); }
 
 private:
 	rave::RobotBasePtr robot;

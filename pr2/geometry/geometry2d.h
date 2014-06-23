@@ -6,7 +6,7 @@ using namespace Eigen;
 
 #include <assert.h>
 
-#define epsilon (1e-5)
+const double epsilon = 1e-5;
 
 inline double triangle_area(const Vector2d& a, const Vector2d& b, const Vector2d& c) {
 	return fabs((c(0)*(a(1) - b(1)) + a(0)*(b(1) - c(1)) + b(0)*(c(1) - a(1))) / 2.0);

@@ -170,7 +170,7 @@ void PlanarSystem::execute_control_step(const vec<J_DIM>& j_t_real, const vec<J_
 	// max-likelihood dynfunc estimate
 	j_tp1 = dynfunc(j_t, u_t, vec<Q_DIM>::Zero(), true);
 
-	mat<Z_DIM,Z_DIM> delta = delta_matrix(j_tp1_real, object, INFINITY); // TODO: not correct, needs to factor in noise
+	mat<Z_DIM,Z_DIM> delta = delta_matrix(j_tp1_real, object, INFINITY);
 	vec<C_DIM> delta_real = delta.diagonal().segment<C_DIM>(J_DIM);
 	update_particles(j_tp1, delta_real(0), z_tp1_real, P_t, P_tp1);
 }

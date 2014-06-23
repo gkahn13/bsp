@@ -41,6 +41,7 @@ typedef Matrix<double,U_DIM,U_DIM> MatrixU;
 typedef Matrix<double,Q_DIM,Q_DIM> MatrixQ;
 typedef Matrix<double,Z_DIM,Z_DIM> MatrixZ;
 typedef Matrix<double,R_DIM,R_DIM> MatrixR;
+typedef Matrix<double,TOTAL_VARS,TOTAL_VARS> MatrixTOTAL;
 
 typedef Matrix<double,3,M_DIM> MatrixP;
 
@@ -98,6 +99,8 @@ public:
 
 	// use figtree
 	void fit_gaussians_to_pf(const MatrixP& P, std::vector<ParticleGaussian>& particle_gmm);
+
+//	VectorJ find_joints_for(const Vector3d& position);
 
 	void display(const VectorJ& j, bool pause=true);
 	void display(const StdVectorJ& J, bool pause=true);

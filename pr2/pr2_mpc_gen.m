@@ -116,7 +116,7 @@ var = sprintf('z%d',i);
 outputs(i) = newOutput(var,i,1:nx);
 
 % solver settings
-mpcname = 'planarMPC';
+mpcname = 'pr2MPC';
 codeoptions = getOptions(mpcname);
 codeoptions.printlevel = 0;
 codeoptions.timing=0;

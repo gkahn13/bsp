@@ -1,3 +1,4 @@
+import sys
 import time
 import random
 import colorsys
@@ -92,8 +93,10 @@ class FOV:
         rays = np.hstack((np.tile(origin_world_pos, (dirs.shape[0],1)), dirs))
         
         env = self.robot.GetEnv()
+        start_time = time.time()
         with env:
             is_hits, hits = env.CheckCollisionRays(rays, None)
+        print('collision time: {0}'.format(time.time() - start_time))
             
         h_sub = int(subsample*self.height)
         w_sub = int(subsample*self.width)
@@ -194,6 +197,75 @@ class FOV:
         
 def random_within(lower, upper):
     return random.random()*(upper - lower) + lower     
+
+def parse_options(args):
+    import argparse
+    parser = argparse.ArgumentParser(description='Computes the set of convex hulls for each triangle mesh geometry.using convexdecomposition')
+    parser.add_argument('--skinWidth',action='store',type=float,dest='skinWidth',default=0.0,
+                      help='Skin width on the convex hulls generated, convex decomposition side (default=%default)')
+    parser.add_argument('--padding',action='store',type=float,dest='padding',default=0.005,
+                      help='The distance to move the hull planes along their respective normals (default=%default)')
+    parser.add_argument('--decompositionDepth',action='store',type=int,dest='decompositionDepth',default=8,
+                      help='recursion depth for convex decomposition (default=%default)')
+    parser.add_argument('--maxHullVertices',action='store',type=int,dest='maxHullVertices',default=64,
+                      help='maximum number of vertices in output convex hulls (default=%default)')
+    parser.add_argument('--concavityThresholdPercent',action='store',type=float,dest='concavityThresholdPercent',default=5.0,
+                      help='The percentage of concavity allowed without causing a split to occur (default=%default).')
+    parser.add_argument('--mergeThresholdPercent',action='store',type=float,dest='mergeThresholdPercent',default=30.0,
+                      help='The percentage of volume difference allowed to merge two convex hulls (default=%default).')
+    parser.add_argument('--volumeSplitThresholdPercent',action='store',type=float,dest='volumeSplitThresholdPercent',default=5.0,
+                      help='The percentage of the total volume of the object above which splits will still occur (default=%default).')
+    parser.add_argument('--useInitialIslandGeneration',action='store',type=int,dest='useInitialIslandGeneration',default=1,
+                      help='whether or not to perform initial island generation on the input mesh (default=%default).')
+    parser.add_argument('--useIslandGeneration',action='store',type=int,dest='useIslandGeneration',default=0,
+                      help='Whether or not to perform island generation at each split.  Currently disabled due to bug in RemoveTjunctions (default=%default).')
+    parser.add_argument('--convexHullLinks',action='store',type=str,dest='convexHullLinks',default='',
+                      help='comma separated list of link names to compute convex hull for instead')
+    return parser.parse_args(args=args)
+    
+def convexify_workspace(env, robot):
+    options = parse_options(sys.argv[1:])
+    
+    total_orig_vertices = 0
+    total_cd_vertices = 0
+    total_hulls = 0
+    for body in env.GetBodies():
+        body.Enable(False)
+        
+        if body != robot:
+            print('\n'+body.GetName())
+            
+            link = body.GetLinks()[0]
+            num_orig_vertices = link.GetGeometries()[0].GetCollisionMesh().vertices.shape[0]
+            print('vertices: {0}'.format(num_orig_vertices))
+            total_orig_vertices += num_orig_vertices
+            
+            bodycd = rave.databases.convexdecomposition.ConvexDecompositionModel(body)
+            #if not bodycd.load():
+            #    bodycd.autogenerate()
+            
+            bodycd.autogenerate()
+            bodycd.load()
+                
+            if len(bodycd.linkgeometry[0]) > 0:
+                bodycd_trimesh = bodycd.GenerateTrimeshFromHulls(bodycd.linkgeometry[0][0][1])
+                num_hulls = len(bodycd.linkgeometry[0][0][1])
+                print('cd hulls: {0}'.format(num_hulls))
+                total_hulls += num_hulls
+                num_cd_vertices = bodycd_trimesh.vertices.shape[0]
+                print('cd vertices: {0}'.format(num_cd_vertices))
+                total_cd_vertices += num_cd_vertices
+        
+                new_body = rave.RaveCreateKinBody(env,'')
+                new_body.SetName('new_'+body.GetName())
+                new_body.InitFromTrimesh(bodycd_trimesh)
+                new_body.SetTransform(body.GetTransform())
+                env.Add(new_body, True)
+                env.Remove(body)
+        
+    print('\nTotal original vertices: {0}'.format(total_orig_vertices))
+    print('Total cd vertices: {0}'.format(total_cd_vertices))
+    print('Total hulls: {0}\n\n'.format(total_hulls))
         
 def test_FOV(M=10):
     env = rave.Environment()
@@ -202,6 +274,8 @@ def test_FOV(M=10):
     env.GetViewer().SendCommand('SetFiguresInCamera 1') # also shows the figures in the image
     time.sleep(1)
     robot = env.GetRobots()[0]
+    
+    convexify_workspace(env, robot)
     
     cam = robot.GetAttachedSensor('head_cam').GetSensor()
     type = rave.Sensor.Type.Camera
@@ -215,10 +289,6 @@ def test_FOV(M=10):
         
     cam_pose = tfx.pose([0,0,0.05], frame='wide_stereo_optical_frame')
     
-    fov.directions(cam_pose)
-    IPython.embed()
-    return
-    
     start = time.time()
     beams = fov.get_beams(cam_pose)
     print('beams time: {0}'.format(time.time()-start))
@@ -226,6 +296,9 @@ def test_FOV(M=10):
     start = time.time()
     border = fov.get_border(beams)
     print('border time: {0}'.format(time.time()-start))
+    
+    IPython.embed()
+    return
     
     table = env.GetKinBody('table')
     base = table.GetLink('base')
@@ -261,15 +334,6 @@ def test_FOV(M=10):
         tri.plot(env)
     
     IPython.embed()
-    """
-    start = time.time()
-    directions = fov.directions(cam_pose)
-    print('Time: {0}'.format(time.time()-start))
-    
-    cam_pose_world = tfx.pose(utils.openraveTransformFromTo(robot, cam_pose.matrix, cam_pose.frame, 'world'))
-    closest_collisions(env, cam_pose_world.position.array, directions, plot=True)
-    IPython.embed()
-    """
 
 def test_image_rays():
     env = rave.Environment()

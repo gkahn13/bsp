@@ -12,7 +12,7 @@ namespace rave = OpenRAVE;
 
 TimerCollection tc;
 
-void test_fov(bool view=true) {
+void test_fov(bool view=false) {
 	PR2 brett(view);
 	rave::EnvironmentBasePtr env = brett.get_env();
 	sleep(2);

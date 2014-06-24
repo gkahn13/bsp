@@ -65,6 +65,9 @@ void PR2::init(std::string env_file, std::string robot_name, bool view) {
 	hcam = new Camera(robot, "head_cam", 5);
 	rcam = new Camera(robot, "r_gripper_cam", 5);
 	lcam = new Camera(robot, "l_gripper_cam", 5);
+
+	rave::CollisionCheckerBasePtr collision_checker = rave::RaveCreateCollisionChecker(env, "ode");
+	env->SetCollisionChecker(collision_checker);
 }
 
 

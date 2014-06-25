@@ -407,7 +407,7 @@ std::vector<std::vector<Beam3d> > Camera::get_beams() {
 
 	RowVector3d origin_pos = rave_utils::rave_to_eigen(sensor->GetTransform().trans);
 
-	Matrix<double,N_SUB,3> dirs = get_directions();
+	Matrix<double,N_SUB,3> dirs = get_directions_new(H_SUB,N_SUB);
 //	Matrix<double,N_SUB,3> dirs = get_directions_new(H_SUB,W_SUB);
 
 	std::vector<std::vector<Vector3d> > hits(H_SUB, std::vector<Vector3d>(W_SUB));
@@ -435,100 +435,6 @@ std::vector<std::vector<Beam3d> > Camera::get_beams() {
 	return beams;
 }
 
-//void Camera::init_env_mesh() {
-//	RowVector3d origin_pos = rave_utils::rave_to_eigen(sensor->GetTransform().trans);
-//
-//	Matrix<double,N_SUB,3> dirs = get_directions();
-//
-//	if (fov != nullptr) {
-//		free(fov);
-//	}
-//	fov = new Beam3d(origin_pos, origin_pos + dirs.row(H_SUB*(W_SUB-1)),
-//			origin_pos + dirs.row(0),
-//			origin_pos + dirs.row(H_SUB-1),
-//			origin_pos + dirs.row(N_SUB-1));
-//
-//	Matrix<double,N_SUB,3> hits;
-//
-//	rave::EnvironmentBasePtr env = robot->GetEnv();
-//	rave::RAY ray;
-//	ray.pos = sensor->GetTransform().trans;
-//	rave::CollisionReportPtr report(new rave::CollisionReport());
-//	for(int i=0; i < N_SUB; ++i) {
-//		ray.dir.x = dirs(i,0);
-//		ray.dir.y = dirs(i,1);
-//		ray.dir.z = dirs(i,2);
-//		if (env->CheckCollision(ray, report)) {
-//			hits.row(i) = rave_utils::rave_to_eigen(report->contacts[0].pos);
-//		} else {
-//			hits.row(i) = origin_pos + (max_range / sqrt(ray.dir.lengthsqr3()))*dirs.row(i);
-//		}
-//	}
-//
-////	env_mesh = std::vector<std::vector<MeshUnit*> >(H_SUB-1, std::vector<MeshUnit*>(W_SUB-1));
-//	if (env_mesh != nullptr) {
-//		free(env_mesh);
-//	}
-//	env_mesh = new Mesh(H_SUB-1, W_SUB-1);
-//
-//	for(int j=0; j < W_SUB-1; ++j) {
-//		for(int i=0; i < H_SUB-1; ++i) {
-//			env_mesh->set(i, j, new MeshUnit(hits.row((j+1)*H_SUB+i),
-//					hits.row(j*H_SUB+i),
-//					hits.row(j*H_SUB+i+1),
-//					hits.row((j+1)*H_SUB+i+1)));
-//		}
-//	}
-//
-//	env_mesh->connect();
-//}
-//
-//std::vector<std::vector<Beam3d> > Camera::get_beams() {
-//	std::vector<std::vector<Beam3d> > beams(H_SUB-1, std::vector<Beam3d>(W_SUB-1));
-//
-//	RowVector3d origin_pos = rave_utils::rave_to_eigen(sensor->GetTransform().trans);
-//
-//	Matrix<double,N_SUB,3> dirs = get_directions();
-//
-//	Matrix<double,N_SUB,3> hits;
-//
-//	TimerCollection tc;
-//	int num_intersection_calls = 0;
-//	tc.start("total intersection time");
-//	MeshUnit *start = env_mesh->get(0,0);
-//	MeshUnit *end = start;
-//	for(int i=0; i < dirs.rows(); ++i) {
-//		RowVector3d end_point = origin_pos + dirs.row(i);
-//		Vector3d intersection;
-//		bool found_intersection = false;
-//
-//		if (fov->is_crossed_by(origin_pos, end_point)) {
-//			found_intersection = env_mesh->find_intersection_starting_from(origin_pos, end_point, start, intersection, &end);
-//		}
-//
-//		if (found_intersection) {
-//			hits.row(i) = intersection;
-//		} else {
-//			hits.row(i) = end_point;
-//		}
-//		start = end;
-//	}
-//	tc.stop("total intersection time");
-//	tc.print_all_elapsed();
-//	std::cout << "num_intersection_calls: " << num_intersection_calls << "\n";
-//
-//	for(int j=0; j < W_SUB-1; ++j) {
-//		for(int i=0; i < H_SUB-1; ++i) {
-//			beams[i][j].base = origin_pos;
-//			beams[i][j].a = hits.row((j+1)*H_SUB+i);
-//			beams[i][j].b = hits.row(j*H_SUB+i);
-//			beams[i][j].c = hits.row(j*H_SUB+i+1);
-//			beams[i][j].d = hits.row((j+1)*H_SUB+i+1);
-//		}
-//	}
-//
-//	return beams;
-//}
 
 std::vector<Triangle3d> Camera::get_border(const std::vector<std::vector<Beam3d> >& beams, bool with_side_border) {
 	std::vector<Triangle3d> border;

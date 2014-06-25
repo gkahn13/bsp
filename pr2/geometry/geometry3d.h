@@ -12,6 +12,8 @@ using namespace Eigen;
 
 #include <assert.h>
 
+typedef std::vector<Vector3d> StdVector3d;
+
 class Beam3d {
 public:
 	/**

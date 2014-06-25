@@ -48,7 +48,6 @@ typedef Matrix<double,3,M_DIM> MatrixP;
 typedef std::vector<VectorX, aligned_allocator<VectorX>> StdVectorX;
 typedef std::vector<VectorJ, aligned_allocator<VectorJ>> StdVectorJ;
 typedef std::vector<VectorU, aligned_allocator<VectorU>> StdVectorU;
-typedef std::vector<Vector3d, aligned_allocator<Vector3d>> StdVector3d;
 
 struct ParticleGaussian {
 	Vector3d mean;

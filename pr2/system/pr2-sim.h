@@ -22,14 +22,27 @@ namespace rave = OpenRAVE;
 #define ARM_DIM 7
 #define HEAD_DIM 2
 
-#define H_SUB 48
-#define W_SUB 64
-#define N_SUB (H_SUB*W_SUB)
+#define WIDTH	   256 // 64
+#define HEIGHT 	   192 // 48
+const double fx  = WIDTH*2.0;
+const double fy  = HEIGHT*2.0;
+const double cx  = double(WIDTH)/2.0 + 0.5;
+const double cy  = double(HEIGHT)/2.0 + 0.5;
+
+#define W_SUB 64 // 64
+#define H_SUB 48 // 48
+const double fx_sub  = W_SUB*2.0;
+const double fy_sub  = H_SUB*2.0;
+const double cx_sub  = double(W_SUB)/2.0 + 0.5;
+const double cy_sub  = double(H_SUB)/2.0 + 0.5;
+#define N_SUB (W_SUB*H_SUB)
 
 // forward declarations
 class Arm;
 class Head;
 class Camera;
+class PixelBucket;
+class DepthMap;
 
 class PR2 {
 public:
@@ -133,13 +146,77 @@ private:
 	double H, W;
 
 	Beam3d* fov = nullptr;
-//	std::vector<Triangle3d> env_mesh;
-//	std::vector<MeshUnit> env_mesh;
-//	std::vector<std::vector<MeshUnit*> > env_mesh;
 	Mesh* env_mesh = nullptr;
 
+	StdVector3d env_points;
+	DepthMap* depth_map;
+
 	Matrix<double,N_SUB,3> get_directions();
+	MatrixXd get_directions_new(const int h, const int w);
 	std::vector<std::vector<Beam3d> > get_beams_from_env();
+};
+
+class PixelBucket {
+public:
+	PixelBucket(const Vector2d& pc) : pixel_center(pc) { };
+
+	inline void add_point(const Vector2d& pixel, const Vector3d& point) { pixels.push_back(pixel); points.push_back(point); }
+	inline bool is_empty() { return pixels.size() == 0; }
+	inline Vector3d average_point() {
+//		double dist_to_center = INFINITY;
+//		Vector3d closest_point;
+//		for(int i=0; i < pixels.size(); ++i) {
+//			if ((pixels[i] - pixel_center).norm() < dist_to_center) {
+//				dist_to_center = (pixels[i] - pixel_center).norm();
+//				closest_point = points[i];
+//			}
+//		}
+//		return closest_point;
+
+		VectorXd weights(pixels.size());
+		for(int i=0; i < pixels.size(); ++i) {
+			weights(i) = (pixels[i] - pixel_center).norm();
+		}
+		weights /= weights.sum();
+
+		Vector3d avg_point = Vector3d::Zero();
+		for(int i=0; i < points.size(); ++i) {
+			avg_point += weights(i)*points[i];
+		}
+
+		return avg_point;
+	}
+	inline void clear() { pixels.clear(); points.clear(); }
+
+private:
+	Vector2d pixel_center;
+	StdVector2d pixels;
+	StdVector3d points;
+};
+
+/**
+ * DepthMap size is H_SUB x W_SUB
+ */
+class DepthMap {
+public:
+	DepthMap(rave::SensorBasePtr s, const Matrix3d& P_mat, double mr);
+
+	void add_point(const Vector3d& point);
+	Matrix<double,H_SUB,W_SUB> get_z_buffer();
+
+	void clear();
+
+private:
+	rave::SensorBasePtr sensor;
+	Matrix3d P;
+	double max_range;
+
+	std::vector<std::vector<PixelBucket*> > pixel_buckets;
+
+	int num_neighbors_empty(int i, int j);
+	Vector3d average_of_neighbors(int i, int j);
+
+
 };
 
 #endif

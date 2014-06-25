@@ -6,6 +6,8 @@ using namespace Eigen;
 
 #include <assert.h>
 
+typedef std::vector<Vector2d> StdVector2d;
+
 const double epsilon = 1e-5;
 
 inline double triangle_area(const Vector2d& a, const Vector2d& b, const Vector2d& c) {

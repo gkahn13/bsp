@@ -16,6 +16,7 @@ namespace rave = OpenRAVE;
 #include "../geometry/geometry3d.h"
 #include "../utils/rave-utils.h"
 #include "../utils/utils.h"
+#include "../utils/pr2-utils.h"
 #include "../../util/Timer.h"
 
 #define ARM_DIM 7
@@ -107,14 +108,18 @@ class Camera {
 public:
 	Camera(rave::RobotBasePtr r, std::string camera_name, double mr);
 
-	Matrix<double,N_SUB,3> get_directions();
+	// sends rays out and creates mesh from collisions
+	// call once before collocation
+	void init_env_mesh();
+
 	std::vector<std::vector<Beam3d> > get_beams();
-	std::vector<Triangle3d> get_border(const std::vector<std::vector<Beam3d> >& beams);
+	std::vector<Triangle3d> get_border(const std::vector<std::vector<Beam3d> >& beams, bool with_side_border=true);
 
 	bool is_inside(const Vector3d& p, std::vector<std::vector<Beam3d> >& beams);
 	double signed_distance(const Vector3d& p, std::vector<std::vector<Beam3d> >& beams, std::vector<Triangle3d>& border);
 
 	void plot_fov(std::vector<std::vector<Beam3d> >& beams);
+	void plot_env_mesh();
 
 	inline Vector3d get_position() { return rave_utils::rave_to_eigen(sensor->GetTransform().trans); }
 	inline rave::Transform get_pose() { return sensor->GetTransform(); }
@@ -126,6 +131,15 @@ private:
 	int height, width;
 	double f, F, max_range;
 	double H, W;
+
+	Beam3d* fov = nullptr;
+//	std::vector<Triangle3d> env_mesh;
+//	std::vector<MeshUnit> env_mesh;
+//	std::vector<std::vector<MeshUnit*> > env_mesh;
+	Mesh* env_mesh = nullptr;
+
+	Matrix<double,N_SUB,3> get_directions();
+	std::vector<std::vector<Beam3d> > get_beams_from_env();
 };
 
 #endif

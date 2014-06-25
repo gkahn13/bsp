@@ -135,12 +135,47 @@ void test_pr2_system() {
 	particle_gmm.push_back(ParticleGaussian(Vector3d::Zero(), Matrix3d::Identity(), P.rightCols(M_DIM/2), 1));
 
 	sys.display(j, particle_gmm);
+}
 
+void test_camera() {
+	Vector3d object(3.35, -1.11, 0.8);
+	Arm::ArmType arm_type = Arm::ArmType::right;
+	bool view = true;
+	PR2System sys(object, arm_type, view);
+
+	PR2* brett = sys.get_brett();
+	Arm* arm = sys.get_arm();
+	Camera* cam = sys.get_camera();
+	rave::EnvironmentBasePtr env = brett->get_env();
+
+	arm->set_posture(Arm::Posture::mantis);
+	sleep(2);
+
+	tc.start("init_env_mesh");
+	cam->init_env_mesh();
+	tc.stop("init_env_mesh");
+	cam->plot_env_mesh();
+
+	std::cout << "Displaying env mesh. Teleop and then get FOV\n";
+
+	arm->teleop();
+
+//	tc.start("get_beams");
+	std::vector<std::vector<Beam3d> > beams = cam->get_beams();
+//	tc.stop("get_beams");
+	rave_utils::clear_plots();
+	cam->plot_fov(beams);
+
+//	tc.print_all_elapsed();
+
+	std::cout << "Displaying current fov beams. Press enter to exit\n";
+	std::cin.ignore();
 }
 
 int main() {
-	test_particle_update();
+//	test_particle_update();
 //	test_figtree();
 //	test_pr2_system();
+	test_camera();
 	return 0;
 }

@@ -109,6 +109,7 @@ public:
 
 	PR2* get_brett() { return brett; }
 	Arm* get_arm() { return arm; }
+	Camera* get_camera() { return cam; }
 
 private:
 	PR2* brett;

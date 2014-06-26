@@ -9,6 +9,11 @@ using namespace Eigen;
 #include "badiff.h"
 using namespace fadbad;
 typedef B<double> bdouble;
+typedef B<int> bint;
+
+typedef Matrix<bdouble,Eigen::Dynamic,1> VectorDynb;
+typedef Matrix<bdouble,1,Eigen::Dynamic> RowVectorDynb;
+typedef Matrix<bdouble,Eigen::Dynamic,Eigen::Dynamic> MatrixDynb;
 
 namespace Eigen {
 template<> struct NumTraits<bdouble >
@@ -46,5 +51,6 @@ inline bdouble abs2(const bdouble& x) { return x*x; }
 inline bool fadbad_isnan(const bdouble& x) {
 	return (abs(x) > 1e10);
 }
+
 
 #endif

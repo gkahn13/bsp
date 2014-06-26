@@ -220,11 +220,11 @@ void test_camera() {
 	sleep(2);
 
 	cam->get_pcl();
-//	cam->plot_pcl();
+	cam->plot_pcl();
 
 //	std::cout << "Displaying env mesh. Teleop and then get FOV\n";
 
-//	arm->teleop();
+	arm->teleop();
 
 	std::vector<std::vector<Beam3d> > beams = cam->get_beams();
 	rave_utils::clear_plots();
@@ -239,7 +239,8 @@ void test_camera() {
 //	tc.stop("sd");
 
 	rave_utils::plot_point(env, P.col(0), Vector3d(1,0,0));
-
+	std::cin.ignore();
+	exit(0);
 	while(true) {
 //		VectorJ grad = delta_grad(arm, cam, arm->get_joint_values(), P.col(0), .01);
 		VectorU grad = cost_grad(sys, arm->get_joint_values(), P.col(0), VectorU::Zero(), .01);

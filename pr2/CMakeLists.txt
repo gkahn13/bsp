@@ -35,6 +35,7 @@ target_link_libraries(pr2 ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES} ${Boo
 
 add_executable(test-fadbad      tests/test-fadbad.cpp
 								fadbad/geometry/fadbad-geometry2d.cpp fadbad/geometry/fadbad-geometry3d.cpp
+								fadbad/system/fadbad-pr2-sim.cpp fadbad/system/fadbad-pr2-system.cpp
 								geometry/geometry2d.cpp geometry/geometry3d.cpp
 								system/pr2-sim.cpp system/pr2-system.cpp
 								utils/pr2-utils.cpp utils/rave-utils.cpp

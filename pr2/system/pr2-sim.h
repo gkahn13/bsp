@@ -129,7 +129,6 @@ class Camera {
 public:
 	Camera(rave::RobotBasePtr r, std::string camera_name, double mr);
 
-	// sends rays out and creates mesh from collisions
 	// call once before collocation
 	void get_pcl();
 
@@ -144,6 +143,7 @@ public:
 
 	inline Vector3d get_position() { return rave_utils::rave_to_eigen(sensor->GetTransform().trans); }
 	inline rave::Transform get_pose() { return sensor->GetTransform(); }
+	inline rave::SensorBasePtr get_sensor() { return sensor; }
 
 private:
 	rave::RobotBasePtr robot;

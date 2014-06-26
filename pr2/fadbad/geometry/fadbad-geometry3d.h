@@ -14,9 +14,10 @@ using namespace Eigen;
 #include <assert.h>
 
 typedef Matrix<bdouble,3,1> Vector3b;
+typedef Matrix<bdouble,1,3> RowVector3b;
 typedef Matrix<bdouble,3,3> Matrix3b;
 
-typedef std::vector<Vector3b> StdVector3d;
+typedef std::vector<Vector3b> StdVector3b;
 
 class FadbadBeam3d {
 public:

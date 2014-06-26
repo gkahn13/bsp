@@ -117,8 +117,7 @@ void PR2System::belief_dynamics(const VectorX& x_t, const MatrixX& sigma_t, cons
 
 	// propagate belief through observation
 	Matrix<double,Z_DIM,X_DIM> H;
-	Matrix<double,Z_DIM,R_DIM> N;
-	linearize_obsfunc(x_tp1, VectorR::Zero(), H, N);
+	linearize_obsfunc(x_tp1, VectorR::Zero(), H);
 
 	MatrixZ delta = delta_matrix(x_tp1.segment<J_DIM>(0), x_tp1.segment<3>(J_DIM), alpha);
 	Matrix<double,X_DIM,Z_DIM> K = sigma_tp1_bar*H.transpose()*delta*(delta*H*sigma_tp1_bar*H.transpose()*delta + R).inverse()*delta;
@@ -151,6 +150,8 @@ void PR2System::get_limits(VectorJ& j_min, VectorJ& j_max, VectorU& u_min, Vecto
 double PR2System::cost(const StdVectorJ& J, const Vector3d& obj, const MatrixX& sigma0, const StdVectorU& U, const double alpha) {
 	double cost = 0;
 
+	VectorJ j_orig = arm->get_joint_values();
+
 	VectorX x_t, x_tp1 = VectorX::Zero();
 	MatrixX sigma_t = sigma0, sigma_tp1 = MatrixX::Zero();
 	for(int t=0; t < TIMESTEPS-1; ++t) {
@@ -164,7 +165,6 @@ double PR2System::cost(const StdVectorJ& J, const Vector3d& obj, const MatrixX& 
 		sigma_t = sigma_tp1;
 	}
 
-	VectorJ j_orig = arm->get_joint_values();
 	arm->set_joint_values(J.back());
 
 	Vector3d final_pos = cam->get_position();
@@ -175,7 +175,6 @@ double PR2System::cost(const StdVectorJ& J, const Vector3d& obj, const MatrixX& 
 
 
 	return cost;
-
 }
 
 double PR2System::cost_gmm(const StdVectorJ& J, const MatrixJ& j_sigma0, const StdVectorU& U,
@@ -382,44 +381,45 @@ void PR2System::display(const StdVectorJ& J, const std::vector<ParticleGaussian>
 
 void PR2System::linearize_dynfunc(const VectorX& x, const VectorU& u, const VectorQ& q,
 		Matrix<double,X_DIM,X_DIM>& A, Matrix<double,X_DIM,Q_DIM>& M) {
-	A.setZero();
+
+	A = Matrix<double,X_DIM,X_DIM>::Identity();
+
 	M.setZero();
-
-	VectorQ q_zero = VectorQ::Zero();
-	VectorX x_p = x, x_m = x;
-	for(int i=0; i < X_DIM; ++i) {
-		x_p(i) += step; x_m(i) -= step;
-		A.block<J_DIM,1>(0, i) = (dynfunc(x_p.segment<J_DIM>(0), u, q_zero) - dynfunc(x_m.segment<J_DIM>(0), u, q_zero)) / (2*step);
-		x_p(i) = x(i); x_m(i) = x(i);
+	for(int j=0; j < Q_DIM; ++j) {
+		for(int i=0; i < j+1; ++i) {
+			M(i, j) = DT;
+		}
 	}
 
-	VectorQ q_p = q, q_m = q;
-	for(int i=0; i < Q_DIM; ++i) {
-		q_p(i) += step; q_m(i) -= step;
-		M.block<J_DIM,1>(0, i) = (dynfunc(x.segment<J_DIM>(0), u, q_p) - dynfunc(x.segment<J_DIM>(0), u, q_m)) / (2*step);
-	}
+//	A.setZero();
+//	VectorQ q_zero = VectorQ::Zero();
+//	VectorX x_p = x, x_m = x;
+//	for(int i=0; i < X_DIM; ++i) {
+//		x_p(i) += step; x_m(i) -= step;
+//		A.block<J_DIM,1>(0, i) = (dynfunc(x_p.segment<J_DIM>(0), u, q_zero) - dynfunc(x_m.segment<J_DIM>(0), u, q_zero)) / (2*step);
+//		x_p(i) = x(i); x_m(i) = x(i);
+//	}
+
+//	M.setZero();
+//	VectorQ q_p = q, q_m = q;
+//	for(int i=0; i < Q_DIM; ++i) {
+//		q_p(i) += step; q_m(i) -= step;
+//		M.block<J_DIM,1>(0, i) = (dynfunc(x.segment<J_DIM>(0), u, q_p) - dynfunc(x.segment<J_DIM>(0), u, q_m)) / (2*step);
+//	}
 }
 
 void PR2System::linearize_obsfunc(const VectorX& x, const VectorR& r,
-		Matrix<double,Z_DIM,X_DIM>& H, Matrix<double,Z_DIM,R_DIM>& N) {
-	H.setZero();
-	N.setZero();
+		Matrix<double,Z_DIM,X_DIM>& H) {
+	H = Matrix<double,Z_DIM,X_DIM>::Identity();
 
-	VectorX x_p = x, x_m = x;
-	for(int i=0; i < X_DIM; ++i) {
-		x_p(i) += step; x_m(i) -= step;
-		H.block<Z_DIM,1>(0, i) = (obsfunc(x_p.segment<J_DIM>(0), x_p.segment<3>(J_DIM), r) -
-				obsfunc(x_m.segment<J_DIM>(0), x_m.segment<3>(J_DIM), r)) / (2*step);
-		x_p(i) = x(i); x_m(i) = x(i);
-	}
-
-	VectorR r_p = r, r_m = r;
-	for(int i=0; i < R_DIM; ++i) {
-		r_p(i) += step; r_m(i) -= step;
-		N.block<Z_DIM,1>(0, i) = (obsfunc(x.segment<J_DIM>(0), x.segment<3>(J_DIM), r_p) -
-				obsfunc(x.segment<J_DIM>(0), x.segment<3>(J_DIM), r_m)) / (2*step);
-		r_p(i) = x(i); r_m(i) = x(i);
-	}
+//	H.setZero();
+//	VectorX x_p = x, x_m = x;
+//	for(int i=0; i < X_DIM; ++i) {
+//		x_p(i) += step; x_m(i) -= step;
+//		H.block<Z_DIM,1>(0, i) = (obsfunc(x_p.segment<J_DIM>(0), x_p.segment<3>(J_DIM), r) -
+//				obsfunc(x_m.segment<J_DIM>(0), x_m.segment<3>(J_DIM), r)) / (2*step);
+//		x_p(i) = x(i); x_m(i) = x(i);
+//	}
 }
 
 

@@ -22,12 +22,18 @@ namespace rave = OpenRAVE;
 #define ARM_DIM 7
 #define HEAD_DIM 2
 
+// Camera constants for actual and subsampled
+
+#define FOCAL_LENGTH .01
+
 #define WIDTH	   256 // 64
 #define HEIGHT 	   192 // 48
 const double fx  = WIDTH*2.0;
 const double fy  = HEIGHT*2.0;
 const double cx  = double(WIDTH)/2.0 + 0.5;
 const double cy  = double(HEIGHT)/2.0 + 0.5;
+const double HEIGHT_M = FOCAL_LENGTH*(HEIGHT/fy);
+const double WIDTH_M = FOCAL_LENGTH*(WIDTH/fx);
 
 #define W_SUB 64 // 64
 #define H_SUB 48 // 48
@@ -35,6 +41,8 @@ const double fx_sub  = W_SUB*2.0;
 const double fy_sub  = H_SUB*2.0;
 const double cx_sub  = double(W_SUB)/2.0 + 0.5;
 const double cy_sub  = double(H_SUB)/2.0 + 0.5;
+const double H_SUB_M = FOCAL_LENGTH*(H_SUB/fy_sub);
+const double W_SUB_M = FOCAL_LENGTH*(W_SUB/fx_sub);
 #define N_SUB (W_SUB*H_SUB)
 
 // forward declarations
@@ -123,7 +131,7 @@ public:
 
 	// sends rays out and creates mesh from collisions
 	// call once before collocation
-	void init_env_mesh();
+	void get_pcl();
 
 	std::vector<std::vector<Beam3d> > get_beams();
 	std::vector<Triangle3d> get_border(const std::vector<std::vector<Beam3d> >& beams, bool with_side_border=true);
@@ -132,7 +140,7 @@ public:
 	double signed_distance(const Vector3d& p, std::vector<std::vector<Beam3d> >& beams, std::vector<Triangle3d>& border);
 
 	void plot_fov(std::vector<std::vector<Beam3d> >& beams);
-	void plot_env_mesh();
+	void plot_pcl();
 
 	inline Vector3d get_position() { return rave_utils::rave_to_eigen(sensor->GetTransform().trans); }
 	inline rave::Transform get_pose() { return sensor->GetTransform(); }
@@ -141,19 +149,17 @@ private:
 	rave::RobotBasePtr robot;
 	rave::SensorBasePtr sensor;
 
-	int height, width;
-	double f, F, max_range;
-	double H, W;
+//	int height, width;
+//	double f, F, max_range;
+//	double H, W;
+	double max_range;
 
 	Beam3d* fov = nullptr;
-	Mesh* env_mesh = nullptr;
 
 	StdVector3d env_points;
 	DepthMap* depth_map;
 
-	Matrix<double,N_SUB,3> get_directions();
-	MatrixXd get_directions_new(const int h, const int w);
-	std::vector<std::vector<Beam3d> > get_beams_from_env();
+	MatrixXd get_directions(const int h, const int w, const double h_meters, const double w_meters);
 };
 
 class PixelBucket {

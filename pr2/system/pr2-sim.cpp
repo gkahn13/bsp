@@ -7,7 +7,8 @@
 PR2::PR2(bool view) {
 	std::string working_dir = boost::filesystem::current_path().normalize().string();
 	std::string bsp_dir = working_dir.substr(0,working_dir.find("bsp"));
-	std::string env_file = bsp_dir + "bsp/pr2/envs/pr2-test.env.xml";
+//	std::string env_file = bsp_dir + "bsp/pr2/envs/pr2-test.env.xml";
+	std::string env_file = bsp_dir + "bsp/pr2/envs/pr2-empty.env.xml";
 
 	std::string robot_name = "Brett";
 
@@ -324,38 +325,12 @@ Camera::Camera(rave::RobotBasePtr r, std::string camera_name, double mr) : robot
 	boost::shared_ptr<rave::SensorBase::CameraGeomData> cam_geom =
 			boost::static_pointer_cast<rave::SensorBase::CameraGeomData>(geom);
 
-//	height = cam_geom->height;
-//	width = cam_geom->width;
-//	f = cam_geom->KK.fx;
-//	F = cam_geom->KK.focal_length;
-//
-//	H = F*(height/f);
-//	W = F*(width/f);
-//
-//	Matrix3d P = Matrix3d::Zero();
-//	P(0,0) = cam_geom->KK.fx;
-//	P(1,1) = cam_geom->KK.fy;
-//	P(2,2) = 1;
-//	P(0,2) = cam_geom->KK.cx;
-//	P(1,2) = cam_geom->KK.cy;
-
-	height = HEIGHT;
-	width = WIDTH;
-	F = cam_geom->KK.focal_length;
-
-	H = F*(height/fy);
-	W = F*(width/fx);
-
 	Matrix3d P = Matrix3d::Zero();
 	P(0,0) = fx_sub;
 	P(1,1) = fy_sub;
 	P(2,2) = 1;
 	P(0,2) = cx_sub;
 	P(1,2) = cy_sub;
-
-	std::cout << sensor->GetName() << "\n";
-	std::cout << P << "\n";
-
 
 	depth_map = new DepthMap(sensor, P, max_range);
 }
@@ -364,19 +339,18 @@ Camera::Camera(rave::RobotBasePtr r, std::string camera_name, double mr) : robot
  * Camera public methods
  */
 
-void Camera::init_env_mesh() {
+void Camera::get_pcl() {
 	RowVector3d origin_pos = rave_utils::rave_to_eigen(sensor->GetTransform().trans);
 
-//	Matrix<double,N_SUB,3> dirs = get_directions();
-	MatrixXd dirs = get_directions_new(HEIGHT,WIDTH);
+	MatrixXd dirs = get_directions(HEIGHT, WIDTH, HEIGHT_M, WIDTH_M);
 
 	if (fov != nullptr) {
 		free(fov);
 	}
-	fov = new Beam3d(origin_pos, origin_pos + dirs.row(H_SUB*(W_SUB-1)),
+	fov = new Beam3d(origin_pos, origin_pos + dirs.row(HEIGHT*(WIDTH-1)),
 			origin_pos + dirs.row(0),
-			origin_pos + dirs.row(H_SUB-1),
-			origin_pos + dirs.row(N_SUB-1));
+			origin_pos + dirs.row(HEIGHT-1),
+			origin_pos + dirs.row(HEIGHT*WIDTH-1));
 
 	rave::EnvironmentBasePtr env = robot->GetEnv();
 	rave::RAY ray;
@@ -394,8 +368,8 @@ void Camera::init_env_mesh() {
 }
 
 std::vector<std::vector<Beam3d> > Camera::get_beams() {
-	TimerCollection tc;
-	tc.start("get beams time");
+//	TimerCollection tc;
+//	tc.start("get beams time");
 
 	std::vector<std::vector<Beam3d> > beams(H_SUB-1, std::vector<Beam3d>(W_SUB-1));
 
@@ -407,8 +381,7 @@ std::vector<std::vector<Beam3d> > Camera::get_beams() {
 
 	RowVector3d origin_pos = rave_utils::rave_to_eigen(sensor->GetTransform().trans);
 
-	Matrix<double,N_SUB,3> dirs = get_directions_new(H_SUB,N_SUB);
-//	Matrix<double,N_SUB,3> dirs = get_directions_new(H_SUB,W_SUB);
+	Matrix<double,N_SUB,3> dirs = get_directions(H_SUB, W_SUB, H_SUB_M, W_SUB_M);
 
 	std::vector<std::vector<Vector3d> > hits(H_SUB, std::vector<Vector3d>(W_SUB));
 
@@ -422,15 +395,15 @@ std::vector<std::vector<Beam3d> > Camera::get_beams() {
 	for(int j=0; j < W_SUB-1; ++j) {
 		for(int i=0; i < H_SUB-1; ++i) {
 			beams[i][j].base = origin_pos;
-			beams[i][j].a = hits[i][j+1];//hits.row((j+1)*H_SUB+i);
-			beams[i][j].b = hits[i][j];//hits.row(j*H_SUB+i);
-			beams[i][j].c = hits[i+1][j];//hits.row(j*H_SUB+i+1);
-			beams[i][j].d = hits[i+1][j+1];//hits.row((j+1)*H_SUB+i+1);
+			beams[i][j].a = hits[i][j+1];
+			beams[i][j].b = hits[i][j];
+			beams[i][j].c = hits[i+1][j];
+			beams[i][j].d = hits[i+1][j+1];
 		}
 	}
 
-	tc.stop("get beams time");
-	tc.print_all_elapsed();
+//	tc.stop("get beams time");
+//	tc.print_all_elapsed();
 
 	return beams;
 }
@@ -485,7 +458,7 @@ std::vector<Triangle3d> Camera::get_border(const std::vector<std::vector<Beam3d>
 		}
 	}
 
-	std::cout << "before pruning size: " << border.size() << "\n";
+//	std::cout << "before pruning size: " << border.size() << "\n";
 
 	std::vector<Triangle3d> pruned_border;
 	for(int i=0; i < border.size(); ++i) {
@@ -494,7 +467,7 @@ std::vector<Triangle3d> Camera::get_border(const std::vector<std::vector<Beam3d>
 		}
 	}
 
-	std::cout << "after pruning size: " << pruned_border.size() << "\n";
+//	std::cout << "after pruning size: " << pruned_border.size() << "\n";
 
 	return pruned_border;
 }
@@ -526,9 +499,9 @@ double Camera::signed_distance(const Vector3d& p, std::vector<std::vector<Beam3d
 }
 
 void Camera::plot_fov(std::vector<std::vector<Beam3d> >& beams) {
-	rave::EnvironmentBasePtr env = sensor->GetEnv();
-	rave::KinBodyPtr table = env->GetKinBody("table");
-	env->Remove(table);
+//	rave::EnvironmentBasePtr env = sensor->GetEnv();
+//	rave::KinBodyPtr table = env->GetKinBody("table");
+//	env->Remove(table);
 
 	Vector3d color(0,1,0);
 	// plot the ends
@@ -557,10 +530,9 @@ void Camera::plot_fov(std::vector<std::vector<Beam3d> >& beams) {
 //	}
 }
 
-void Camera::plot_env_mesh() {
+void Camera::plot_pcl() {
 	rave::EnvironmentBasePtr env = sensor->GetEnv();
 
-//	env_mesh->plot(env);
 	Vector3d color(1,0,0);
 	for(int i=0; i < env_points.size(); ++i) {
 		rave_utils::plot_point(env, env_points[i], color, .005);
@@ -577,40 +549,11 @@ void Camera::plot_env_mesh() {
  * Camera Private methods
  */
 
-Matrix<double,N_SUB,3> Camera::get_directions() {
-	Matrix<double,H_SUB,W_SUB> height_grid = Matrix<double,H_SUB,1>::LinSpaced(H_SUB, -H/2.0, H/2.0).replicate(1,W_SUB);
-	Matrix<double,H_SUB,W_SUB> width_grid = Matrix<double,1,W_SUB>::LinSpaced(W_SUB, -W/2.0, W/2.0).replicate(H_SUB,1);
 
-	Matrix<double,N_SUB,1> height_grid_vec(height_grid.data());
-	Matrix<double,N_SUB,1> width_grid_vec(width_grid.data());
-	Matrix<double,N_SUB,1> z_grid = Matrix<double,N_SUB,1>::Zero();
-
-	Matrix<double,N_SUB,3> offsets;
-	offsets << width_grid_vec, height_grid_vec, z_grid;
-
-	Matrix<double,N_SUB,3> points_cam = RowVector3d(0,0,max_range).replicate(N_SUB,1) + (max_range/F)*offsets;
-
-	Matrix4d ref_from_world = rave_utils::rave_to_eigen(sensor->GetTransform());
-	Vector3d origin_world_pos = ref_from_world.block<3,1>(0,3);
-
-	Matrix<double,N_SUB,3> directions;
-
-	Matrix4d point_cam = Matrix4d::Identity();
-	Vector3d point_world;
-	for(int i=0; i < N_SUB; ++i) {
-		point_cam.block<3,1>(0,3) = points_cam.row(i);
-		point_world = (ref_from_world*point_cam).block<3,1>(0,3);
-
-		directions.row(i) = point_world - origin_world_pos;
-	}
-
-	return directions;
-}
-
-MatrixXd Camera::get_directions_new(const int h, const int w) {
+MatrixXd Camera::get_directions(const int h, const int w, const double h_meters, const double w_meters) {
 	const int n = h*w;
-	MatrixXd height_grid = VectorXd::LinSpaced(h, -H/2.0, H/2.0).replicate(1,w);
-	MatrixXd width_grid = RowVectorXd::LinSpaced(w, -W/2.0, W/2.0).replicate(h,1);
+	MatrixXd height_grid = VectorXd::LinSpaced(h, -h_meters/2.0, h_meters/2.0).replicate(1,w);
+	MatrixXd width_grid = RowVectorXd::LinSpaced(w, -w_meters/2.0, w_meters/2.0).replicate(h,1);
 
 	MatrixXd height_grid_vec(Map<VectorXd>(height_grid.data(), n));
 	MatrixXd width_grid_vec(Map<VectorXd>(width_grid.data(), n));
@@ -620,7 +563,7 @@ MatrixXd Camera::get_directions_new(const int h, const int w) {
 	MatrixXd offsets(n,3);
 	offsets << width_grid_vec, height_grid_vec, z_grid;
 
-	MatrixXd points_cam = RowVector3d(0,0,max_range).replicate(n,1) + (max_range/F)*offsets;
+	MatrixXd points_cam = RowVector3d(0,0,max_range).replicate(n,1) + (max_range/FOCAL_LENGTH)*offsets;
 
 	Matrix4d ref_from_world = rave_utils::rave_to_eigen(sensor->GetTransform());
 	Vector3d origin_world_pos = ref_from_world.block<3,1>(0,3);
@@ -640,43 +583,6 @@ MatrixXd Camera::get_directions_new(const int h, const int w) {
 }
 
 
-std::vector<std::vector<Beam3d> > Camera::get_beams_from_env() {
-	std::vector<std::vector<Beam3d> > beams(H_SUB-1, std::vector<Beam3d>(W_SUB-1));
-
-	RowVector3d origin_pos = rave_utils::rave_to_eigen(sensor->GetTransform().trans);
-
-	Matrix<double,N_SUB,3> dirs = get_directions();
-
-	Matrix<double,N_SUB,3> hits;
-
-	rave::EnvironmentBasePtr env = robot->GetEnv();
-	rave::RAY ray;
-	ray.pos = sensor->GetTransform().trans;
-	rave::CollisionReportPtr report(new rave::CollisionReport());
-	for(int i=0; i < N_SUB; ++i) {
-		ray.dir.x = dirs(i,0);
-		ray.dir.y = dirs(i,1);
-		ray.dir.z = dirs(i,2);
-		if (env->CheckCollision(ray, report)) {
-			hits.row(i) = rave_utils::rave_to_eigen(report->contacts[0].pos);
-		} else {
-			hits.row(i) = origin_pos + (max_range / sqrt(ray.dir.lengthsqr2()))*dirs.row(i);
-		}
-	}
-
-	for(int j=0; j < W_SUB-1; ++j) {
-		for(int i=0; i < H_SUB-1; ++i) {
-			beams[i][j].base = origin_pos;
-			beams[i][j].a = hits.row((j+1)*H_SUB+i);
-			beams[i][j].b = hits.row(j*H_SUB+i);
-			beams[i][j].c = hits.row(j*H_SUB+i+1);
-			beams[i][j].d = hits.row((j+1)*H_SUB+i+1);
-		}
-	}
-
-	return beams;
-}
-
 /**
  * DepthMap Constructors
  */
@@ -694,6 +600,7 @@ DepthMap::DepthMap(rave::SensorBasePtr s, const Matrix3d& P_mat, double mr) : se
  * DepthMap Public methods
  */
 
+// TODO: only add point to bucket if point is either (1) closer than points in bucket or (2) closet to points in bucket
 void DepthMap::add_point(const Vector3d& point) {
 	Matrix4d point_mat = Matrix4d::Identity();
 	point_mat.block<3,1>(0,3) = point;

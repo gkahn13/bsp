@@ -218,6 +218,8 @@ double pr2_approximate_collocation(StdVectorJ& J, StdVectorU& U, const MatrixJ& 
 				grad = gradopt;
 			}
 
+			std::cout << "gradient:\n" << grad << "\n";
+
 			VectorTOTAL diaghess = hess.diagonal();
 
 			constant_cost = 0;
@@ -425,6 +427,17 @@ void init_collocation(const VectorJ& j0, const MatrixP& P, PR2System& sys,
 	// re-initialize GMM from PF
 	sys.fit_gaussians_to_pf(P, particle_gmm);
 
+	for(int i=0; i < particle_gmm.size(); ++i) {
+		particle_gmm[i].cov *= 5000;
+		std::cout << particle_gmm[i].pct << "\n";
+		std::cout << particle_gmm[i].cov << "\n\n";
+	}
+
+	// only take max gaussian
+//	particle_gmm = std::vector<ParticleGaussian>(1, particle_gmm[0]);
+//	particle_gmm[0].cov = .01*Matrix3d::Identity();
+//	particle_gmm[0].cov *= 5000;
+
 	// TODO: try a non-zero initialization
 	VectorU uinit = VectorU::Zero();
 
@@ -512,9 +525,12 @@ int main(int argc, char* argv[]) {
 
 	bool stop_condition = false;
 	for(int iter=0; !stop_condition; iter++) {
+		arm->set_joint_values(j_t);
+
 		LOG_INFO("MPC iteration: %d",iter);
 		init_collocation(j_t, P_t, sys, J, U, particle_gmm);
 
+		sys.get_pcl(); // grab current environment point cloud
 		LOG_INFO("Current state");
 		sys.display(j_t, particle_gmm);
 

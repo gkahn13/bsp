@@ -137,6 +137,72 @@ void test_pr2_system() {
 	sys.display(j, particle_gmm);
 }
 
+VectorJ delta_grad(Arm* arm, Camera* cam, const VectorJ& j, const Vector3d& p, const double alpha) {
+	arm->set_joint_values(j);
+	VectorJ j_plus = j, j_minus = j, grad;
+	double delta_plus, delta_minus, sd_plus, sd_minus;
+	std::vector<std::vector<Beam3d> > beams;
+	std::vector<Triangle3d> border;
+	for(int i=0; i < J_DIM; ++i) {
+		j_plus = j; j_minus = j;
+		j_plus(i) = j(i) + epsilon;
+		j_minus(i) = j(i) - epsilon;
+
+		arm->set_joint_values(j_plus);
+		beams = cam->get_beams();
+		border = cam->get_border(beams);
+		sd_plus = cam->signed_distance(p, beams, border);
+		delta_plus = 1.0 - 1.0/(1.0 + exp(-alpha*sd_plus));
+
+		arm->set_joint_values(j_minus);
+		beams = cam->get_beams();
+		border = cam->get_border(beams);
+		sd_minus = cam->signed_distance(p, beams, border);
+		delta_minus = 1.0 - 1.0/(1.0 + exp(-alpha*sd_minus));
+
+		grad(i) = (delta_plus - delta_minus) / (2.0*epsilon);
+	}
+
+	arm->set_joint_values(j);
+	return grad;
+}
+
+double cost(PR2System& sys, const VectorJ& j, const Vector3d& obj, const VectorU& u, const double alpha) {
+	VectorX x_t, x_tp1;
+	MatrixX sigma_t, sigma_tp1;
+
+	sigma_t = .01*MatrixX::Identity();
+	sigma_t.block<3,3>(J_DIM,J_DIM) = 20*Matrix3d::Identity();
+
+	x_t << j, obj;
+	sys.belief_dynamics(x_t, sigma_t, u, alpha, x_tp1, sigma_tp1);
+
+	return sigma_tp1.trace();
+}
+
+VectorU cost_grad(PR2System& sys, const VectorJ& j, const Vector3d& obj, const VectorU& u, const double alpha) {
+	VectorU grad;
+
+	MatrixX sigma = .01*MatrixX::Identity();
+	sigma.block<3,3>(J_DIM,J_DIM) = 20*Matrix3d::Identity();
+
+	double cost_p, cost_m;
+	VectorU u_plus = u, u_minus = u;
+	for(int i=0; i < U_DIM; ++i) {
+		u_plus = u; u_minus = u;
+		u_plus(i) = u(i) + epsilon;
+		u_minus(i) = u(i) - epsilon;
+
+		cost_p = cost(sys, j, obj, u_plus, alpha);
+
+		cost_m = cost(sys, j, obj, u_minus, alpha);
+
+		grad(i) = (cost_p - cost_m) / (2*epsilon);
+	}
+	return grad;
+}
+
+
 void test_camera() {
 	Vector3d object(3.35, -1.11, 0.8);
 	Arm::ArmType arm_type = Arm::ArmType::right;
@@ -148,26 +214,49 @@ void test_camera() {
 	Camera* cam = sys.get_camera();
 	rave::EnvironmentBasePtr env = brett->get_env();
 
+	MatrixP P = setup_particles(env);
+
 	arm->set_posture(Arm::Posture::mantis);
 	sleep(2);
 
-	tc.start("init_env_mesh");
-	cam->init_env_mesh();
-	tc.stop("init_env_mesh");
-	cam->plot_env_mesh();
+	cam->get_pcl();
+//	cam->plot_pcl();
 
-	std::cout << "Displaying env mesh. Teleop and then get FOV\n";
+//	std::cout << "Displaying env mesh. Teleop and then get FOV\n";
 
-	arm->teleop();
+//	arm->teleop();
 
-//	tc.start("get_beams");
 	std::vector<std::vector<Beam3d> > beams = cam->get_beams();
-//	tc.stop("get_beams");
 	rave_utils::clear_plots();
 	cam->plot_fov(beams);
 
-//	tc.print_all_elapsed();
+	std::vector<Triangle3d> border = cam->get_border(beams);
 
+//	tc.start("sd");
+//	for(int m=0; m < M_DIM; ++m) {
+//		double sd = cam->signed_distance(P.col(m), beams, border);
+//	}
+//	tc.stop("sd");
+
+	rave_utils::plot_point(env, P.col(0), Vector3d(1,0,0));
+
+	while(true) {
+//		VectorJ grad = delta_grad(arm, cam, arm->get_joint_values(), P.col(0), .01);
+		VectorU grad = cost_grad(sys, arm->get_joint_values(), P.col(0), VectorU::Zero(), .01);
+		std::cout << "grad:\n" << grad << "\n";
+
+		if (grad.norm() < epsilon) {
+			std::cout << "crap\n";
+			exit(0);
+		}
+
+		VectorJ j_new = arm->get_joint_values() - (M_PI/32)*grad/grad.norm();
+		arm->set_joint_values(j_new);
+
+		std::cin.ignore();
+	}
+
+	tc.print_all_elapsed();
 	std::cout << "Displaying current fov beams. Press enter to exit\n";
 	std::cin.ignore();
 }

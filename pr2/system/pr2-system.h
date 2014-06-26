@@ -66,10 +66,10 @@ class PR2System {
 	const double step = 0.0078125*0.0078125;
 	const double INFTY = 1e10;
 
-	const double alpha_control = .01; // .01
+	const double alpha_control = 0; // .01
 	const double alpha_belief = 1; // 1
 	const double alpha_final_belief = 1; // 1
-	const double alpha_goal = .5; // 10
+	const double alpha_goal = 0; // .5
 
 public:
 	PR2System(Vector3d& object);
@@ -100,6 +100,7 @@ public:
 	void fit_gaussians_to_pf(const MatrixP& P, std::vector<ParticleGaussian>& particle_gmm);
 
 //	VectorJ find_joints_for(const Vector3d& position);
+	void get_pcl() { cam->get_pcl(); }
 
 	void display(const VectorJ& j, bool pause=true);
 	void display(const StdVectorJ& J, bool pause=true);
@@ -125,7 +126,7 @@ private:
 	void linearize_dynfunc(const VectorX& x, const VectorU& u, const VectorQ& q,
 			Matrix<double,X_DIM,X_DIM>& A, Matrix<double,X_DIM,Q_DIM>& M);
 	void linearize_obsfunc(const VectorX& x, const VectorR& r,
-			Matrix<double,Z_DIM,X_DIM>& H, Matrix<double,Z_DIM,R_DIM>& N);
+			Matrix<double,Z_DIM,X_DIM>& H);
 
 	void update_particles(const VectorJ& j_tp1_t, const double delta_fov_real, const VectorZ& z_tp1_real, const MatrixP& P_t,
 			MatrixP& P_tp1);

@@ -1,14 +1,81 @@
 #include "fadbad-pr2-sim.h"
 
 /**
+ * FadbadArm constructors
+ */
+
+FadbadArm::FadbadArm(rave::RobotBasePtr robot, Arm::ArmType arm_type) {
+	origin = rave_utils::rave_to_eigen(robot->GetLink("torso_lift_link")->GetTransform()).cast<bdouble>();
+
+	arm_joint_axes = { Vector3b(0,0,1),
+			Vector3b(0,1,0),
+			Vector3b(1,0,0),
+			Vector3b(0,1,0),
+			Vector3b(1,0,0),
+			Vector3b(0,1,0),
+			Vector3b(1,0,0) };
+
+	arm_link_trans = { Vector3b(0, (arm_type == Arm::ArmType::left) ? 0.188 : -0.188, 0),
+			Vector3b(0.1, 0, 0),
+			Vector3b(0, 0, 0),
+			Vector3b(0.4, 0, 0),
+			Vector3b(0, 0, 0),
+			Vector3b(.321, 0, 0),
+			Vector3b(.18, 0, 0) };
+}
+
+/**
+ * FadbadArm public methods
+ */
+
+/**
+ * \param angle: radians
+ * \param axis: vector
+ */
+inline Matrix3b axis_angle_to_matrix(const bdouble& angle, const Vector3b& axis) {
+	bdouble sina = sin(angle);
+	bdouble cosa = cos(angle);
+
+	Matrix3b R = Vector3b(cosa, cosa, cosa).asDiagonal();
+	Matrix3b axis_outer = axis*axis.transpose();
+	for(int i=0; i < 3; ++i) {
+		for(int j=0; j < 3; ++j) {
+			axis_outer(i,j) *= (1-cosa);
+		}
+	}
+	R += axis_outer;
+
+	Vector3b axis_sina = axis;
+	for(int i=0; i < 3; ++i) { axis_sina(i) *= sina; }
+	Matrix3b mat_sina;
+	mat_sina << 0, -axis_sina(2), axis_sina(1),
+			axis_sina(2), 0, -axis_sina(0),
+			-axis_sina(1), axis_sina(0), 0;
+	R += mat_sina;
+
+	return R;
+}
+
+Matrix4b FadbadArm::get_pose(const Matrix<bdouble,ARM_DIM,1>& j) {
+	Matrix4b pose_mat = origin;
+
+	Matrix4b R;
+	for(int i=0; i < ARM_DIM; ++i) {
+		R.block<3,3>(0,0) = axis_angle_to_matrix(j(i), arm_joint_axes[i]);
+		R.block<3,1>(0,3) = arm_link_trans[i];
+		pose_mat = pose_mat*R;
+	}
+
+	return pose_mat;
+}
+
+/**
  * FadbadCamera constructors
  */
 
-FadbadCamera::FadbadCamera(rave::SensorBasePtr s, double mr) : sensor(s), max_range(mr) {
-	rave::SensorBase::SensorGeometryPtr geom = sensor->GetSensorGeometry(rave::SensorBase::ST_Camera);
+FadbadCamera::FadbadCamera(FadbadArm* a, const Matrix4d& g_t_to_s) : arm(a) {
+	gripper_tool_to_sensor = g_t_to_s.cast<bdouble>();
 
-	boost::shared_ptr<rave::SensorBase::CameraGeomData> cam_geom =
-			boost::static_pointer_cast<rave::SensorBase::CameraGeomData>(geom);
 
 	Matrix3b P = Matrix3b::Zero();
 	P(0,0) = fx_sub;
@@ -17,7 +84,7 @@ FadbadCamera::FadbadCamera(rave::SensorBasePtr s, double mr) : sensor(s), max_ra
 	P(0,2) = cx_sub;
 	P(1,2) = cy_sub;
 
-	depth_map = new FadbadDepthMap(sensor, P, max_range);
+	depth_map = new FadbadDepthMap(P);
 }
 
 
@@ -26,18 +93,18 @@ FadbadCamera::FadbadCamera(rave::SensorBasePtr s, double mr) : sensor(s), max_ra
  */
 
 
-std::vector<std::vector<FadbadBeam3d> > FadbadCamera::get_beams(const StdVector3b& env_points) {
+std::vector<std::vector<FadbadBeam3d> > FadbadCamera::get_beams(const Matrix<bdouble,ARM_DIM,1>& j, const StdVector3b& pcl) {
 	std::vector<std::vector<FadbadBeam3d> > beams(H_SUB-1, std::vector<FadbadBeam3d>(W_SUB-1));
 
 	depth_map->clear();
-	for(int i=0; i < env_points.size(); ++i) {
-		depth_map->add_point(env_points[i]);
+	for(int i=0; i < pcl.size(); ++i) {
+		depth_map->add_point(pcl[i], get_pose(j));
 	}
-	Matrix<bdouble,H_SUB,W_SUB> z_buffer = depth_map->get_z_buffer();
+	Matrix<bdouble,H_SUB,W_SUB> z_buffer = depth_map->get_z_buffer(get_position(j));
 
-	RowVector3b origin_pos = rave_utils::rave_to_eigen(sensor->GetTransform().trans).cast<bdouble>();
+	RowVector3b origin_pos = get_position(j);
 
-	Matrix<bdouble,N_SUB,3> dirs = get_directions(H_SUB, W_SUB, H_SUB_M, W_SUB_M);
+	Matrix<bdouble,N_SUB,3> dirs = get_directions(j, H_SUB, W_SUB, H_SUB_M, W_SUB_M);
 	for(int i=0; i < N_SUB; ++i) {
 		bdouble row_norm = dirs.row(i).norm();
 		for(int j=0; j < 3; ++j) {
@@ -161,28 +228,27 @@ bdouble FadbadCamera::signed_distance(const Vector3b& p, std::vector<std::vector
  */
 
 
-MatrixDynb FadbadCamera::get_directions(const int h, const int w, const bdouble h_meters, const bdouble w_meters) {
+MatrixDynb FadbadCamera::get_directions(const Matrix<bdouble,ARM_DIM,1>& j, const int h, const int w, const bdouble h_meters, const bdouble w_meters) {
 	const int n = h*w;
 	MatrixDynb height_grid = VectorDynb::LinSpaced(h, -h_meters/2.0, h_meters/2.0).replicate(1,w);
 	MatrixDynb width_grid = RowVectorDynb::LinSpaced(w, -w_meters/2.0, w_meters/2.0).replicate(h,1);
 
 	MatrixDynb height_grid_vec(Map<VectorDynb>(height_grid.data(), n));
 	MatrixDynb width_grid_vec(Map<VectorDynb>(width_grid.data(), n));
-	VectorDynb z_grid(n,1);
-	z_grid.setZero();
+	VectorDynb z_grid = VectorDynb::Zero(n,1);
 
 	MatrixDynb offsets(n,3);
 	offsets << width_grid_vec, height_grid_vec, z_grid;
 
 	for(int i=0; i < n; ++i) {
 		for(int j=0; j < 3; ++j) {
-			offsets *= (max_range/FOCAL_LENGTH);
+			offsets *= (MAX_RANGE/FOCAL_LENGTH);
 		}
 	}
 
-	MatrixDynb points_cam = RowVector3b(0,0,max_range).replicate(n,1) + offsets;
+	MatrixDynb points_cam = RowVector3b(0,0,MAX_RANGE).replicate(n,1) + offsets;
 
-	Matrix4b ref_from_world = rave_utils::rave_to_eigen(sensor->GetTransform()).cast<bdouble>();
+	Matrix4b ref_from_world = get_pose(j);
 	Vector3b origin_world_pos = ref_from_world.block<3,1>(0,3);
 
 	MatrixDynb directions(n,3);
@@ -200,11 +266,11 @@ MatrixDynb FadbadCamera::get_directions(const int h, const int w, const bdouble 
 }
 
 
-///**
-// * FadbadDepthMap Constructors
-// */
-//
-FadbadDepthMap::FadbadDepthMap(rave::SensorBasePtr s, const Matrix3b& P_mat, bdouble mr) : sensor(s), P(P_mat),  max_range(mr) {
+/**
+ * FadbadDepthMap Constructors
+ */
+
+FadbadDepthMap::FadbadDepthMap(const Matrix3b& P_mat) : P(P_mat) {
 	pixel_buckets = std::vector<std::vector<FadbadPixelBucket*> >(H_SUB, std::vector<FadbadPixelBucket*>(W_SUB));
 	for(int i=0; i < H_SUB; ++i) {
 		for(int j=0; j < W_SUB; ++j) {
@@ -219,18 +285,17 @@ FadbadDepthMap::FadbadDepthMap(rave::SensorBasePtr s, const Matrix3b& P_mat, bdo
  */
 
 // TODO: only add point to bucket if point is either (1) closer than points in bucket or (2) closet to points in bucket
-void FadbadDepthMap::add_point(const Vector3b& point) {
+void FadbadDepthMap::add_point(const Vector3b& point, const Matrix4b& cam_pose) {
 	Matrix4b point_mat = Matrix4b::Identity();
 	point_mat.block<3,1>(0,3) = point;
 
-	Matrix4b cam_pose = rave_utils::rave_to_eigen(sensor->GetTransform()).cast<bdouble>();
 	Matrix4b point_mat_tilde = cam_pose.fullPivLu().solve(Matrix4b::Identity())*point_mat;
 
 	Vector3b y = P*point_mat_tilde.block<3,1>(0,3);
 	Vector2b pixel = {y(1)/y(2), y(0)/y(2)};
 
 	if ((0 <= pixel(0)) && (pixel(0) < H_SUB) && (0 <= pixel(1)) && (pixel(1) < W_SUB) &&
-			((cam_pose.block<3,1>(0,3) - point).norm() < max_range)) { // TODO: should filter out points behind camera!
+			((cam_pose.block<3,1>(0,3) - point).norm() < MAX_RANGE)) { // TODO: should filter out points behind camera!
 		for(int i=0; i < H_SUB; ++i) {
 			for(int j=0; j < W_SUB; ++j) {
 				bdouble i_b = i, j_b = j;
@@ -243,10 +308,9 @@ void FadbadDepthMap::add_point(const Vector3b& point) {
 	}
 }
 
-Matrix<bdouble,H_SUB,W_SUB> FadbadDepthMap::get_z_buffer() {
+Matrix<bdouble,H_SUB,W_SUB> FadbadDepthMap::get_z_buffer(const Vector3b& cam_pos) {
 	Matrix<bdouble,H_SUB,W_SUB> z_buffer = Matrix<bdouble,H_SUB,W_SUB>::Ones();
 
-	Vector3b cam_pos = rave_utils::rave_to_eigen(sensor->GetTransform().trans).cast<bdouble>();
 	for(int i=0; i < H_SUB; ++i) {
 		for(int j=0; j < W_SUB; ++j) {
 			if (!(pixel_buckets[i][j]->is_empty())) {
@@ -254,7 +318,7 @@ Matrix<bdouble,H_SUB,W_SUB> FadbadDepthMap::get_z_buffer() {
 			} else if (num_neighbors_empty(i,j) >= 5 ) {
 				z_buffer(i,j) = (cam_pos - average_of_neighbors(i, j)).norm();
 			} else {
-				z_buffer(i,j) = max_range;
+				z_buffer(i,j) = MAX_RANGE;
 			}
 		}
 	}

@@ -23,27 +23,37 @@ class FadbadCamera;
 class FadbadPixelBucket;
 class FadbadDepthMap;
 
+class FadbadArm {
+public:
+	FadbadArm(rave::RobotBasePtr robot, Arm::ArmType arm_type);
+
+	Matrix4b get_pose(const Matrix<bdouble,ARM_DIM,1>& j);
+
+private:
+	Matrix4b origin;
+	std::vector<Vector3b> arm_joint_axes, arm_link_trans;
+};
+
 class FadbadCamera {
 public:
-	FadbadCamera(rave::SensorBasePtr s, double mr);
+	FadbadCamera(FadbadArm* a, const Matrix4d& g_t_to_s);
 
-	std::vector<std::vector<FadbadBeam3d> > get_beams(const StdVector3b& env_points);
+	std::vector<std::vector<FadbadBeam3d> > get_beams(const Matrix<bdouble,ARM_DIM,1>& j, const StdVector3b& pcl);
 	std::vector<FadbadTriangle3d> get_border(const std::vector<std::vector<FadbadBeam3d> >& beams, bool with_side_border=true);
 
 	bool is_inside(const Vector3b& p, std::vector<std::vector<FadbadBeam3d> >& beams);
 	bdouble signed_distance(const Vector3b& p, std::vector<std::vector<FadbadBeam3d> >& beams, std::vector<FadbadTriangle3d>& border);
 
-	inline Vector3b get_position() { return rave_utils::rave_to_eigen(sensor->GetTransform().trans).cast<bdouble>(); }
-	inline rave::Transform get_pose() { return sensor->GetTransform(); }
+	inline Matrix4b get_pose(const Matrix<bdouble,ARM_DIM,1>& j) { return arm->get_pose(j)*gripper_tool_to_sensor; }
+	inline Vector3b get_position(const Matrix<bdouble,ARM_DIM,1>& j) { return get_pose(j).block<3,1>(0,3); }
 
 private:
-	rave::SensorBasePtr sensor;
-
-	bdouble max_range;
+	FadbadArm* arm;
+	Matrix4b gripper_tool_to_sensor;
 
 	FadbadDepthMap* depth_map;
 
-	MatrixDynb get_directions(const int h, const int w, const bdouble h_meters, const bdouble w_meters);
+	MatrixDynb get_directions(const Matrix<bdouble,ARM_DIM,1>& j, const int h, const int w, const bdouble h_meters, const bdouble w_meters);
 };
 
 class FadbadPixelBucket {
@@ -80,17 +90,15 @@ private:
  */
 class FadbadDepthMap {
 public:
-	FadbadDepthMap(rave::SensorBasePtr s, const Matrix3b& P_mat, bdouble mr);
+	FadbadDepthMap(const Matrix3b& P_mat);
 
-	void add_point(const Vector3b& point);
-	Matrix<bdouble,H_SUB,W_SUB> get_z_buffer();
+	void add_point(const Vector3b& point, const Matrix4b& cam_pose);
+	Matrix<bdouble,H_SUB,W_SUB> get_z_buffer(const Vector3b& cam_pos);
 
 	void clear();
 
 private:
-	rave::SensorBasePtr sensor;
 	Matrix3b P;
-	bdouble max_range;
 
 	std::vector<std::vector<FadbadPixelBucket*> > pixel_buckets;
 

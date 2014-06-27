@@ -131,7 +131,7 @@ Matrix4d Arm::get_pose(const Matrix<double,ARM_DIM,1>& j) {
 
 	rave::Transform R;
 	for(int i=0; i < ARM_DIM; ++i) {
-		R.rot = rave::geometry::quatFromAxisAngle(arm_joint_axes[i], j[i]);
+		R.rot = rave::geometry::quatFromAxisAngle(arm_joint_axes[i], j(i));
 		R.trans = arm_link_trans[i];
 		pose_mat = pose_mat*R;
 	}

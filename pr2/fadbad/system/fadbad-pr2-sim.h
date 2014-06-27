@@ -53,7 +53,7 @@ private:
 
 	FadbadDepthMap* depth_map;
 
-	MatrixDynb get_directions(const Matrix<bdouble,ARM_DIM,1>& j, const int h, const int w, const bdouble h_meters, const bdouble w_meters);
+	Matrix<bdouble,N_SUB,3> get_directions(const Matrix<bdouble,ARM_DIM,1>& j);
 };
 
 class FadbadPixelBucket {
@@ -63,11 +63,14 @@ public:
 	inline void add_point(const Vector2b& pixel, const Vector3b& point) { pixels.push_back(pixel); points.push_back(point); }
 	inline bool is_empty() { return pixels.size() == 0; }
 	inline Vector3b average_point() {
+		std::cout << "pixels size: " << pixels.size() << "\n";
+		assert(pixels.size() > 0);
 
 		VectorDynb weights(pixels.size());
 		for(int i=0; i < pixels.size(); ++i) {
 			weights(i) = (pixels[i] - pixel_center).norm();
 		}
+		std::cout << "weights sum: " << weights.sum().x() << "\n";
 		weights /= weights.sum();
 
 		Vector3b avg_point = Vector3b::Zero();

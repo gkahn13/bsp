@@ -25,7 +25,7 @@ namespace rave = OpenRAVE;
 // Camera constants for actual and subsampled
 
 #define FOCAL_LENGTH .01
-#define MAX_RANGE 5
+#define MAX_RANGE 5.0
 
 #define WIDTH	   256 // 64
 #define HEIGHT 	   192 // 48
@@ -150,6 +150,7 @@ public:
 	void plot_pcl(const StdVector3d& pcl);
 
 	inline rave::SensorBasePtr get_sensor() { return sensor; }
+	inline Matrix4d get_gripper_tool_to_sensor() { return gripper_tool_to_sensor; }
 
 private:
 	rave::RobotBasePtr robot;

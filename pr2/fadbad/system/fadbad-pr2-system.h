@@ -4,11 +4,16 @@
 #include "../fadbad-utils.h"
 #include "fadbad-pr2-sim.h"
 
+class FadbadPR2System;
 #include "../../system/pr2-system.h"
+#include "../../geometry/geometry3d.h"
 
 #include <Eigen/Eigen>
 #include <Eigen/StdVector>
 using namespace Eigen;
+
+#include <openrave-core.h>
+namespace rave = OpenRAVE;
 
 //#include "../../../util/logging.h"
 
@@ -44,16 +49,13 @@ struct FadbadParticleGaussian {
 };
 
 class FadbadPR2System {
-	const bdouble step = 0.0078125*0.0078125;
-	const bdouble INFTY = 1e10;
-
 	const bdouble alpha_control = 0; // .01
 	const bdouble alpha_belief = 1; // 1
 	const bdouble alpha_final_belief = 1; // 1
 	const bdouble alpha_goal = 0; // .5
 
 public:
-	FadbadPR2System(PR2* brett, Arm* arm, Camera* cam);
+	FadbadPR2System(rave::RobotBasePtr r, Arm::ArmType arm_type, PR2System& sys);
 
 	VectorJb dynfunc(const VectorJb& j, const VectorUb& u, const VectorQb& q, bool enforce_limits=false);
 	VectorZb obsfunc(const VectorJb& j, const Vector3b& object, const VectorRb& r);
@@ -63,24 +65,26 @@ public:
 	void belief_dynamics(const VectorXb& x_t, const MatrixXb& sigma_t, const VectorUb& u_t, const bdouble alpha,
 			VectorXb& x_tp1, MatrixXb& sigma_tp1);
 
-	void get_limits(VectorJb& j_min, VectorJb& j_max, VectorUb& u_min, VectorUb& u_max);
-
 	bdouble cost(const StdVectorJb& J, const Vector3b& obj, const MatrixXb& sigma0, const StdVectorUb& U, const bdouble alpha);
 	bdouble cost_gmm(const StdVectorJb& J, const MatrixJb& j_sigma0, const StdVectorUb& U,
-				const std::vector<ParticleGaussian>& particle_gmm, const bdouble alpha);
+				const std::vector<FadbadParticleGaussian>& particle_gmm, const bdouble alpha);
 
+	void cost_gmm_and_grad(StdVectorJ& J, const MatrixJ& j_sigma0, StdVectorU& U,
+			const std::vector<ParticleGaussian>& particle_gmm, const double alpha, const StdVector3d& pcl_d,
+			double& cost, VectorTOTAL& grad);
 
 private:
-	PR2* brett;
-	Arm* arm;
-	Camera* cam;
+	PR2System* sys;
+
+	FadbadArm* arm;
+	FadbadCamera* cam;
 
 	Vector3b object;
-	VectorJb j_min, j_max, u_min, u_max;
+	VectorJb j_min, j_max;
 	MatrixQb Q;
 	MatrixRb R;
 
-	void init();
+	StdVector3b pcl;
 
 	void linearize_dynfunc(const VectorXb& x, const VectorUb& u, const VectorQb& q,
 			Matrix<bdouble,X_DIM,X_DIM>& A, Matrix<bdouble,X_DIM,Q_DIM>& M);

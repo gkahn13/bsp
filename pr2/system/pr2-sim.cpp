@@ -126,11 +126,43 @@ void Arm::get_limits(Matrix<double,ARM_DIM,1>& l, Matrix<double,ARM_DIM,1>& u) {
 	u = upper;
 }
 
+//inline Matrix3d axis_angle_to_matrix(const double& angle, const Vector3d& axis) {
+//	double sina = sin(angle);
+//	double cosa = cos(angle);
+//
+//	Matrix3d R = Vector3d(cosa, cosa, cosa).asDiagonal();
+//	Matrix3d axis_outer = axis*axis.transpose();
+//	for(int i=0; i < 3; ++i) {
+//		for(int j=0; j < 3; ++j) {
+//			axis_outer(i,j) *= (1-cosa);
+//		}
+//	}
+//	R += axis_outer;
+//
+//	Vector3d axis_sina = axis;
+//	for(int i=0; i < 3; ++i) { axis_sina(i) *= sina; }
+//	Matrix3d mat_sina;
+//	mat_sina << 0, -axis_sina(2), axis_sina(1),
+//			axis_sina(2), 0, -axis_sina(0),
+//			-axis_sina(1), axis_sina(0), 0;
+//	R += mat_sina;
+//
+//	return R;
+//}
+
 Matrix4d Arm::get_pose(const Matrix<double,ARM_DIM,1>& j) {
 	rave::Transform pose_mat = origin;
 
 	rave::Transform R;
 	for(int i=0; i < ARM_DIM; ++i) {
+//		Matrix3d rot = axis_angle_to_matrix(j(i), rave_utils::rave_to_eigen(arm_joint_axes[i]));
+//		Vector3d trans = rave_utils::rave_to_eigen(arm_link_trans[i]);
+//		Matrix4d R_eigen = Matrix4d::Identity();
+//		R_eigen.block<3,3>(0,0) = rot;
+//		R_eigen.block<3,1>(0,3) = trans;
+//		std::cout << "R_eigen:\n" << R_eigen << "\n";
+//		R = rave_utils::eigen_to_rave(R_eigen);
+
 		R.rot = rave::geometry::quatFromAxisAngle(arm_joint_axes[i], j(i));
 		R.trans = arm_link_trans[i];
 		pose_mat = pose_mat*R;
@@ -410,11 +442,17 @@ std::vector<std::vector<Beam3d> > Camera::get_beams(const Matrix<double,ARM_DIM,
 	std::vector<std::vector<Beam3d> > beams(H_SUB-1, std::vector<Beam3d>(W_SUB-1));
 	Matrix4d cam_pose = get_pose(j);
 
+	std::cout << "arm_pose:\n" << arm->get_pose(j) << "\n";
+	std::cout << "j: " << j.transpose() << "\n";
+	std::cout << "cam_pose:\n" << cam_pose << "\n";
+
 	depth_map->clear();
 	for(int i=0; i < pcl.size(); ++i) {
 		depth_map->add_point(pcl[i], cam_pose);
 	}
 	Matrix<double,H_SUB,W_SUB> z_buffer = depth_map->get_z_buffer(get_position(j));
+
+	std::cout << "z_buffer(10,10): " << z_buffer(10,10) << "\n";
 
 	RowVector3d origin_pos = get_pose(j).block<3,1>(0,3);
 
@@ -647,6 +685,13 @@ void DepthMap::add_point(const Vector3d& point, const Matrix4d& cam_pose) {
 	Vector2d pixel = {y(1)/y(2), y(0)/y(2)};
 	int h_round = int(pixel(0));
 	int w_round = int(pixel(1));
+
+//	std::cout << "cam_pose\n" << cam_pose << "\n";
+//	std::cout << "point_mat_tilde:\n" << point_mat_tilde << "\n";
+//	std::cout << "y: " << y.transpose() << "\n";
+//	std::cout << "point: " << point.transpose() << "\n";
+//	std::cout << "pixel: " << pixel.transpose() << "\n";
+//	exit(0);
 
 	if ((0 <= h_round) && (h_round < H_SUB) && (0 <= w_round) && (w_round < W_SUB) &&
 			((cam_pose.block<3,1>(0,3) - point).norm() < MAX_RANGE)) { // TODO: should filter out points behind camera!

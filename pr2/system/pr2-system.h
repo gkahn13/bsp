@@ -49,6 +49,10 @@ typedef std::vector<VectorX, aligned_allocator<VectorX>> StdVectorX;
 typedef std::vector<VectorJ, aligned_allocator<VectorJ>> StdVectorJ;
 typedef std::vector<VectorU, aligned_allocator<VectorU>> StdVectorU;
 
+class ParticleGaussian;
+class PR2System;
+#include "../fadbad/system/fadbad-pr2-system.h"
+
 struct ParticleGaussian {
 	Vector3d mean;
 	Matrix3d cov;
@@ -63,6 +67,8 @@ struct ParticleGaussian {
  * NOTE: all coordinates are with respect to OpenRAVE 'world' frame
  */
 class PR2System {
+	friend class FadbadPR2System;
+
 	const double step = 0.0078125*0.0078125;
 	const double INFTY = 1e10;
 
@@ -72,9 +78,9 @@ class PR2System {
 	const double alpha_goal = 0; // .5
 
 public:
-	PR2System(Vector3d& object);
-	PR2System(Vector3d& object, Arm::ArmType arm_type, bool view);
-	PR2System(Vector3d& object, Arm::ArmType arm_type, std::string env_file, std::string robot_name, bool view);
+	PR2System(Vector3d& object, bool use_fadbad);
+	PR2System(Vector3d& object, Arm::ArmType arm_type, bool view, bool use_fadbad);
+	PR2System(Vector3d& object, Arm::ArmType arm_type, std::string env_file, std::string robot_name, bool view, bool use_fadbad);
 
 	VectorJ dynfunc(const VectorJ& j, const VectorU& u, const VectorQ& q, bool enforce_limits=false);
 	VectorZ obsfunc(const VectorJ& j, const Vector3d& object, const VectorR& r);
@@ -91,6 +97,9 @@ public:
 	double cost(const StdVectorJ& J, const Vector3d& obj, const MatrixX& sigma0, const StdVectorU& U, const double alpha);
 	double cost_gmm(const StdVectorJ& J, const MatrixJ& j_sigma0, const StdVectorU& U,
 				const std::vector<ParticleGaussian>& particle_gmm, const double alpha);
+	void cost_gmm_and_grad(StdVectorJ& J, const MatrixJ& j_sigma0, StdVectorU& U,
+				const std::vector<ParticleGaussian>& particle_gmm, const double alpha,
+				double& cost, VectorTOTAL& grad);
 
 //	VectorTOTAL cost_grad(StdVectorJ& J, const Vector3d& obj, const MatrixX& sigma0, StdVectorU& U, const double alpha);
 	VectorTOTAL cost_gmm_grad(StdVectorJ& J, const MatrixJ& j_sigma0, StdVectorU& U,
@@ -114,6 +123,7 @@ private:
 	PR2* brett;
 	Arm* arm;
 	Camera* cam;
+	Arm::ArmType arm_type;
 
 	Vector3d object;
 	VectorJ j_min, j_max, u_min, u_max;
@@ -121,6 +131,9 @@ private:
 	MatrixR R;
 
 	StdVector3d pcl;
+
+	bool use_fadbad;
+	FadbadPR2System* fadbad_sys;
 
 	void init();
 

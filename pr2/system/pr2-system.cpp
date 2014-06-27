@@ -4,15 +4,17 @@
  * PR2System Constructors and Initializers
  */
 
-PR2System::PR2System(Vector3d& o) : object(o) {
+PR2System::PR2System(Vector3d& o, bool f) : object(o), use_fadbad(f) {
 	brett = new PR2();
+	arm_type = Arm::ArmType::right;
 	arm = brett->rarm;
 	cam = brett->rcam;
 	init();
 }
 
-PR2System::PR2System(Vector3d& o, Arm::ArmType arm_type, bool view) : object(o) {
+PR2System::PR2System(Vector3d& o, Arm::ArmType arm_type, bool view, bool f) : object(o), use_fadbad(f) {
 	brett = new PR2(view);
+	this->arm_type = arm_type;
 	if (arm_type == Arm::ArmType::right) {
 		arm = brett->rarm;
 		cam = brett->rcam;
@@ -23,8 +25,10 @@ PR2System::PR2System(Vector3d& o, Arm::ArmType arm_type, bool view) : object(o) 
 	init();
 }
 
-PR2System::PR2System(Vector3d& o, Arm::ArmType arm_type, std::string env_file, std::string robot_name, bool view) : object(o) {
+PR2System::PR2System(Vector3d& o, Arm::ArmType arm_type, std::string env_file, std::string robot_name, bool view, bool f) :
+				object(o), use_fadbad(f) {
 	brett = new PR2(env_file, robot_name, view);
+	this->arm_type = arm_type;
 	if (arm_type == Arm::ArmType::right) {
 		arm = brett->rarm;
 		cam = brett->rcam;
@@ -44,6 +48,10 @@ void PR2System::init() {
 	VectorR R_diag;
 	R_diag << (M_PI/4)*VectorJ::Ones(), 5*Vector3d::Ones();
 	R = R_diag.asDiagonal();
+
+	if (use_fadbad) {
+		fadbad_sys = new FadbadPR2System(brett->get_robot(), arm_type, *this);
+	}
 }
 
 /**
@@ -88,6 +96,8 @@ MatrixZ PR2System::delta_matrix(const VectorJ& j, const Vector3d& object, const 
 	std::vector<std::vector<Beam3d> > beams = cam->get_beams(j, pcl);
 	std::vector<Triangle3d> border = cam->get_border(beams);
 	double sd = cam->signed_distance(object, beams, border);
+
+	std::cout << "sd: " << sd << "\n";
 
 	double sd_sigmoid = 1.0 - 1.0/(1.0 + exp(-alpha*sd));
 	for(int i=J_DIM; i < Z_DIM; ++i) {
@@ -150,6 +160,9 @@ double PR2System::cost(const StdVectorJ& J, const Vector3d& obj, const MatrixX& 
 	for(int t=0; t < TIMESTEPS-1; ++t) {
 		x_t << J[t], obj;
 		belief_dynamics(x_t, sigma_t, U[t], alpha, x_tp1, sigma_tp1);
+
+		std::cout << "sigma " << t << "\n" << sigma_tp1 << "\n\n";
+
 		if (t < TIMESTEPS-2) {
 			cost += alpha_belief*sigma_tp1.trace();
 		} else {
@@ -214,6 +227,17 @@ VectorTOTAL PR2System::cost_gmm_grad(StdVectorJ& J, const MatrixJ& j_sigma0, Std
 		}
 	}
 	return grad;
+}
+
+void PR2System::cost_gmm_and_grad(StdVectorJ& J, const MatrixJ& j_sigma0, StdVectorU& U,
+				const std::vector<ParticleGaussian>& particle_gmm, const double alpha,
+				double& cost, VectorTOTAL& grad) {
+	if (use_fadbad) {
+		fadbad_sys->cost_gmm_and_grad(J, j_sigma0, U, particle_gmm, alpha, pcl, cost, grad);
+	} else {
+		cost = cost_gmm(J, j_sigma0, U, particle_gmm, alpha);
+		grad = cost_gmm_grad(J, j_sigma0, U, particle_gmm, alpha);
+	}
 }
 
 void PR2System::fit_gaussians_to_pf(const MatrixP& P, std::vector<ParticleGaussian>& particle_gmm) {

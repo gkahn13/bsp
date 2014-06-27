@@ -434,7 +434,7 @@ void init_collocation(const VectorJ& j0, const MatrixP& P, PR2System& sys,
 	}
 
 	// only take max gaussian
-//	particle_gmm = std::vector<ParticleGaussian>(1, particle_gmm[0]);
+	particle_gmm = std::vector<ParticleGaussian>(1, particle_gmm[0]);
 //	particle_gmm[0].cov = .01*Matrix3d::Identity();
 //	particle_gmm[0].cov *= 5000;
 
@@ -530,7 +530,7 @@ int main(int argc, char* argv[]) {
 		LOG_INFO("MPC iteration: %d",iter);
 		init_collocation(j_t, P_t, sys, J, U, particle_gmm);
 
-		sys.get_pcl(); // grab current environment point cloud
+		sys.get_pcl(j_t); // grab current environment point cloud, TODO: should be j_t_real
 		LOG_INFO("Current state");
 		sys.display(j_t, particle_gmm);
 

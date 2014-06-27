@@ -99,8 +99,7 @@ public:
 	// use figtree
 	void fit_gaussians_to_pf(const MatrixP& P, std::vector<ParticleGaussian>& particle_gmm);
 
-//	VectorJ find_joints_for(const Vector3d& position);
-	void get_pcl() { cam->get_pcl(); }
+	void get_pcl(const VectorJ& j) { StdVector3d new_pcl = cam->get_pcl(j); pcl.insert(pcl.end(), new_pcl.begin(), new_pcl.end()); }
 
 	void display(const VectorJ& j, bool pause=true);
 	void display(const StdVectorJ& J, bool pause=true);
@@ -120,6 +119,8 @@ private:
 	VectorJ j_min, j_max, u_min, u_max;
 	MatrixQ Q;
 	MatrixR R;
+
+	StdVector3d pcl;
 
 	void init();
 

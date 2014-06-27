@@ -59,13 +59,13 @@ void PR2::init(std::string env_file, std::string robot_name, bool view) {
 		viewer_thread = boost::shared_ptr<boost::thread>(new boost::thread(boost::bind(SetViewer, env, "qtcoin")));
 	}
 
-	larm = new Arm(robot, Arm::ArmType::left);
 	rarm = new Arm(robot, Arm::ArmType::right);
-	head = new Head(robot);
+	larm = new Arm(robot, Arm::ArmType::left);
+//	head = new Head(robot);
 
-	hcam = new Camera(robot, "head_cam", 5);
-	rcam = new Camera(robot, "r_gripper_cam", 5);
-	lcam = new Camera(robot, "l_gripper_cam", 5);
+//	hcam = new Camera(robot, "head_cam", 5);
+	rcam = new Camera(robot, "r_gripper_cam", rarm);
+	lcam = new Camera(robot, "l_gripper_cam", larm);
 
 	rave::CollisionCheckerBasePtr collision_checker = rave::RaveCreateCollisionChecker(env, "ode");
 	env->SetCollisionChecker(collision_checker);
@@ -91,6 +91,24 @@ Arm::Arm(rave::RobotBasePtr robot, ArmType arm_type) {
 
 	lower = Matrix<double,ARM_DIM,1>(lower_vec.data());
 	upper = Matrix<double,ARM_DIM,1>(upper_vec.data());
+
+	origin = robot->GetLink("torso_lift_link")->GetTransform();
+
+	arm_joint_axes = { rave::Vector(0,0,1),
+			rave::Vector(0,1,0),
+			rave::Vector(1,0,0),
+			rave::Vector(0,1,0),
+			rave::Vector(1,0,0),
+			rave::Vector(0,1,0),
+			rave::Vector(1,0,0) };
+
+	arm_link_trans = { rave::Vector(0, (arm_type == ArmType::left) ? 0.188 : -0.188, 0),
+			rave::Vector(0.1, 0, 0),
+			rave::Vector(0, 0, 0),
+			rave::Vector(0.4, 0, 0),
+			rave::Vector(0, 0, 0),
+			rave::Vector(.321, 0, 0),
+			rave::Vector(.18, 0, 0) };
 }
 
 /**
@@ -108,8 +126,17 @@ void Arm::get_limits(Matrix<double,ARM_DIM,1>& l, Matrix<double,ARM_DIM,1>& u) {
 	u = upper;
 }
 
-rave::Transform Arm::get_pose() {
-	return manip->GetEndEffectorTransform();
+Matrix4d Arm::get_pose(const Matrix<double,ARM_DIM,1>& j) {
+	rave::Transform pose_mat = origin;
+
+	rave::Transform R;
+	for(int i=0; i < ARM_DIM; ++i) {
+		R.rot = rave::geometry::quatFromAxisAngle(arm_joint_axes[i], j[i]);
+		R.trans = arm_link_trans[i];
+		pose_mat = pose_mat*R;
+	}
+
+	return rave_utils::rave_to_eigen(pose_mat);
 }
 
 void Arm::set_joint_values(const Matrix<double,ARM_DIM,1>& j) {
@@ -191,7 +218,7 @@ void Arm::teleop() {
 	char c;
 	while ((c = utils::getch()) != 'q') {
 
-		rave::Transform pose = get_pose();
+		rave::Transform pose = manip->GetEndEffectorTransform();
 		if (delta_position.count(c) > 0) {
 			pose.trans += delta_position[c];
 		} else if (delta_angle.count(c) > 0) {
@@ -206,108 +233,108 @@ void Arm::teleop() {
 
 
 
-/**
- * Head constructors
- */
-
-Head::Head(rave::RobotBasePtr robot) {
-	this->robot = robot;
-
-	std::vector<std::string> joint_names = {"head_pan_joint", "head_tilt_joint"};
-	for(int i=0; i < joint_names.size(); ++i) {
-		joint_indices.push_back(robot->GetJointIndex(joint_names[i]));
-	}
-	num_joints = joint_indices.size();
-
-	pose_link = robot->GetLink("wide_stereo_link");
-
-	std::vector<double> lower_vec(num_joints), upper_vec(num_joints);
-	robot->GetDOFLimits(lower_vec, upper_vec, joint_indices);
-
-	lower = Matrix<double,HEAD_DIM,1>(lower_vec.data());
-	upper = Matrix<double,HEAD_DIM,1>(upper_vec.data());
-}
-
-/**
- * Head public methods
- */
-
-Matrix<double,HEAD_DIM,1> Head::get_joint_values() {
-	std::vector<double> joint_values;
-	robot->GetDOFValues(joint_values, joint_indices);
-	return Matrix<double,HEAD_DIM,1>(joint_values.data());
-}
-
-void Head::get_limits(Matrix<double,HEAD_DIM,1>& l, Matrix<double,HEAD_DIM,1>& u) {
-	l = lower;
-	u = upper;
-}
-
-rave::Transform Head::get_pose() {
-	return pose_link->GetTransform();
-}
-
-void Head::set_joint_values(Matrix<double,HEAD_DIM,1>& j) {
-	std::vector<double> joint_values_vec(HEAD_DIM);
-	for(int i=0; i < num_joints; ++i) {
-		joint_values_vec[i] = std::min(j(i), upper(i));
-		joint_values_vec[i] = std::max(j(i), lower(i));
-	}
-
-	robot->SetDOFValues(joint_values_vec, rave::KinBody::CheckLimitsAction::CLA_Nothing, joint_indices);
-}
-
-void Head::look_at(const rave::Transform &pose, const std::string ref_frame) {
-	rave::Transform world_from_ref, world_from_cam, ref_from_cam;
-
-	if (ref_frame == "world") {
-		world_from_ref.identity();
-	} else {
-		world_from_ref = robot->GetLink(ref_frame)->GetTransform();
-	}
-	world_from_cam = get_pose();
-	ref_from_cam = world_from_ref.inverse()*world_from_cam;
-
-	rave::Vector ax = pose.trans - ref_from_cam.trans;
-	double pan = atan(ax.y/ax.x);
-	double tilt = asin(-ax.z/sqrt(ax.lengthsqr3()));
-
-	Matrix<double,HEAD_DIM,1> joint_values(pan, tilt);
-	set_joint_values(joint_values);
-}
-
-void Head::teleop() {
-	double pos_step = .01;
-	std::map<int,std::vector<double> > delta_joints =
-	{
-			{'a' , {pos_step, 0}},
-			{'d' , {-pos_step, 0}},
-			{'w' , {0, -pos_step}},
-			{'x' , {0, pos_step}},
-	};
-
-	std::cout << "Head teleop\n";
-
-	char c;
-	while ((c = utils::getch()) != 'q') {
-
-		Matrix<double,HEAD_DIM,1> j = get_joint_values();
-		if (delta_joints.count(c) > 0) {
-			j += Matrix<double,HEAD_DIM,1>(delta_joints[c].data());
-		}
-
-		set_joint_values(j);
-
-	}
-
-	std::cout << "Head end teleop\n";
-}
+///**
+// * Head constructors
+// */
+//
+//Head::Head(rave::RobotBasePtr robot) {
+//	this->robot = robot;
+//
+//	std::vector<std::string> joint_names = {"head_pan_joint", "head_tilt_joint"};
+//	for(int i=0; i < joint_names.size(); ++i) {
+//		joint_indices.push_back(robot->GetJointIndex(joint_names[i]));
+//	}
+//	num_joints = joint_indices.size();
+//
+//	pose_link = robot->GetLink("wide_stereo_link");
+//
+//	std::vector<double> lower_vec(num_joints), upper_vec(num_joints);
+//	robot->GetDOFLimits(lower_vec, upper_vec, joint_indices);
+//
+//	lower = Matrix<double,HEAD_DIM,1>(lower_vec.data());
+//	upper = Matrix<double,HEAD_DIM,1>(upper_vec.data());
+//}
+//
+///**
+// * Head public methods
+// */
+//
+//Matrix<double,HEAD_DIM,1> Head::get_joint_values() {
+//	std::vector<double> joint_values;
+//	robot->GetDOFValues(joint_values, joint_indices);
+//	return Matrix<double,HEAD_DIM,1>(joint_values.data());
+//}
+//
+//void Head::get_limits(Matrix<double,HEAD_DIM,1>& l, Matrix<double,HEAD_DIM,1>& u) {
+//	l = lower;
+//	u = upper;
+//}
+//
+//rave::Transform Head::get_pose() {
+//	return pose_link->GetTransform();
+//}
+//
+//void Head::set_joint_values(Matrix<double,HEAD_DIM,1>& j) {
+//	std::vector<double> joint_values_vec(HEAD_DIM);
+//	for(int i=0; i < num_joints; ++i) {
+//		joint_values_vec[i] = std::min(j(i), upper(i));
+//		joint_values_vec[i] = std::max(j(i), lower(i));
+//	}
+//
+//	robot->SetDOFValues(joint_values_vec, rave::KinBody::CheckLimitsAction::CLA_Nothing, joint_indices);
+//}
+//
+//void Head::look_at(const rave::Transform &pose, const std::string ref_frame) {
+//	rave::Transform world_from_ref, world_from_cam, ref_from_cam;
+//
+//	if (ref_frame == "world") {
+//		world_from_ref.identity();
+//	} else {
+//		world_from_ref = robot->GetLink(ref_frame)->GetTransform();
+//	}
+//	world_from_cam = get_pose();
+//	ref_from_cam = world_from_ref.inverse()*world_from_cam;
+//
+//	rave::Vector ax = pose.trans - ref_from_cam.trans;
+//	double pan = atan(ax.y/ax.x);
+//	double tilt = asin(-ax.z/sqrt(ax.lengthsqr3()));
+//
+//	Matrix<double,HEAD_DIM,1> joint_values(pan, tilt);
+//	set_joint_values(joint_values);
+//}
+//
+//void Head::teleop() {
+//	double pos_step = .01;
+//	std::map<int,std::vector<double> > delta_joints =
+//	{
+//			{'a' , {pos_step, 0}},
+//			{'d' , {-pos_step, 0}},
+//			{'w' , {0, -pos_step}},
+//			{'x' , {0, pos_step}},
+//	};
+//
+//	std::cout << "Head teleop\n";
+//
+//	char c;
+//	while ((c = utils::getch()) != 'q') {
+//
+//		Matrix<double,HEAD_DIM,1> j = get_joint_values();
+//		if (delta_joints.count(c) > 0) {
+//			j += Matrix<double,HEAD_DIM,1>(delta_joints[c].data());
+//		}
+//
+//		set_joint_values(j);
+//
+//	}
+//
+//	std::cout << "Head end teleop\n";
+//}
 
 /**
  * Camera constructors
  */
 
-Camera::Camera(rave::RobotBasePtr r, std::string camera_name, double mr) : robot(r), max_range(mr) {
+Camera::Camera(rave::RobotBasePtr r, std::string camera_name, Arm* a) : robot(r), arm(a), fov(nullptr) {
 	bool found_sensor = false;
 	std::vector<rave::RobotBase::AttachedSensorPtr> sensors = robot->GetAttachedSensors();
 	for(int i=0; i < sensors.size(); ++i) {
@@ -332,17 +359,24 @@ Camera::Camera(rave::RobotBasePtr r, std::string camera_name, double mr) : robot
 	P(0,2) = cx_sub;
 	P(1,2) = cy_sub;
 
-	depth_map = new DepthMap(sensor, P, max_range);
+	depth_map = new DepthMap(sensor, P);
+
+	Matrix4d sensor_pose = rave_utils::rave_to_eigen(sensor->GetTransform());
+	Matrix4d ee_pose = a->get_pose(a->get_joint_values());
+
+	gripper_tool_to_sensor = ee_pose.inverse()*sensor_pose;
 }
 
 /**
  * Camera public methods
  */
 
-void Camera::get_pcl() {
+StdVector3d Camera::get_pcl(const Matrix<double,ARM_DIM,1>& j) {
+	StdVector3d pcl;
+	arm->set_joint_values(j);
 	RowVector3d origin_pos = rave_utils::rave_to_eigen(sensor->GetTransform().trans);
 
-	MatrixXd dirs = get_directions(HEIGHT, WIDTH, HEIGHT_M, WIDTH_M);
+	MatrixXd dirs = get_directions(j, HEIGHT, WIDTH, HEIGHT_M, WIDTH_M);
 
 	if (fov != nullptr) {
 		free(fov);
@@ -361,27 +395,30 @@ void Camera::get_pcl() {
 		ray.dir.y = dirs(i,1);
 		ray.dir.z = dirs(i,2);
 		if (env->CheckCollision(ray, report)) {
-			env_points.push_back(rave_utils::rave_to_eigen(report->contacts[0].pos));
+			pcl.push_back(rave_utils::rave_to_eigen(report->contacts[0].pos));
 
 		}
 	}
+
+	return pcl;
 }
 
-std::vector<std::vector<Beam3d> > Camera::get_beams() {
+std::vector<std::vector<Beam3d> > Camera::get_beams(const Matrix<double,ARM_DIM,1>& j, const StdVector3d& pcl) {
 //	TimerCollection tc;
 //	tc.start("get beams time");
 
 	std::vector<std::vector<Beam3d> > beams(H_SUB-1, std::vector<Beam3d>(W_SUB-1));
+	Matrix4d cam_pose = get_pose(j);
 
 	depth_map->clear();
-	for(int i=0; i < env_points.size(); ++i) {
-		depth_map->add_point(env_points[i]);
+	for(int i=0; i < pcl.size(); ++i) {
+		depth_map->add_point(pcl[i], cam_pose);
 	}
-	Matrix<double,H_SUB,W_SUB> z_buffer = depth_map->get_z_buffer();
+	Matrix<double,H_SUB,W_SUB> z_buffer = depth_map->get_z_buffer(get_position(j));
 
-	RowVector3d origin_pos = rave_utils::rave_to_eigen(sensor->GetTransform().trans);
+	RowVector3d origin_pos = get_pose(j).block<3,1>(0,3);
 
-	Matrix<double,N_SUB,3> dirs = get_directions(H_SUB, W_SUB, H_SUB_M, W_SUB_M);
+	Matrix<double,N_SUB,3> dirs = get_directions(j, H_SUB, W_SUB, H_SUB_M, W_SUB_M);
 
 	std::vector<std::vector<Vector3d> > hits(H_SUB, std::vector<Vector3d>(W_SUB));
 
@@ -530,12 +567,12 @@ void Camera::plot_fov(std::vector<std::vector<Beam3d> >& beams) {
 //	}
 }
 
-void Camera::plot_pcl() {
+void Camera::plot_pcl(const StdVector3d& pcl) {
 	rave::EnvironmentBasePtr env = sensor->GetEnv();
 
 	Vector3d color(1,0,0);
-	for(int i=0; i < env_points.size(); ++i) {
-		rave_utils::plot_point(env, env_points[i], color, .005);
+	for(int i=0; i < pcl.size(); ++i) {
+		rave_utils::plot_point(env, pcl[i], color, .005);
 	}
 
 	fov->plot(env, color);
@@ -550,22 +587,21 @@ void Camera::plot_pcl() {
  */
 
 
-MatrixXd Camera::get_directions(const int h, const int w, const double h_meters, const double w_meters) {
+MatrixXd Camera::get_directions(const Matrix<double,ARM_DIM,1>& j, const int h, const int w, const double h_meters, const double w_meters) {
 	const int n = h*w;
 	MatrixXd height_grid = VectorXd::LinSpaced(h, -h_meters/2.0, h_meters/2.0).replicate(1,w);
 	MatrixXd width_grid = RowVectorXd::LinSpaced(w, -w_meters/2.0, w_meters/2.0).replicate(h,1);
 
 	MatrixXd height_grid_vec(Map<VectorXd>(height_grid.data(), n));
 	MatrixXd width_grid_vec(Map<VectorXd>(width_grid.data(), n));
-	VectorXd z_grid(n,1);
-	z_grid.setZero();
+	VectorXd z_grid = VectorXd::Zero(n,1);
 
 	MatrixXd offsets(n,3);
 	offsets << width_grid_vec, height_grid_vec, z_grid;
 
-	MatrixXd points_cam = RowVector3d(0,0,max_range).replicate(n,1) + (max_range/FOCAL_LENGTH)*offsets;
+	MatrixXd points_cam = RowVector3d(0,0,MAX_RANGE).replicate(n,1) + (MAX_RANGE/FOCAL_LENGTH)*offsets;
 
-	Matrix4d ref_from_world = rave_utils::rave_to_eigen(sensor->GetTransform());
+	Matrix4d ref_from_world = get_pose(j);
 	Vector3d origin_world_pos = ref_from_world.block<3,1>(0,3);
 
 	MatrixXd directions(n,3);
@@ -587,7 +623,7 @@ MatrixXd Camera::get_directions(const int h, const int w, const double h_meters,
  * DepthMap Constructors
  */
 
-DepthMap::DepthMap(rave::SensorBasePtr s, const Matrix3d& P_mat, double mr) : sensor(s), P(P_mat),  max_range(mr) {
+DepthMap::DepthMap(rave::SensorBasePtr s, const Matrix3d& P_mat) : sensor(s), P(P_mat) {
 	pixel_buckets = std::vector<std::vector<PixelBucket*> >(H_SUB, std::vector<PixelBucket*>(W_SUB));
 	for(int i=0; i < H_SUB; ++i) {
 		for(int j=0; j < W_SUB; ++j) {
@@ -601,11 +637,10 @@ DepthMap::DepthMap(rave::SensorBasePtr s, const Matrix3d& P_mat, double mr) : se
  */
 
 // TODO: only add point to bucket if point is either (1) closer than points in bucket or (2) closet to points in bucket
-void DepthMap::add_point(const Vector3d& point) {
+void DepthMap::add_point(const Vector3d& point, const Matrix4d& cam_pose) {
 	Matrix4d point_mat = Matrix4d::Identity();
 	point_mat.block<3,1>(0,3) = point;
 
-	Matrix4d cam_pose = rave_utils::rave_to_eigen(sensor->GetTransform());
 	Matrix4d point_mat_tilde = cam_pose.inverse()*point_mat;
 
 	Vector3d y = P*point_mat_tilde.block<3,1>(0,3);
@@ -614,15 +649,14 @@ void DepthMap::add_point(const Vector3d& point) {
 	int w_round = int(pixel(1));
 
 	if ((0 <= h_round) && (h_round < H_SUB) && (0 <= w_round) && (w_round < W_SUB) &&
-			((cam_pose.block<3,1>(0,3) - point).norm() < max_range)) { // TODO: should filter out points behind camera!
+			((cam_pose.block<3,1>(0,3) - point).norm() < MAX_RANGE)) { // TODO: should filter out points behind camera!
 		pixel_buckets[h_round][w_round]->add_point(pixel, point);
 	}
 }
 
-Matrix<double,H_SUB,W_SUB> DepthMap::get_z_buffer() {
+Matrix<double,H_SUB,W_SUB> DepthMap::get_z_buffer(const Vector3d& cam_pos) {
 	Matrix<double,H_SUB,W_SUB> z_buffer = Matrix<double,H_SUB,W_SUB>::Ones();
 
-	Vector3d cam_pos = rave_utils::rave_to_eigen(sensor->GetTransform().trans);
 	for(int i=0; i < H_SUB; ++i) {
 		for(int j=0; j < W_SUB; ++j) {
 			if (!(pixel_buckets[i][j]->is_empty())) {
@@ -630,11 +664,11 @@ Matrix<double,H_SUB,W_SUB> DepthMap::get_z_buffer() {
 			} else if (num_neighbors_empty(i,j) >= 5 ) {
 				z_buffer(i,j) = (cam_pos - average_of_neighbors(i, j)).norm();
 			} else {
-				z_buffer(i,j) = max_range;
+				z_buffer(i,j) = MAX_RANGE;
 			}
 //
 //			if (pixel_buckets[i][j]->is_empty()) {
-//				z_buffer(i,j) = max_range;
+//				z_buffer(i,j) = MAX_RANGE;
 //			} else {
 //				z_buffer(i,j) = (cam_pos - pixel_buckets[i][j]->average_point()).norm();
 //			}

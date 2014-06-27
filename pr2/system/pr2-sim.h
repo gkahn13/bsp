@@ -25,6 +25,7 @@ namespace rave = OpenRAVE;
 // Camera constants for actual and subsampled
 
 #define FOCAL_LENGTH .01
+#define MAX_RANGE 5
 
 #define WIDTH	   256 // 64
 #define HEIGHT 	   192 // 48
@@ -63,6 +64,7 @@ public:
 	~PR2();
 
 	rave::EnvironmentBasePtr get_env() { return env; }
+	rave::RobotBasePtr get_robot() { return robot; }
 
 private:
 	void init(std::string env_file, std::string robot_name, bool view);
@@ -83,7 +85,7 @@ public:
 
 	Matrix<double,ARM_DIM,1> get_joint_values();
 	void get_limits(Matrix<double,ARM_DIM,1>& lower, Matrix<double,ARM_DIM,1>& upper);
-	rave::Transform get_pose();
+	Matrix4d get_pose(const Matrix<double,ARM_DIM,1>& j);
 
 	void set_joint_values(const Matrix<double,ARM_DIM,1>& j);
 	void set_pose(const rave::Transform &pose, std::string ref_frame="world");
@@ -100,66 +102,66 @@ private:
 	std::vector<int> joint_indices;
 	int num_joints;
 	Matrix<double,ARM_DIM,1> lower, upper;
+
+	rave::Transform origin;
+	std::vector<rave::Vector> arm_joint_axes, arm_link_trans;
 };
 
-class Head {
-public:
-	Head(rave::RobotBasePtr robot);
-
-	Matrix<double,HEAD_DIM,1> get_joint_values();
-	void get_limits(Matrix<double,HEAD_DIM,1>& lower, Matrix<double,HEAD_DIM,1>& upper);
-	rave::Transform get_pose();
-
-	void set_joint_values(Matrix<double,HEAD_DIM,1>& j);
-	void look_at(const rave::Transform &pose, const std::string ref_frame="world");
-
-	void teleop();
-
-private:
-	rave::RobotBasePtr robot;
-	std::vector<int> joint_indices;
-	int num_joints;
-	Matrix<double,HEAD_DIM,1> lower, upper;
-
-	rave::KinBody::LinkPtr pose_link;
-};
+//class Head {
+//public:
+//	Head(rave::RobotBasePtr robot);
+//
+//	Matrix<double,HEAD_DIM,1> get_joint_values();
+//	void get_limits(Matrix<double,HEAD_DIM,1>& lower, Matrix<double,HEAD_DIM,1>& upper);
+//	rave::Transform get_pose();
+//
+//	void set_joint_values(Matrix<double,HEAD_DIM,1>& j);
+//	void look_at(const rave::Transform &pose, const std::string ref_frame="world");
+//
+//	void teleop();
+//
+//private:
+//	rave::RobotBasePtr robot;
+//	std::vector<int> joint_indices;
+//	int num_joints;
+//	Matrix<double,HEAD_DIM,1> lower, upper;
+//
+//	rave::KinBody::LinkPtr pose_link;
+//};
 
 
 class Camera {
 public:
-	Camera(rave::RobotBasePtr r, std::string camera_name, double mr);
+	Camera(rave::RobotBasePtr r, std::string camera_name, Arm* a);
 
 	// call once before collocation
-	void get_pcl();
+	StdVector3d get_pcl(const Matrix<double,ARM_DIM,1>& j);
 
-	std::vector<std::vector<Beam3d> > get_beams();
+	std::vector<std::vector<Beam3d> > get_beams(const Matrix<double,ARM_DIM,1>& j, const StdVector3d& pcl);
 	std::vector<Triangle3d> get_border(const std::vector<std::vector<Beam3d> >& beams, bool with_side_border=true);
 
 	bool is_inside(const Vector3d& p, std::vector<std::vector<Beam3d> >& beams);
 	double signed_distance(const Vector3d& p, std::vector<std::vector<Beam3d> >& beams, std::vector<Triangle3d>& border);
 
-	void plot_fov(std::vector<std::vector<Beam3d> >& beams);
-	void plot_pcl();
+	inline Matrix4d get_pose(const Matrix<double,ARM_DIM,1>& j) { return arm->get_pose(j)*gripper_tool_to_sensor; }
+	inline Vector3d get_position(const Matrix<double,ARM_DIM,1>& j) { return get_pose(j).block<3,1>(0,3); }
 
-	inline Vector3d get_position() { return rave_utils::rave_to_eigen(sensor->GetTransform().trans); }
-	inline rave::Transform get_pose() { return sensor->GetTransform(); }
+	void plot_fov(std::vector<std::vector<Beam3d> >& beams);
+	void plot_pcl(const StdVector3d& pcl);
+
 	inline rave::SensorBasePtr get_sensor() { return sensor; }
 
 private:
 	rave::RobotBasePtr robot;
 	rave::SensorBasePtr sensor;
+	Arm* arm;
 
-//	int height, width;
-//	double f, F, max_range;
-//	double H, W;
-	double max_range;
+	Matrix4d gripper_tool_to_sensor;
 
-	Beam3d* fov = nullptr;
-
-	StdVector3d env_points;
+	Beam3d* fov;
 	DepthMap* depth_map;
 
-	MatrixXd get_directions(const int h, const int w, const double h_meters, const double w_meters);
+	MatrixXd get_directions(const Matrix<double,ARM_DIM,1>& j, const int h, const int w, const double h_meters, const double w_meters);
 };
 
 class PixelBucket {
@@ -205,17 +207,16 @@ private:
  */
 class DepthMap {
 public:
-	DepthMap(rave::SensorBasePtr s, const Matrix3d& P_mat, double mr);
+	DepthMap(rave::SensorBasePtr s, const Matrix3d& P_mat);
 
-	void add_point(const Vector3d& point);
-	Matrix<double,H_SUB,W_SUB> get_z_buffer();
+	void add_point(const Vector3d& point, const Matrix4d& cam_pose);
+	Matrix<double,H_SUB,W_SUB> get_z_buffer(const Vector3d& cam_pos);
 
 	void clear();
 
 private:
 	rave::SensorBasePtr sensor;
 	Matrix3d P;
-	double max_range;
 
 	std::vector<std::vector<PixelBucket*> > pixel_buckets;
 

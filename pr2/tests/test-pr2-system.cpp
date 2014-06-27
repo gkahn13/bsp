@@ -137,35 +137,6 @@ void test_pr2_system() {
 	sys.display(j, particle_gmm);
 }
 
-VectorJ delta_grad(Arm* arm, Camera* cam, const VectorJ& j, const Vector3d& p, const double alpha) {
-	arm->set_joint_values(j);
-	VectorJ j_plus = j, j_minus = j, grad;
-	double delta_plus, delta_minus, sd_plus, sd_minus;
-	std::vector<std::vector<Beam3d> > beams;
-	std::vector<Triangle3d> border;
-	for(int i=0; i < J_DIM; ++i) {
-		j_plus = j; j_minus = j;
-		j_plus(i) = j(i) + epsilon;
-		j_minus(i) = j(i) - epsilon;
-
-		arm->set_joint_values(j_plus);
-		beams = cam->get_beams();
-		border = cam->get_border(beams);
-		sd_plus = cam->signed_distance(p, beams, border);
-		delta_plus = 1.0 - 1.0/(1.0 + exp(-alpha*sd_plus));
-
-		arm->set_joint_values(j_minus);
-		beams = cam->get_beams();
-		border = cam->get_border(beams);
-		sd_minus = cam->signed_distance(p, beams, border);
-		delta_minus = 1.0 - 1.0/(1.0 + exp(-alpha*sd_minus));
-
-		grad(i) = (delta_plus - delta_minus) / (2.0*epsilon);
-	}
-
-	arm->set_joint_values(j);
-	return grad;
-}
 
 double cost(PR2System& sys, const VectorJ& j, const Vector3d& obj, const VectorU& u, const double alpha) {
 	VectorX x_t, x_tp1;
@@ -219,14 +190,15 @@ void test_camera() {
 	arm->set_posture(Arm::Posture::mantis);
 	sleep(2);
 
-	cam->get_pcl();
-	cam->plot_pcl();
+	VectorJ j = arm->get_joint_values();
+	StdVector3d pcl = cam->get_pcl(j);
+	cam->plot_pcl(pcl);
 
 //	std::cout << "Displaying env mesh. Teleop and then get FOV\n";
 
 	arm->teleop();
 
-	std::vector<std::vector<Beam3d> > beams = cam->get_beams();
+	std::vector<std::vector<Beam3d> > beams = cam->get_beams(j, pcl);
 	rave_utils::clear_plots();
 	cam->plot_fov(beams);
 
@@ -238,12 +210,11 @@ void test_camera() {
 //	}
 //	tc.stop("sd");
 
-	rave_utils::plot_point(env, P.col(0), Vector3d(1,0,0));
-	std::cin.ignore();
-	exit(0);
+	Vector3d p(3.35, -2.5, 0.8);
+	rave_utils::plot_point(env, p, Vector3d(1,0,0));
+
 	while(true) {
-//		VectorJ grad = delta_grad(arm, cam, arm->get_joint_values(), P.col(0), .01);
-		VectorU grad = cost_grad(sys, arm->get_joint_values(), P.col(0), VectorU::Zero(), .01);
+		VectorU grad = cost_grad(sys, j, p, VectorU::Zero(), .01);
 		std::cout << "grad:\n" << grad << "\n";
 
 		if (grad.norm() < epsilon) {
@@ -251,8 +222,16 @@ void test_camera() {
 			exit(0);
 		}
 
-		VectorJ j_new = arm->get_joint_values() - (M_PI/32)*grad/grad.norm();
-		arm->set_joint_values(j_new);
+		VectorJ j_new = j - (M_PI/32)*grad/grad.norm();
+//		arm->set_joint_values(j_new);
+
+		beams = cam->get_beams(j_new, pcl);
+		rave_utils::clear_plots();
+		rave_utils::plot_transform(env, rave_utils::eigen_to_rave(arm->get_pose(j_new)));
+		cam->plot_fov(beams);
+		rave_utils::plot_point(env, p, Vector3d(1,0,0));
+
+		j = j_new;
 
 		std::cin.ignore();
 	}
@@ -262,10 +241,40 @@ void test_camera() {
 	std::cin.ignore();
 }
 
+void test_fk() {
+	Vector3d object(3.35, -1.11, 0.8);
+	Arm::ArmType arm_type = Arm::ArmType::right;
+	bool view = true;
+	PR2System sys(object, arm_type, view);
+
+	PR2* brett = sys.get_brett();
+	Arm* arm = sys.get_arm();
+	Camera* cam = sys.get_camera();
+	rave::EnvironmentBasePtr env = brett->get_env();
+
+	arm->set_posture(Arm::Posture::mantis);
+	sleep(1);
+
+	VectorJ j = arm->get_joint_values();
+
+	Matrix4d actual_arm_pose = rave_utils::transform_from_to(brett->get_robot(), Matrix4d::Identity(), "r_gripper_tool_frame", "world");
+	Matrix4d fk_arm_pose = arm->get_pose(j);
+
+	std::cout << "actual_arm_pose:\n" << actual_arm_pose << "\n\n";
+	std::cout << "fk_arm_pose:\n" << fk_arm_pose << "\n\n";
+
+	Matrix4d actual_cam_pose = rave_utils::rave_to_eigen(cam->get_sensor()->GetTransform());
+	Matrix4d fk_cam_pose = cam->get_pose(j);
+
+	std::cout << "actual_cam_pose:\n" << actual_cam_pose << "\n\n";
+	std::cout << "fk_cam_pose:\n" << fk_cam_pose << "\n\n";
+}
+
 int main() {
 //	test_particle_update();
 //	test_figtree();
 //	test_pr2_system();
 	test_camera();
+//	test_fk();
 	return 0;
 }

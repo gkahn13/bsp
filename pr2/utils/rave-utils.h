@@ -11,6 +11,8 @@ namespace rave = OpenRAVE;
 
 namespace rave_utils {
 
+Matrix4d transform_from_to(rave::RobotBasePtr robot, const Matrix4d& mat_in_ref, std::string ref_link_name, std::string targ_link_name);
+
 void cart_to_joint(rave::RobotBase::ManipulatorPtr manip, const rave::Transform &matrix4,
 		const std::string &ref_frame, const std::string &targ_frame, std::vector<double> &joint_values,
 		const int filter_options=0);

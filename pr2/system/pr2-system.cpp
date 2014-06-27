@@ -71,7 +71,7 @@ VectorJ PR2System::dynfunc(const VectorJ& j, const VectorU& u, const VectorQ& q,
 VectorZ PR2System::obsfunc(const VectorJ& j, const Vector3d& object, const VectorR& r) {
 	VectorZ z;
 	z.segment<J_DIM>(0) = j;
-	z.segment<3>(J_DIM) = object - cam->get_position();
+	z.segment<3>(J_DIM) = object - cam->get_position(j);
 	return z;
 }
 
@@ -85,14 +85,9 @@ MatrixZ PR2System::delta_matrix(const VectorJ& j, const Vector3d& object, const 
 		delta(i,i) = 1; // TODO: should this depend on SD of joints?
 	}
 
-	VectorJ j_orig = arm->get_joint_values();
-	arm->set_joint_values(j);
-
-	std::vector<std::vector<Beam3d> > beams = cam->get_beams();
+	std::vector<std::vector<Beam3d> > beams = cam->get_beams(j, pcl);
 	std::vector<Triangle3d> border = cam->get_border(beams);
 	double sd = cam->signed_distance(object, beams, border);
-
-	arm->set_joint_values(j_orig);
 
 	double sd_sigmoid = 1.0 - 1.0/(1.0 + exp(-alpha*sd));
 	for(int i=J_DIM; i < Z_DIM; ++i) {
@@ -150,8 +145,6 @@ void PR2System::get_limits(VectorJ& j_min, VectorJ& j_max, VectorU& u_min, Vecto
 double PR2System::cost(const StdVectorJ& J, const Vector3d& obj, const MatrixX& sigma0, const StdVectorU& U, const double alpha) {
 	double cost = 0;
 
-	VectorJ j_orig = arm->get_joint_values();
-
 	VectorX x_t, x_tp1 = VectorX::Zero();
 	MatrixX sigma_t = sigma0, sigma_tp1 = MatrixX::Zero();
 	for(int t=0; t < TIMESTEPS-1; ++t) {
@@ -165,14 +158,9 @@ double PR2System::cost(const StdVectorJ& J, const Vector3d& obj, const MatrixX& 
 		sigma_t = sigma_tp1;
 	}
 
-	arm->set_joint_values(J.back());
-
-	Vector3d final_pos = cam->get_position();
+	Vector3d final_pos = cam->get_position(J.back());
 	Vector3d e = obj - final_pos;
 	cost += alpha_goal*e.squaredNorm();
-
-	arm->set_joint_values(j_orig);
-
 
 	return cost;
 }
@@ -347,14 +335,14 @@ void PR2System::display(const StdVectorJ& J, const std::vector<ParticleGaussian>
 		rave_utils::clear_plots();
 	}
 
-	VectorJ j_orig = arm->get_joint_values();
 	for(int t=0; t < J.size(); ++t) {
-		arm->set_joint_values(J[t]);
-		rave_utils::plot_transform(brett->get_env(), cam->get_pose());
+		rave_utils::plot_transform(brett->get_env(), rave_utils::eigen_to_rave(cam->get_pose(J[t])));
 	}
-	std::vector<std::vector<Beam3d> > beams = cam->get_beams();
+	std::vector<std::vector<Beam3d> > beams = cam->get_beams(J.back(), pcl);
 	cam->plot_fov(beams);
-	arm->set_joint_values(j_orig);
+
+	VectorJ j_orig = arm->get_joint_values();
+	arm->set_joint_values(J.back());
 
 	int num_gaussians = particle_gmm.size();
 	for(int i=0; i < num_gaussians; ++i) {
@@ -373,6 +361,8 @@ void PR2System::display(const StdVectorJ& J, const std::vector<ParticleGaussian>
 		LOG_INFO("Display: Press enter to continue");
 		std::cin.ignore();
 	}
+
+	arm->set_joint_values(j_orig);
 }
 
 /**
@@ -427,9 +417,7 @@ void PR2System::update_particles(const VectorJ& j_tp1_t, const double delta_fov_
 		MatrixP& P_tp1) {
 	Vector3d z_obj_real = z_tp1_real.segment<3>(J_DIM);
 
-	VectorJ j_orig = arm->get_joint_values();
-	arm->set_joint_values(j_tp1_t);
-	std::vector<std::vector<Beam3d> > beams = cam->get_beams();
+	std::vector<std::vector<Beam3d> > beams = cam->get_beams(j_tp1_t, pcl);
 
 	VectorM W = VectorM::Zero();
 	// for each particle, weight by gauss_likelihood of that measurement given particle/agent observation
@@ -451,7 +439,6 @@ void PR2System::update_particles(const VectorJ& j_tp1_t, const double delta_fov_
 
 	low_variance_sampler(P_t, W, P_tp1);
 
-	arm->set_joint_values(j_orig);
 }
 
 double PR2System::gauss_likelihood(const Vector3d& v, const Matrix3d& S) {

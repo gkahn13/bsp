@@ -12,6 +12,26 @@ inline double closer_ang(double x, double a) {
 
 namespace rave_utils {
 
+Matrix4d transform_from_to(rave::RobotBasePtr robot, const Matrix4d& mat_in_ref, std::string ref_link_name, std::string targ_link_name) {
+	Matrix4d ref_from_world;
+	if (ref_link_name != "world") {
+		ref_from_world = rave_utils::rave_to_eigen(robot->GetLink(ref_link_name)->GetTransform());
+	} else {
+		ref_from_world.setIdentity();
+	}
+
+	Matrix4d targ_from_world;
+	if (targ_link_name != "world") {
+		targ_from_world = rave_utils::rave_to_eigen(robot->GetLink(targ_link_name)->GetTransform());
+	} else {
+		targ_from_world.setIdentity();
+	}
+
+	Matrix4d targ_from_ref = targ_from_world.inverse()*ref_from_world;
+	Matrix4d mat_in_targ = targ_from_ref*mat_in_ref;
+	return mat_in_targ;
+}
+
 void cart_to_joint(rave::RobotBase::ManipulatorPtr manip, const rave::Transform &matrix4,
 		const std::string &ref_frame, const std::string &targ_frame, std::vector<double> &joint_values,
 		const int filter_options) {

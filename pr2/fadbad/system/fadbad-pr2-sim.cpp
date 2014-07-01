@@ -95,37 +95,14 @@ FadbadCamera::FadbadCamera(FadbadArm* a, const Matrix4d& g_t_to_s) : arm(a) {
 std::vector<std::vector<FadbadBeam3d> > FadbadCamera::get_beams(const Matrix<bdouble,ARM_DIM,1>& j, const StdVector3b& pcl) {
 	std::vector<std::vector<FadbadBeam3d> > beams(H_SUB-1, std::vector<FadbadBeam3d>(W_SUB-1));
 
-//	Matrix4b arm_pose = arm->get_pose(j);
-//	std::cout << "arm_pose:\n";
-//	for(int i=0; i < 4; ++i) {
-//		for(int j=0; j < 4; ++j) {
-//			std::cout << arm_pose(i,j).x() << " ";
-//		}
-//		std::cout << "\n";
-//	}
-//	std::cout << "\n";
-
 	Matrix4b cam_pose = get_pose(j);
-
-//	std::cout << "cam_pose:\n";
-//	for(int i=0; i < 4; ++i) {
-//		for(int j=0; j < 4; ++j) {
-//			std::cout << cam_pose(i,j).x() << " ";
-//		}
-//		std::cout << "\n";
-//	}
-//	std::cout << "\n";
-//	exit(0);
 
 	depth_map->clear();
 	for(int i=0; i < pcl.size(); ++i) {
 		depth_map->add_point(pcl[i], cam_pose);
 	}
 
-	std::cout << "fadbad get_z_buffer\n";
 	Matrix<bdouble,H_SUB,W_SUB> z_buffer = depth_map->get_z_buffer(get_position(j));
-
-	std::cout << "z_buffer(10,10): " << z_buffer(10,10).x() << "\n";
 
 	RowVector3b origin_pos = get_position(j);
 
@@ -267,13 +244,11 @@ Matrix<bdouble,N_SUB,3> FadbadCamera::get_directions(const Matrix<bdouble,ARM_DI
 	Matrix<bdouble,N_SUB,3> offsets;
 	offsets << width_grid_vec, height_grid_vec, z_grid;
 
-//	std::cout << "fadbad multiply offsets\n";
 //	for(int i=0; i < N_SUB; ++i) {
 //		for(int j=0; j < 3; ++j) {
 //			offsets *= (MAX_RANGE/FOCAL_LENGTH);
 //		}
 //	}
-//	std::cout << "fadbad after multiply offsets\n";
 
 	Matrix<bdouble,N_SUB,3> points_cam = RowVector3b(0,0,MAX_RANGE).replicate(N_SUB,1) + offsets;
 
@@ -323,27 +298,6 @@ void FadbadDepthMap::add_point(const Vector3b& point, const Matrix4b& cam_pose) 
 	Vector3b y = P*point_mat_tilde.block<3,1>(0,3);
 	Vector2b pixel = {y(1)/y(2), y(0)/y(2)};
 
-//	Matrix4b cp = cam_pose;
-//	std::cout << "cam_pose\n";
-//	for(int i=0; i < 4; ++i) {
-//		for(int j=0; j < 4; ++j) {
-//			std::cout << cp(i,j).x() << " ";
-//		}
-//		std::cout << "\n";
-//	}
-//	std::cout << "\nfadbad point_mat_tilde:\n";
-//	for(int i=0; i < 4; ++i) {
-//		for(int j=0; j < 4; ++j) {
-//			std::cout << point_mat_tilde(i,j).x() << " ";
-//		}
-//		std::cout << "\n";
-//	}
-//	std::cout << "\n";
-//	std::cout << "fadbad y: " << y(0).x() << " " << y(1).x() << " " << y(2).x() << "\n";
-//	std::cout << "fadbad point: " << point_mat(0,3).x() << " " << point_mat(1,3).x() << " " << point_mat(2,3).x() << "\n";
-//	std::cout << "fadbad pixel: " << pixel(0).x() << " " << pixel(1).x() << "\n";
-//	exit(0);
-
 	if ((0 <= pixel(0)) && (pixel(0) < H_SUB) && (0 <= pixel(1)) && (pixel(1) < W_SUB) &&
 			((cam_pose.block<3,1>(0,3) - point).norm() < MAX_RANGE)) { // TODO: should filter out points behind camera!
 		int i, j;
@@ -361,18 +315,7 @@ void FadbadDepthMap::add_point(const Vector3b& point, const Matrix4b& cam_pose) 
 			}
 		}
 
-		std::cout << "fadbad add_point to (" << i << "," << j << ")\n";
 		pixel_buckets[i][j]->add_point(pixel, point);
-//
-//		for(int i=0; i < H_SUB; ++i) {
-//			for(int j=0; j < W_SUB; ++j) {
-//				bdouble i_b = i, j_b = j;
-//				if ((0 <= pixel(0) - i_b) && (pixel(0) - i_b < 1) &&
-//						(0 <= pixel(1) - j_b) && (pixel(1) - j_b < 1)) {
-//					pixel_buckets[i][j]->add_point(pixel, point);
-//				}
-//			}
-//		}
 	}
 }
 
@@ -382,7 +325,6 @@ Matrix<bdouble,H_SUB,W_SUB> FadbadDepthMap::get_z_buffer(const Vector3b& cam_pos
 	for(int i=0; i < H_SUB; ++i) {
 		for(int j=0; j < W_SUB; ++j) {
 			if (!(pixel_buckets[i][j]->is_empty())) {
-				std::cout << "pixel bucket (" << i << "," << j << ") not empty\n";
 				z_buffer(i,j) = (cam_pos - pixel_buckets[i][j]->average_point()).norm();
 			} else if (num_neighbors_empty(i,j) >= 5 ) {
 				z_buffer(i,j) = (cam_pos - average_of_neighbors(i, j)).norm();

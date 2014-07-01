@@ -97,8 +97,6 @@ MatrixZ PR2System::delta_matrix(const VectorJ& j, const Vector3d& object, const 
 	std::vector<Triangle3d> border = cam->get_border(beams);
 	double sd = cam->signed_distance(object, beams, border);
 
-	std::cout << "sd: " << sd << "\n";
-
 	double sd_sigmoid = 1.0 - 1.0/(1.0 + exp(-alpha*sd));
 	for(int i=J_DIM; i < Z_DIM; ++i) {
 		delta(i,i) = sd_sigmoid;
@@ -160,8 +158,6 @@ double PR2System::cost(const StdVectorJ& J, const Vector3d& obj, const MatrixX& 
 	for(int t=0; t < TIMESTEPS-1; ++t) {
 		x_t << J[t], obj;
 		belief_dynamics(x_t, sigma_t, U[t], alpha, x_tp1, sigma_tp1);
-
-		std::cout << "sigma " << t << "\n" << sigma_tp1 << "\n\n";
 
 		if (t < TIMESTEPS-2) {
 			cost += alpha_belief*sigma_tp1.trace();

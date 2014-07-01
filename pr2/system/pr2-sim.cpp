@@ -442,17 +442,11 @@ std::vector<std::vector<Beam3d> > Camera::get_beams(const Matrix<double,ARM_DIM,
 	std::vector<std::vector<Beam3d> > beams(H_SUB-1, std::vector<Beam3d>(W_SUB-1));
 	Matrix4d cam_pose = get_pose(j);
 
-	std::cout << "arm_pose:\n" << arm->get_pose(j) << "\n";
-	std::cout << "j: " << j.transpose() << "\n";
-	std::cout << "cam_pose:\n" << cam_pose << "\n";
-
 	depth_map->clear();
 	for(int i=0; i < pcl.size(); ++i) {
 		depth_map->add_point(pcl[i], cam_pose);
 	}
 	Matrix<double,H_SUB,W_SUB> z_buffer = depth_map->get_z_buffer(get_position(j));
-
-	std::cout << "z_buffer(10,10): " << z_buffer(10,10) << "\n";
 
 	RowVector3d origin_pos = get_pose(j).block<3,1>(0,3);
 
@@ -533,16 +527,12 @@ std::vector<Triangle3d> Camera::get_border(const std::vector<std::vector<Beam3d>
 		}
 	}
 
-//	std::cout << "before pruning size: " << border.size() << "\n";
-
 	std::vector<Triangle3d> pruned_border;
 	for(int i=0; i < border.size(); ++i) {
 		if (border[i].area() > epsilon) {
 			pruned_border.push_back(border[i]);
 		}
 	}
-
-//	std::cout << "after pruning size: " << pruned_border.size() << "\n";
 
 	return pruned_border;
 }
@@ -574,10 +564,6 @@ double Camera::signed_distance(const Vector3d& p, std::vector<std::vector<Beam3d
 }
 
 void Camera::plot_fov(std::vector<std::vector<Beam3d> >& beams) {
-//	rave::EnvironmentBasePtr env = sensor->GetEnv();
-//	rave::KinBodyPtr table = env->GetKinBody("table");
-//	env->Remove(table);
-
 	Vector3d color(0,1,0);
 	// plot the ends
 	for(int i=0; i < beams.size(); ++i) {
@@ -685,13 +671,6 @@ void DepthMap::add_point(const Vector3d& point, const Matrix4d& cam_pose) {
 	Vector2d pixel = {y(1)/y(2), y(0)/y(2)};
 	int h_round = int(pixel(0));
 	int w_round = int(pixel(1));
-
-//	std::cout << "cam_pose\n" << cam_pose << "\n";
-//	std::cout << "point_mat_tilde:\n" << point_mat_tilde << "\n";
-//	std::cout << "y: " << y.transpose() << "\n";
-//	std::cout << "point: " << point.transpose() << "\n";
-//	std::cout << "pixel: " << pixel.transpose() << "\n";
-//	exit(0);
 
 	if ((0 <= h_round) && (h_round < H_SUB) && (0 <= w_round) && (w_round < W_SUB) &&
 			((cam_pose.block<3,1>(0,3) - point).norm() < MAX_RANGE)) { // TODO: should filter out points behind camera!

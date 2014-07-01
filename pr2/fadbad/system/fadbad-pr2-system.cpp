@@ -48,8 +48,6 @@ VectorZb FadbadPR2System::obsfunc(const VectorJb& j, const Vector3b& object, con
 }
 
 MatrixZb FadbadPR2System::delta_matrix(const VectorJb& j, const Vector3b& object, const bdouble alpha) {
-	std::cout << "fadbad delta_matrix\n";
-
 	MatrixZb delta = MatrixZb::Identity();
 
 	for(int i=0; i < J_DIM; ++i) {
@@ -59,8 +57,6 @@ MatrixZb FadbadPR2System::delta_matrix(const VectorJb& j, const Vector3b& object
 	std::vector<std::vector<FadbadBeam3d> > beams = cam->get_beams(j, pcl);
 	std::vector<FadbadTriangle3d> border = cam->get_border(beams);
 	bdouble sd = cam->signed_distance(object, beams, border);
-
-	std::cout << "sd: " << sd.x() << "\n";
 
 	bdouble sd_sigmoid = 1.0 - 1.0/(1.0 + exp(-alpha*sd));
 	for(int i=J_DIM; i < Z_DIM; ++i) {
@@ -101,15 +97,6 @@ bdouble FadbadPR2System::cost(const StdVectorJb& J, const Vector3b& obj, const M
 	for(int t=0; t < TIMESTEPS-1; ++t) {
 		x_t << J[t], obj;
 		belief_dynamics(x_t, sigma_t, U[t], alpha, x_tp1, sigma_tp1);
-
-		std::cout << "sigma " << t << "\n";
-		for(int i=0; i < X_DIM; ++i) {
-			for(int j=0; j < X_DIM; ++j) {
-				std::cout << sigma_tp1(i,j).x() << " ";
-			}
-			std::cout << "\n";
-		}
-		std::cout << "\n";
 
 		if (t < TIMESTEPS-2) {
 			cost += alpha_belief*sigma_tp1.trace();

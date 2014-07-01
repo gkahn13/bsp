@@ -25,8 +25,8 @@ class Camera:
     HEIGHT  =      192
     fx  = WIDTH # WIDTH*2.0;
     fy  = HEIGHT # HEIGHT*2.0;
-    cx  = WIDTH + 0.5 # WIDTH/2.0 + 0.5;
-    cy  = HEIGHT + 0.5 # HEIGHT/2.0 + 0.5;
+    cx  = WIDTH/2.0 + 0.5 # WIDTH/2.0 + 0.5;
+    cy  = HEIGHT/2.0 + 0.5 # HEIGHT/2.0 + 0.5;
     HEIGHT_M = FOCAL_LENGTH*(HEIGHT/fy);
     WIDTH_M = FOCAL_LENGTH*(WIDTH/fx);
     N = WIDTH*HEIGHT
@@ -36,10 +36,10 @@ class Camera:
     
     W_SUB = 64
     H_SUB = 48
-    fx_sub  = W_SUB*2.0;
-    fy_sub  = H_SUB*2.0;
-    cx_sub  = W_SUB/2.0 + 0.5;
-    cy_sub  = H_SUB/2.0 + 0.5;
+    fx_sub  = W_SUB*1.0 # W_SUB*2.0;
+    fy_sub  = H_SUB*1.0 # H_SUB*2.0;
+    cx_sub  = W_SUB/2.0 + 0.5 # W_SUB/2.0 + 0.5;
+    cy_sub  = H_SUB/2.0 + 0.5 # H_SUB/2.0 + 0.5;
     H_SUB_M = FOCAL_LENGTH*(H_SUB/fy_sub);
     W_SUB_M = FOCAL_LENGTH*(W_SUB/fx_sub);
     N_SUB = W_SUB*H_SUB
@@ -48,13 +48,6 @@ class Camera:
                        [0, 0, 1]])
     
     def __init__(self, robot, sensor):
-        """
-        @param KK        - camera intrinsics matrix
-        @param height    - camera pixel height
-        @param width     - camera pixel width
-        @param F         - focal distance (meters) 
-        @param max_range - max range of sensor
-        """
         self.robot = robot
         self.sensor = sensor
         
@@ -116,18 +109,18 @@ class Camera:
         with env:
             is_hits, hits = env.CheckCollisionRays(rays, None)
         
-        is_hits = is_hits.reshape((w,h))
-        hits = hits.reshape((w,h,6))
-        dirs = dirs.reshape((w,h,3))
-        zpoints = np.zeros((w,h,3))
+        is_hits = is_hits.reshape((w,h)).T
+        hits = np.swapaxes(hits.reshape((w,h,6)), 0, 1)
+        dirs = np.swapaxes(dirs.reshape((w,h,3)), 0, 1)
+        zpoints = np.zeros((h,w,3))
         
         global handles
         for i in xrange(h):
             for j in xrange(w):
-                if is_hits[j,i]:
-                    zpoints[j,i,:] = hits[j,i,:3]
+                if is_hits[i,j]:
+                    zpoints[i,j,:] = hits[i,j,:3]
                 else:
-                    zpoints[j,i,:] = origin_world_pos + dirs[j,i,:]
+                    zpoints[i,j,:] = origin_world_pos + dirs[i,j,:]
                 #handles.append(utils.plot_point(env, zpoints[j,i,:]))
                 #print('(i,j): ({0},{1})'.format(i,j))
                 #raw_input()
@@ -141,22 +134,29 @@ class Camera:
         
         rows, cols = hits.shape[:2]
         zbuffer = np.zeros((rows,cols))
-        for i in xrange(row):
+        for i in xrange(rows):
             for j in xrange(cols):
-                zbuffer = np.linalg.norm(hits[i,j,:] - sensor_world_pos)
+                zbuffer[i,j] = np.linalg.norm(hits[i,j,:] - sensor_world_pos)
                 
         return zbuffer
     
     def get_pixel_from_point(self, x, subsampled=True, is_round=True):
+        #x_mat = np.array(tfx.point(x).as_pose().matrix)
+        #x_mat[:3,:3] = np.zeros((3,3))
+        
         x_mat = np.eye(4)
-        x_mat[:3,3] = tfx.point(x).array
+        x_mat[0:3,3] = tfx.point(x).array
         
         x_mat_tilde = np.dot(np.linalg.inv(self.sensor.GetTransform()), x_mat)
         
+        #print x_mat
+        #print ''
+        #print x_mat_tilde
+        
         if subsampled:
-            y = np.dot(Camera.KK_sub, x_mat_tilde[:3,3])
+            y = np.dot(Camera.KK_sub, x_mat_tilde[0:3,3])
         else:
-            y = np.dot(Camera.KK, x_mat_tilde[:3,3])
+            y = np.dot(Camera.KK, x_mat_tilde[0:3,3])
         
         y_pixel = y[1]/y[2]
         x_pixel = y[0]/y[2]
@@ -178,8 +178,8 @@ class Camera:
         if (y < 0) or (y >= h) or (x < 0) or (x >= w):
             return False
         
-        if zbuffer[y,x] < (tfx.point(self.sensor.GetTransform()) - point).norm:
-            return False
+        #if zbuffer[y,x] < (tfx.point(self.sensor.GetTransform()) - point).norm:
+        #    return False
         
         return True
         
@@ -196,11 +196,17 @@ class VoxelGrid:
         self.radius = min([self.dx, self.dy, self.dz])/10.
         
         self.TSDF = np.ones((resolution, resolution, resolution))
+        self.object = None
         self.ODF = -np.inf*np.ones((resolution, resolution, resolution))
         
         self.handles = list()
     
+    """
+    User-called methods
+    """
+    
     def update_TSDF(self):
+        """ Update TSDF by getting collisions from current camera pose """
         is_hits, hits = self.camera.get_hits()
         rows, cols = is_hits.shape
         for r in xrange(rows):
@@ -208,20 +214,19 @@ class VoxelGrid:
                 if is_hits[r,c]:
                     i, j, k = self.voxel_from_point(hits[r,c,:])
                     self.TSDF[i,j,k] = 0
+                    for neighbor, _ in self.get_voxel_neighbors_and_dists([i,j,k]):
+                        l, m, n = neighbor
+                        self.TSDF[l,m,n] = 0
                     
     def update_ODF(self, obj):
         """ 
         Update object distance-field.
-        Call this after update_TSDF so Dijkstra's goes around the environment
+        Call this after update_TSDF so Dijkstra's goes around the environment.
         """
-        
-        """Returns the shortest paths from the source to all other nodes.
-        'edges' are in form of {head: [(tail, edge_dist), ...]}, contain all
-        edges of the graph, both directions if undirected."""
         # TEMP
-        self.handles = list()
-        env = self.camera.sensor.GetEnv()
-        
+        #self.handles = list()
+        #env = self.camera.sensor.GetEnv()
+        self.object = obj
         self.ODF = np.inf*np.ones((self.resolution, self.resolution, self.resolution))
         
         unvisited = set()
@@ -264,53 +269,46 @@ class VoxelGrid:
                     self.ODF[i,j,k] = dist
                     pq.delete(n)
                     pq.insert(n, dist)
-
-        return
         
-        self.ODF = np.inf*np.ones((self.resolution, self.resolution, self.resolution))
-        obj_voxel = tuple(self.voxel_from_point(obj))
+    def signed_distance_complete(self):
+        """
+        Finds signed-distance from the current field-of-view to the object
+        (where object is implicitly given by the ODF).
+        Call this after update_TSDF and update_ODF.
+        """
+        zbuffer = self.camera.get_zbuffer()
+        obj_in_fov = self.camera.is_in_fov(self.object, zbuffer)
         
-        visited = {obj_voxel: 0}
-        
-        voxels = set()
+        min_dist, min_voxel = np.inf, None
         for i in xrange(self.resolution):
             for j in xrange(self.resolution):
                 for k in xrange(self.resolution):
+                    print('({0},{1},{2})'.format(i,j,k))
                     if self.TSDF[i,j,k] != 0:
-                        voxels.add((i,j,k))
+                        voxel_center = self.get_voxel_center([i,j,k])
+                        if obj_in_fov:
+                            if not self.camera.is_in_fov(voxel_center, zbuffer) and self.ODF[i,j,k] < min_dist:
+                                min_dist = self.ODF[i,j,k]
+                                min_voxel = [i,j,k]
+                        else:
+                            if self.camera.is_in_fov(voxel_center, zbuffer) and self.ODF[i,j,k] < min_dist:
+                                min_dist = self.ODF[i,j,k]
+                                min_voxel = [i,j,k]
+                                
+                        if self.camera.is_in_fov(voxel_center, zbuffer):
+                            self.handles += [utils.plot_point(self.camera.sensor.GetEnv(), voxel_center, size=self.radius)]
+                            
+        sd = min_dist if obj_in_fov else -min_dist
         
-        iter = 0
-        while voxels:
-            #print('iter: {0}'.format(iter))
-            iter += 1 
-            # find the closest visited voxel
-            min_voxel, min_dist = None, np.inf
-            for voxel in voxels:
-                if voxel in visited:
-                    if min_voxel is None:
-                        min_voxel = voxel
-                    elif visited[voxel] < visited[min_voxel]:
-                        min_voxel = voxel
+        # TEMP
+        self.handles += [utils.plot_point(self.camera.sensor.GetEnv(), self.get_voxel_center(min_voxel), size=5*self.radius)]
         
-            if min_voxel is None:
-                break
-            
-            #self.handles += [utils.plot_point(env, self.get_voxel_center(min_voxel), size=self.radius)]
-            #raw_input()
-            
-            # remove the voxel from the frontier
-            # and update ODF
-            voxels.remove(min_voxel)
-            current_dist = visited[min_voxel]
-            i,j,k = min_voxel
-            self.ODF[i,j,k] = current_dist
-        
-            # update unvisited neighbor distances
-            for n, n_dist in self.get_voxel_neighbors_and_dists(min_voxel):
-                dist = current_dist + n_dist
-                if n not in visited or dist < visited[n]:
-                    visited[n] = dist
-        
+        return sd
+    
+    
+    """
+    Support methods
+    """
         
     def get_voxel_neighbors_and_dists(self, voxel):
         """ Gets neighbors of voxel that are not part of the environment (i.e. TSDF != 0) """
@@ -362,6 +360,10 @@ class VoxelGrid:
         center = self.corner + np.array([i*self.dx, j*self.dy, k*self.dz])
         return center
     
+    """
+    Plotting methods
+    """
+    
     def plot_TSDF(self):
         """ Only plot objects hit (i.e. TSDF[i,j,k] = 0) """
         self.handles = list()
@@ -395,6 +397,25 @@ class VoxelGrid:
                     else:
                         self.handles += [utils.plot_point(env, self.get_voxel_center([i,j,k]), size=self.radius, color=[0,0,0])]
     
+    def plot_FOV(self):
+        env = self.camera.sensor.GetEnv()
+        color = [1,0,0]
+        
+        is_hits, hits = self.camera.get_hits()
+        rows, cols = is_hits.shape
+        for i in xrange(rows):
+            for j in xrange(cols):
+                if is_hits[i,j]:
+                    voxel = self.voxel_from_point(hits[i,j,:])
+                    voxel_center = self.get_voxel_center(voxel)
+                    self.handles += [utils.plot_point(env, voxel_center, size=self.radius, color=color)]
+                    
+        cam_pos = self.camera.sensor.GetTransform()[:3,3]
+        self.handles += utils.plot_segment(env, cam_pos, hits[0,0,:], color=color)
+        self.handles += utils.plot_segment(env, cam_pos, hits[0,cols-1,:], color=color)
+        self.handles += utils.plot_segment(env, cam_pos, hits[rows-1,0,:], color=color)
+        self.handles += utils.plot_segment(env, cam_pos, hits[rows-1,cols-1,:], color=color)
+    
     def plot_centers(self):
         self.handles = list()
         env = self.camera.sensor.GetEnv()
@@ -406,9 +427,9 @@ class VoxelGrid:
         
 def test_camera():
     env = rave.Environment()
-    env.Load('../envs/pr2-test.env.xml')
+    env.Load('../envs/pr2-empty.env.xml')
     env.SetViewer('qtcoin')
-    env.GetViewer().SendCommand('SetFiguresInCamera 1') # also shows the figures in the image
+    #env.GetViewer().SendCommand('SetFiguresInCamera 1') # also shows the figures in the image
     time.sleep(1)
     robot = env.GetRobots()[0]
     
@@ -417,6 +438,7 @@ def test_camera():
     cam = Camera(robot, sensor)
     
     is_hits, hits = cam.get_hits(subsampled=True)
+    zbuffer = cam.get_zbuffer()
     
     height, width, _ = hits.shape
     global handles
@@ -424,7 +446,8 @@ def test_camera():
         for j in xrange(width):
             #print zpoints[i,j,:]
             if is_hits[i,j]:
-                handles += [utils.plot_point(env, hits[i,j,:], size=.001)]
+                if cam.is_in_fov(hits[i,j,:], zbuffer):
+                    handles += [utils.plot_point(env, hits[i,j,:], size=.01)]
     
     IPython.embed()
     
@@ -446,14 +469,17 @@ def test_voxel_grid():
     vgrid = VoxelGrid(cam, table_pos, 2, 3, 2, resolution = 50)
     #vgrid.plot_centers()
     
-    object = table_pos + np.array([0,0,.1])
+    object = table_pos + np.array([0,0,-.1])
+    vgrid.object = object # TEMP
     h = utils.plot_point(env, object, size=.05, color=[1,0,0])
     
     vgrid.update_TSDF()
     vgrid.update_ODF(object)
+    vgrid.signed_distance_complete()
     
     #vgrid.plot_TSDF()
-    vgrid.plot_ODF()
+    #vgrid.plot_ODF()
+    vgrid.plot_FOV()
     
     IPython.embed()
     

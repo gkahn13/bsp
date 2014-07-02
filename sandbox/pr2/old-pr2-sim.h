@@ -137,13 +137,17 @@ public:
 	// call once before collocation
 	StdVector3d get_pcl(const Matrix<double,ARM_DIM,1>& j);
 
-	Matrix<double,H_SUB,W_SUB> get_zbuffer(const Matrix<double,ARM_DIM,1>& j, const StdVector3d& obstacles);
+	std::vector<std::vector<Beam3d> > get_beams(const Matrix<double,ARM_DIM,1>& j, const StdVector3d& pcl);
+	std::vector<Triangle3d> get_border(const std::vector<std::vector<Beam3d> >& beams, bool with_side_border=true);
 
-	Vector2i get_pixel_from_point(const Vector3d& point, const Matrix4d& cam_pose);
-	bool is_in_fov(const Vector3d& point, const Matrix<double,H_SUB,W_SUB>& zbuffer, const Matrix4d& cam_pose);
+	bool is_inside(const Vector3d& p, std::vector<std::vector<Beam3d> >& beams);
+	double signed_distance(const Vector3d& p, std::vector<std::vector<Beam3d> >& beams, std::vector<Triangle3d>& border);
 
 	inline Matrix4d get_pose(const Matrix<double,ARM_DIM,1>& j) { return arm->get_pose(j)*gripper_tool_to_sensor; }
 	inline Vector3d get_position(const Matrix<double,ARM_DIM,1>& j) { return get_pose(j).block<3,1>(0,3); }
+
+	void plot_fov(std::vector<std::vector<Beam3d> >& beams);
+	void plot_pcl(const StdVector3d& pcl);
 
 	inline rave::SensorBasePtr get_sensor() { return sensor; }
 	inline Matrix4d get_gripper_tool_to_sensor() { return gripper_tool_to_sensor; }
@@ -152,8 +156,6 @@ private:
 	rave::RobotBasePtr robot;
 	rave::SensorBasePtr sensor;
 	Arm* arm;
-
-	Matrix3d KK, KK_SUB;
 
 	Matrix4d gripper_tool_to_sensor;
 

@@ -51,7 +51,6 @@ typedef std::vector<VectorU, aligned_allocator<VectorU>> StdVectorU;
 
 class ParticleGaussian;
 class PR2System;
-#include "../fadbad/system/fadbad-pr2-system.h"
 
 struct ParticleGaussian {
 	Vector3d mean;
@@ -67,8 +66,6 @@ struct ParticleGaussian {
  * NOTE: all coordinates are with respect to OpenRAVE 'world' frame
  */
 class PR2System {
-	friend class FadbadPR2System;
-
 	const double step = 0.0078125*0.0078125;
 	const double INFTY = 1e10;
 
@@ -78,9 +75,9 @@ class PR2System {
 	const double alpha_goal = 0; // .5
 
 public:
-	PR2System(Vector3d& object, bool use_fadbad);
-	PR2System(Vector3d& object, Arm::ArmType arm_type, bool view, bool use_fadbad);
-	PR2System(Vector3d& object, Arm::ArmType arm_type, std::string env_file, std::string robot_name, bool view, bool use_fadbad);
+	PR2System(Vector3d& object);
+	PR2System(Vector3d& object, Arm::ArmType arm_type, bool view);
+	PR2System(Vector3d& object, Arm::ArmType arm_type, std::string env_file, std::string robot_name, bool view);
 
 	VectorJ dynfunc(const VectorJ& j, const VectorU& u, const VectorQ& q, bool enforce_limits=false);
 	VectorZ obsfunc(const VectorJ& j, const Vector3d& object, const VectorR& r);
@@ -131,9 +128,6 @@ private:
 	MatrixR R;
 
 	StdVector3d pcl;
-
-	bool use_fadbad;
-	FadbadPR2System* fadbad_sys;
 
 	void init();
 

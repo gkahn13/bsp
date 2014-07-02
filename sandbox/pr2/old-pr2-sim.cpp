@@ -391,14 +391,6 @@ Camera::Camera(rave::RobotBasePtr r, std::string camera_name, Arm* a) : robot(r)
 	P(0,2) = cx_sub;
 	P(1,2) = cy_sub;
 
-	KK << fx, 0, cx,
-			0, fy, cy,
-			0, 0, 1;
-
-	KK_SUB << fx_sub, 0, cx_sub,
-				0, fy_sub, cy_sub,
-				0, 0, 1;
-
 	depth_map = new DepthMap(sensor, P);
 
 	Matrix4d sensor_pose = rave_utils::rave_to_eigen(sensor->GetTransform());
@@ -443,62 +435,176 @@ StdVector3d Camera::get_pcl(const Matrix<double,ARM_DIM,1>& j) {
 	return pcl;
 }
 
-Matrix<double,H_SUB,W_SUB> Camera::get_zbuffer(const Matrix<double,ARM_DIM,1>& j, const StdVector3d& obstacles) {
-	Matrix<double,H_SUB,W_SUB> zbuffer = MAX_RANGE*Matrix<double,H_SUB,W_SUB>::Ones();
+std::vector<std::vector<Beam3d> > Camera::get_beams(const Matrix<double,ARM_DIM,1>& j, const StdVector3d& pcl) {
+//	TimerCollection tc;
+//	tc.start("get beams time");
+
+	std::vector<std::vector<Beam3d> > beams(H_SUB-1, std::vector<Beam3d>(W_SUB-1));
 	Matrix4d cam_pose = get_pose(j);
 
-	for(int i=0; i < obstacles.size(); ++i) {
-		Vector2i pixel = get_pixel_from_point(obstacles[i], cam_pose);
-		int h = pixel(0), w = pixel(1);
-		if ((w >= 0) && (w < W_SUB) && (h >= 0) && (h < H_SUB)) { // in frustrum
-			Matrix4d obstacle_pose = Matrix4d::Identity();
-			obstacle_pose.block<3,1>(0,3) = obstacles[i];
-			if ((cam_pose.inverse()*obstacle_pose)(2,3) > 0) { // in front of camera pose
-				double dist = (obstacles[i] - cam_pose.block<3,1>(0,3)).norm();
-				zbuffer(h,w) = (zbuffer(h,w) < dist) ? zbuffer(h,w) : dist;
-			}
+	depth_map->clear();
+	for(int i=0; i < pcl.size(); ++i) {
+		depth_map->add_point(pcl[i], cam_pose);
+	}
+	Matrix<double,H_SUB,W_SUB> z_buffer = depth_map->get_z_buffer(get_position(j));
+
+	RowVector3d origin_pos = get_pose(j).block<3,1>(0,3);
+
+	Matrix<double,N_SUB,3> dirs = get_directions(j, H_SUB, W_SUB, H_SUB_M, W_SUB_M);
+
+	std::vector<std::vector<Vector3d> > hits(H_SUB, std::vector<Vector3d>(W_SUB));
+
+	for(int i=0; i < H_SUB; ++i) {
+		for(int j=0; j < W_SUB; ++j) {
+
+			hits[i][j] = origin_pos + z_buffer(i,j)*(dirs.row(j*H_SUB+i) / dirs.row(j*H_SUB+i).norm());
 		}
 	}
 
-	return zbuffer;
-}
-
-Vector2i Camera::get_pixel_from_point(const Vector3d& point, const Matrix4d& cam_pose) {
-	Matrix4d point_mat = Matrix4d::Identity();
-	point_mat.block<3,1>(0,3) = point;
-
-	Matrix4d point_mat_tilde = cam_pose.inverse()*point_mat;
-
-	Vector3d y = KK_SUB*point_mat_tilde.block<3,1>(0,3);
-
-	Vector2i pixel = {int(y(1)/y(2)), int(y(0)/y(2))};
-	return pixel;
-}
-
-bool Camera::is_in_fov(const Vector3d& point, const Matrix<double,H_SUB,W_SUB>& zbuffer, const Matrix4d& cam_pose) {
-	Vector2i pixel = get_pixel_from_point(point, cam_pose);
-	int h = pixel(0), w = pixel(1);
-
-	// out of frustrum
-	if ((w < 0) || (w >= W_SUB) || (h < 0) || (h >= H_SUB)) {
-		return false;
+	for(int j=0; j < W_SUB-1; ++j) {
+		for(int i=0; i < H_SUB-1; ++i) {
+			beams[i][j].base = origin_pos;
+			beams[i][j].a = hits[i][j+1];
+			beams[i][j].b = hits[i][j];
+			beams[i][j].c = hits[i+1][j];
+			beams[i][j].d = hits[i+1][j+1];
+		}
 	}
 
-	// occluded
-	if (zbuffer(h,w) < (cam_pose.block<3,1>(0,3) - point).norm()) {
-		return false;
-	}
+//	tc.stop("get beams time");
+//	tc.print_all_elapsed();
 
-	// behind camera pose
-	Matrix4d point_pose = Matrix4d::Identity();
-	point_pose.block<3,1>(0,3) = point;
-	if ((cam_pose.inverse()*point_pose)(2,3) < 0) {
-		return false;
-	}
-
-	return true;
+	return beams;
 }
 
+
+std::vector<Triangle3d> Camera::get_border(const std::vector<std::vector<Beam3d> >& beams, bool with_side_border) {
+	std::vector<Triangle3d> border;
+
+	int rows = beams.size(), cols = beams[0].size();
+
+	if (with_side_border) {
+		// deal with left and right border columns
+		for(int i=0; i < rows; ++i) {
+			border.push_back(Triangle3d(beams[i][0].base, beams[i][0].b, beams[i][0].c));
+			border.push_back(Triangle3d(beams[i][cols-1].base, beams[i][cols-1].a, beams[i][cols-1].d));
+		}
+
+		// deal with top and bottom border rows
+		for(int j=0; j < cols; ++j) {
+			border.push_back(Triangle3d(beams[0][j].base, beams[0][j].a, beams[0][j].b));
+			border.push_back(Triangle3d(beams[rows-1][j].base, beams[rows-1][j].c, beams[rows-1][j].d));
+		}
+	}
+
+	const double min_sep = epsilon;
+	// connect with left and top and add center
+	for(int i=0; i < rows; ++i) {
+		for(int j=0; j < cols; ++j) {
+			const Beam3d& curr = beams[i][j];
+			// left
+			if (i > 0) {
+				const Beam3d& left = beams[i-1][j];
+				if (((left.a - curr.b).norm() > min_sep) || ((left.d - curr.c).norm() > min_sep)) {
+					// not touching, add linkage
+					border.push_back(Triangle3d(left.a, left.d, curr.b));
+					border.push_back(Triangle3d(left.b, curr.b, curr.c));
+				}
+			}
+
+			// top
+			if (j > 0) {
+				const Beam3d& top = beams[i][j-1];
+				if (((top.c - curr.b).norm() > min_sep) || ((top.d - curr.a).norm() > min_sep)) {
+					// not touching, add linkage
+					border.push_back(Triangle3d(top.c, top.d, curr.b));
+					border.push_back(Triangle3d(top.b, curr.b, curr.a));
+				}
+			}
+
+			border.push_back(Triangle3d(curr.a, curr.b, curr.c));
+			border.push_back(Triangle3d(curr.a, curr.c, curr.d));
+		}
+	}
+
+	std::vector<Triangle3d> pruned_border;
+	for(int i=0; i < border.size(); ++i) {
+		if (border[i].area() > epsilon) {
+			pruned_border.push_back(border[i]);
+		}
+	}
+
+	return pruned_border;
+}
+
+bool Camera::is_inside(const Vector3d& p, std::vector<std::vector<Beam3d> >& beams) {
+	bool inside = false;
+	for(int i=0; i < beams.size(); ++i) {
+		for(int j=0; j < beams[i].size(); ++j) {
+			if (beams[i][j].is_inside(p)) {
+				inside = true;
+				break;
+			}
+		}
+		if (inside) { break; }
+	}
+
+	return inside;
+}
+
+double Camera::signed_distance(const Vector3d& p, std::vector<std::vector<Beam3d> >& beams, std::vector<Triangle3d>& border) {
+	double sd_sign = (is_inside(p, beams)) ? -1 : 1;
+
+	double sd = INFINITY;
+	for(int i=0; i < border.size(); ++i) {
+		sd = std::min(sd, border[i].distance_to(p));
+	}
+
+	return (sd_sign*sd);
+}
+
+void Camera::plot_fov(std::vector<std::vector<Beam3d> >& beams) {
+	Vector3d color(0,1,0);
+	// plot the ends
+	for(int i=0; i < beams.size(); ++i) {
+		for(int j=0; j < beams[i].size(); ++j) {
+			beams[i][j].plot(sensor->GetEnv(), color);
+		}
+	}
+
+//	int rows = beams.size(), cols = beams[0].size();
+//	// plot the left and right
+//	for(int i=0; i < rows; ++i) {
+//		rave_utils::plot_segment(sensor->GetEnv(), beams[i][0].base, beams[i][0].b, color);
+//		rave_utils::plot_segment(sensor->GetEnv(), beams[i][0].base, beams[i][0].c, color);
+//
+//		rave_utils::plot_segment(sensor->GetEnv(), beams[i][cols-1].base, beams[i][cols-1].a, color);
+//		rave_utils::plot_segment(sensor->GetEnv(), beams[i][cols-1].base, beams[i][cols-1].d, color);
+//	}
+//	// plot the top and bottom
+//	for(int j=0; j < cols; ++j) {
+//		rave_utils::plot_segment(sensor->GetEnv(), beams[0][j].base, beams[0][j].a, color);
+//		rave_utils::plot_segment(sensor->GetEnv(), beams[0][j].base, beams[0][j].b, color);
+//
+//		rave_utils::plot_segment(sensor->GetEnv(), beams[rows-1][j].base, beams[rows-1][j].c, color);
+//		rave_utils::plot_segment(sensor->GetEnv(), beams[rows-1][j].base, beams[rows-1][j].d, color);
+//	}
+}
+
+void Camera::plot_pcl(const StdVector3d& pcl) {
+	rave::EnvironmentBasePtr env = sensor->GetEnv();
+
+	Vector3d color(1,0,0);
+	for(int i=0; i < pcl.size(); ++i) {
+		rave_utils::plot_point(env, pcl[i], color, .005);
+	}
+
+	fov->plot(env, color);
+	rave_utils::plot_segment(env, fov->base, fov->a, color);
+	rave_utils::plot_segment(env, fov->base, fov->b, color);
+	rave_utils::plot_segment(env, fov->base, fov->c, color);
+	rave_utils::plot_segment(env, fov->base, fov->d, color);
+}
 
 /**
  * Camera Private methods

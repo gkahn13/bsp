@@ -9,17 +9,16 @@ if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
 endif( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
 
 find_package(OpenRAVE REQUIRED)
-find_package(Boost ${OpenRAVE_Boost_VERSION} EXACT COMPONENTS iostreams thread filesystem system program_options)
+find_package(Boost ${OpenRAVE_Boost_VERSION} EXACT COMPONENTS iostreams thread filesystem system program_options graph)
 find_package(Eigen)
 
 set(FIGTREE_INCLUDE_DIR "/home/gkahn/source/figtree-0.9.3/include")
 set(FIGTREE_LIBRARIES_DIR "/home/gkahn/source/figtree-0.9.3/lib")
 set(FIGTREE_LIBRARIES "figtree;ann_figtree_version")
 
-set(FADBAD_INCLUDE_DIR "/home/gkahn/source/FADBAD++")
 
 include_directories(${OpenRAVE_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR} ${PYTHON_INCLUDE_DIRS}
-					${Eigen_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${FIGTREE_INCLUDE_DIR} ${FADBAD_INCLUDE_DIR})
+					${Eigen_INCLUDE_DIRS} ${Boost_INCLUDE_DIRS} ${FIGTREE_INCLUDE_DIR})
 
 link_directories(${OpenRAVE_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS} ${FIGTREE_LIBRARIES_DIR})
 
@@ -33,22 +32,9 @@ set_target_properties(pr2 PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 target_link_libraries(pr2 ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES} ${Boost_LIBRARIES} ${FIGTREE_LIBRARIES})
 
 
-add_executable(test-fadbad      tests/test-fadbad.cpp
-								fadbad/geometry/fadbad-geometry2d.cpp fadbad/geometry/fadbad-geometry3d.cpp
-								fadbad/system/fadbad-pr2-sim.cpp fadbad/system/fadbad-pr2-system.cpp
-								geometry/geometry2d.cpp geometry/geometry3d.cpp
-								system/pr2-sim.cpp system/pr2-system.cpp
-								utils/pr2-utils.cpp utils/rave-utils.cpp
-		                        ../util/logging.cpp)
-set_target_properties(test-fadbad PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
-set_target_properties(test-fadbad PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
-target_link_libraries(test-fadbad ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES} ${Boost_LIBRARIES} ${FIGTREE_LIBRARIES})
-
-
-
 add_executable(test-pr2-system  tests/test-pr2-system.cpp
 								geometry/geometry2d.cpp geometry/geometry3d.cpp
-								system/pr2-sim.cpp system/pr2-system.cpp
+								system/pr2-sim.cpp system/pr2-system.cpp system/voxel-grid.cpp
 								utils/pr2-utils.cpp utils/rave-utils.cpp
 		                        ../util/logging.cpp)
 set_target_properties(test-pr2-system PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")

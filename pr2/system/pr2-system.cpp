@@ -4,7 +4,7 @@
  * PR2System Constructors and Initializers
  */
 
-PR2System::PR2System(Vector3d& o, bool f) : object(o), use_fadbad(f) {
+PR2System::PR2System(Vector3d& o) : object(o) {
 	brett = new PR2();
 	arm_type = Arm::ArmType::right;
 	arm = brett->rarm;
@@ -12,7 +12,7 @@ PR2System::PR2System(Vector3d& o, bool f) : object(o), use_fadbad(f) {
 	init();
 }
 
-PR2System::PR2System(Vector3d& o, Arm::ArmType arm_type, bool view, bool f) : object(o), use_fadbad(f) {
+PR2System::PR2System(Vector3d& o, Arm::ArmType arm_type, bool view) : object(o) {
 	brett = new PR2(view);
 	this->arm_type = arm_type;
 	if (arm_type == Arm::ArmType::right) {
@@ -25,8 +25,8 @@ PR2System::PR2System(Vector3d& o, Arm::ArmType arm_type, bool view, bool f) : ob
 	init();
 }
 
-PR2System::PR2System(Vector3d& o, Arm::ArmType arm_type, std::string env_file, std::string robot_name, bool view, bool f) :
-				object(o), use_fadbad(f) {
+PR2System::PR2System(Vector3d& o, Arm::ArmType arm_type, std::string env_file, std::string robot_name, bool view) :
+				object(o) {
 	brett = new PR2(env_file, robot_name, view);
 	this->arm_type = arm_type;
 	if (arm_type == Arm::ArmType::right) {
@@ -48,10 +48,6 @@ void PR2System::init() {
 	VectorR R_diag;
 	R_diag << (M_PI/4)*VectorJ::Ones(), 5*Vector3d::Ones();
 	R = R_diag.asDiagonal();
-
-	if (use_fadbad) {
-		fadbad_sys = new FadbadPR2System(brett->get_robot(), arm_type, *this);
-	}
 }
 
 /**
@@ -93,14 +89,14 @@ MatrixZ PR2System::delta_matrix(const VectorJ& j, const Vector3d& object, const 
 		delta(i,i) = 1; // TODO: should this depend on SD of joints?
 	}
 
-	std::vector<std::vector<Beam3d> > beams = cam->get_beams(j, pcl);
-	std::vector<Triangle3d> border = cam->get_border(beams);
-	double sd = cam->signed_distance(object, beams, border);
-
-	double sd_sigmoid = 1.0 - 1.0/(1.0 + exp(-alpha*sd));
-	for(int i=J_DIM; i < Z_DIM; ++i) {
-		delta(i,i) = sd_sigmoid;
-	}
+//	std::vector<std::vector<Beam3d> > beams = cam->get_beams(j, pcl);
+//	std::vector<Triangle3d> border = cam->get_border(beams);
+//	double sd = cam->signed_distance(object, beams, border);
+//
+//	double sd_sigmoid = 1.0 - 1.0/(1.0 + exp(-alpha*sd));
+//	for(int i=J_DIM; i < Z_DIM; ++i) {
+//		delta(i,i) = sd_sigmoid;
+//	}
 
 	return delta;
 }
@@ -228,12 +224,8 @@ VectorTOTAL PR2System::cost_gmm_grad(StdVectorJ& J, const MatrixJ& j_sigma0, Std
 void PR2System::cost_gmm_and_grad(StdVectorJ& J, const MatrixJ& j_sigma0, StdVectorU& U,
 				const std::vector<ParticleGaussian>& particle_gmm, const double alpha,
 				double& cost, VectorTOTAL& grad) {
-	if (use_fadbad) {
-		fadbad_sys->cost_gmm_and_grad(J, j_sigma0, U, particle_gmm, alpha, pcl, cost, grad);
-	} else {
-		cost = cost_gmm(J, j_sigma0, U, particle_gmm, alpha);
-		grad = cost_gmm_grad(J, j_sigma0, U, particle_gmm, alpha);
-	}
+	cost = cost_gmm(J, j_sigma0, U, particle_gmm, alpha);
+	grad = cost_gmm_grad(J, j_sigma0, U, particle_gmm, alpha);
 }
 
 void PR2System::fit_gaussians_to_pf(const MatrixP& P, std::vector<ParticleGaussian>& particle_gmm) {
@@ -358,8 +350,8 @@ void PR2System::display(const StdVectorJ& J, const std::vector<ParticleGaussian>
 	for(int t=0; t < J.size(); ++t) {
 		rave_utils::plot_transform(brett->get_env(), rave_utils::eigen_to_rave(cam->get_pose(J[t])));
 	}
-	std::vector<std::vector<Beam3d> > beams = cam->get_beams(J.back(), pcl);
-	cam->plot_fov(beams);
+//	std::vector<std::vector<Beam3d> > beams = cam->get_beams(J.back(), pcl);
+//	cam->plot_fov(beams);
 
 	VectorJ j_orig = arm->get_joint_values();
 	arm->set_joint_values(J.back());
@@ -437,12 +429,13 @@ void PR2System::update_particles(const VectorJ& j_tp1_t, const double delta_fov_
 		MatrixP& P_tp1) {
 	Vector3d z_obj_real = z_tp1_real.segment<3>(J_DIM);
 
-	std::vector<std::vector<Beam3d> > beams = cam->get_beams(j_tp1_t, pcl);
+//	std::vector<std::vector<Beam3d> > beams = cam->get_beams(j_tp1_t, pcl);
 
 	VectorM W = VectorM::Zero();
 	// for each particle, weight by gauss_likelihood of that measurement given particle/agent observation
 	for(int m=0; m < M_DIM; ++m) {
-		bool inside = cam->is_inside(P_t.col(m), beams);
+//		bool inside = cam->is_inside(P_t.col(m), beams);
+		bool inside = true;
 		if (delta_fov_real < epsilon) {
 			W(m) = (inside) ? 0 : 1;
 		} else {

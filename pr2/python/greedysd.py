@@ -178,8 +178,11 @@ class Camera:
         if (y < 0) or (y >= h) or (x < 0) or (x >= w):
             return False
         
-        #if zbuffer[y,x] < (tfx.point(self.sensor.GetTransform()) - point).norm:
-        #    return False
+        if zbuffer[y,x] < (tfx.point(self.sensor.GetTransform()) - point).norm:
+            return False
+        
+        if np.dot(np.linalg.inv(self.sensor.GetTransform()),point.as_pose().matrix)[2,3] < 0:
+            return False
         
         return True
         
@@ -229,14 +232,12 @@ class VoxelGrid:
         self.object = obj
         self.ODF = np.inf*np.ones((self.resolution, self.resolution, self.resolution))
         
-        unvisited = set()
         pq = utils.PriorityQueue()
         
         for i in xrange(self.resolution):
             for j in xrange(self.resolution):
                 for k in xrange(self.resolution):
                     if self.TSDF[i,j,k] != 0:
-                        unvisited.add((i,j,k))
                         pq.insert((i,j,k), np.inf)
         
      
@@ -258,14 +259,13 @@ class VoxelGrid:
             #time.sleep(.005)
             #raw_input()
             
-            unvisited.remove(curr)
             i, j, k = curr
             self.ODF[i,j,k] = curr_dist
             
             for n, n_dist in self.get_voxel_neighbors_and_dists(curr):
                 dist = curr_dist + n_dist
                 i, j, k = n
-                if n in unvisited and dist < self.ODF[i,j,k]:
+                if dist < self.ODF[i,j,k]:
                     self.ODF[i,j,k] = dist
                     pq.delete(n)
                     pq.insert(n, dist)
@@ -313,20 +313,30 @@ class VoxelGrid:
     def get_voxel_neighbors_and_dists(self, voxel):
         """ Gets neighbors of voxel that are not part of the environment (i.e. TSDF != 0) """
         voxel = np.array(voxel)
-        offsets_and_dists = [([1, 0, 0], self.dx),
-                           ([-1, 0, 0], self.dx),
-                           ([0, 1, 0], self.dy),
-                           ([0, -1, 0], self.dy),
-                           ([0, 0, 1], self.dz),
-                           ([0, 0, -1], self.dz),
+        offsets_and_dists = [([0, 0, -1], self.dz),
+                           ([1, 0, -1], np.linalg.norm([self.dx,0,self.dz])),
+                           ([-1, 0, -1], np.linalg.norm([self.dx,0,self.dz])),
+                           ([0, 1, -1], np.linalg.norm([0,self.dy,self.dz])),
+                           ([0, -1, -1], np.linalg.norm([0,self.dy,self.dz])),
                            ([1, 1, -1], np.linalg.norm(np.array([self.dx,self.dy,self.dz]))),
                            ([1, -1, -1], np.linalg.norm(np.array([self.dx,self.dy,self.dz]))),
                            ([-1, 1, -1], np.linalg.norm(np.array([self.dx,self.dy,self.dz]))),
                            ([-1, -1, -1], np.linalg.norm(np.array([self.dx,self.dy,self.dz]))),
+                           
+                           ([1, 0, 0], self.dx),
+                           ([-1, 0, 0], self.dx),
+                           ([0, 1, 0], self.dy),
+                           ([0, -1, 0], self.dy),
                            ([1, 1, 0], np.linalg.norm(np.array([self.dx,self.dy,0]))),
                            ([1, -1, 0], np.linalg.norm(np.array([self.dx,self.dy,0]))),
                            ([-1, 1, 0], np.linalg.norm(np.array([self.dx,self.dy,0]))),
                            ([-1, -1, 0], np.linalg.norm(np.array([self.dx,self.dy,0]))),
+                           
+                           ([0, 0, 1], self.dz),
+                           ([1, 0, 1], np.linalg.norm([self.dx,0,self.dz])),
+                           ([-1, 0, 1], np.linalg.norm([self.dx,0,self.dz])),
+                           ([0, 1, 1], np.linalg.norm([0,self.dy,self.dz])),
+                           ([0, -1, 1], np.linalg.norm([0,self.dy,self.dz])),
                            ([1, 1, 1], np.linalg.norm(np.array([self.dx,self.dy,self.dz]))),
                            ([1, -1, 1], np.linalg.norm(np.array([self.dx,self.dy,self.dz]))),
                            ([-1, 1, 1], np.linalg.norm(np.array([self.dx,self.dy,self.dz]))),
@@ -466,20 +476,20 @@ def test_voxel_grid():
     table = env.GetKinBody('table')
     table_pos = tfx.point(table.GetTransform()).array
     
-    vgrid = VoxelGrid(cam, table_pos, 2, 3, 2, resolution = 50)
+    vgrid = VoxelGrid(cam, table_pos, 1, 2, 1, resolution = 50)
     #vgrid.plot_centers()
     
-    object = table_pos + np.array([0,0,-.1])
+    object = table_pos + np.array([.15,0,-.2])
     vgrid.object = object # TEMP
     h = utils.plot_point(env, object, size=.05, color=[1,0,0])
     
     vgrid.update_TSDF()
-    vgrid.update_ODF(object)
-    vgrid.signed_distance_complete()
+    #vgrid.update_ODF(object)
+    #vgrid.signed_distance_complete()
     
     #vgrid.plot_TSDF()
-    #vgrid.plot_ODF()
-    vgrid.plot_FOV()
+    vgrid.plot_ODF()
+    #vgrid.plot_FOV()
     
     IPython.embed()
     

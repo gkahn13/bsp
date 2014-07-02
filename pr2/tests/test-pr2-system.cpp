@@ -29,21 +29,21 @@ MatrixP setup_particles(rave::EnvironmentBasePtr env) {
 
 	// uniform
 	for(int m=0; m < M_DIM; ++m) {
-		P(0,m) = mm_utils::uniform(x_min, x_max);
-		P(1,m) = mm_utils::uniform(y_min, y_max);
-		P(2,m) = mm_utils::uniform(z_min, z_max);
+		P(0,m) = pr2_utils::uniform(x_min, x_max);
+		P(1,m) = pr2_utils::uniform(y_min, y_max);
+		P(2,m) = pr2_utils::uniform(z_min, z_max);
 	}
 
 	// two clumps
 //	for(int m=0; m < M_DIM; ++m) {
 //		if (m < M_DIM/2) {
-//			P(0,m) = mm_utils::uniform(x_min, .7*x_min + .3*x_max);
-//			P(1,m) = mm_utils::uniform(y_min, y_max);
-//			P(2,m) = mm_utils::uniform(z_min, z_max);
+//			P(0,m) = pr2_utils::uniform(x_min, .7*x_min + .3*x_max);
+//			P(1,m) = pr2_utils::uniform(y_min, y_max);
+//			P(2,m) = pr2_utils::uniform(z_min, z_max);
 //		} else {
-//			P(0,m) = mm_utils::uniform(.3*x_min + .7*x_max, x_max);
-//			P(1,m) = mm_utils::uniform(y_min, y_max);
-//			P(2,m) = mm_utils::uniform(z_min, z_max);
+//			P(0,m) = pr2_utils::uniform(.3*x_min + .7*x_max, x_max);
+//			P(1,m) = pr2_utils::uniform(y_min, y_max);
+//			P(2,m) = pr2_utils::uniform(z_min, z_max);
 //		}
 //	}
 
@@ -273,7 +273,8 @@ void test_fk() {
 
 void test_voxel_grid() {
 	Vector3d table(3.5, -1.2, 0.74);
-	Vector3d object = table + Vector3d(0, 0, .4);
+	Vector3d object = table + Vector3d(0, -.2, .05);
+//	Vector3d object = table + Vector3d(0, .1, -.2);
 	Arm::ArmType arm_type = Arm::ArmType::right;
 	bool view = true;
 	PR2System sys(object, arm_type, view);
@@ -286,10 +287,11 @@ void test_voxel_grid() {
 	arm->set_posture(Arm::Posture::mantis);
 	sleep(1);
 
+	rave_utils::plot_transform(env, rave_utils::eigen_to_rave(cam->get_pose(arm->get_joint_values())));
 	rave_utils::plot_point(env, object, Vector3d(1,0,0), .05);
 
 	Vector3d pos_center = table;
-	double x_height = 1, y_height = 2, z_height = 1;
+	double x_height = 1.5, y_height = 2, z_height = 1;
 	int resolution = 100;
 	VoxelGrid vgrid(pos_center, x_height, y_height, z_height, resolution);
 
@@ -310,9 +312,18 @@ void test_voxel_grid() {
 	StdVector3d obstacles = vgrid.get_obstacles();
 	Matrix<double,H_SUB,W_SUB> zbuffer = cam->get_zbuffer(arm->get_joint_values(), pcl); // TODO: should be obstacles
 
-	tc.start("sd");
-	vgrid.signed_distance_complete(cam, zbuffer, cam->get_pose(arm->get_joint_values()));
-	tc.stop("sd");
+//	std::cout << "zbuffer\n" << zbuffer << "\n";
+
+	tc.start("sd_complete");
+	double sd_complete = vgrid.signed_distance_complete(cam, zbuffer, cam->get_pose(arm->get_joint_values()));
+	tc.stop("sd_complete");
+
+	tc.start("sd_greedy");
+	double sd_greedy = vgrid.signed_distance_greedy(cam, zbuffer, cam->get_pose(arm->get_joint_values()));
+	tc.stop("sd_greedy");
+//
+	std::cout << "sd_complete: " << sd_complete << "\n";
+	std::cout << "sd_greedy: " << sd_greedy << "\n";
 
 	vgrid.plot_TSDF(env);
 //	vgrid.plot_ODF(env);
@@ -322,7 +333,81 @@ void test_voxel_grid() {
 
 	std::cout << "Press enter to exit\n";
 	std::cin.ignore();
+}
 
+void test_greedy() {
+	srand(time(0));
+
+	Vector3d table(3.5, -1.2, 0.74);
+	Vector3d object = table + Vector3d(0, -.2, .05);
+//	Vector3d object = table + Vector3d(0, .1, -.2);
+	Arm::ArmType arm_type = Arm::ArmType::right;
+	bool view = true;
+	PR2System sys(object, arm_type, view);
+
+	PR2* brett = sys.get_brett();
+	Arm* arm = sys.get_arm();
+	Camera* cam = sys.get_camera();
+	rave::EnvironmentBasePtr env = brett->get_env();
+
+	arm->set_posture(Arm::Posture::mantis);
+	sleep(1);
+
+	rave_utils::plot_transform(env, rave_utils::eigen_to_rave(cam->get_pose(arm->get_joint_values())));
+
+	Vector3d pos_center = table;
+	double x_height = 1.5, y_height = 2, z_height = 1;
+	int resolution = 100;
+	VoxelGrid vgrid(pos_center, x_height, y_height, z_height, resolution);
+
+	StdVector3d pcl = cam->get_pcl(arm->get_joint_values());
+
+	std::cout << "update_TSDF\n";
+	vgrid.update_TSDF(pcl);
+
+	StdVector3d obstacles = vgrid.get_obstacles();
+	Matrix<double,H_SUB,W_SUB> zbuffer = cam->get_zbuffer(arm->get_joint_values(), pcl); // TODO: should be obstacles
+
+	Vector3d lower = pos_center - Vector3d(x_height/2., y_height/2., z_height/2.);
+	Vector3d upper = pos_center + Vector3d(x_height/2., y_height/2., z_height/2.);
+	for(int iter=0; iter < 10; ++iter) {
+		rave_utils::clear_plots();
+		vgrid.plot_TSDF(env);
+		vgrid.plot_FOV(env, cam, zbuffer, cam->get_pose(arm->get_joint_values()));
+
+		std::cout << "\niter: " << iter << "\n";
+		for(int i=0; i < 3; ++i) {
+			object(i) = pr2_utils::uniform(lower(i), upper(i));
+		}
+
+		std::cout << "update_ODF\n";
+		tc.start("update_ODF");
+		vgrid.update_ODF(object, env);
+		tc.stop("update_ODF");
+
+		//	std::cout << "zbuffer\n" << zbuffer << "\n";
+
+		tc.start("sd_complete");
+		double sd_complete = vgrid.signed_distance_complete(cam, zbuffer, cam->get_pose(arm->get_joint_values()));
+		tc.stop("sd_complete");
+
+		tc.start("sd_greedy");
+		double sd_greedy = vgrid.signed_distance_greedy(cam, zbuffer, cam->get_pose(arm->get_joint_values()));
+		tc.stop("sd_greedy");
+
+		std::cout << "sd_complete: " << sd_complete << "\n";
+		std::cout << "sd_greedy: " << sd_greedy << "\n";
+
+		tc.print_all_elapsed();
+		tc.clear_all();
+
+		rave_utils::plot_point(env, object, Vector3d(1,0,0), .05);
+		std::cin.ignore();
+	}
+
+
+	std::cout << "Press enter to exit\n";
+	std::cin.ignore();
 }
 
 int main() {
@@ -331,6 +416,7 @@ int main() {
 //	test_pr2_system();
 //	test_camera();
 //	test_fk();
-	test_voxel_grid();
+//	test_voxel_grid();
+	test_greedy();
 	return 0;
 }

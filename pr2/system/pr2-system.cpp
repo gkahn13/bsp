@@ -466,7 +466,7 @@ double PR2System::gauss_likelihood(const Vector3d& v, const Matrix3d& S) {
 }
 
 void PR2System::low_variance_sampler(const MatrixP& P, const VectorM& W, MatrixP& P_sampled) {
-	double r = mm_utils::uniform(0, 1/double(M_DIM));
+	double r = pr2_utils::uniform(0, 1/double(M_DIM));
 	double c = W(0);
 	int i = 0;
 	for(int m=0; m < M_DIM; ++m) {

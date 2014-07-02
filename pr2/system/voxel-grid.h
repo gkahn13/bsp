@@ -60,6 +60,35 @@ private:
 	VectorXd array;
 };
 
+class CubeVector3i {
+public:
+	CubeVector3i(int x, int y, int z) : x_size(x), y_size(y), z_size(z) {
+		array = std::vector<std::vector<std::vector<Vector3i> > >(x_size,
+				std::vector<std::vector<Vector3i> >(y_size,
+						std::vector<Vector3i>(z_size)));
+
+		for(int i=0; i < x_size; ++i) {
+			for(int j=0; j < y_size; ++j) {
+				for(int k=0; k < z_size; ++k) {
+					array[i][j][k] = Vector3i(i,j,k);
+				}
+			}
+		}
+	}
+
+	inline Vector3i get(const Vector3i& index) {
+		return array[index(0)][index(1)][index(2)];
+	}
+
+	inline void set(const Vector3i& index, const Vector3i& val) {
+		array[index(0)][index(1)][index(2)] = val;
+	}
+
+private:
+	int x_size, y_size, z_size;
+	std::vector<std::vector<std::vector<Vector3i> > > array;
+};
+
 
 class VoxelGrid {
 public:
@@ -69,6 +98,7 @@ public:
 	void update_ODF(const Vector3d& obj, rave::EnvironmentBasePtr env);
 
 	double signed_distance_complete(Camera* cam, const Matrix<double,H_SUB,W_SUB>& zbuffer, const Matrix4d& cam_pose);
+	double signed_distance_greedy(Camera* cam, const Matrix<double,H_SUB,W_SUB>& zbuffer, const Matrix4d& cam_pose);
 
 	StdVector3d get_obstacles();
 
@@ -83,9 +113,13 @@ private:
 
 	Vector3d object;
 	Cube *TSDF, *ODF;
+	CubeVector3i* smallest_OD_neighbors;
 
 	StdVector3i offsets;
 	std::vector<double> offset_dists;
+
+	// called at the end of update_ODF
+	void update_smallest_OD_neighbors();
 
 	void get_voxel_neighbors_and_dists(const Vector3i& voxel, StdVector3i& neighbors, std::vector<double>& dists);
 	Vector3i voxel_from_point(const Vector3d& point);

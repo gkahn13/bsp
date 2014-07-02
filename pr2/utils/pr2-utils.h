@@ -29,7 +29,7 @@ private:
 };
 
 
-namespace mm_utils {
+namespace pr2_utils {
 
 inline double uniform(double low, double high) {
 	return (high - low)*(rand() / double(RAND_MAX)) + low;

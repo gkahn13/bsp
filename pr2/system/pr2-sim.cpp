@@ -399,7 +399,7 @@ Camera::Camera(rave::RobotBasePtr r, std::string camera_name, Arm* a) : robot(r)
 				0, fy_sub, cy_sub,
 				0, 0, 1;
 
-	depth_map = new DepthMap(sensor, P);
+//	depth_map = new DepthMap(sensor, P);
 
 	Matrix4d sensor_pose = rave_utils::rave_to_eigen(sensor->GetTransform());
 	Matrix4d ee_pose = a->get_pose(a->get_joint_values());
@@ -443,6 +443,28 @@ StdVector3d Camera::get_pcl(const Matrix<double,ARM_DIM,1>& j) {
 	return pcl;
 }
 
+inline std::vector<std::vector<int> > index_neighbors(int i, int j, int rows, int cols) {
+	if ((i == 0) && (j == 0)) {
+		return {{i+1,j+0}, {i+1,j+1}, {i+0,j+1}};
+	} else if ((i == 0) && (j == cols-1)) {
+		return {{i+0,j-1}, {i+1,j-1}, {i+1,j+0}};
+	} else if ((i == rows-1) && (j == cols-1)) {
+		return {{i-1,j+0}, {i-1,j-1}, {i+0,j-1}};
+	} else if ((i == rows-1) && (j == 0)) {
+		return {{i-1,j+0}, {i-1,j+1}, {i+0,j+1}};
+	} else if (j == 0) {
+		return {{i-1,j+0}, {i-1,j+1}, {i+0,j+1}, {i+1,j+1}, {i+1,j+0}};
+	} else if (j == cols-1) {
+		return {{i-1,j+0}, {i-1,j-1}, {i+0,j-1}, {i+1,j-1}, {i+1,j+0}};
+	} else if (i == 0) {
+		return {{i+0,j-1}, {i+1,j-1}, {i+1,j+0}, {i+1,j+1}, {i+0,j+1}};
+	} else if (i == rows-1) {
+		return {{i+0,j-1}, {i-1,j-1}, {i-1,j+0}, {i-1,j+1}, {i+0,j+1}};
+	} else {
+		return {{i-1,j-1}, {i-1,j+0}, {i-1,j+1}, {i+0,j+1}, {i+1,j+1}, {i+1,j+0}, {i+1,j-1}, {i+0,cols-1}};
+	}
+}
+
 Matrix<double,H_SUB,W_SUB> Camera::get_zbuffer(const Matrix<double,ARM_DIM,1>& j, const StdVector3d& obstacles) {
 	Matrix<double,H_SUB,W_SUB> zbuffer = MAX_RANGE*Matrix<double,H_SUB,W_SUB>::Ones();
 	Matrix4d cam_pose = get_pose(j);
@@ -460,6 +482,33 @@ Matrix<double,H_SUB,W_SUB> Camera::get_zbuffer(const Matrix<double,ARM_DIM,1>& j
 		}
 	}
 
+	Matrix<double,H_SUB,W_SUB> zbuffer_smoothed;
+	zbuffer_smoothed.setZero();
+	for(int i=0; i < H_SUB; ++i) {
+		for(int j=0; j < W_SUB; ++j) {
+			if (zbuffer(i,j) == MAX_RANGE) {
+				std::vector<std::vector<int> > n = index_neighbors(i, j, H_SUB, W_SUB);
+				int num_not_max = 0;
+				double depth_sum = 0;
+				for(int k=0; k < n.size(); ++k) {
+					if (zbuffer(n[k][0], n[k][1]) < MAX_RANGE) {
+						num_not_max++;
+						depth_sum += zbuffer(n[k][0], n[k][1]);
+					}
+				}
+
+				if ((double(num_not_max)/double(n.size())) >= .5) {
+					zbuffer_smoothed(i,j) = depth_sum / double(n.size());
+				} else {
+					zbuffer_smoothed(i,j) = zbuffer(i,j);
+				}
+			} else {
+				zbuffer_smoothed(i,j) = zbuffer(i,j);
+			}
+		}
+	}
+	zbuffer = zbuffer_smoothed;
+
 	return zbuffer;
 }
 
@@ -473,6 +522,17 @@ Vector2i Camera::get_pixel_from_point(const Vector3d& point, const Matrix4d& cam
 
 	Vector2i pixel = {int(y(1)/y(2)), int(y(0)/y(2))};
 	return pixel;
+}
+
+Vector3d Camera::get_point_from_pixel_and_dist(const Vector2i& pixel, const double dist, const Matrix4d& cam_pose) {
+	double x = FOCAL_LENGTH*(double(pixel(1)-W_SUB/2.0)/fx_sub);
+	double y = FOCAL_LENGTH*(double(pixel(0)-H_SUB/2.0)/fy_sub);
+	double z = dist;
+
+	Matrix4d point_cam = Matrix4d::Identity();
+	point_cam.block<3,1>(0,3) = Vector3d(x,y,z);
+	Matrix4d point_world = cam_pose*point_cam;
+	return point_world.block<3,1>(0,3);
 }
 
 bool Camera::is_in_fov(const Vector3d& point, const Matrix<double,H_SUB,W_SUB>& zbuffer, const Matrix4d& cam_pose) {
@@ -537,116 +597,116 @@ MatrixXd Camera::get_directions(const Matrix<double,ARM_DIM,1>& j, const int h, 
 }
 
 
-/**
- * DepthMap Constructors
- */
-
-DepthMap::DepthMap(rave::SensorBasePtr s, const Matrix3d& P_mat) : sensor(s), P(P_mat) {
-	pixel_buckets = std::vector<std::vector<PixelBucket*> >(H_SUB, std::vector<PixelBucket*>(W_SUB));
-	for(int i=0; i < H_SUB; ++i) {
-		for(int j=0; j < W_SUB; ++j) {
-			pixel_buckets[i][j] = new PixelBucket({i+0.5,j+0.5});
-		}
-	}
-};
-
-/**
- * DepthMap Public methods
- */
-
-// TODO: only add point to bucket if point is either (1) closer than points in bucket or (2) closet to points in bucket
-void DepthMap::add_point(const Vector3d& point, const Matrix4d& cam_pose) {
-	Matrix4d point_mat = Matrix4d::Identity();
-	point_mat.block<3,1>(0,3) = point;
-
-	Matrix4d point_mat_tilde = cam_pose.inverse()*point_mat;
-
-	Vector3d y = P*point_mat_tilde.block<3,1>(0,3);
-	Vector2d pixel = {y(1)/y(2), y(0)/y(2)};
-	int h_round = int(pixel(0));
-	int w_round = int(pixel(1));
-
-	if ((0 <= h_round) && (h_round < H_SUB) && (0 <= w_round) && (w_round < W_SUB) &&
-			((cam_pose.block<3,1>(0,3) - point).norm() < MAX_RANGE)) { // TODO: should filter out points behind camera!
-		pixel_buckets[h_round][w_round]->add_point(pixel, point);
-	}
-}
-
-Matrix<double,H_SUB,W_SUB> DepthMap::get_z_buffer(const Vector3d& cam_pos) {
-	Matrix<double,H_SUB,W_SUB> z_buffer = Matrix<double,H_SUB,W_SUB>::Ones();
-
-	for(int i=0; i < H_SUB; ++i) {
-		for(int j=0; j < W_SUB; ++j) {
-			if (!(pixel_buckets[i][j]->is_empty())) {
-				z_buffer(i,j) = (cam_pos - pixel_buckets[i][j]->average_point()).norm();
-			} else if (num_neighbors_empty(i,j) >= 5 ) {
-				z_buffer(i,j) = (cam_pos - average_of_neighbors(i, j)).norm();
-			} else {
-				z_buffer(i,j) = MAX_RANGE;
-			}
+///**
+// * DepthMap Constructors
+// */
 //
-//			if (pixel_buckets[i][j]->is_empty()) {
-//				z_buffer(i,j) = MAX_RANGE;
-//			} else {
+//DepthMap::DepthMap(rave::SensorBasePtr s, const Matrix3d& P_mat) : sensor(s), P(P_mat) {
+//	pixel_buckets = std::vector<std::vector<PixelBucket*> >(H_SUB, std::vector<PixelBucket*>(W_SUB));
+//	for(int i=0; i < H_SUB; ++i) {
+//		for(int j=0; j < W_SUB; ++j) {
+//			pixel_buckets[i][j] = new PixelBucket({i+0.5,j+0.5});
+//		}
+//	}
+//};
+//
+///**
+// * DepthMap Public methods
+// */
+//
+//// TODO: only add point to bucket if point is either (1) closer than points in bucket or (2) closet to points in bucket
+//void DepthMap::add_point(const Vector3d& point, const Matrix4d& cam_pose) {
+//	Matrix4d point_mat = Matrix4d::Identity();
+//	point_mat.block<3,1>(0,3) = point;
+//
+//	Matrix4d point_mat_tilde = cam_pose.inverse()*point_mat;
+//
+//	Vector3d y = P*point_mat_tilde.block<3,1>(0,3);
+//	Vector2d pixel = {y(1)/y(2), y(0)/y(2)};
+//	int h_round = int(pixel(0));
+//	int w_round = int(pixel(1));
+//
+//	if ((0 <= h_round) && (h_round < H_SUB) && (0 <= w_round) && (w_round < W_SUB) &&
+//			((cam_pose.block<3,1>(0,3) - point).norm() < MAX_RANGE)) { // TODO: should filter out points behind camera!
+//		pixel_buckets[h_round][w_round]->add_point(pixel, point);
+//	}
+//}
+//
+//Matrix<double,H_SUB,W_SUB> DepthMap::get_z_buffer(const Vector3d& cam_pos) {
+//	Matrix<double,H_SUB,W_SUB> z_buffer = Matrix<double,H_SUB,W_SUB>::Ones();
+//
+//	for(int i=0; i < H_SUB; ++i) {
+//		for(int j=0; j < W_SUB; ++j) {
+//			if (!(pixel_buckets[i][j]->is_empty())) {
 //				z_buffer(i,j) = (cam_pos - pixel_buckets[i][j]->average_point()).norm();
+//			} else if (num_neighbors_empty(i,j) >= 5 ) {
+//				z_buffer(i,j) = (cam_pos - average_of_neighbors(i, j)).norm();
+//			} else {
+//				z_buffer(i,j) = MAX_RANGE;
 //			}
-		}
-	}
-
-	return z_buffer;
-}
-
-void DepthMap::clear() {
-	for(int i=0; i < H_SUB; ++i) {
-		for(int j=0; j < W_SUB; ++j) {
-			pixel_buckets[i][j]->clear();
-		}
-	}
-}
-
-/**
- * DepthMap Private methods
- */
-
-inline std::vector<std::vector<int> > offsets(int i, int j, int rows, int cols) {
-	if ((i == 0) && (j == 0)) {
-		return {{1,0}, {1,1}, {0,1}};
-	} else if ((i == 0) && (j == cols-1)) {
-		return {{0,-1}, {1,-1}, {1,0}};
-	} else if ((i == rows-1) && (j == cols-1)) {
-		return {{-1,0}, {-1,-1}, {0,-1}};
-	} else if ((i == rows-1) && (j == 0)) {
-		return {{-1,0}, {-1,1}, {0,1}};
-	} else if (j == 0) {
-		return {{-1,0}, {-1,1}, {0,1}, {1,1}, {1,0}};
-	} else if (j == cols-1) {
-		return {{-1,0}, {-1,-1}, {0,-1}, {1,-1}, {1,0}};
-	} else if (i == 0) {
-		return {{0,-1}, {1,-1}, {1,0}, {1,1}, {0,1}};
-	} else if (i == rows-1) {
-		return {{0,-1}, {-1,-1}, {-1,0}, {-1,1}, {0,1}};
-	} else {
-		return {{-1,-1}, {-1,0}, {-1,1}, {0,1}, {1,1}, {1,0}, {1,-1}, {0,-1}};
-	}
-}
-
-int DepthMap::num_neighbors_empty(int i, int j) {
-	int num_empty = 0;
-	std::vector<std::vector<int> > o = offsets(i, j, H_SUB, W_SUB);
-	for(int k=0; k < o.size(); ++k) {
-		num_empty += (pixel_buckets[i+o[k][0]][j+o[k][1]]->is_empty()) ? 1 : 0;
-	}
-
-	return num_empty;
-}
-
-Vector3d DepthMap::average_of_neighbors(int i, int j) {
-	std::vector<std::vector<int> > o = offsets(i, j, H_SUB, W_SUB);
-	Vector3d avg_pt = Vector3d::Zero();
-	double num_neighbors = o.size();
-	for(int k=0; k < o.size(); ++k) {
-		avg_pt += (1/num_neighbors)*(pixel_buckets[i+o[k][0]][j+o[k][1]]->average_point());
-	}
-	return avg_pt;
-}
+////
+////			if (pixel_buckets[i][j]->is_empty()) {
+////				z_buffer(i,j) = MAX_RANGE;
+////			} else {
+////				z_buffer(i,j) = (cam_pos - pixel_buckets[i][j]->average_point()).norm();
+////			}
+//		}
+//	}
+//
+//	return z_buffer;
+//}
+//
+//void DepthMap::clear() {
+//	for(int i=0; i < H_SUB; ++i) {
+//		for(int j=0; j < W_SUB; ++j) {
+//			pixel_buckets[i][j]->clear();
+//		}
+//	}
+//}
+//
+///**
+// * DepthMap Private methods
+// */
+//
+//inline std::vector<std::vector<int> > offsets(int i, int j, int rows, int cols) {
+//	if ((i == 0) && (j == 0)) {
+//		return {{1,0}, {1,1}, {0,1}};
+//	} else if ((i == 0) && (j == cols-1)) {
+//		return {{0,-1}, {1,-1}, {1,0}};
+//	} else if ((i == rows-1) && (j == cols-1)) {
+//		return {{-1,0}, {-1,-1}, {0,-1}};
+//	} else if ((i == rows-1) && (j == 0)) {
+//		return {{-1,0}, {-1,1}, {0,1}};
+//	} else if (j == 0) {
+//		return {{-1,0}, {-1,1}, {0,1}, {1,1}, {1,0}};
+//	} else if (j == cols-1) {
+//		return {{-1,0}, {-1,-1}, {0,-1}, {1,-1}, {1,0}};
+//	} else if (i == 0) {
+//		return {{0,-1}, {1,-1}, {1,0}, {1,1}, {0,1}};
+//	} else if (i == rows-1) {
+//		return {{0,-1}, {-1,-1}, {-1,0}, {-1,1}, {0,1}};
+//	} else {
+//		return {{-1,-1}, {-1,0}, {-1,1}, {0,1}, {1,1}, {1,0}, {1,-1}, {0,-1}};
+//	}
+//}
+//
+//int DepthMap::num_neighbors_empty(int i, int j) {
+//	int num_empty = 0;
+//	std::vector<std::vector<int> > o = offsets(i, j, H_SUB, W_SUB);
+//	for(int k=0; k < o.size(); ++k) {
+//		num_empty += (pixel_buckets[i+o[k][0]][j+o[k][1]]->is_empty()) ? 1 : 0;
+//	}
+//
+//	return num_empty;
+//}
+//
+//Vector3d DepthMap::average_of_neighbors(int i, int j) {
+//	std::vector<std::vector<int> > o = offsets(i, j, H_SUB, W_SUB);
+//	Vector3d avg_pt = Vector3d::Zero();
+//	double num_neighbors = o.size();
+//	for(int k=0; k < o.size(); ++k) {
+//		avg_pt += (1/num_neighbors)*(pixel_buckets[i+o[k][0]][j+o[k][1]]->average_point());
+//	}
+//	return avg_pt;
+//}
 

@@ -476,7 +476,7 @@ def test_voxel_grid():
     table = env.GetKinBody('table')
     table_pos = tfx.point(table.GetTransform()).array
     
-    vgrid = VoxelGrid(cam, table_pos, 1, 2, 1, resolution = 50)
+    vgrid = VoxelGrid(cam, table_pos + np.array([0,0,0]), 1.5, 2, 1, resolution = 50)
     #vgrid.plot_centers()
     
     object = table_pos + np.array([.15,0,-.2])

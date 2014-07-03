@@ -467,8 +467,8 @@ void test_gradient() {
 	srand(time(0));
 
 	Vector3d table(3.5, -1.2, 0.74);
-//	Vector3d object = table + Vector3d(0, .5, .05);
-	Vector3d object = table + Vector3d(.1, -.1, -.1);
+	Vector3d object = table + Vector3d(0, .5, .05);
+//	Vector3d object = table + Vector3d(.1, -.1, -.1);
 	Arm::ArmType arm_type = Arm::ArmType::right;
 	bool view = true;
 	PR2System sys(object, arm_type, view);

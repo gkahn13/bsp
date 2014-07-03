@@ -48,6 +48,11 @@ void PR2System::init() {
 	VectorR R_diag;
 	R_diag << (M_PI/4)*VectorJ::Ones(), 5*Vector3d::Ones();
 	R = R_diag.asDiagonal();
+
+	Vector3d table_center(3.5, -1.2, 0.74);
+	double x_height = 1.5, y_height = 2, z_height = 1;
+	int resolution = 100;
+	vgrid = new VoxelGrid(table_center, x_height, y_height, z_height, resolution);
 }
 
 /**
@@ -82,26 +87,25 @@ VectorZ PR2System::obsfunc(const VectorJ& j, const Vector3d& object, const Vecto
 /**
  * \brief Delta for (object - camera) determined by FOV of camera for arm joint values j
  */
-MatrixZ PR2System::delta_matrix(const VectorJ& j, const Vector3d& object, const double alpha) {
+MatrixZ PR2System::delta_matrix(const VectorJ& j, const Vector3d& object, const double alpha, const Cube& ODF) {
 	MatrixZ delta = MatrixZ::Identity();
 
 	for(int i=0; i < J_DIM; ++i) {
 		delta(i,i) = 1; // TODO: should this depend on SD of joints?
 	}
 
-//	std::vector<std::vector<Beam3d> > beams = cam->get_beams(j, pcl);
-//	std::vector<Triangle3d> border = cam->get_border(beams);
-//	double sd = cam->signed_distance(object, beams, border);
-//
-//	double sd_sigmoid = 1.0 - 1.0/(1.0 + exp(-alpha*sd));
-//	for(int i=J_DIM; i < Z_DIM; ++i) {
-//		delta(i,i) = sd_sigmoid;
-//	}
+	Matrix<double,H_SUB,W_SUB> zbuffer = cam->get_zbuffer(j, vgrid->get_obstacles());
+	double sd = vgrid->signed_distance_greedy(object, ODF, cam, zbuffer, cam->get_pose(j));
+
+	double sd_sigmoid = 1.0 - 1.0/(1.0 + exp(-alpha*sd));
+	for(int i=J_DIM; i < Z_DIM; ++i) {
+		delta(i,i) = sd_sigmoid;
+	}
 
 	return delta;
 }
 
-void PR2System::belief_dynamics(const VectorX& x_t, const MatrixX& sigma_t, const VectorU& u_t, const double alpha,
+void PR2System::belief_dynamics(const VectorX& x_t, const MatrixX& sigma_t, const VectorU& u_t, const double alpha, const Cube& ODF,
 			VectorX& x_tp1, MatrixX& sigma_tp1) {
 	// propagate dynamics
 	x_tp1 = x_t;
@@ -118,12 +122,12 @@ void PR2System::belief_dynamics(const VectorX& x_t, const MatrixX& sigma_t, cons
 	Matrix<double,Z_DIM,X_DIM> H;
 	linearize_obsfunc(x_tp1, VectorR::Zero(), H);
 
-	MatrixZ delta = delta_matrix(x_tp1.segment<J_DIM>(0), x_tp1.segment<3>(J_DIM), alpha);
+	MatrixZ delta = delta_matrix(x_tp1.segment<J_DIM>(0), x_tp1.segment<3>(J_DIM), alpha, ODF);
 	Matrix<double,X_DIM,Z_DIM> K = sigma_tp1_bar*H.transpose()*delta*(delta*H*sigma_tp1_bar*H.transpose()*delta + R).inverse()*delta;
 	sigma_tp1 = (MatrixX::Identity() - K*H)*sigma_tp1_bar;
 }
 
-void PR2System::execute_control_step(const VectorJ& j_t_real, const VectorJ& j_t, const VectorU& u_t, const MatrixP& P_t,
+void PR2System::execute_control_step(const VectorJ& j_t_real, const VectorJ& j_t, const VectorU& u_t, const MatrixP& P_t, const Cube& ODF,
 				VectorJ& j_tp1_real, VectorJ& j_tp1, MatrixP& P_tp1) {
 	// find next real state from input + noise
 	VectorQ control_noise = VectorQ::Zero();// + chol(.2*Q)*randn<vec>(Q_DIM);
@@ -134,7 +138,7 @@ void PR2System::execute_control_step(const VectorJ& j_t_real, const VectorJ& j_t
 	// max-likelihood dynfunc estimate
 	j_tp1 = dynfunc(j_t, u_t, VectorQ::Zero(), true);
 
-	MatrixZ delta = delta_matrix(j_tp1_real, object, INFINITY);
+	MatrixZ delta = delta_matrix(j_tp1_real, object, INFINITY, ODF); // TODO: not really right, will be ok once on real robot
 	Vector3d delta_real = delta.diagonal().segment<3>(J_DIM);
 	update_particles(j_tp1, delta_real(0), z_tp1_real, P_t, P_tp1);
 }
@@ -146,14 +150,14 @@ void PR2System::get_limits(VectorJ& j_min, VectorJ& j_max, VectorU& u_min, Vecto
 	u_max = this->u_max;
 }
 
-double PR2System::cost(const StdVectorJ& J, const Vector3d& obj, const MatrixX& sigma0, const StdVectorU& U, const double alpha) {
+double PR2System::cost(const StdVectorJ& J, const Vector3d& obj, const MatrixX& sigma0, const StdVectorU& U, const double alpha, const Cube& ODF) {
 	double cost = 0;
 
 	VectorX x_t, x_tp1 = VectorX::Zero();
 	MatrixX sigma_t = sigma0, sigma_tp1 = MatrixX::Zero();
 	for(int t=0; t < TIMESTEPS-1; ++t) {
 		x_t << J[t], obj;
-		belief_dynamics(x_t, sigma_t, U[t], alpha, x_tp1, sigma_tp1);
+		belief_dynamics(x_t, sigma_t, U[t], alpha, ODF, x_tp1, sigma_tp1);
 
 		if (t < TIMESTEPS-2) {
 			cost += alpha_belief*sigma_tp1.trace();
@@ -179,7 +183,7 @@ double PR2System::cost_gmm(const StdVectorJ& J, const MatrixJ& j_sigma0, const S
 	for(int i=0; i < particle_gmm.size(); ++i) {
 		sigma0.block<3,3>(J_DIM,J_DIM) = particle_gmm[i].cov;
 //		cost_gmm += particle_gmm[i].pct*cost(J, particle_gmm[i].mean, sigma0, U, alpha);
-		cost_gmm += cost(J, particle_gmm[i].mean, sigma0, U, alpha);
+		cost_gmm += cost(J, particle_gmm[i].mean, sigma0, U, alpha, particle_gmm[i].ODF);
 	}
 
 	return cost_gmm;
@@ -350,8 +354,10 @@ void PR2System::display(const StdVectorJ& J, const std::vector<ParticleGaussian>
 	for(int t=0; t < J.size(); ++t) {
 		rave_utils::plot_transform(brett->get_env(), rave_utils::eigen_to_rave(cam->get_pose(J[t])));
 	}
-//	std::vector<std::vector<Beam3d> > beams = cam->get_beams(J.back(), pcl);
-//	cam->plot_fov(beams);
+
+	vgrid->plot_TSDF(brett->get_env());
+	vgrid->plot_FOV(brett->get_env(), cam, cam->get_zbuffer(J.back(), vgrid->get_obstacles()), cam->get_pose(J.back()));
+
 
 	VectorJ j_orig = arm->get_joint_values();
 	arm->set_joint_values(J.back());
@@ -429,13 +435,12 @@ void PR2System::update_particles(const VectorJ& j_tp1_t, const double delta_fov_
 		MatrixP& P_tp1) {
 	Vector3d z_obj_real = z_tp1_real.segment<3>(J_DIM);
 
-//	std::vector<std::vector<Beam3d> > beams = cam->get_beams(j_tp1_t, pcl);
+	Matrix<double,H_SUB,W_SUB> zbuffer = cam->get_zbuffer(j_tp1_t, vgrid->get_obstacles());
 
 	VectorM W = VectorM::Zero();
 	// for each particle, weight by gauss_likelihood of that measurement given particle/agent observation
 	for(int m=0; m < M_DIM; ++m) {
-//		bool inside = cam->is_inside(P_t.col(m), beams);
-		bool inside = true;
+		bool inside = cam->is_in_fov(P_t.col(m), zbuffer, cam->get_pose(j_tp1_t));
 		if (delta_fov_real < epsilon) {
 			W(m) = (inside) ? 0 : 1;
 		} else {

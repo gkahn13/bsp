@@ -306,7 +306,7 @@ void test_voxel_grid() {
 
 	std::cout << "update_ODF\n";
 	tc.start("update_ODF");
-	vgrid.update_ODF(object, env);
+	Cube ODF = vgrid.get_ODF(object);
 	tc.stop("update_ODF");
 
 	StdVector3d obstacles = vgrid.get_obstacles();
@@ -315,11 +315,11 @@ void test_voxel_grid() {
 //	std::cout << "zbuffer\n" << zbuffer << "\n";
 
 	tc.start("sd_complete");
-	double sd_complete = vgrid.signed_distance_complete(cam, zbuffer, cam->get_pose(arm->get_joint_values()));
+	double sd_complete = vgrid.signed_distance_complete(object, ODF, cam, zbuffer, cam->get_pose(arm->get_joint_values()));
 	tc.stop("sd_complete");
 
 	tc.start("sd_greedy");
-	double sd_greedy = vgrid.signed_distance_greedy(cam, zbuffer, cam->get_pose(arm->get_joint_values()));
+	double sd_greedy = vgrid.signed_distance_greedy(object, ODF, cam, zbuffer, cam->get_pose(arm->get_joint_values()));
 	tc.stop("sd_greedy");
 //
 	std::cout << "sd_complete: " << sd_complete << "\n";
@@ -382,17 +382,17 @@ void test_greedy() {
 
 		std::cout << "update_ODF\n";
 		tc.start("update_ODF");
-		vgrid.update_ODF(object, env);
+		Cube ODF = vgrid.get_ODF(object);
 		tc.stop("update_ODF");
 
 		//	std::cout << "zbuffer\n" << zbuffer << "\n";
 
 		tc.start("sd_complete");
-		double sd_complete = vgrid.signed_distance_complete(cam, zbuffer, cam->get_pose(arm->get_joint_values()));
+		double sd_complete = vgrid.signed_distance_complete(object, ODF, cam, zbuffer, cam->get_pose(arm->get_joint_values()));
 		tc.stop("sd_complete");
 
 		tc.start("sd_greedy");
-		double sd_greedy = vgrid.signed_distance_greedy(cam, zbuffer, cam->get_pose(arm->get_joint_values()));
+		double sd_greedy = vgrid.signed_distance_greedy(object, ODF, cam, zbuffer, cam->get_pose(arm->get_joint_values()));
 		tc.stop("sd_greedy");
 
 		std::cout << "sd_complete: " << sd_complete << "\n";
@@ -410,6 +410,103 @@ void test_greedy() {
 	std::cin.ignore();
 }
 
+VectorJ sd_gradient(VectorJ j, const Vector3d& object, const Cube& ODF, Camera* cam, VoxelGrid* vgrid) {
+	VectorJ grad = VectorJ::Zero();
+	const double step = 1e-5;
+	const double alpha = 1;
+
+	StdVector3d obstacles = vgrid->get_obstacles();
+
+	Matrix<double,H_SUB,W_SUB> zbuffer = cam->get_zbuffer(j, obstacles);
+	Matrix4d cam_pose = cam->get_pose(j), voxel_pose = Matrix4d::Identity(), u_cam_pose;
+	voxel_pose.block<3,1>(0,3) = vgrid->signed_distance_complete_voxel_center(object, ODF, cam, zbuffer, cam_pose);
+	u_cam_pose = cam_pose.inverse()*voxel_pose;
+	double sd_sign = (cam->is_in_fov(object, zbuffer, cam_pose)) ? -1 : 1;
+
+	if (sd_sign == -1) {
+		std::cout << "obj is in fov\n";
+	} else {
+		std::cout << "obj is not in fov\n";
+	}
+
+	Matrix4d cam_pose_m, cam_pose_p;
+	Vector3d u_m, u_p, v_m, v_p;
+	double sd_m, sd_p, cos_theta_m, cos_theta_p;
+	VectorJ j_m = j, j_p = j;
+	double sd_sigmoid_m, sd_sigmoid_p;
+	for(int i=0; i < J_DIM; ++i) {
+		j_m(i) = j(i) - step;
+		j_p(i) = j(i) + step;
+
+		cam_pose_m = cam->get_pose(j_m);
+		u_m = (cam_pose_m*u_cam_pose).block<3,1>(0,3);
+		v_m = object - u_m;
+
+		sd_m = sd_sign*v_m.norm();
+		cos_theta_m = (u_m.dot(v_m)) / (u_m.norm()*v_m.norm());
+		sd_sigmoid_m = 1.0 - 1.0/(1.0+exp(-alpha*sd_m*(1-cos_theta_m)));
+
+		cam_pose_p = cam->get_pose(j_p);
+		u_p = (cam_pose_p*u_cam_pose).block<3,1>(0,3);
+		v_p = object - u_p;
+
+		sd_p = sd_sign*v_p.norm();
+		cos_theta_p = (u_p.dot(v_p)) / (u_p.norm()*v_p.norm());
+		sd_sigmoid_p = 1.0 - 1.0/(1.0+exp(-alpha*sd_p*(1-cos_theta_p)));
+
+		grad(i) = (sd_sigmoid_p - sd_sigmoid_m) / (2*step);
+
+		j_m = j;
+		j_p = j;
+	}
+
+	return grad;
+}
+
+void test_gradient() {
+	srand(time(0));
+
+	Vector3d table(3.5, -1.2, 0.74);
+//	Vector3d object = table + Vector3d(0, .5, .05);
+	Vector3d object = table + Vector3d(.1, -.1, -.1);
+	Arm::ArmType arm_type = Arm::ArmType::right;
+	bool view = true;
+	PR2System sys(object, arm_type, view);
+
+	PR2* brett = sys.get_brett();
+	Arm* arm = sys.get_arm();
+	Camera* cam = sys.get_camera();
+	VoxelGrid* vgrid = sys.get_voxel_grid();
+	rave::EnvironmentBasePtr env = brett->get_env();
+
+	arm->set_posture(Arm::Posture::mantis);
+	sleep(1);
+
+	std::cout << "update_TSDF\n";
+	sys.update_TSDF(arm->get_joint_values());
+
+	std::cout << "get_ODF\n";
+	Cube ODF = sys.get_ODF(object);
+
+	VectorJ j = arm->get_joint_values();
+	while(true) {
+		std::cout << "Press enter:\n";
+		std::cin.ignore();
+		rave_utils::clear_plots();
+
+		arm->set_joint_values(j);
+		VectorJ grad = sd_gradient(j, object, ODF, cam, vgrid);
+
+//		std::cout << "grad\n" << grad << "\n";
+
+		rave_utils::plot_point(env, object, Vector3d(1,0,0), .05);
+		vgrid->plot_TSDF(env);
+		vgrid->plot_FOV(env, cam, cam->get_zbuffer(j, vgrid->get_obstacles()), cam->get_pose(j));
+
+		j = j + (M_PI/64)*(grad/grad.norm());
+	}
+}
+
 int main() {
 //	test_particle_update();
 //	test_figtree();
@@ -417,6 +514,7 @@ int main() {
 //	test_camera();
 //	test_fk();
 //	test_voxel_grid();
-	test_greedy();
+//	test_greedy();
+	test_gradient();
 	return 0;
 }

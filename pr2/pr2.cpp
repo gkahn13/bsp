@@ -1,5 +1,7 @@
 #include "system/pr2-system.h"
 
+#include <stdio.h>
+
 #include <boost/preprocessor/iteration/local.hpp>
 
 extern "C" {
@@ -467,9 +469,9 @@ MatrixP init_particles(rave::EnvironmentBasePtr env) {
 
 	// uniform
 	for(int m=0; m < M_DIM; ++m) {
-		P(0,m) = mm_utils::uniform(x_min, x_max);
-		P(1,m) = mm_utils::uniform(y_min, y_max);
-		P(2,m) = mm_utils::uniform(z_min, z_max);
+		P(0,m) = pr2_utils::uniform(x_min, x_max);
+		P(1,m) = pr2_utils::uniform(y_min, y_max);
+		P(2,m) = pr2_utils::uniform(z_min, z_max);
 	}
 
 	// two clumps
@@ -527,10 +529,11 @@ int main(int argc, char* argv[]) {
 	for(int iter=0; !stop_condition; iter++) {
 		arm->set_joint_values(j_t);
 
+		sys.update_TSDF(j_t); // grab current environment point cloud and update VoxelGrid, TODO: should be j_t_real
+
 		LOG_INFO("MPC iteration: %d",iter);
 		init_collocation(j_t, P_t, sys, J, U, particle_gmm);
 
-		sys.get_pcl(j_t); // grab current environment point cloud, TODO: should be j_t_real
 		LOG_INFO("Current state");
 		sys.display(j_t, particle_gmm);
 

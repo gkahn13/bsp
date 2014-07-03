@@ -160,71 +160,9 @@ private:
 	Matrix4d gripper_tool_to_sensor;
 
 	Beam3d* fov;
-//	DepthMap* depth_map;
 
 	MatrixXd get_directions(const Matrix<double,ARM_DIM,1>& j, const int h, const int w, const double h_meters, const double w_meters);
 };
 
-//class PixelBucket {
-//public:
-//	PixelBucket(const Vector2d& pc) : pixel_center(pc) { };
-//
-//	inline void add_point(const Vector2d& pixel, const Vector3d& point) { pixels.push_back(pixel); points.push_back(point); }
-//	inline bool is_empty() { return pixels.size() == 0; }
-//	inline Vector3d average_point() {
-////		double dist_to_center = INFINITY;
-////		Vector3d closest_point;
-////		for(int i=0; i < pixels.size(); ++i) {
-////			if ((pixels[i] - pixel_center).norm() < dist_to_center) {
-////				dist_to_center = (pixels[i] - pixel_center).norm();
-////				closest_point = points[i];
-////			}
-////		}
-////		return closest_point;
-//
-//		VectorXd weights(pixels.size());
-//		for(int i=0; i < pixels.size(); ++i) {
-//			weights(i) = (pixels[i] - pixel_center).norm();
-//		}
-//		weights /= weights.sum();
-//
-//		Vector3d avg_point = Vector3d::Zero();
-//		for(int i=0; i < points.size(); ++i) {
-//			avg_point += weights(i)*points[i];
-//		}
-//
-//		return avg_point;
-//	}
-//	inline void clear() { pixels.clear(); points.clear(); }
-//
-//private:
-//	Vector2d pixel_center;
-//	StdVector2d pixels;
-//	StdVector3d points;
-//};
-//
-///**
-// * DepthMap size is H_SUB x W_SUB
-// */
-//class DepthMap {
-//public:
-//	DepthMap(rave::SensorBasePtr s, const Matrix3d& P_mat);
-//
-//	void add_point(const Vector3d& point, const Matrix4d& cam_pose);
-//	Matrix<double,H_SUB,W_SUB> get_z_buffer(const Vector3d& cam_pos);
-//
-//	void clear();
-//
-//private:
-//	rave::SensorBasePtr sensor;
-//	Matrix3d P;
-//
-//	std::vector<std::vector<PixelBucket*> > pixel_buckets;
-//
-//	int num_neighbors_empty(int i, int j);
-//	Vector3d average_of_neighbors(int i, int j);
-//
-//
-//};
 
 #endif

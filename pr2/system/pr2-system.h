@@ -49,6 +49,8 @@ typedef std::vector<VectorX, aligned_allocator<VectorX>> StdVectorX;
 typedef std::vector<VectorJ, aligned_allocator<VectorJ>> StdVectorJ;
 typedef std::vector<VectorU, aligned_allocator<VectorU>> StdVectorU;
 
+#include "voxel-grid.h" // needs to be here, not sure why
+
 class ParticleGaussian;
 class PR2System;
 
@@ -57,6 +59,7 @@ struct ParticleGaussian {
 	Matrix3d cov;
 	MatrixXd particles;
 	double pct;
+	Cube ODF;
 
 	ParticleGaussian(const Vector3d& m, const Matrix3d& c, const MatrixXd& P, double p) :
 		mean(m), cov(c), particles(P), pct(p) { };
@@ -82,16 +85,16 @@ public:
 	VectorJ dynfunc(const VectorJ& j, const VectorU& u, const VectorQ& q, bool enforce_limits=false);
 	VectorZ obsfunc(const VectorJ& j, const Vector3d& object, const VectorR& r);
 
-	MatrixZ delta_matrix(const VectorJ& j, const Vector3d& object, const double alpha);
+	MatrixZ delta_matrix(const VectorJ& j, const Vector3d& object, const double alpha, const Cube& ODF);
 
-	void belief_dynamics(const VectorX& x_t, const MatrixX& sigma_t, const VectorU& u_t, const double alpha,
+	void belief_dynamics(const VectorX& x_t, const MatrixX& sigma_t, const VectorU& u_t, const double alpha, const Cube& ODF,
 			VectorX& x_tp1, MatrixX& sigma_tp1);
-	void execute_control_step(const VectorJ& j_t_real, const VectorJ& j_t, const VectorU& u_t, const MatrixP& P_t,
+	void execute_control_step(const VectorJ& j_t_real, const VectorJ& j_t, const VectorU& u_t, const MatrixP& P_t, const Cube& ODF,
 				VectorJ& j_tp1_real, VectorJ& j_tp1, MatrixP& P_tp1);
 
 	void get_limits(VectorJ& j_min, VectorJ& j_max, VectorU& u_min, VectorU& u_max);
 
-	double cost(const StdVectorJ& J, const Vector3d& obj, const MatrixX& sigma0, const StdVectorU& U, const double alpha);
+	double cost(const StdVectorJ& J, const Vector3d& obj, const MatrixX& sigma0, const StdVectorU& U, const double alpha, const Cube& ODF);
 	double cost_gmm(const StdVectorJ& J, const MatrixJ& j_sigma0, const StdVectorU& U,
 				const std::vector<ParticleGaussian>& particle_gmm, const double alpha);
 	void cost_gmm_and_grad(StdVectorJ& J, const MatrixJ& j_sigma0, StdVectorU& U,
@@ -105,7 +108,8 @@ public:
 	// use figtree
 	void fit_gaussians_to_pf(const MatrixP& P, std::vector<ParticleGaussian>& particle_gmm);
 
-	void get_pcl(const VectorJ& j) { StdVector3d new_pcl = cam->get_pcl(j); pcl.insert(pcl.end(), new_pcl.begin(), new_pcl.end()); }
+	void update_TSDF(const VectorJ& j) { StdVector3d new_pcl = cam->get_pcl(j); vgrid->update_TSDF(new_pcl); }
+	Cube get_ODF(const Vector3d& obj) { return vgrid->get_ODF(obj); }
 
 	void display(const VectorJ& j, bool pause=true);
 	void display(const StdVectorJ& J, bool pause=true);
@@ -115,12 +119,14 @@ public:
 	PR2* get_brett() { return brett; }
 	Arm* get_arm() { return arm; }
 	Camera* get_camera() { return cam; }
+	VoxelGrid* get_voxel_grid() { return vgrid; }
 
 private:
 	PR2* brett;
 	Arm* arm;
 	Camera* cam;
 	Arm::ArmType arm_type;
+	VoxelGrid* vgrid;
 
 	Vector3d object;
 	VectorJ j_min, j_max, u_min, u_max;

@@ -1,7 +1,7 @@
 #include "voxel-grid.h"
 
 /**
- * Local Helper classes
+ * Local Helper classes/functions
  */
 
 struct VoxelDist {
@@ -30,34 +30,34 @@ VoxelGrid::VoxelGrid(const Vector3d& pos_center, double x, double y, double z, i
 	TSDF = new Cube(resolution, resolution, resolution);
 	TSDF->set_all(1);
 
-	offsets = {Vector3i(0, 0, -1),
-			Vector3i(1, 0, -1),
-			Vector3i(-1, 0, -1),
-			Vector3i(0, 1, -1),
-			Vector3i(0, -1, -1),
-			Vector3i(1, 1, -1),
-			Vector3i(1, -1, -1),
-			Vector3i(-1, 1, -1),
-			Vector3i(-1, -1, -1),
+	offsets.push_back(Vector3i(0, 0, -1));
+	offsets.push_back(Vector3i(1, 0, -1));
+	offsets.push_back(Vector3i(-1, 0, -1));
+	offsets.push_back(Vector3i(0, 1, -1));
+	offsets.push_back(Vector3i(0, -1, -1));
+	offsets.push_back(Vector3i(1, 1, -1));
+	offsets.push_back(Vector3i(1, -1, -1));
+	offsets.push_back(Vector3i(-1, 1, -1));
+	offsets.push_back(Vector3i(-1, -1, -1));
 
-			Vector3i(1, 0, 0),
-			Vector3i(-1, 0, 0),
-			Vector3i(0, 1, 0),
-			Vector3i(0, -1, 0),
-			Vector3i(1, 1, 0),
-			Vector3i(1, -1, 0),
-			Vector3i(-1, 1, 0),
-			Vector3i(-1, -1, 0),
+	offsets.push_back(Vector3i(1, 0, 0));
+	offsets.push_back(Vector3i(-1, 0, 0));
+	offsets.push_back(Vector3i(0, 1, 0));
+	offsets.push_back(Vector3i(0, -1, 0));
+	offsets.push_back(Vector3i(1, 1, 0));
+	offsets.push_back(Vector3i(1, -1, 0));
+	offsets.push_back(Vector3i(-1, 1, 0));
+	offsets.push_back(Vector3i(-1, -1, 0));
 
-			Vector3i(0, 0, 1),
-			Vector3i(1, 0, 1),
-			Vector3i(-1, 0, 1),
-			Vector3i(0, 1, 1),
-			Vector3i(0, -1, 1),
-			Vector3i(1, 1, 1),
-			Vector3i(1, -1, 1),
-			Vector3i(-1, 1, 1),
-			Vector3i(-1, -1, 1)};
+	offsets.push_back(Vector3i(0, 0, 1));
+	offsets.push_back(Vector3i(1, 0, 1));
+	offsets.push_back(Vector3i(-1, 0, 1));
+	offsets.push_back(Vector3i(0, 1, 1));
+	offsets.push_back(Vector3i(0, -1, 1));
+	offsets.push_back(Vector3i(1, 1, 1));
+	offsets.push_back(Vector3i(1, -1, 1));
+	offsets.push_back(Vector3i(-1, 1, 1));
+	offsets.push_back(Vector3i(-1, -1, 1));
 
 	offset_dists = {dz,
                    Vector3d(dx,0,dz).norm(),
@@ -87,7 +87,6 @@ VoxelGrid::VoxelGrid(const Vector3d& pos_center, double x, double y, double z, i
                    Vector3d(dx,dy,dz).norm(),
                    Vector3d(dx,dy,dz).norm(),
                    Vector3d(dx,dy,dz).norm()};
-
 }
 
 /**
@@ -110,8 +109,9 @@ void VoxelGrid::update_TSDF(const StdVector3d& pcl) {
 			}
 		}
 	}
-}
 
+	upload_to_pcl_tsdf();
+}
 
 Cube VoxelGrid::get_ODF(const Vector3d& obj) {
 	typedef boost::heap::fibonacci_heap<VoxelDist>::handle_type handle_t;
@@ -137,13 +137,9 @@ Cube VoxelGrid::get_ODF(const Vector3d& obj) {
 		}
 	}
 
-//	VoxelDist* curr;
 	StdVector3i neighbors;
 	std::vector<double> neighbor_dists;
 	while (pq.size() > 0) {
-//		if (pq.size() % 1000 == 0) {
-//			std::cout << "pq size: " << pq.size() << "\n";
-//		}
 		VoxelDist curr = pq.top();
 		pq.pop();
 
@@ -218,7 +214,7 @@ Vector3d VoxelGrid::signed_distance_greedy_voxel_center(const Vector3d& object, 
 		start_voxels.push_back(Vector3i(0, 0, resolution-1));
 	} else {
 		Matrix4d start_cam_frame = Matrix4d::Identity();
-		start_cam_frame(2,3) = MIN_RANGE; // zbuffer(H_SUB/2,W_SUB/2);
+		start_cam_frame(2,3) = .2; // intrinsics::MIN_RANGE;
 		Vector3d start_world = (cam_pose*start_cam_frame).block<3,1>(0,3);
 
 		start_voxels.push_back(voxel_from_point(start_world));
@@ -300,6 +296,24 @@ StdVector3d VoxelGrid::get_obstacles() {
 	return obstacles;
 }
 
+Matrix<double,H_SUB,W_SUB> VoxelGrid::get_zbuffer(const Matrix4d& cam_pose) {
+	pcl::gpu::kinfuLS::RayCaster ray_caster(H_SUB, W_SUB,
+			intrinsics::fx_sub, intrinsics::fy_sub, intrinsics::cx_sub, intrinsics::cy_sub);
+
+	Vector3f t = (cam_pose.block<3,1>(0,3)).cast<float>();
+	Matrix3f R = (cam_pose.block<3,3>(0,0)).cast<float>();
+
+	Affine3f affine_cam_pose = Translation3f(t) * AngleAxisf(R);
+	pcl::gpu::kinfuLS::tsdf_buffer *tsdf_buffer = new pcl::gpu::kinfuLS::tsdf_buffer();
+	ray_caster.run(*pcl_tsdf, affine_cam_pose, tsdf_buffer);
+
+	typedef pcl::gpu::DeviceArray2D<unsigned short> Depth;
+	Depth depth;
+	ray_caster.generateDepthImage(depth);
+
+
+}
+
 /**
  * VoxelGrid Display methods
  */
@@ -350,7 +364,7 @@ void VoxelGrid::plot_ODF(Cube& ODF, rave::EnvironmentBasePtr env) {
 }
 
 void VoxelGrid::plot_FOV(rave::EnvironmentBasePtr env, Camera* cam, const Matrix<double,H_SUB,W_SUB>& zbuffer, const Matrix4d& cam_pose) {
-	int step = 5;
+	int step = 2;
 
 	for(int i=0; i < resolution; i+=step) {
 		for(int j=0; j < resolution; j+=step) {
@@ -369,6 +383,32 @@ void VoxelGrid::plot_FOV(rave::EnvironmentBasePtr env, Camera* cam, const Matrix
 /**
  * VoxelGrid Private methods
  */
+
+void VoxelGrid::upload_to_pcl_tsdf() {
+	pcl::device::DeviceArray2D<int> volume = pcl_tsdf->data();
+	size_t step = volume.step();
+	int rows = volume.rows();
+	int cols = volume.cols();
+
+	// Needed, otherwise vector 'tsdf' would be altered.
+	std::vector<float> tsdf_tmp(resolution*resolution*resolution);
+
+	int index = 0;
+	for(int z=0; z < resolution; ++z) {
+		for(int y=0; y < resolution; ++y) {
+			for(int x=0; x < resolution; ++x) {
+				short2 elem;
+
+				elem.x = (short)(TSDF->get(x,y,z)*pcl::device::kinfuLS::DIVISOR);
+				elem.y = (short)(1); // TODO: what should weight be?
+
+				tsdf_tmp[index++] = *reinterpret_cast<float*>(&elem);
+			}
+		}
+	}
+
+	pcl_tsdf->data().upload(&tsdf_tmp[0], step, rows, cols);
+}
 
 void VoxelGrid::get_voxel_neighbors_and_dists(const Vector3i& voxel, StdVector3i& neighbors, std::vector<double>& dists) {
 	neighbors.clear();

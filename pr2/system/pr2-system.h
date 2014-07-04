@@ -108,7 +108,7 @@ public:
 	// use figtree
 	void fit_gaussians_to_pf(const MatrixP& P, std::vector<ParticleGaussian>& particle_gmm);
 
-	void update_TSDF(const VectorJ& j) { StdVector3d new_pcl = cam->get_pcl(j); vgrid->update_TSDF(new_pcl); }
+	void update_TSDF(const VectorJ& j) { StdVector3d new_pc = cam->get_pc(j); pc.insert(pc.end(), new_pc.begin(), new_pc.end()); vgrid->update_TSDF(new_pc); }
 	Cube get_ODF(const Vector3d& obj) { return vgrid->get_ODF(obj); }
 
 	void display(const VectorJ& j, bool pause=true);
@@ -120,6 +120,7 @@ public:
 	Arm* get_arm() { return arm; }
 	Camera* get_camera() { return cam; }
 	VoxelGrid* get_voxel_grid() { return vgrid; }
+	StdVector3d get_pc() { return pc; }
 
 private:
 	PR2* brett;
@@ -133,7 +134,7 @@ private:
 	MatrixQ Q;
 	MatrixR R;
 
-	StdVector3d pcl;
+	StdVector3d pc;
 
 	void init();
 

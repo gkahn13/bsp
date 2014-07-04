@@ -192,14 +192,14 @@ MatrixP setup_particles(rave::EnvironmentBasePtr env) {
 //	sleep(2);
 //
 //	VectorJ j = arm->get_joint_values();
-//	StdVector3d pcl = cam->get_pcl(j);
-//	cam->plot_pcl(pcl);
+//	StdVector3d pc = cam->get_pc(j);
+//	cam->plot_pc(pc);
 //
 ////	std::cout << "Displaying env mesh. Teleop and then get FOV\n";
 //
 //	arm->teleop();
 //
-//	std::vector<std::vector<Beam3d> > beams = cam->get_beams(j, pcl);
+//	std::vector<std::vector<Beam3d> > beams = cam->get_beams(j, pc);
 //	rave_utils::clear_plots();
 //	cam->plot_fov(beams);
 //
@@ -226,7 +226,7 @@ MatrixP setup_particles(rave::EnvironmentBasePtr env) {
 //		VectorJ j_new = j - (M_PI/32)*grad/grad.norm();
 ////		arm->set_joint_values(j_new);
 //
-//		beams = cam->get_beams(j_new, pcl);
+//		beams = cam->get_beams(j_new, pc);
 //		rave_utils::clear_plots();
 //		rave_utils::plot_transform(env, rave_utils::eigen_to_rave(arm->get_pose(j_new)));
 //		cam->plot_fov(beams);
@@ -295,14 +295,14 @@ void test_voxel_grid() {
 	int resolution = 100;
 	VoxelGrid vgrid(pos_center, x_height, y_height, z_height, resolution);
 
-	StdVector3d pcl = cam->get_pcl(arm->get_joint_values());
+	StdVector3d pc = cam->get_pc(arm->get_joint_values());
 
-//	for(int i=0; i < pcl.size(); ++i) {
-//		rave_utils::plot_point(env, pcl[i], Vector3d(1,0,0), .005);
+//	for(int i=0; i < pc.size(); ++i) {
+//		rave_utils::plot_point(env, pc[i], Vector3d(1,0,0), .005);
 //	}
 
 	std::cout << "update_TSDF\n";
-	vgrid.update_TSDF(pcl);
+	vgrid.update_TSDF(pc);
 
 	std::cout << "update_ODF\n";
 	tc.start("update_ODF");
@@ -310,7 +310,7 @@ void test_voxel_grid() {
 	tc.stop("update_ODF");
 
 	StdVector3d obstacles = vgrid.get_obstacles();
-	Matrix<double,H_SUB,W_SUB> zbuffer = cam->get_zbuffer(arm->get_joint_values(), pcl); // TODO: should be obstacles
+	Matrix<double,H_SUB,W_SUB> zbuffer = cam->get_zbuffer(arm->get_joint_values(), pc); // TODO: should be obstacles
 
 //	std::cout << "zbuffer\n" << zbuffer << "\n";
 
@@ -360,13 +360,13 @@ void test_greedy() {
 	int resolution = 100;
 	VoxelGrid vgrid(pos_center, x_height, y_height, z_height, resolution);
 
-	StdVector3d pcl = cam->get_pcl(arm->get_joint_values());
+	StdVector3d pc = cam->get_pc(arm->get_joint_values());
 
 	std::cout << "update_TSDF\n";
-	vgrid.update_TSDF(pcl);
+	vgrid.update_TSDF(pc);
 
 	StdVector3d obstacles = vgrid.get_obstacles();
-	Matrix<double,H_SUB,W_SUB> zbuffer = cam->get_zbuffer(arm->get_joint_values(), pcl); // TODO: should be obstacles
+	Matrix<double,H_SUB,W_SUB> zbuffer = cam->get_zbuffer(arm->get_joint_values(), pc); // TODO: should be obstacles
 
 	Vector3d lower = pos_center - Vector3d(x_height/2., y_height/2., z_height/2.);
 	Vector3d upper = pos_center + Vector3d(x_height/2., y_height/2., z_height/2.);
@@ -410,20 +410,21 @@ void test_greedy() {
 	std::cin.ignore();
 }
 
-VectorJ sd_gradient(VectorJ j, const Vector3d& object, const Cube& ODF, Camera* cam, VoxelGrid* vgrid) {
+VectorJ sd_gradient(VectorJ j, const Vector3d& object, const Cube& ODF, Camera* cam, VoxelGrid* vgrid, const StdVector3d& obstacles) {
 	VectorJ grad = VectorJ::Zero();
 	const double step = 1e-5;
 	const double alpha = 1;
 
-	StdVector3d obstacles = vgrid->get_obstacles();
-
 	Matrix<double,H_SUB,W_SUB> zbuffer = cam->get_zbuffer(j, obstacles);
 	Matrix4d cam_pose = cam->get_pose(j), voxel_pose = Matrix4d::Identity(), u_cam_pose;
-	voxel_pose.block<3,1>(0,3) = vgrid->signed_distance_complete_voxel_center(object, ODF, cam, zbuffer, cam_pose);
+	voxel_pose.block<3,1>(0,3) = vgrid->signed_distance_greedy_voxel_center(object, ODF, cam, zbuffer, cam_pose);
 	u_cam_pose = cam_pose.inverse()*voxel_pose;
-	double sd_sign = (cam->is_in_fov(object, zbuffer, cam_pose)) ? -1 : 1;
+	bool obj_in_fov = cam->is_in_fov(object, zbuffer, cam_pose);
+	double sd_sign = (obj_in_fov) ? -1 : 1;
 
-	if (sd_sign == -1) {
+	Vector3d v = object - voxel_pose.block<3,1>(0,3);
+
+	if (obj_in_fov) {
 		std::cout << "obj is in fov\n";
 	} else {
 		std::cout << "obj is not in fov\n";
@@ -440,18 +441,20 @@ VectorJ sd_gradient(VectorJ j, const Vector3d& object, const Cube& ODF, Camera* 
 
 		cam_pose_m = cam->get_pose(j_m);
 		u_m = (cam_pose_m*u_cam_pose).block<3,1>(0,3);
-		v_m = object - u_m;
+		v_m = object - u_m; // v
 
 		sd_m = sd_sign*v_m.norm();
-		cos_theta_m = (u_m.dot(v_m)) / (u_m.norm()*v_m.norm());
+//		cos_theta_m = (obj_in_fov) ? 0 : (u_m.dot(v_m)) / (u_m.norm()*v_m.norm());
+		cos_theta_m = (obj_in_fov) ? 0 : (u_m.dot(v)) / (u_m.norm()*v.norm());
 		sd_sigmoid_m = 1.0 - 1.0/(1.0+exp(-alpha*sd_m*(1-cos_theta_m)));
 
 		cam_pose_p = cam->get_pose(j_p);
 		u_p = (cam_pose_p*u_cam_pose).block<3,1>(0,3);
-		v_p = object - u_p;
+		v_p = object - u_p; // v
 
 		sd_p = sd_sign*v_p.norm();
-		cos_theta_p = (u_p.dot(v_p)) / (u_p.norm()*v_p.norm());
+//		cos_theta_p = (obj_in_fov) ? 0 : (u_p.dot(v_p)) / (u_p.norm()*v_p.norm());
+		cos_theta_p = (obj_in_fov) ? 0 : (u_p.dot(v)) / (u_p.norm()*v.norm());
 		sd_sigmoid_p = 1.0 - 1.0/(1.0+exp(-alpha*sd_p*(1-cos_theta_p)));
 
 		grad(i) = (sd_sigmoid_p - sd_sigmoid_m) / (2*step);
@@ -467,8 +470,8 @@ void test_gradient() {
 	srand(time(0));
 
 	Vector3d table(3.5, -1.2, 0.74);
-	Vector3d object = table + Vector3d(0, .5, .05);
-//	Vector3d object = table + Vector3d(.1, -.1, -.1);
+//	Vector3d object = table + Vector3d(0, .5, .05);
+	Vector3d object = table + Vector3d(.1, -.1, -.1);
 	Arm::ArmType arm_type = Arm::ArmType::right;
 	bool view = true;
 	PR2System sys(object, arm_type, view);
@@ -482,11 +485,11 @@ void test_gradient() {
 	arm->set_posture(Arm::Posture::mantis);
 	sleep(1);
 
-	std::cout << "update_TSDF\n";
-	sys.update_TSDF(arm->get_joint_values());
-
-	std::cout << "get_ODF\n";
-	Cube ODF = sys.get_ODF(object);
+//	std::cout << "update_TSDF\n";
+//	sys.update_TSDF(arm->get_joint_values());
+//
+//	std::cout << "get_ODF\n";
+//	Cube ODF = sys.get_ODF(object);
 
 	VectorJ j = arm->get_joint_values();
 	while(true) {
@@ -494,8 +497,15 @@ void test_gradient() {
 		std::cin.ignore();
 		rave_utils::clear_plots();
 
+		std::cout << "update_TSDF\n";
+		sys.update_TSDF(arm->get_joint_values());
+		std::cout << "get_ODF\n";
+		Cube ODF = sys.get_ODF(object);
+
+		StdVector3d obstacles = vgrid->get_obstacles();
+
 		arm->set_joint_values(j);
-		VectorJ grad = sd_gradient(j, object, ODF, cam, vgrid);
+		VectorJ grad = sd_gradient(j, object, ODF, cam, vgrid, obstacles);
 
 //		std::cout << "grad\n" << grad << "\n";
 
@@ -503,7 +513,10 @@ void test_gradient() {
 		vgrid->plot_TSDF(env);
 		vgrid->plot_FOV(env, cam, cam->get_zbuffer(j, vgrid->get_obstacles()), cam->get_pose(j));
 
-		j = j + (M_PI/64)*(grad/grad.norm());
+		if (grad.norm() > epsilon) {
+			grad /= grad.norm();
+		}
+		j = j + (M_PI/64)*(grad);
 	}
 }
 

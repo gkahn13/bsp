@@ -24,28 +24,32 @@ namespace rave = OpenRAVE;
 
 // Camera constants for actual and subsampled
 
-#define FOCAL_LENGTH .01
-#define MAX_RANGE 5.0
-#define MIN_RANGE 0.2
-
-#define WIDTH	   256 // 64
-#define HEIGHT 	   192 // 48
-const double fx  = WIDTH*2.0;
-const double fy  = HEIGHT*2.0;
-const double cx  = double(WIDTH)/2.0 + 0.5;
-const double cy  = double(HEIGHT)/2.0 + 0.5;
-const double HEIGHT_M = FOCAL_LENGTH*(HEIGHT/fy);
-const double WIDTH_M = FOCAL_LENGTH*(WIDTH/fx);
+#define WIDTH_FULL	   256 // 64
+#define HEIGHT_FULL 	   192 // 48
 
 #define W_SUB 64 // 64
 #define H_SUB 48 // 48
+#define N_SUB (W_SUB*H_SUB)
+
+namespace intrinsics {
+const double FOCAL_LENGTH = .01;
+const double MAX_RANGE = 5.0;
+const double MIN_RANGE = 0.2;
+
+const double fx  = WIDTH_FULL*2.0;
+const double fy  = HEIGHT_FULL*2.0;
+const double cx  = double(WIDTH_FULL)/2.0 + 0.5;
+const double cy  = double(HEIGHT_FULL)/2.0 + 0.5;
+const double HEIGHT_M = FOCAL_LENGTH*(HEIGHT_FULL/fy);
+const double WIDTH_M = FOCAL_LENGTH*(WIDTH_FULL/fx);
+
 const double fx_sub  = W_SUB*2.0;
 const double fy_sub  = H_SUB*2.0;
 const double cx_sub  = double(W_SUB)/2.0 + 0.5;
 const double cy_sub  = double(H_SUB)/2.0 + 0.5;
 const double H_SUB_M = FOCAL_LENGTH*(H_SUB/fy_sub);
 const double W_SUB_M = FOCAL_LENGTH*(W_SUB/fx_sub);
-#define N_SUB (W_SUB*H_SUB)
+}
 
 // forward declarations
 class Arm;
@@ -136,7 +140,7 @@ public:
 	Camera(rave::RobotBasePtr r, std::string camera_name, Arm* a);
 
 	// call once before collocation
-	StdVector3d get_pcl(const Matrix<double,ARM_DIM,1>& j);
+	StdVector3d get_pc(const Matrix<double,ARM_DIM,1>& j);
 
 	Matrix<double,H_SUB,W_SUB> get_zbuffer(const Matrix<double,ARM_DIM,1>& j, const StdVector3d& obstacles);
 

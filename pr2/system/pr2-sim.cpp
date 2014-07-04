@@ -385,18 +385,18 @@ Camera::Camera(rave::RobotBasePtr r, std::string camera_name, Arm* a) : robot(r)
 			boost::static_pointer_cast<rave::SensorBase::CameraGeomData>(geom);
 
 	Matrix3d P = Matrix3d::Zero();
-	P(0,0) = fx_sub;
-	P(1,1) = fy_sub;
+	P(0,0) = intrinsics::fx_sub;
+	P(1,1) = intrinsics::fy_sub;
 	P(2,2) = 1;
-	P(0,2) = cx_sub;
-	P(1,2) = cy_sub;
+	P(0,2) = intrinsics::cx_sub;
+	P(1,2) = intrinsics::cy_sub;
 
-	KK << fx, 0, cx,
-			0, fy, cy,
+	KK << intrinsics::fx, 0, intrinsics::cx,
+			0, intrinsics::fy, intrinsics::cy,
 			0, 0, 1;
 
-	KK_SUB << fx_sub, 0, cx_sub,
-				0, fy_sub, cy_sub,
+	KK_SUB << intrinsics::fx_sub, 0, intrinsics::cx_sub,
+				0, intrinsics::fy_sub, intrinsics::cy_sub,
 				0, 0, 1;
 
 //	depth_map = new DepthMap(sensor, P);
@@ -411,20 +411,20 @@ Camera::Camera(rave::RobotBasePtr r, std::string camera_name, Arm* a) : robot(r)
  * Camera public methods
  */
 
-StdVector3d Camera::get_pcl(const Matrix<double,ARM_DIM,1>& j) {
-	StdVector3d pcl;
+StdVector3d Camera::get_pc(const Matrix<double,ARM_DIM,1>& j) {
+	StdVector3d pc;
 	arm->set_joint_values(j);
 	RowVector3d origin_pos = rave_utils::rave_to_eigen(sensor->GetTransform().trans);
 
-	MatrixXd dirs = get_directions(j, HEIGHT, WIDTH, HEIGHT_M, WIDTH_M);
+	MatrixXd dirs = get_directions(j, HEIGHT_FULL, WIDTH_FULL, intrinsics::HEIGHT_M, intrinsics::WIDTH_M);
 
 	if (fov != nullptr) {
 		free(fov);
 	}
-	fov = new Beam3d(origin_pos, origin_pos + dirs.row(HEIGHT*(WIDTH-1)),
+	fov = new Beam3d(origin_pos, origin_pos + dirs.row(HEIGHT_FULL*(WIDTH_FULL-1)),
 			origin_pos + dirs.row(0),
-			origin_pos + dirs.row(HEIGHT-1),
-			origin_pos + dirs.row(HEIGHT*WIDTH-1));
+			origin_pos + dirs.row(HEIGHT_FULL-1),
+			origin_pos + dirs.row(HEIGHT_FULL*WIDTH_FULL-1));
 
 	rave::EnvironmentBasePtr env = robot->GetEnv();
 	rave::RAY ray;
@@ -435,12 +435,12 @@ StdVector3d Camera::get_pcl(const Matrix<double,ARM_DIM,1>& j) {
 		ray.dir.y = dirs(i,1);
 		ray.dir.z = dirs(i,2);
 		if (env->CheckCollision(ray, report)) {
-			pcl.push_back(rave_utils::rave_to_eigen(report->contacts[0].pos));
+			pc.push_back(rave_utils::rave_to_eigen(report->contacts[0].pos));
 
 		}
 	}
 
-	return pcl;
+	return pc;
 }
 
 inline std::vector<std::vector<int> > index_neighbors(int i, int j, int rows, int cols) {
@@ -466,7 +466,7 @@ inline std::vector<std::vector<int> > index_neighbors(int i, int j, int rows, in
 }
 
 Matrix<double,H_SUB,W_SUB> Camera::get_zbuffer(const Matrix<double,ARM_DIM,1>& j, const StdVector3d& obstacles) {
-	Matrix<double,H_SUB,W_SUB> zbuffer = MAX_RANGE*Matrix<double,H_SUB,W_SUB>::Ones();
+	Matrix<double,H_SUB,W_SUB> zbuffer = intrinsics::MAX_RANGE*Matrix<double,H_SUB,W_SUB>::Ones();
 	Matrix4d cam_pose = get_pose(j);
 
 	for(int i=0; i < obstacles.size(); ++i) {
@@ -486,12 +486,13 @@ Matrix<double,H_SUB,W_SUB> Camera::get_zbuffer(const Matrix<double,ARM_DIM,1>& j
 	zbuffer_smoothed.setZero();
 	for(int i=0; i < H_SUB; ++i) {
 		for(int j=0; j < W_SUB; ++j) {
-			if (zbuffer(i,j) == MAX_RANGE) {
+			if (zbuffer(i,j) == intrinsics::MAX_RANGE) {
+				// get rid of MAX_RANGEs surrounded by valids
 				std::vector<std::vector<int> > n = index_neighbors(i, j, H_SUB, W_SUB);
 				int num_not_max = 0;
 				double depth_sum = 0;
 				for(int k=0; k < n.size(); ++k) {
-					if (zbuffer(n[k][0], n[k][1]) < MAX_RANGE) {
+					if (zbuffer(n[k][0], n[k][1]) < intrinsics::MAX_RANGE) {
 						num_not_max++;
 						depth_sum += zbuffer(n[k][0], n[k][1]);
 					}
@@ -503,7 +504,20 @@ Matrix<double,H_SUB,W_SUB> Camera::get_zbuffer(const Matrix<double,ARM_DIM,1>& j
 					zbuffer_smoothed(i,j) = zbuffer(i,j);
 				}
 			} else {
-				zbuffer_smoothed(i,j) = zbuffer(i,j);
+				// get rid of valids surrounded by MAX_RANGEs
+				std::vector<std::vector<int> > n = index_neighbors(i, j, H_SUB, W_SUB);
+				int num_max = 0;
+				for(int k=0; k < n.size(); ++k) {
+					if (zbuffer(n[k][0], n[k][1]) >= intrinsics::MAX_RANGE) {
+						num_max++;
+					}
+				}
+
+				if ((double(num_max)/double(n.size())) >=.75) {
+					zbuffer_smoothed(i,j) = intrinsics::MAX_RANGE;
+				} else {
+					zbuffer_smoothed(i,j) = zbuffer(i,j);
+				}
 			}
 		}
 	}
@@ -525,8 +539,8 @@ Vector2i Camera::get_pixel_from_point(const Vector3d& point, const Matrix4d& cam
 }
 
 Vector3d Camera::get_point_from_pixel_and_dist(const Vector2i& pixel, const double dist, const Matrix4d& cam_pose) {
-	double x = FOCAL_LENGTH*(double(pixel(1)-W_SUB/2.0)/fx_sub);
-	double y = FOCAL_LENGTH*(double(pixel(0)-H_SUB/2.0)/fy_sub);
+	double x = intrinsics::FOCAL_LENGTH*(double(pixel(1)-W_SUB/2.0)/intrinsics::fx_sub);
+	double y = intrinsics::FOCAL_LENGTH*(double(pixel(0)-H_SUB/2.0)/intrinsics::fy_sub);
 	double z = dist;
 
 	Matrix4d point_cam = Matrix4d::Identity();
@@ -577,7 +591,7 @@ MatrixXd Camera::get_directions(const Matrix<double,ARM_DIM,1>& j, const int h, 
 	MatrixXd offsets(n,3);
 	offsets << width_grid_vec, height_grid_vec, z_grid;
 
-	MatrixXd points_cam = RowVector3d(0,0,MAX_RANGE).replicate(n,1) + (MAX_RANGE/FOCAL_LENGTH)*offsets;
+	MatrixXd points_cam = RowVector3d(0,0,intrinsics::MAX_RANGE).replicate(n,1) + (intrinsics::MAX_RANGE/intrinsics::FOCAL_LENGTH)*offsets;
 
 	Matrix4d ref_from_world = get_pose(j);
 	Vector3d origin_world_pos = ref_from_world.block<3,1>(0,3);

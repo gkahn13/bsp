@@ -18,8 +18,27 @@ namespace rave = OpenRAVE;
 #include <boost/property_map/property_map.hpp>
 #include <boost/heap/fibonacci_heap.hpp>
 
-#include <queue>
-#include <unordered_set>
+#include <pcl/console/parse.h>
+#include <pcl/gpu/kinfu_large_scale/kinfu.h>
+#include <pcl/gpu/kinfu_large_scale/raycaster.h>
+#include <pcl/gpu/kinfu_large_scale/marching_cubes.h>
+#include <pcl/gpu/kinfu_large_scale/tsdf_volume.h>
+#include <pcl/gpu/containers/initialization.h>
+#include <pcl/gpu/containers/device_array.h>
+
+//#include <pcl/console/parse.h>
+//#include <pcl/gpu/kinfu/kinfu.h>
+//#include <pcl/gpu/kinfu/raycaster.h>
+//#include <pcl/gpu/kinfu/marching_cubes.h>
+//#include <pcl/gpu/kinfu/tsdf_volume.h>
+//#include <pcl/gpu/containers/initialization.h>
+//#include <pcl/gpu/containers/device_array.h>
+
+#include <cuda_runtime.h>
+
+typedef float            VoxelT;
+typedef short            WeightT;
+
 #include <assert.h>
 
 typedef std::vector<Vector3i, aligned_allocator<Vector3i>> StdVector3i;
@@ -57,6 +76,10 @@ public:
 		}
 	}
 
+	inline Vector3i size() const {
+		return Vector3i(x_size, y_size, z_size);
+	}
+
 private:
 	int x_size, y_size, z_size;
 	VectorXd array;
@@ -68,6 +91,8 @@ public:
 	VoxelGrid(const Vector3d& pos_center, double x_height, double y_height, double z_height, int resolution=512);
 
 	void update_TSDF(const StdVector3d& pcl);
+	// void update_TSDF(const pcl::gpu::TsdfVolume::Ptr& new_tsdf);
+
 	Cube get_ODF(const Vector3d& obj);
 
 	Vector3d signed_distance_complete_voxel_center(const Vector3d& object, const Cube& ODF,
@@ -82,6 +107,8 @@ public:
 
 	StdVector3d get_obstacles();
 
+	Matrix<double,H_SUB,W_SUB> get_zbuffer(const Matrix4d& cam_pose);
+
 	void plot_TSDF(rave::EnvironmentBasePtr env);
 	void plot_ODF(Cube& ODF, rave::EnvironmentBasePtr env);
 	void plot_FOV(rave::EnvironmentBasePtr env, Camera* cam, const Matrix<double,H_SUB,W_SUB>& zbuffer, const Matrix4d& cam_pose);
@@ -92,9 +119,13 @@ private:
 	double dx, dy, dz, radius;
 
 	Cube *TSDF;
+	pcl::gpu::kinfuLS::TsdfVolume::Ptr pcl_tsdf;
+
 
 	StdVector3i offsets;
 	std::vector<double> offset_dists;
+
+	void upload_to_pcl_tsdf();
 
 	void get_voxel_neighbors_and_dists(const Vector3i& voxel, StdVector3i& neighbors, std::vector<double>& dists);
 	Vector3i voxel_from_point(const Vector3d& point);

@@ -520,6 +520,54 @@ void test_gradient() {
 	}
 }
 
+void test_raycaster() {
+	srand(time(0));
+
+	Vector3d table(3.5, -1.2, 0.74);
+	Vector3d object = table + Vector3d(0, .5, .05);
+//	Vector3d object = table + Vector3d(.1, -.1, -.1);
+	Arm::ArmType arm_type = Arm::ArmType::right;
+	bool view = true;
+	PR2System sys(object, arm_type, view);
+
+	PR2* brett = sys.get_brett();
+	Arm* arm = sys.get_arm();
+	Camera* cam = sys.get_camera();
+	VoxelGrid* vgrid = sys.get_voxel_grid();
+	rave::EnvironmentBasePtr env = brett->get_env();
+
+	arm->set_posture(Arm::Posture::mantis);
+	sleep(1);
+
+//	arm->teleop();
+	VectorJ j = arm->get_joint_values();
+
+	std::cout << "Getting point cloud\n";
+	StdVector3d pc = cam->get_pc(j);
+
+	std::cout << "Updating TSDF (on gpu too)\n";
+	vgrid->update_TSDF(pc);
+
+	std::cout << "test_gpu_conversions\n";
+	vgrid->test_gpu_conversions(env);
+
+	std::cout << "get_zbuffer using RayCaster\n";
+	tc.start("get_zbuffer");
+	Matrix<double,H_SUB,W_SUB> zbuffer = vgrid->get_zbuffer(cam->get_pose(j));
+	tc.stop("get_zbuffer");
+
+//	std::cout << "zbuffer:\n" << zbuffer << "\n\n";
+
+//	std::cout << "get_zbuffer using projection\n";
+//	tc.start("get_zbuffer projection");
+//	cam->get_zbuffer(j, pc);
+//	tc.stop("get_zbuffer projection");
+
+	tc.print_all_elapsed();
+	std::cout << "Press enter to exit\n";
+	std::cin.ignore();
+}
+
 int main() {
 //	test_particle_update();
 //	test_figtree();
@@ -528,6 +576,7 @@ int main() {
 //	test_fk();
 //	test_voxel_grid();
 //	test_greedy();
-	test_gradient();
+//	test_gradient();
+	test_raycaster();
 	return 0;
 }

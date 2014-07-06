@@ -50,8 +50,9 @@ void PR2System::init() {
 	R = R_diag.asDiagonal();
 
 	Vector3d table_center(3.5, -1.2, 0.74);
+//	double x_height = 1.5, y_height = 2, z_height = 1;
 	double x_height = 1.5, y_height = 2, z_height = 1;
-	int resolution = 100;
+	int resolution = 128; // must be {32, 64, 128, 256, 512}
 	vgrid = new VoxelGrid(table_center, x_height, y_height, z_height, resolution);
 }
 

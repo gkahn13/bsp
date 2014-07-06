@@ -109,18 +109,24 @@ public:
 
 	Matrix<double,H_SUB,W_SUB> get_zbuffer(const Matrix4d& cam_pose);
 
+	void test_gpu_conversions(rave::EnvironmentBasePtr env);
+
 	void plot_TSDF(rave::EnvironmentBasePtr env);
 	void plot_ODF(Cube& ODF, rave::EnvironmentBasePtr env);
 	void plot_FOV(rave::EnvironmentBasePtr env, Camera* cam, const Matrix<double,H_SUB,W_SUB>& zbuffer, const Matrix4d& cam_pose);
 
 private:
 	int resolution;
-	Vector3d bottom_corner, top_corner;
+	Vector3d size, bottom_corner, top_corner;
 	double dx, dy, dz, radius;
 
 	Cube *TSDF;
 	pcl::gpu::kinfuLS::TsdfVolume::Ptr pcl_tsdf;
+	pcl::gpu::kinfuLS::KinfuTracker *pcl_kinfu;
 
+	Vector3i gpu_resolution;
+	Vector3d gpu_size;
+	Matrix4d gpu_pcl_tsdf_origin;
 
 	StdVector3i offsets;
 	std::vector<double> offset_dists;
@@ -130,6 +136,8 @@ private:
 	void get_voxel_neighbors_and_dists(const Vector3i& voxel, StdVector3i& neighbors, std::vector<double>& dists);
 	Vector3i voxel_from_point(const Vector3d& point);
 	Vector3d point_from_voxel(const Vector3i& voxel);
+
+	Vector3d point_from_gpu_voxel(const Vector3i& voxel);
 
 	inline bool is_valid_point(const Vector3d& p) {
 		return (((top_corner-p).minCoeff() > 0) && ((p - bottom_corner).minCoeff() > 0));

@@ -22,6 +22,7 @@ struct VoxelDist {
 VoxelGrid::VoxelGrid(const Vector3d& pos_center, double x, double y, double z, int res) : resolution(res) {
 	bottom_corner = pos_center - Vector3d(x/2.0, y/2.0, z/2.0);
 	top_corner = pos_center + Vector3d(x/2.0, y/2.0, z/2.0);
+	size = Vector3d(x,y,z);
 	dx = x / double(resolution);
 	dy = y / double(resolution);
 	dz = z / double(resolution);
@@ -87,6 +88,21 @@ VoxelGrid::VoxelGrid(const Vector3d& pos_center, double x, double y, double z, i
                    Vector3d(dx,dy,dz).norm(),
                    Vector3d(dx,dy,dz).norm(),
                    Vector3d(dx,dy,dz).norm()};
+
+	gpu_size = Vector3d(y,z,x);
+	gpu_resolution = Vector3i(pcl::device::kinfuLS::VOLUME_X,
+			pcl::device::kinfuLS::VOLUME_Y,
+			pcl::device::kinfuLS::VOLUME_Z);
+
+	pcl_tsdf = pcl::gpu::kinfuLS::TsdfVolume::Ptr(new pcl::gpu::kinfuLS::TsdfVolume(gpu_resolution));
+	pcl_tsdf->setSize(gpu_size.cast<float>());
+	pcl_tsdf->setTsdfTruncDist(.03);
+
+	gpu_pcl_tsdf_origin = Matrix4d::Identity();
+	gpu_pcl_tsdf_origin.block<3,3>(0,0) << 0, 0, 1,
+			-1, 0, 0,
+			0, -1, 0;
+	gpu_pcl_tsdf_origin.block<3,1>(0,3) = pos_center + Vector3d(-x/2., y/2., z/2.);
 }
 
 /**
@@ -97,16 +113,23 @@ void VoxelGrid::update_TSDF(const StdVector3d& pcl) {
 	Vector3i voxel;
 	StdVector3i neighbors;
 	std::vector<double> dists;
-	for(int i=0; i < pcl.size(); ++i) {
-		if (is_valid_point(pcl[i])) {
-			voxel = voxel_from_point(pcl[i]);
-			TSDF->set(voxel, 0);
+//	for(int i=0; i < pcl.size(); ++i) {
+//		if (is_valid_point(pcl[i])) {
+//			voxel = voxel_from_point(pcl[i]);
+//			TSDF->set(voxel, 0);
+//
+////			// set neighbors also, fill in the gaps
+////			get_voxel_neighbors_and_dists(voxel, neighbors, dists);
+////			for(int i=0; i < neighbors.size(); ++i) {
+////				TSDF->set(neighbors[i], 0);
+////			}
+//		}
+//	}
 
-			// set neighbors also, fill in the gaps
-			get_voxel_neighbors_and_dists(voxel, neighbors, dists);
-			for(int i=0; i < neighbors.size(); ++i) {
-				TSDF->set(neighbors[i], 0);
-			}
+	// TODO: temp
+	for(int y=0; y < resolution; ++y) {
+		for(int z=0; z < resolution; ++z) {
+			TSDF->set(Vector3i(resolution/2,y,z),0);
 		}
 	}
 
@@ -300,19 +323,101 @@ Matrix<double,H_SUB,W_SUB> VoxelGrid::get_zbuffer(const Matrix4d& cam_pose) {
 	pcl::gpu::kinfuLS::RayCaster ray_caster(H_SUB, W_SUB,
 			intrinsics::fx_sub, intrinsics::fy_sub, intrinsics::cx_sub, intrinsics::cy_sub);
 
-	Vector3f t = (cam_pose.block<3,1>(0,3)).cast<float>();
-	Matrix3f R = (cam_pose.block<3,3>(0,0)).cast<float>();
+	Matrix4d cam_pose_gpu = gpu_pcl_tsdf_origin.inverse()*cam_pose;
+	Vector3f t = (cam_pose_gpu.block<3,1>(0,3)).cast<float>();
+	Matrix3f R = (cam_pose_gpu.block<3,3>(0,0)).cast<float>();
+
+//	Matrix3f R = Matrix3f::Identity();  // 3X3 identity matrix
+//	Vector3f t = gpu_size.cast<float>() * 0.5 - Vector3f (0,0, gpu_size(2) /2 * 1.2);
+
 
 	Affine3f affine_cam_pose = Translation3f(t) * AngleAxisf(R);
+
 	pcl::gpu::kinfuLS::tsdf_buffer *tsdf_buffer = new pcl::gpu::kinfuLS::tsdf_buffer();
+	tsdf_buffer->tsdf_memory_start = 0;
+	tsdf_buffer->tsdf_memory_end = 0;
+	tsdf_buffer->tsdf_rolling_buff_origin = 0;
+	tsdf_buffer->origin_GRID.x = 0;
+	tsdf_buffer->origin_GRID.y = 0;
+	tsdf_buffer->origin_GRID.z = 0;
+	tsdf_buffer->origin_GRID_global.x = 0.f;
+	tsdf_buffer->origin_GRID_global.y = 0.f;
+	tsdf_buffer->origin_GRID_global.z = 0.f;
+	tsdf_buffer->origin_metric.x = 0.f;
+	tsdf_buffer->origin_metric.y = 0.f;
+	tsdf_buffer->origin_metric.z = 0.f;
+	tsdf_buffer->volume_size.x = gpu_size(0);
+	tsdf_buffer->volume_size.y = gpu_size(1);
+	tsdf_buffer->volume_size.z = gpu_size(2);
+	tsdf_buffer->voxels_size.x = gpu_resolution(0);
+	tsdf_buffer->voxels_size.y = gpu_resolution(1);
+	tsdf_buffer->voxels_size.z = gpu_resolution(2);
+
 	ray_caster.run(*pcl_tsdf, affine_cam_pose, tsdf_buffer);
 
 	typedef pcl::gpu::DeviceArray2D<unsigned short> Depth;
-	Depth depth;
+	Depth depth(H_SUB,W_SUB);
 	ray_caster.generateDepthImage(depth);
 
+	int c;
+	std::vector<unsigned short> data;
+	depth.download(data, c);
 
+	std::cout << "depth size: " << data.size() << "\n";
+	std::cout << "should be: " << H_SUB*W_SUB << "\n";
+
+	std::cout << "distance between rows: " << c << "\n";
+
+	Matrix<double,H_SUB,W_SUB> zbuffer;
+	int index = 0;
+	for(int j=0; j < W_SUB; ++j) {
+		for(int i=0; i < H_SUB; ++i) {
+			std::cout << data[index] << " ";
+			zbuffer(i,j) = data[index++];
+		}
+		std::cout << "\n";
+	}
+	std::cout << "\n\n";
+
+	std::cout << "tsdf_memory_start: " << tsdf_buffer->tsdf_memory_start << "\n";
+	std::cout << "tsdf_memory_end: " << tsdf_buffer->tsdf_memory_end << "\n";
+
+	return zbuffer;
 }
+
+void VoxelGrid::test_gpu_conversions(rave::EnvironmentBasePtr env) {
+	rave_utils::plot_transform(env, rave_utils::eigen_to_rave(gpu_pcl_tsdf_origin));
+
+	for(int i=0; i < gpu_resolution(0); i+=5) {
+		rave_utils::plot_point(env, point_from_gpu_voxel(Vector3i(i,0,0)), Vector3d(1,0,0));
+	}
+
+	for(int j=0; j < gpu_resolution(1); j+=5) {
+		rave_utils::plot_point(env, point_from_gpu_voxel(Vector3i(0,j,0)), Vector3d(0,1,0));
+	}
+
+	for(int k=0; k < gpu_resolution(2); k+=5) {
+		rave_utils::plot_point(env, point_from_gpu_voxel(Vector3i(0,0,k)), Vector3d(0,0,1));
+	}
+
+	std::vector<float> tsdf_vector;
+	pcl_tsdf->downloadTsdf(tsdf_vector);
+
+	int index = 0;
+	for(int i=0; i < gpu_resolution(0); i++) {
+		for(int j=0; j < gpu_resolution(1); j++) {
+			for(int k=0; k < gpu_resolution(2); k++) {
+				float val = tsdf_vector[index++];
+				if ((i % 4 == 0) && (j % 4 == 0) && (k % 4 == 0)) {
+					if (val == 0) {
+						rave_utils::plot_point(env, point_from_gpu_voxel(Vector3i(i,j,k)), Vector3d(1,0,0));
+					}
+				}
+			}
+		}
+	}
+}
+
 
 /**
  * VoxelGrid Display methods
@@ -391,18 +496,31 @@ void VoxelGrid::upload_to_pcl_tsdf() {
 	int cols = volume.cols();
 
 	// Needed, otherwise vector 'tsdf' would be altered.
-	std::vector<float> tsdf_tmp(resolution*resolution*resolution);
+	std::vector<float> tsdf_tmp(gpu_resolution.prod());
+	int x_scale = gpu_resolution(0) / resolution;
+	int y_scale = gpu_resolution(1) / resolution;
+	int z_scale = gpu_resolution(2) / resolution;
+
+	std::cout << "x_scale: " << x_scale << "\n";
+	std::cout << "y_scale: " << y_scale << "\n";
+	std::cout << "z_scale: " << z_scale << "\n";
 
 	int index = 0;
-	for(int z=0; z < resolution; ++z) {
-		for(int y=0; y < resolution; ++y) {
-			for(int x=0; x < resolution; ++x) {
-				short2 elem;
+	for(int y=0; y < resolution; ++y) {
+		for(int ys=0; ys < y_scale; ++ys) {
+			for(int z=0; z < resolution; ++z) {
+				for(int zs=0; zs < z_scale; ++zs) {
+					for(int x=0; x < resolution; ++x) {
+						for(int xs=0; xs < x_scale; ++xs) {
+							short2 elem;
 
-				elem.x = (short)(TSDF->get(x,y,z)*pcl::device::kinfuLS::DIVISOR);
-				elem.y = (short)(1); // TODO: what should weight be?
+							elem.x = (short)(TSDF->get(x,y,z)*pcl::device::kinfuLS::DIVISOR);
+							elem.y = (short)(1); // TODO: what should weight be?
 
-				tsdf_tmp[index++] = *reinterpret_cast<float*>(&elem);
+							tsdf_tmp[index++] = *reinterpret_cast<float*>(&elem);
+						}
+					}
+				}
 			}
 		}
 	}
@@ -441,4 +559,17 @@ Vector3i VoxelGrid::voxel_from_point(const Vector3d& point) {
 Vector3d VoxelGrid::point_from_voxel(const Vector3i& voxel) {
 	Vector3d center(voxel(0)*dx, voxel(1)*dy, voxel(2)*dz);
 	return (bottom_corner + center);
+}
+
+Vector3d VoxelGrid::point_from_gpu_voxel(const Vector3i& voxel) {
+	double dx_gpu, dy_gpu, dz_gpu;
+	dx_gpu = gpu_size(0) / gpu_resolution(0);
+	dy_gpu = gpu_size(1) / gpu_resolution(1);
+	dz_gpu = gpu_size(2) / gpu_resolution(2);
+
+	Matrix4d gpu_pose = Matrix4d::Identity();
+	gpu_pose.block<3,1>(0,3) = Vector3d((gpu_size(0)-voxel(0)*dx_gpu), voxel(1)*dy_gpu, voxel(2)*dz_gpu);
+
+	Vector3d world_center = (gpu_pcl_tsdf_origin*gpu_pose).block<3,1>(0,3);
+	return world_center;
 }

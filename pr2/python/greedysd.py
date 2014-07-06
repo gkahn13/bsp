@@ -488,7 +488,7 @@ def test_voxel_grid():
     #vgrid.signed_distance_complete()
     
     #vgrid.plot_TSDF()
-    vgrid.plot_ODF()
+    #vgrid.plot_ODF()
     #vgrid.plot_FOV()
     
     IPython.embed()

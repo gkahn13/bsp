@@ -293,7 +293,7 @@ void test_voxel_grid() {
 	Vector3d pos_center = table;
 	double x_height = 1.5, y_height = 2, z_height = 1;
 	int resolution = 100;
-	VoxelGrid vgrid(pos_center, x_height, y_height, z_height, resolution);
+	VoxelGrid vgrid(pos_center, x_height, y_height, z_height, resolution, cam->get_pose(arm->get_joint_values()));
 
 	StdVector3d pc = cam->get_pc(arm->get_joint_values());
 
@@ -358,7 +358,7 @@ void test_greedy() {
 	Vector3d pos_center = table;
 	double x_height = 1.5, y_height = 2, z_height = 1;
 	int resolution = 100;
-	VoxelGrid vgrid(pos_center, x_height, y_height, z_height, resolution);
+	VoxelGrid vgrid(pos_center, x_height, y_height, z_height, resolution, cam->get_pose(arm->get_joint_values()));
 
 	StdVector3d pc = cam->get_pc(arm->get_joint_values());
 
@@ -536,14 +536,42 @@ void test_raycaster() {
 	VoxelGrid* vgrid = sys.get_voxel_grid();
 	rave::EnvironmentBasePtr env = brett->get_env();
 
-	arm->set_posture(Arm::Posture::mantis);
+//	arm->set_posture(Arm::Posture::mantis);
 	sleep(1);
 
-//	arm->teleop();
 	VectorJ j = arm->get_joint_values();
 
 	std::cout << "Getting point cloud\n";
 	StdVector3d pc = cam->get_pc(j);
+
+	std::cout << "Getting full zbuffer\n";
+	Matrix<double,HEIGHT_FULL,WIDTH_FULL> full_zbuffer = cam->get_full_zbuffer(j, pc);
+
+	for(int i=0; i < 1; ++i) {
+		std::cout << "Updating kinfu with full_zbuffer\n";
+		vgrid->update_kinfu(full_zbuffer);
+	}
+
+	std::cout << "Visualize tsdf\n";
+	vgrid->test_gpu_conversions(env);
+
+	rave_utils::plot_transform(env, rave_utils::eigen_to_rave(cam->get_pose(j)));
+
+//	std::cout << "update_TSDF\n";
+//	vgrid->update_TSDF(pc);
+//
+//	std::cout << "plot_TSDF\n";
+//	vgrid->plot_TSDF(env);
+//
+	std::cout << "plot_FOV_full\n";
+	vgrid->plot_FOV_full(env, cam, cam->get_full_zbuffer(j, pc), cam->get_pose(j));
+
+	std::cout << "Press enter to exit\n";
+	std::cin.ignore();
+	exit(0);
+
+
+
 
 	std::cout << "Updating TSDF (on gpu too)\n";
 	vgrid->update_TSDF(pc);

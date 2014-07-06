@@ -19,7 +19,7 @@ struct VoxelDist {
  * VoxelGrid Constructors
  */
 
-VoxelGrid::VoxelGrid(const Vector3d& pos_center, double x, double y, double z, int res) : resolution(res) {
+VoxelGrid::VoxelGrid(const Vector3d& pos_center, double x, double y, double z, int res, const Matrix4d& init_cam_pose) : resolution(res) {
 	bottom_corner = pos_center - Vector3d(x/2.0, y/2.0, z/2.0);
 	top_corner = pos_center + Vector3d(x/2.0, y/2.0, z/2.0);
 	size = Vector3d(x,y,z);
@@ -99,39 +99,82 @@ VoxelGrid::VoxelGrid(const Vector3d& pos_center, double x, double y, double z, i
 	pcl_tsdf->setTsdfTruncDist(.03);
 
 	gpu_pcl_tsdf_origin = Matrix4d::Identity();
-	gpu_pcl_tsdf_origin.block<3,3>(0,0) << 0, 0, 1,
-			-1, 0, 0,
+	gpu_pcl_tsdf_origin.block<3,3>(0,0) << -1, 0, 0,
+			0, 0, -1,
 			0, -1, 0;
-	gpu_pcl_tsdf_origin.block<3,1>(0,3) = pos_center + Vector3d(-x/2., y/2., z/2.);
+	gpu_pcl_tsdf_origin.block<3,1>(0,3) = pos_center + Vector3d(x/2., y/2., z/2.);
+
+
+	// setup kinfu tracker
+	float shifting_distance = 5.0f;
+	pcl_kinfu_tracker = new pcl::gpu::kinfuLS::KinfuTracker(gpu_size.cast<float>(), shifting_distance, HEIGHT_FULL, WIDTH_FULL);
+	pcl_kinfu_tracker->setDepthIntrinsics(intrinsics::fx, intrinsics::fy, intrinsics::cx, intrinsics::cy);
+
+	Matrix4d init_cam_pose_gpu = gpu_pcl_tsdf_origin.inverse()*init_cam_pose;
+	Vector3f t = (init_cam_pose_gpu.block<3,1>(0,3)).cast<float>();
+	Matrix3f R = (init_cam_pose_gpu.block<3,3>(0,0)).cast<float>();
+
+	Affine3f affine_init_cam_pose = Translation3f(t) * AngleAxisf(R);
+
+	pcl_kinfu_tracker->setInitialCameraPose(affine_init_cam_pose);
+	pcl_kinfu_tracker->reset();
+//	pcl_kinfu_tracker->setDisableICP();
 }
 
 /**
  * VoxelGrid Public methods
  */
 
+void VoxelGrid::update_kinfu(const Matrix<double,HEIGHT_FULL,WIDTH_FULL>& zbuffer) {
+	typedef pcl::gpu::DeviceArray2D<unsigned short> Depth;
+	Depth depth(H_SUB,W_SUB);
+
+	std::vector<unsigned short> data(HEIGHT_FULL*WIDTH_FULL);
+	int cols = WIDTH_FULL;
+
+	int index = 0;
+	for(int i=0; i < HEIGHT_FULL; ++i) {
+		for(int j=0; j < WIDTH_FULL; ++j) {
+			data[index++] = static_cast<unsigned short>(1e3*zbuffer(i,j)); // in mm
+		}
+	}
+
+	depth.upload(data, cols);
+
+	std::cout << "prev pose:\n" << pcl_kinfu_tracker->getCameraPose().translation().transpose() << "\n";
+	std::cout << pcl_kinfu_tracker->getCameraPose().rotation() << "\n";
+
+	(*pcl_kinfu_tracker)(depth);
+
+	std::cout << "pose pose: " << pcl_kinfu_tracker->getCameraPose().translation().transpose() << "\n";
+	std::cout << pcl_kinfu_tracker->getCameraPose().rotation() << "\n\n";
+
+
+}
+
 void VoxelGrid::update_TSDF(const StdVector3d& pcl) {
 	Vector3i voxel;
 	StdVector3i neighbors;
 	std::vector<double> dists;
-//	for(int i=0; i < pcl.size(); ++i) {
-//		if (is_valid_point(pcl[i])) {
-//			voxel = voxel_from_point(pcl[i]);
-//			TSDF->set(voxel, 0);
-//
-////			// set neighbors also, fill in the gaps
-////			get_voxel_neighbors_and_dists(voxel, neighbors, dists);
-////			for(int i=0; i < neighbors.size(); ++i) {
-////				TSDF->set(neighbors[i], 0);
-////			}
-//		}
-//	}
+	for(int i=0; i < pcl.size(); ++i) {
+		if (is_valid_point(pcl[i])) {
+			voxel = voxel_from_point(pcl[i]);
+			TSDF->set(voxel, 0);
 
-	// TODO: temp
-	for(int y=0; y < resolution; ++y) {
-		for(int z=0; z < resolution; ++z) {
-			TSDF->set(Vector3i(resolution/2,y,z),0);
+//			// set neighbors also, fill in the gaps
+//			get_voxel_neighbors_and_dists(voxel, neighbors, dists);
+//			for(int i=0; i < neighbors.size(); ++i) {
+//				TSDF->set(neighbors[i], 0);
+//			}
 		}
 	}
+
+//	// TODO: temp
+//	for(int y=0; y < resolution; ++y) {
+//		for(int z=0; z < resolution; ++z) {
+//			TSDF->set(Vector3i(resolution/2,y,z),0);
+//		}
+//	}
 
 	upload_to_pcl_tsdf();
 }
@@ -388,6 +431,13 @@ Matrix<double,H_SUB,W_SUB> VoxelGrid::get_zbuffer(const Matrix4d& cam_pose) {
 void VoxelGrid::test_gpu_conversions(rave::EnvironmentBasePtr env) {
 	rave_utils::plot_transform(env, rave_utils::eigen_to_rave(gpu_pcl_tsdf_origin));
 
+	Affine3f pose_affine = pcl_kinfu_tracker->getCameraPose();
+	Matrix4d pose = Matrix4d::Identity();
+	pose.block<3,1>(0,3) = pose_affine.translation().cast<double>();
+	pose.block<3,3>(0,0) = pose_affine.rotation().cast<double>();
+	Matrix4d pose_world = gpu_pcl_tsdf_origin*pose;
+	rave_utils::plot_transform(env, rave_utils::eigen_to_rave(pose_world));
+
 	for(int i=0; i < gpu_resolution(0); i+=5) {
 		rave_utils::plot_point(env, point_from_gpu_voxel(Vector3i(i,0,0)), Vector3d(1,0,0));
 	}
@@ -401,15 +451,17 @@ void VoxelGrid::test_gpu_conversions(rave::EnvironmentBasePtr env) {
 	}
 
 	std::vector<float> tsdf_vector;
-	pcl_tsdf->downloadTsdf(tsdf_vector);
+//	pcl_tsdf->downloadTsdf(tsdf_vector);
+	pcl_kinfu_tracker->volume().downloadTsdf(tsdf_vector);
 
 	int index = 0;
 	for(int i=0; i < gpu_resolution(0); i++) {
 		for(int j=0; j < gpu_resolution(1); j++) {
 			for(int k=0; k < gpu_resolution(2); k++) {
 				float val = tsdf_vector[index++];
-				if ((i % 4 == 0) && (j % 4 == 0) && (k % 4 == 0)) {
-					if (val == 0) {
+				if ((i % 15 == 0) && (j % 15 == 0) && (k % 15 == 0)) {
+//					std::cout << val << "\n";
+					if (val == 1) {
 						rave_utils::plot_point(env, point_from_gpu_voxel(Vector3i(i,j,k)), Vector3d(1,0,0));
 					}
 				}
@@ -477,6 +529,23 @@ void VoxelGrid::plot_FOV(rave::EnvironmentBasePtr env, Camera* cam, const Matrix
 				if (TSDF->get(i,j,k) != 0) {
 					Vector3d voxel_center = point_from_voxel(Vector3i(i,j,k));
 					if (cam->is_in_fov(voxel_center, zbuffer, cam_pose)) {
+						rave_utils::plot_point(env, voxel_center, Vector3d(0,1,0), .005);
+					}
+				}
+			}
+		}
+	}
+}
+
+void VoxelGrid::plot_FOV_full(rave::EnvironmentBasePtr env, Camera* cam, const Matrix<double,HEIGHT_FULL,WIDTH_FULL>& zbuffer, const Matrix4d& cam_pose) {
+	int step = 2;
+
+	for(int i=0; i < resolution; i+=step) {
+		for(int j=0; j < resolution; j+=step) {
+			for(int k=0; k < resolution; k+=step) {
+				if (TSDF->get(i,j,k) != 0) {
+					Vector3d voxel_center = point_from_voxel(Vector3i(i,j,k));
+					if (cam->is_in_fov_full(voxel_center, zbuffer, cam_pose)) {
 						rave_utils::plot_point(env, voxel_center, Vector3d(0,1,0), .005);
 					}
 				}
@@ -568,8 +637,10 @@ Vector3d VoxelGrid::point_from_gpu_voxel(const Vector3i& voxel) {
 	dz_gpu = gpu_size(2) / gpu_resolution(2);
 
 	Matrix4d gpu_pose = Matrix4d::Identity();
-	gpu_pose.block<3,1>(0,3) = Vector3d((gpu_size(0)-voxel(0)*dx_gpu), voxel(1)*dy_gpu, voxel(2)*dz_gpu);
+//	gpu_pose.block<3,1>(0,3) = Vector3d(voxel(0)*dx_gpu, voxel(1)*dy_gpu, voxel(2)*dz_gpu);
+	gpu_pose.block<3,1>(0,3) = Vector3d(voxel(2)*dz_gpu, voxel(1)*dy_gpu, voxel(0)*dx_gpu); // swap x and z
 
 	Vector3d world_center = (gpu_pcl_tsdf_origin*gpu_pose).block<3,1>(0,3);
+
 	return world_center;
 }

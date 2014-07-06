@@ -443,6 +443,50 @@ StdVector3d Camera::get_pc(const Matrix<double,ARM_DIM,1>& j) {
 	return pc;
 }
 
+Matrix<double,HEIGHT_FULL,WIDTH_FULL> Camera::get_full_zbuffer(const Matrix<double,ARM_DIM,1>& j, const StdVector3d& obstacles) {
+	Matrix<double,HEIGHT_FULL,WIDTH_FULL> zbuffer = intrinsics::MAX_RANGE*Matrix<double,HEIGHT_FULL,WIDTH_FULL>::Ones();
+	Matrix4d cam_pose = get_pose(j);
+
+	for(int i=0; i < obstacles.size(); ++i) {
+		Vector2i pixel = get_pixel_from_point(obstacles[i], cam_pose, KK);
+		int h = pixel(0), w = pixel(1);
+		if ((w >= 0) && (w < WIDTH_FULL) && (h >= 0) && (h < HEIGHT_FULL)) { // in frustrum
+			Matrix4d obstacle_pose = Matrix4d::Identity();
+			obstacle_pose.block<3,1>(0,3) = obstacles[i];
+			if ((cam_pose.inverse()*obstacle_pose)(2,3) > 0) { // in front of camera pose
+				double dist = (obstacles[i] - cam_pose.block<3,1>(0,3)).norm();
+				zbuffer(h,w) = (zbuffer(h,w) < dist) ? zbuffer(h,w) : dist;
+			}
+		}
+	}
+
+	return zbuffer;
+}
+
+bool Camera::is_in_fov_full(const Vector3d& point, const Matrix<double,HEIGHT_FULL,WIDTH_FULL>& zbuffer, const Matrix4d& cam_pose) {
+	Vector2i pixel = get_pixel_from_point(point, cam_pose, KK);
+	int h = pixel(0), w = pixel(1);
+
+	// out of frustrum
+	if ((w < 0) || (w >= WIDTH_FULL) || (h < 0) || (h >= HEIGHT_FULL)) {
+		return false;
+	}
+
+	// occluded
+	if (zbuffer(h,w) < (cam_pose.block<3,1>(0,3) - point).norm()) {
+		return false;
+	}
+
+	// behind camera pose
+	Matrix4d point_pose = Matrix4d::Identity();
+	point_pose.block<3,1>(0,3) = point;
+	if ((cam_pose.inverse()*point_pose)(2,3) < 0) {
+		return false;
+	}
+
+	return true;
+}
+
 inline std::vector<std::vector<int> > index_neighbors(int i, int j, int rows, int cols) {
 	if ((i == 0) && (j == 0)) {
 		return {{i+1,j+0}, {i+1,j+1}, {i+0,j+1}};
@@ -470,7 +514,7 @@ Matrix<double,H_SUB,W_SUB> Camera::get_zbuffer(const Matrix<double,ARM_DIM,1>& j
 	Matrix4d cam_pose = get_pose(j);
 
 	for(int i=0; i < obstacles.size(); ++i) {
-		Vector2i pixel = get_pixel_from_point(obstacles[i], cam_pose);
+		Vector2i pixel = get_pixel_from_point(obstacles[i], cam_pose, KK_SUB);
 		int h = pixel(0), w = pixel(1);
 		if ((w >= 0) && (w < W_SUB) && (h >= 0) && (h < H_SUB)) { // in frustrum
 			Matrix4d obstacle_pose = Matrix4d::Identity();
@@ -526,13 +570,13 @@ Matrix<double,H_SUB,W_SUB> Camera::get_zbuffer(const Matrix<double,ARM_DIM,1>& j
 	return zbuffer;
 }
 
-Vector2i Camera::get_pixel_from_point(const Vector3d& point, const Matrix4d& cam_pose) {
+Vector2i Camera::get_pixel_from_point(const Vector3d& point, const Matrix4d& cam_pose, const Matrix3d& P) {
 	Matrix4d point_mat = Matrix4d::Identity();
 	point_mat.block<3,1>(0,3) = point;
 
 	Matrix4d point_mat_tilde = cam_pose.inverse()*point_mat;
 
-	Vector3d y = KK_SUB*point_mat_tilde.block<3,1>(0,3);
+	Vector3d y = P*point_mat_tilde.block<3,1>(0,3);
 
 	Vector2i pixel = {int(y(1)/y(2)), int(y(0)/y(2))};
 	return pixel;
@@ -550,7 +594,7 @@ Vector3d Camera::get_point_from_pixel_and_dist(const Vector2i& pixel, const doub
 }
 
 bool Camera::is_in_fov(const Vector3d& point, const Matrix<double,H_SUB,W_SUB>& zbuffer, const Matrix4d& cam_pose) {
-	Vector2i pixel = get_pixel_from_point(point, cam_pose);
+	Vector2i pixel = get_pixel_from_point(point, cam_pose, KK_SUB);
 	int h = pixel(0), w = pixel(1);
 
 	// out of frustrum

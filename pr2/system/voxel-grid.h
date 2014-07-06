@@ -88,7 +88,9 @@ private:
 
 class VoxelGrid {
 public:
-	VoxelGrid(const Vector3d& pos_center, double x_height, double y_height, double z_height, int resolution=512);
+	VoxelGrid(const Vector3d& pos_center, double x_height, double y_height, double z_height, int resolution, const Matrix4d& init_cam_pose);
+
+	void update_kinfu(const Matrix<double,HEIGHT_FULL,WIDTH_FULL>& zbuffer);
 
 	void update_TSDF(const StdVector3d& pcl);
 	// void update_TSDF(const pcl::gpu::TsdfVolume::Ptr& new_tsdf);
@@ -114,6 +116,7 @@ public:
 	void plot_TSDF(rave::EnvironmentBasePtr env);
 	void plot_ODF(Cube& ODF, rave::EnvironmentBasePtr env);
 	void plot_FOV(rave::EnvironmentBasePtr env, Camera* cam, const Matrix<double,H_SUB,W_SUB>& zbuffer, const Matrix4d& cam_pose);
+	void plot_FOV_full(rave::EnvironmentBasePtr env, Camera* cam, const Matrix<double,HEIGHT_FULL,WIDTH_FULL>& zbuffer, const Matrix4d& cam_pose);
 
 private:
 	int resolution;
@@ -122,7 +125,7 @@ private:
 
 	Cube *TSDF;
 	pcl::gpu::kinfuLS::TsdfVolume::Ptr pcl_tsdf;
-	pcl::gpu::kinfuLS::KinfuTracker *pcl_kinfu;
+	pcl::gpu::kinfuLS::KinfuTracker *pcl_kinfu_tracker;
 
 	Vector3i gpu_resolution;
 	Vector3d gpu_size;

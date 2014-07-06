@@ -49,11 +49,13 @@ void PR2System::init() {
 	R_diag << (M_PI/4)*VectorJ::Ones(), 5*Vector3d::Ones();
 	R = R_diag.asDiagonal();
 
+	arm->set_posture(Arm::Posture::mantis);
+	arm->teleop();
 	Vector3d table_center(3.5, -1.2, 0.74);
 //	double x_height = 1.5, y_height = 2, z_height = 1;
-	double x_height = 1.5, y_height = 2, z_height = 1;
+	double x_height = 3, y_height = 3, z_height = 3;
 	int resolution = 128; // must be {32, 64, 128, 256, 512}
-	vgrid = new VoxelGrid(table_center, x_height, y_height, z_height, resolution);
+	vgrid = new VoxelGrid(table_center, x_height, y_height, z_height, resolution, cam->get_pose(arm->get_joint_values()));
 }
 
 /**

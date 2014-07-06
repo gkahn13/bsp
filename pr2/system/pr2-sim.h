@@ -24,8 +24,8 @@ namespace rave = OpenRAVE;
 
 // Camera constants for actual and subsampled
 
-#define WIDTH_FULL	   256 // 64
-#define HEIGHT_FULL 	   192 // 48
+#define WIDTH_FULL	   640 // 256
+#define HEIGHT_FULL    480 // 192
 
 #define W_SUB 64 // 64
 #define H_SUB 48 // 48
@@ -55,8 +55,6 @@ const double W_SUB_M = FOCAL_LENGTH*(W_SUB/fx_sub);
 class Arm;
 class Head;
 class Camera;
-class PixelBucket;
-class DepthMap;
 
 class PR2 {
 public:
@@ -141,10 +139,12 @@ public:
 
 	// call once before collocation
 	StdVector3d get_pc(const Matrix<double,ARM_DIM,1>& j);
+	Matrix<double,HEIGHT_FULL,WIDTH_FULL> get_full_zbuffer(const Matrix<double,ARM_DIM,1>& j, const StdVector3d& obstacles);
+	bool is_in_fov_full(const Vector3d& point, const Matrix<double,HEIGHT_FULL,WIDTH_FULL>& zbuffer, const Matrix4d& cam_pose);
 
 	Matrix<double,H_SUB,W_SUB> get_zbuffer(const Matrix<double,ARM_DIM,1>& j, const StdVector3d& obstacles);
 
-	Vector2i get_pixel_from_point(const Vector3d& point, const Matrix4d& cam_pose);
+	Vector2i get_pixel_from_point(const Vector3d& point, const Matrix4d& cam_pose, const Matrix3d& P);
 	Vector3d get_point_from_pixel_and_dist(const Vector2i& pixel, const double dist, const Matrix4d& cam_pose);
 	bool is_in_fov(const Vector3d& point, const Matrix<double,H_SUB,W_SUB>& zbuffer, const Matrix4d& cam_pose);
 

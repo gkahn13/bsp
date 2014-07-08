@@ -80,6 +80,8 @@ public:
 		return Vector3i(x_size, y_size, z_size);
 	}
 
+	double trilinear_interpolation(const Vector3d& voxel);
+
 private:
 	int x_size, y_size, z_size;
 	VectorXd array;
@@ -90,11 +92,7 @@ class VoxelGrid {
 public:
 	VoxelGrid(const Vector3d& pos_center, double x_height, double y_height, double z_height, int resolution, const Matrix4d& init_cam_pose);
 
-	void update_kinfu(const Matrix<double,HEIGHT_FULL,WIDTH_FULL>& zbuffer);
-
-	void update_TSDF(const StdVector3d& pcl);
-	// void update_TSDF(const pcl::gpu::TsdfVolume::Ptr& new_tsdf);
-
+	void update(const StdVector3d& pc, const Matrix<double,HEIGHT_FULL,WIDTH_FULL>& zbuffer, const Matrix4d& cam_pose);
 	Cube get_ODF(const Vector3d& obj);
 
 	Vector3d signed_distance_complete_voxel_center(const Vector3d& object, const Cube& ODF,
@@ -107,12 +105,9 @@ public:
 	double signed_distance_greedy(const Vector3d& object, const Cube& ODF,
 			Camera* cam, const Matrix<double,H_SUB,W_SUB>& zbuffer, const Matrix4d& cam_pose);
 
-	StdVector3d get_obstacles();
-
 	Matrix<double,H_SUB,W_SUB> get_zbuffer(const Matrix4d& cam_pose);
 
-	void test_gpu_conversions(rave::EnvironmentBasePtr env);
-
+	void plot_kinfu_tsdf(rave::EnvironmentBasePtr env);
 	void plot_TSDF(rave::EnvironmentBasePtr env);
 	void plot_ODF(Cube& ODF, rave::EnvironmentBasePtr env);
 	void plot_FOV(rave::EnvironmentBasePtr env, Camera* cam, const Matrix<double,H_SUB,W_SUB>& zbuffer, const Matrix4d& cam_pose);
@@ -124,7 +119,6 @@ private:
 	double dx, dy, dz, radius;
 
 	Cube *TSDF;
-	pcl::gpu::kinfuLS::TsdfVolume::Ptr pcl_tsdf;
 	pcl::gpu::kinfuLS::KinfuTracker *pcl_kinfu_tracker;
 
 	Vector3i gpu_resolution;
@@ -134,10 +128,12 @@ private:
 	StdVector3i offsets;
 	std::vector<double> offset_dists;
 
-	void upload_to_pcl_tsdf();
+	void update_kinfu(const Matrix<double,HEIGHT_FULL,WIDTH_FULL>& zbuffer, const Matrix4d& cam_pose);
+	void update_TSDF(const StdVector3d& pc);
 
 	void get_voxel_neighbors_and_dists(const Vector3i& voxel, StdVector3i& neighbors, std::vector<double>& dists);
 	Vector3i voxel_from_point(const Vector3d& point);
+	Vector3d exact_voxel_from_point(const Vector3d& point);
 	Vector3d point_from_voxel(const Vector3i& voxel);
 
 	Vector3d point_from_gpu_voxel(const Vector3i& voxel);

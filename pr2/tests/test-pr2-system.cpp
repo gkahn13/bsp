@@ -271,70 +271,6 @@ void test_fk() {
 	std::cout << "fk_cam_pose:\n" << fk_cam_pose << "\n\n";
 }
 
-void test_voxel_grid() {
-	Vector3d table(3.5, -1.2, 0.74);
-	Vector3d object = table + Vector3d(0, -.2, .05);
-//	Vector3d object = table + Vector3d(0, .1, -.2);
-	Arm::ArmType arm_type = Arm::ArmType::right;
-	bool view = true;
-	PR2System sys(object, arm_type, view);
-
-	PR2* brett = sys.get_brett();
-	Arm* arm = sys.get_arm();
-	Camera* cam = sys.get_camera();
-	rave::EnvironmentBasePtr env = brett->get_env();
-
-	arm->set_posture(Arm::Posture::mantis);
-	sleep(1);
-
-	rave_utils::plot_transform(env, rave_utils::eigen_to_rave(cam->get_pose(arm->get_joint_values())));
-	rave_utils::plot_point(env, object, Vector3d(1,0,0), .05);
-
-	Vector3d pos_center = table;
-	double x_height = 1.5, y_height = 2, z_height = 1;
-	int resolution = 100;
-	VoxelGrid vgrid(pos_center, x_height, y_height, z_height, resolution, cam->get_pose(arm->get_joint_values()));
-
-	StdVector3d pc = cam->get_pc(arm->get_joint_values());
-
-//	for(int i=0; i < pc.size(); ++i) {
-//		rave_utils::plot_point(env, pc[i], Vector3d(1,0,0), .005);
-//	}
-
-	std::cout << "update_TSDF\n";
-	vgrid.update_TSDF(pc);
-
-	std::cout << "update_ODF\n";
-	tc.start("update_ODF");
-	Cube ODF = vgrid.get_ODF(object);
-	tc.stop("update_ODF");
-
-	StdVector3d obstacles = vgrid.get_obstacles();
-	Matrix<double,H_SUB,W_SUB> zbuffer = cam->get_zbuffer(arm->get_joint_values(), pc); // TODO: should be obstacles
-
-//	std::cout << "zbuffer\n" << zbuffer << "\n";
-
-	tc.start("sd_complete");
-	double sd_complete = vgrid.signed_distance_complete(object, ODF, cam, zbuffer, cam->get_pose(arm->get_joint_values()));
-	tc.stop("sd_complete");
-
-	tc.start("sd_greedy");
-	double sd_greedy = vgrid.signed_distance_greedy(object, ODF, cam, zbuffer, cam->get_pose(arm->get_joint_values()));
-	tc.stop("sd_greedy");
-//
-	std::cout << "sd_complete: " << sd_complete << "\n";
-	std::cout << "sd_greedy: " << sd_greedy << "\n";
-
-	vgrid.plot_TSDF(env);
-//	vgrid.plot_ODF(env);
-	vgrid.plot_FOV(env, cam, zbuffer, cam->get_pose(arm->get_joint_values()));
-
-	tc.print_all_elapsed();
-
-	std::cout << "Press enter to exit\n";
-	std::cin.ignore();
-}
-
 void test_greedy() {
 	srand(time(0));
 
@@ -361,11 +297,11 @@ void test_greedy() {
 	VoxelGrid vgrid(pos_center, x_height, y_height, z_height, resolution, cam->get_pose(arm->get_joint_values()));
 
 	StdVector3d pc = cam->get_pc(arm->get_joint_values());
+	Matrix<double,HEIGHT_FULL,WIDTH_FULL> full_zbuffer = cam->get_full_zbuffer(arm->get_joint_values(), pc);
 
 	std::cout << "update_TSDF\n";
-	vgrid.update_TSDF(pc);
+	vgrid.update(pc, full_zbuffer, cam->get_pose(arm->get_joint_values()));
 
-	StdVector3d obstacles = vgrid.get_obstacles();
 	Matrix<double,H_SUB,W_SUB> zbuffer = cam->get_zbuffer(arm->get_joint_values(), pc); // TODO: should be obstacles
 
 	Vector3d lower = pos_center - Vector3d(x_height/2., y_height/2., z_height/2.);
@@ -410,12 +346,12 @@ void test_greedy() {
 	std::cin.ignore();
 }
 
-VectorJ sd_gradient(VectorJ j, const Vector3d& object, const Cube& ODF, Camera* cam, VoxelGrid* vgrid, const StdVector3d& obstacles) {
+VectorJ sd_gradient(VectorJ j, const Vector3d& object, const Cube& ODF, Camera* cam, VoxelGrid* vgrid) {
 	VectorJ grad = VectorJ::Zero();
 	const double step = 1e-5;
 	const double alpha = 1;
 
-	Matrix<double,H_SUB,W_SUB> zbuffer = cam->get_zbuffer(j, obstacles);
+	Matrix<double,H_SUB,W_SUB> zbuffer = vgrid->get_zbuffer(cam->get_pose(j));
 	Matrix4d cam_pose = cam->get_pose(j), voxel_pose = Matrix4d::Identity(), u_cam_pose;
 	voxel_pose.block<3,1>(0,3) = vgrid->signed_distance_greedy_voxel_center(object, ODF, cam, zbuffer, cam_pose);
 	u_cam_pose = cam_pose.inverse()*voxel_pose;
@@ -445,7 +381,8 @@ VectorJ sd_gradient(VectorJ j, const Vector3d& object, const Cube& ODF, Camera* 
 
 		sd_m = sd_sign*v_m.norm();
 //		cos_theta_m = (obj_in_fov) ? 0 : (u_m.dot(v_m)) / (u_m.norm()*v_m.norm());
-		cos_theta_m = (obj_in_fov) ? 0 : (u_m.dot(v)) / (u_m.norm()*v.norm());
+//		cos_theta_m = (obj_in_fov) ? 0 : (u_m.dot(v)) / (u_m.norm()*v.norm());
+		cos_theta_m = 0;
 		sd_sigmoid_m = 1.0 - 1.0/(1.0+exp(-alpha*sd_m*(1-cos_theta_m)));
 
 		cam_pose_p = cam->get_pose(j_p);
@@ -454,7 +391,8 @@ VectorJ sd_gradient(VectorJ j, const Vector3d& object, const Cube& ODF, Camera* 
 
 		sd_p = sd_sign*v_p.norm();
 //		cos_theta_p = (obj_in_fov) ? 0 : (u_p.dot(v_p)) / (u_p.norm()*v_p.norm());
-		cos_theta_p = (obj_in_fov) ? 0 : (u_p.dot(v)) / (u_p.norm()*v.norm());
+//		cos_theta_p = (obj_in_fov) ? 0 : (u_p.dot(v)) / (u_p.norm()*v.norm());
+		cos_theta_p = 0;
 		sd_sigmoid_p = 1.0 - 1.0/(1.0+exp(-alpha*sd_p*(1-cos_theta_p)));
 
 		grad(i) = (sd_sigmoid_p - sd_sigmoid_m) / (2*step);
@@ -485,38 +423,45 @@ void test_gradient() {
 	arm->set_posture(Arm::Posture::mantis);
 	sleep(1);
 
-//	std::cout << "update_TSDF\n";
-//	sys.update_TSDF(arm->get_joint_values());
-//
-//	std::cout << "get_ODF\n";
-//	Cube ODF = sys.get_ODF(object);
-
 	VectorJ j = arm->get_joint_values();
+
+//	std::cout << "Updating internal TSDF and kinfu\n";
+//	StdVector3d pc = cam->get_pc(j);
+//	Matrix<double,HEIGHT_FULL,WIDTH_FULL> full_zbuffer = cam->get_full_zbuffer(j, pc);
+//	sys.update(pc, full_zbuffer);
+
 	while(true) {
+		std::cout << "Updating internal TSDF and kinfu\n";
+		StdVector3d pc = cam->get_pc(j);
+		Matrix<double,HEIGHT_FULL,WIDTH_FULL> full_zbuffer = cam->get_full_zbuffer(j, pc);
+		Matrix4d cam_pose = cam->get_pose(j);
+		sys.update(pc, full_zbuffer, cam_pose);
+
 		std::cout << "Press enter:\n";
 		std::cin.ignore();
 		rave_utils::clear_plots();
 
-		std::cout << "update_TSDF\n";
-		sys.update_TSDF(arm->get_joint_values());
 		std::cout << "get_ODF\n";
 		Cube ODF = sys.get_ODF(object);
 
-		StdVector3d obstacles = vgrid->get_obstacles();
-
 		arm->set_joint_values(j);
-		VectorJ grad = sd_gradient(j, object, ODF, cam, vgrid, obstacles);
+		tc.start("sd_gradient");
+		VectorJ grad = sd_gradient(j, object, ODF, cam, vgrid);
+		tc.stop("sd_gradient");
+		tc.print_all_elapsed();
+		tc.clear_all();
 
 //		std::cout << "grad\n" << grad << "\n";
 
 		rave_utils::plot_point(env, object, Vector3d(1,0,0), .05);
 		vgrid->plot_TSDF(env);
-		vgrid->plot_FOV(env, cam, cam->get_zbuffer(j, vgrid->get_obstacles()), cam->get_pose(j));
+//		vgrid->plot_FOV(env, cam, vgrid->get_zbuffer(cam->get_pose(j)), cam->get_pose(j));
+		vgrid->plot_kinfu_tsdf(env);
 
 		if (grad.norm() > epsilon) {
 			grad /= grad.norm();
 		}
-		j = j + (M_PI/64)*(grad);
+		j = j + (M_PI/32)*(grad);
 	}
 }
 
@@ -547,15 +492,24 @@ void test_raycaster() {
 	std::cout << "Getting full zbuffer\n";
 	Matrix<double,HEIGHT_FULL,WIDTH_FULL> full_zbuffer = cam->get_full_zbuffer(j, pc);
 
-	for(int i=0; i < 1; ++i) {
-		std::cout << "Updating kinfu with full_zbuffer\n";
-		vgrid->update_kinfu(full_zbuffer);
-	}
+	std::cout << "Updating\n";
+	vgrid->update(pc, full_zbuffer, cam->get_pose(j));
 
 	std::cout << "Visualize tsdf\n";
-	vgrid->test_gpu_conversions(env);
+	vgrid->plot_kinfu_tsdf(env);
+
+	arm->teleop();
+	j = arm->get_joint_values();
 
 	rave_utils::plot_transform(env, rave_utils::eigen_to_rave(cam->get_pose(j)));
+
+	std::cout << "get_zbuffer using RayCaster\n";
+	tc.start("get_zbuffer");
+	Matrix<double,H_SUB,W_SUB> zbuffer = vgrid->get_zbuffer(cam->get_pose(j));
+	tc.stop("get_zbuffer");
+
+	std::cout << "plot_FOV_full\n";
+	vgrid->plot_FOV(env, cam, zbuffer, cam->get_pose(j));
 
 //	std::cout << "update_TSDF\n";
 //	vgrid->update_TSDF(pc);
@@ -563,28 +517,8 @@ void test_raycaster() {
 //	std::cout << "plot_TSDF\n";
 //	vgrid->plot_TSDF(env);
 //
-	std::cout << "plot_FOV_full\n";
-	vgrid->plot_FOV_full(env, cam, cam->get_full_zbuffer(j, pc), cam->get_pose(j));
-
-	std::cout << "Press enter to exit\n";
-	std::cin.ignore();
-	exit(0);
-
-
-
-
-	std::cout << "Updating TSDF (on gpu too)\n";
-	vgrid->update_TSDF(pc);
-
-	std::cout << "test_gpu_conversions\n";
-	vgrid->test_gpu_conversions(env);
-
-	std::cout << "get_zbuffer using RayCaster\n";
-	tc.start("get_zbuffer");
-	Matrix<double,H_SUB,W_SUB> zbuffer = vgrid->get_zbuffer(cam->get_pose(j));
-	tc.stop("get_zbuffer");
-
-//	std::cout << "zbuffer:\n" << zbuffer << "\n\n";
+//	std::cout << "plot_FOV_full\n";
+//	vgrid->plot_FOV_full(env, cam, cam->get_full_zbuffer(j, pc), cam->get_pose(j));
 
 //	std::cout << "get_zbuffer using projection\n";
 //	tc.start("get_zbuffer projection");
@@ -604,7 +538,7 @@ int main() {
 //	test_fk();
 //	test_voxel_grid();
 //	test_greedy();
-//	test_gradient();
-	test_raycaster();
+	test_gradient();
+//	test_raycaster();
 	return 0;
 }

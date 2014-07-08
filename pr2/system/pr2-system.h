@@ -48,6 +48,7 @@ typedef Matrix<double,3,M_DIM> MatrixP;
 typedef std::vector<VectorX, aligned_allocator<VectorX>> StdVectorX;
 typedef std::vector<VectorJ, aligned_allocator<VectorJ>> StdVectorJ;
 typedef std::vector<VectorU, aligned_allocator<VectorU>> StdVectorU;
+typedef std::vector<Matrix4d, aligned_allocator<Matrix4d>> StdMatrix4d;
 
 #include "voxel-grid.h" // needs to be here, not sure why
 
@@ -75,7 +76,7 @@ class PR2System {
 	const double alpha_control = 0; // .01
 	const double alpha_belief = 1; // 1
 	const double alpha_final_belief = 1; // 1
-	const double alpha_goal = 0; // .5
+	const double alpha_goal = .5; // .5
 
 public:
 	PR2System(Vector3d& object);
@@ -105,10 +106,30 @@ public:
 	VectorTOTAL cost_gmm_grad(StdVectorJ& J, const MatrixJ& j_sigma0, StdVectorU& U,
 			const std::vector<ParticleGaussian>& particle_gmm, const double alpha);
 
+	/**
+	 * RIPPED APART VERSIONS
+	 */
+
+	MatrixZ delta_matrix_ripped(const VectorJ& j, const Vector3d& object, const double alpha, const Matrix4d& sd_vec, const bool& obj_in_fov);
+	void belief_dynamics_ripped(const VectorX& x_t, const MatrixX& sigma_t, const VectorU& u_t, const double alpha, const Matrix4d& sd_vec, const bool& obj_in_fov,
+			VectorX& x_tp1, MatrixX& sigma_tp1);
+
+	double cost_ripped(const StdVectorJ& J, const Vector3d& obj, const MatrixX& sigma0, const StdVectorU& U,
+			const double alpha, const StdMatrix4d& sd_vecs, const std::vector<bool>& obj_in_fovs);
+	double cost_gmm_ripped(const StdVectorJ& J, const MatrixJ& j_sigma0, const StdVectorU& U,
+					const std::vector<ParticleGaussian>& particle_gmm, const double alpha,
+					const std::vector<StdMatrix4d>& objs_sd_vecs, const std::vector<std::vector<bool> >& objs_in_fovs);
+	VectorTOTAL cost_gmm_grad_ripped(StdVectorJ& J, const MatrixJ& j_sigma0, StdVectorU& U,
+			const std::vector<ParticleGaussian>& particle_gmm, const double alpha);
+
+	/**
+	 * END RIPPED APART VERSIONS
+	 */
+
 	// use figtree
 	void fit_gaussians_to_pf(const MatrixP& P, std::vector<ParticleGaussian>& particle_gmm);
 
-	void update_TSDF(const VectorJ& j) { StdVector3d new_pc = cam->get_pc(j); pc.insert(pc.end(), new_pc.begin(), new_pc.end()); vgrid->update_TSDF(new_pc); }
+	void update(const StdVector3d& new_pc, const Matrix<double,HEIGHT_FULL,WIDTH_FULL>& zbuffer, const Matrix4d& cam_pose);
 	Cube get_ODF(const Vector3d& obj) { return vgrid->get_ODF(obj); }
 
 	void display(const VectorJ& j, bool pause=true);

@@ -185,8 +185,8 @@ double pr2_approximate_collocation(StdVectorJ& J, StdVectorU& U, const MatrixJ& 
 		const std::vector<ParticleGaussian>& particle_gmm, const double alpha,
 		PR2System& sys, pr2MPC_params &problem, pr2MPC_output &output, pr2MPC_info &info) {
 	int max_iter = 100;
-	double Xeps = .5;
-	double Ueps = .5;
+	double Xeps = .1; // .5
+	double Ueps = .1; // .5
 
 	double merit = 0, meritopt = 0;
 	double constant_cost, hessian_constant, jac_constant;
@@ -214,7 +214,7 @@ double pr2_approximate_collocation(StdVectorJ& J, StdVectorU& U, const MatrixJ& 
 
 			if (it == 0) {
 				merit = sys.cost_gmm(J, j_sigma0, U, particle_gmm, alpha);
-				grad = sys.cost_gmm_grad(J, j_sigma0, U, particle_gmm, alpha);
+				grad = sys.cost_gmm_grad_ripped(J, j_sigma0, U, particle_gmm, alpha);
 			} else {
 				merit = meritopt; // since L-BFGS calculation required it
 				grad = gradopt;
@@ -331,8 +331,8 @@ double pr2_approximate_collocation(StdVectorJ& J, StdVectorU& U, const MatrixJ& 
 			return INFINITY;
 		}
 
-		LOG_DEBUG("Displaying Jopt");
-		sys.display(Jopt, particle_gmm);
+//		LOG_DEBUG("Displaying Jopt");
+//		sys.display(Jopt, particle_gmm);
 
 		model_merit = optcost + constant_cost; // need to add constant terms that were dropped
 
@@ -376,7 +376,7 @@ double pr2_approximate_collocation(StdVectorJ& J, StdVectorU& U, const MatrixJ& 
 			LOG_DEBUG("Accepted, Increasing trust region size to:  %2.6f %2.6f", Xeps, Ueps);
 
 			meritopt = sys.cost_gmm(Jopt, j_sigma0, Uopt, particle_gmm, alpha);
-			gradopt = sys.cost_gmm_grad(Jopt, j_sigma0, Uopt, particle_gmm, alpha);
+			gradopt = sys.cost_gmm_grad_ripped(Jopt, j_sigma0, Uopt, particle_gmm, alpha);
 			L_BFGS(J, U, grad, Jopt, Uopt, gradopt, hess);
 
 			J = Jopt; U = Uopt;
@@ -403,19 +403,19 @@ double pr2_collocation(StdVectorJ& J, StdVectorU& U, const MatrixJ& j_sigma0,
 			J[t+1] = sys.dynfunc(J[t], U[t], VectorQ::Zero());
 		}
 
-		double max_delta_diff = -INFINITY;
-		for(int t=0; t < T; ++t) {
-			double delta_alpha = sys.delta_matrix(J[t], particle_gmm[0].mean, alpha)(J_DIM,J_DIM);
-			double delta_inf = sys.delta_matrix(J[t], particle_gmm[0].mean, INFTY)(J_DIM,J_DIM);
-			max_delta_diff = std::max(max_delta_diff, fabs(delta_alpha - delta_inf));
-		}
-
-		LOG_DEBUG(" ");
-		LOG_DEBUG("Max delta difference: %4.2f", max_delta_diff);
-		if (max_delta_diff < cfg::alpha_epsilon) {
-			LOG_DEBUG("Max delta difference < %4.10f, exiting minimize merit", cfg::alpha_epsilon);
-			break;
-		}
+//		double max_delta_diff = -INFINITY;
+//		for(int t=0; t < T; ++t) {
+//			double delta_alpha = sys.delta_matrix(J[t], particle_gmm[0].mean, alpha, particle_gmm[0].ODF)(J_DIM,J_DIM);
+//			double delta_inf = sys.delta_matrix(J[t], particle_gmm[0].mean, INFTY, particle_gmm[0].ODF)(J_DIM,J_DIM);
+//			max_delta_diff = std::max(max_delta_diff, fabs(delta_alpha - delta_inf));
+//		}
+//
+//		LOG_DEBUG(" ");
+//		LOG_DEBUG("Max delta difference: %4.2f", max_delta_diff);
+//		if (max_delta_diff < cfg::alpha_epsilon) {
+//			LOG_DEBUG("Max delta difference < %4.10f, exiting minimize merit", cfg::alpha_epsilon);
+//			break;
+//		}
 
 		LOG_DEBUG("Increasing alpha by gain %4.5f", cfg::alpha_gain);
 		alpha *= cfg::alpha_gain;
@@ -429,16 +429,18 @@ void init_collocation(const VectorJ& j0, const MatrixP& P, PR2System& sys,
 	// re-initialize GMM from PF
 	sys.fit_gaussians_to_pf(P, particle_gmm);
 
-	for(int i=0; i < particle_gmm.size(); ++i) {
-		particle_gmm[i].cov *= 5000;
-		std::cout << particle_gmm[i].pct << "\n";
-		std::cout << particle_gmm[i].cov << "\n\n";
-	}
-
 	// only take max gaussian
 	particle_gmm = std::vector<ParticleGaussian>(1, particle_gmm[0]);
 //	particle_gmm[0].cov = .01*Matrix3d::Identity();
 //	particle_gmm[0].cov *= 5000;
+
+	for(int i=0; i < particle_gmm.size(); ++i) {
+		particle_gmm[i].cov *= 1000; // 5000
+		std::cout << particle_gmm[i].pct << "\n";
+		std::cout << particle_gmm[i].cov << "\n\n";
+
+		particle_gmm[i].ODF = sys.get_ODF(particle_gmm[i].mean);
+	}
 
 	// TODO: try a non-zero initialization
 	VectorU uinit = VectorU::Zero();
@@ -458,12 +460,19 @@ MatrixP init_particles(rave::EnvironmentBasePtr env) {
 
 	rave::Vector table_pos = table->GetTransform().trans;
 	double x_min, x_max, y_min, y_max, z_min, z_max;
+//	x_min = table_pos.x - extents.x;
+//	x_max = table_pos.x + extents.x;
+//	y_min = table_pos.y - extents.y;
+//	y_max = table_pos.y + extents.y;
+//	z_min = table_pos.z + extents.z;
+//	z_max = table_pos.z + extents.z + .2;
+
 	x_min = table_pos.x - extents.x;
 	x_max = table_pos.x + extents.x;
 	y_min = table_pos.y - extents.y;
-	y_max = table_pos.y + extents.y;
-	z_min = table_pos.z + extents.z;
-	z_max = table_pos.z + extents.z + .2;
+	y_max = table_pos.y;// + extents.y;
+	z_min = table_pos.z + extents.z - .1;
+	z_max = table_pos.z + extents.z - .2;// + .2;
 
 	MatrixP P;
 
@@ -491,13 +500,15 @@ MatrixP init_particles(rave::EnvironmentBasePtr env) {
 }
 
 int main(int argc, char* argv[]) {
-	Vector3d object(3.35, -1.11, 0.8);
+//	Vector3d object(3.35, -1.11, 0.8);
+	Vector3d object = Vector3d(3.5+.1, -1.2-.1, .74-.1);
 	Arm::ArmType arm_type = Arm::ArmType::right;
 	bool view = true;
 	PR2System sys(object, arm_type, view);
 
 	PR2* brett = sys.get_brett();
 	rave::EnvironmentBasePtr env = brett->get_env();
+	Camera* cam = sys.get_camera();
 	Arm* arm = sys.get_arm();
 	arm->set_posture(Arm::Posture::mantis);
 
@@ -529,7 +540,11 @@ int main(int argc, char* argv[]) {
 	for(int iter=0; !stop_condition; iter++) {
 		arm->set_joint_values(j_t);
 
-		sys.update_TSDF(j_t); // grab current environment point cloud and update VoxelGrid, TODO: should be j_t_real
+		LOG_INFO("Updating internal TSDF and kinfu\n");
+		StdVector3d pc = cam->get_pc(j_t_real);
+		Matrix<double,HEIGHT_FULL,WIDTH_FULL> full_zbuffer = cam->get_full_zbuffer(j_t_real, pc);
+		Matrix4d cam_pose = cam->get_pose(j_t_real);
+		sys.update(pc, full_zbuffer, cam_pose);
 
 		LOG_INFO("MPC iteration: %d",iter);
 		init_collocation(j_t, P_t, sys, J, U, particle_gmm);
@@ -555,7 +570,7 @@ int main(int argc, char* argv[]) {
 		LOG_INFO("Post-optimization");
 		sys.display(J, particle_gmm);
 
-		sys.execute_control_step(j_t_real, j_t, U[0], P_t, j_tp1_real, j_tp1, P_tp1);
+		sys.execute_control_step(j_t_real, j_t, U[0], P_t, particle_gmm[0].ODF, j_tp1_real, j_tp1, P_tp1);
 
 		// TODO: stop condition
 

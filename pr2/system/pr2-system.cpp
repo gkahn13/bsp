@@ -233,7 +233,8 @@ VectorTOTAL PR2System::cost_gmm_grad(StdVectorJ& J, const MatrixJ& j_sigma0, Std
  * RIPPED APART VERSION
  */
 
-MatrixZ PR2System::delta_matrix_ripped(const VectorJ& j, const Vector3d& object, const double alpha, const Matrix4d& sd_vec, const bool& obj_in_fov) {
+MatrixZ PR2System::delta_matrix_ripped(const VectorJ& j, const Vector3d& object, const double alpha,
+		const Cube& ODF, const Matrix4d& sd_pose_in_cam, const bool& obj_in_fov) {
 	MatrixZ delta = MatrixZ::Identity();
 
 	for(int i=0; i < J_DIM; ++i) {
@@ -241,17 +242,18 @@ MatrixZ PR2System::delta_matrix_ripped(const VectorJ& j, const Vector3d& object,
 	}
 
 	Matrix4d cam_pose;
-	Vector3d u, v;
-	double sd_sign, sd, cos_theta, sd_sigmoid;
-
-	cam_pose = cam->get_pose(j);
-	u = (cam_pose*sd_vec).block<3,1>(0,3);
-	v = object - u;
+	Vector3d sd_pose_in_world, sd_voxel;
+	double sd_sign, sd, sd_sigmoid;
 
 	sd_sign = (obj_in_fov) ? -1 : 1;
-	sd = sd_sign*v.norm();
-	cos_theta = 0; // TODO
-	sd_sigmoid = 1.0 - 1.0/(1.0+exp(-alpha*sd*(1-cos_theta)));
+
+	// find sd
+	cam_pose = cam->get_pose(j);
+	sd_pose_in_world = (cam_pose*sd_pose_in_cam).block<3,1>(0,3);
+	sd_voxel = vgrid->exact_voxel_from_point(sd_pose_in_world);
+	sd = sd_sign*ODF.trilinear_interpolation(sd_voxel);
+	// calculate delta
+	sd_sigmoid = 1.0 - 1.0/(1.0+exp(-alpha*sd));
 
 	for(int i=J_DIM; i < Z_DIM; ++i) {
 		delta(i,i) = sd_sigmoid;
@@ -261,7 +263,7 @@ MatrixZ PR2System::delta_matrix_ripped(const VectorJ& j, const Vector3d& object,
 }
 
 void PR2System::belief_dynamics_ripped(const VectorX& x_t, const MatrixX& sigma_t, const VectorU& u_t, const double alpha,
-		const Matrix4d& sd_vec, const bool& obj_in_fov,
+		const Cube& ODF, const Matrix4d& sd_pose_in_cam, const bool& obj_in_fov,
 		VectorX& x_tp1, MatrixX& sigma_tp1) {
 	// propagate dynamics
 	x_tp1 = x_t;
@@ -278,20 +280,20 @@ void PR2System::belief_dynamics_ripped(const VectorX& x_t, const MatrixX& sigma_
 	Matrix<double,Z_DIM,X_DIM> H;
 	linearize_obsfunc(x_tp1, VectorR::Zero(), H);
 
-	MatrixZ delta = delta_matrix_ripped(x_tp1.segment<J_DIM>(0), x_tp1.segment<3>(J_DIM), alpha, sd_vec, obj_in_fov);
+	MatrixZ delta = delta_matrix_ripped(x_tp1.segment<J_DIM>(0), x_tp1.segment<3>(J_DIM), alpha, ODF, sd_pose_in_cam, obj_in_fov);
 	Matrix<double,X_DIM,Z_DIM> K = sigma_tp1_bar*H.transpose()*delta*(delta*H*sigma_tp1_bar*H.transpose()*delta + R).inverse()*delta;
 	sigma_tp1 = (MatrixX::Identity() - K*H)*sigma_tp1_bar;
 }
 
 double PR2System::cost_ripped(const StdVectorJ& J, const Vector3d& obj, const MatrixX& sigma0, const StdVectorU& U,
-		const double alpha, const StdMatrix4d& sd_vecs, const std::vector<bool>& obj_in_fovs) {
+		const double alpha, const Cube& ODF, const StdMatrix4d& sd_poses_in_cam, const std::vector<bool>& obj_in_fovs) {
 	double cost = 0;
 
 	VectorX x_t, x_tp1 = VectorX::Zero();
 	MatrixX sigma_t = sigma0, sigma_tp1 = MatrixX::Zero();
 	for(int t=0; t < TIMESTEPS-1; ++t) {
 		x_t << J[t], obj;
-		belief_dynamics_ripped(x_t, sigma_t, U[t], alpha, sd_vecs[t], obj_in_fovs[t], x_tp1, sigma_tp1);
+		belief_dynamics_ripped(x_t, sigma_t, U[t], alpha, ODF, sd_poses_in_cam[t], obj_in_fovs[t], x_tp1, sigma_tp1);
 
 		if (t < TIMESTEPS-2) {
 			cost += alpha_belief*sigma_tp1.trace();
@@ -302,15 +304,20 @@ double PR2System::cost_ripped(const StdVectorJ& J, const Vector3d& obj, const Ma
 	}
 
 	Vector3d final_pos = cam->get_position(J.back());
-	Vector3d e = obj - final_pos;
-	cost += alpha_goal*e.squaredNorm();
+	Vector3d final_pos_voxel = vgrid->exact_voxel_from_point(final_pos);
+	double dist = ODF.trilinear_interpolation(final_pos_voxel);
+	cost += alpha_goal*dist;
+
+//	Vector3d final_pos = cam->get_position(J.back());
+//	Vector3d e = obj - final_pos;
+//	cost += alpha_goal*e.squaredNorm();
 
 	return cost;
 }
 
 double PR2System::cost_gmm_ripped(const StdVectorJ& J, const MatrixJ& j_sigma0, const StdVectorU& U,
 				const std::vector<ParticleGaussian>& particle_gmm, const double alpha,
-				const std::vector<StdMatrix4d>& objs_sd_vecs, const std::vector<std::vector<bool> >& objs_in_fovs) {
+				const std::vector<StdMatrix4d>& objs_sd_poses_in_cam, const std::vector<std::vector<bool> >& objs_in_fovs) {
 	double cost_gmm = 0;
 
 	MatrixX sigma0 = MatrixX::Zero();
@@ -318,7 +325,7 @@ double PR2System::cost_gmm_ripped(const StdVectorJ& J, const MatrixJ& j_sigma0, 
 	for(int i=0; i < particle_gmm.size(); ++i) {
 		sigma0.block<3,3>(J_DIM,J_DIM) = particle_gmm[i].cov;
 //		cost_gmm += particle_gmm[i].pct*cost(J, particle_gmm[i].mean, sigma0, U, alpha);
-		cost_gmm += cost_ripped(J, particle_gmm[i].mean, sigma0, U, alpha, objs_sd_vecs[i], objs_in_fovs[i]);
+		cost_gmm += cost_ripped(J, particle_gmm[i].mean, sigma0, U, alpha, particle_gmm[i].ODF, objs_sd_poses_in_cam[i], objs_in_fovs[i]);
 	}
 
 	return cost_gmm;
@@ -329,7 +336,7 @@ VectorTOTAL PR2System::cost_gmm_grad_ripped(StdVectorJ& J, const MatrixJ& j_sigm
 	VectorTOTAL grad;
 
 	int num_objs = particle_gmm.size();
-	std::vector<StdMatrix4d> objs_sd_vecs(num_objs, StdMatrix4d(TIMESTEPS-1));
+	std::vector<StdMatrix4d> objs_sd_poses_in_cam(num_objs, StdMatrix4d(TIMESTEPS-1));
 	std::vector<std::vector<bool> > objs_in_fovs(num_objs, std::vector<bool>(TIMESTEPS-1));
 	for(int i=0; i < num_objs; ++i) {
 		const Vector3d& obj = particle_gmm[i].mean;
@@ -344,7 +351,7 @@ VectorTOTAL PR2System::cost_gmm_grad_ripped(StdVectorJ& J, const MatrixJ& j_sigm
 			voxel_pose.block<3,1>(0,3) = vgrid->signed_distance_greedy_voxel_center(obj, ODF, cam, zbuffer, cam_pose);
 
 			// convert voxel_pose to camera frame
-			objs_sd_vecs[i][t] = cam_pose.inverse()*voxel_pose;
+			objs_sd_poses_in_cam[i][t] = cam_pose.inverse()*voxel_pose;
 			objs_in_fovs[i][t] = cam->is_in_fov(obj, zbuffer, cam_pose);
 		}
 	}
@@ -356,10 +363,10 @@ VectorTOTAL PR2System::cost_gmm_grad_ripped(StdVectorJ& J, const MatrixJ& j_sigm
 			orig = J[t][i];
 
 			J[t](i) = orig + step;
-			cost_p = cost_gmm_ripped(J, j_sigma0, U, particle_gmm, alpha, objs_sd_vecs, objs_in_fovs);
+			cost_p = cost_gmm_ripped(J, j_sigma0, U, particle_gmm, alpha, objs_sd_poses_in_cam, objs_in_fovs);
 
 			J[t](i) = orig - step;
-			cost_m = cost_gmm_ripped(J, j_sigma0, U, particle_gmm, alpha, objs_sd_vecs, objs_in_fovs);
+			cost_m = cost_gmm_ripped(J, j_sigma0, U, particle_gmm, alpha, objs_sd_poses_in_cam, objs_in_fovs);
 
 			grad(index++) = (cost_p - cost_m) / (2*step);
 		}
@@ -369,10 +376,10 @@ VectorTOTAL PR2System::cost_gmm_grad_ripped(StdVectorJ& J, const MatrixJ& j_sigm
 				orig = U[t][i];
 
 				U[t](i) = orig + step;
-				cost_p = cost_gmm_ripped(J, j_sigma0, U, particle_gmm, alpha, objs_sd_vecs, objs_in_fovs);
+				cost_p = cost_gmm_ripped(J, j_sigma0, U, particle_gmm, alpha, objs_sd_poses_in_cam, objs_in_fovs);
 
 				U[t](i) = orig - step;
-				cost_m = cost_gmm_ripped(J, j_sigma0, U, particle_gmm, alpha, objs_sd_vecs, objs_in_fovs);
+				cost_m = cost_gmm_ripped(J, j_sigma0, U, particle_gmm, alpha, objs_sd_poses_in_cam, objs_in_fovs);
 
 				grad(index++) = (cost_p - cost_m) / (2*step);
 			}

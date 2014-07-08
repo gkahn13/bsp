@@ -352,13 +352,13 @@ VectorJ sd_gradient(VectorJ j, const Vector3d& object, const Cube& ODF, Camera* 
 	const double alpha = 1;
 
 	Matrix<double,H_SUB,W_SUB> zbuffer = vgrid->get_zbuffer(cam->get_pose(j));
-	Matrix4d cam_pose = cam->get_pose(j), voxel_pose = Matrix4d::Identity(), u_cam_pose;
-	voxel_pose.block<3,1>(0,3) = vgrid->signed_distance_greedy_voxel_center(object, ODF, cam, zbuffer, cam_pose);
-	u_cam_pose = cam_pose.inverse()*voxel_pose;
+	Matrix4d cam_pose = cam->get_pose(j), sd_pose_in_world = Matrix4d::Identity(), sd_pose_in_cam;
+	sd_pose_in_world.block<3,1>(0,3) = vgrid->signed_distance_greedy_voxel_center(object, ODF, cam, zbuffer, cam_pose);
+	sd_pose_in_cam = cam_pose.inverse()*sd_pose_in_world;
 	bool obj_in_fov = cam->is_in_fov(object, zbuffer, cam_pose);
 	double sd_sign = (obj_in_fov) ? -1 : 1;
 
-	Vector3d v = object - voxel_pose.block<3,1>(0,3);
+	Vector3d v = object - sd_pose_in_cam.block<3,1>(0,3);
 
 	if (obj_in_fov) {
 		std::cout << "obj is in fov\n";
@@ -367,38 +367,41 @@ VectorJ sd_gradient(VectorJ j, const Vector3d& object, const Cube& ODF, Camera* 
 	}
 
 	Matrix4d cam_pose_m, cam_pose_p;
-	Vector3d u_m, u_p, v_m, v_p;
-	double sd_m, sd_p, cos_theta_m, cos_theta_p;
-	VectorJ j_m = j, j_p = j;
+	Vector3d sd_in_world_m, sd_in_world_p, voxel_m, voxel_p;
+	Vector3d u_m, u_p;
+	double sd_m, sd_p, costheta_m, costheta_p;
+	VectorJ j_m, j_p;
 	double sd_sigmoid_m, sd_sigmoid_p;
 	for(int i=0; i < J_DIM; ++i) {
+		j_m = j;
+		j_p = j;
 		j_m(i) = j(i) - step;
 		j_p(i) = j(i) + step;
 
+		// find sd
 		cam_pose_m = cam->get_pose(j_m);
-		u_m = (cam_pose_m*u_cam_pose).block<3,1>(0,3);
-		v_m = object - u_m; // v
+		sd_in_world_m = (cam_pose_m*sd_pose_in_cam).block<3,1>(0,3);
+		voxel_m = vgrid->exact_voxel_from_point(sd_in_world_m);
+		sd_m = sd_sign*ODF.trilinear_interpolation(voxel_m);
+		// find cos(theta)
+		u_m = sd_in_world_m - cam_pose_m.block<3,1>(0,3);
+		costheta_m = 0;//(obj_in_fov) ? 0 : (u_m.dot(v)) / (u_m.norm()*v.norm());
+		// calculate delta
+		sd_sigmoid_m = 1.0 - 1.0/(1.0+exp(-alpha*sd_m*(1-costheta_m)));
 
-		sd_m = sd_sign*v_m.norm();
-//		cos_theta_m = (obj_in_fov) ? 0 : (u_m.dot(v_m)) / (u_m.norm()*v_m.norm());
-//		cos_theta_m = (obj_in_fov) ? 0 : (u_m.dot(v)) / (u_m.norm()*v.norm());
-		cos_theta_m = 0;
-		sd_sigmoid_m = 1.0 - 1.0/(1.0+exp(-alpha*sd_m*(1-cos_theta_m)));
-
+		// find sd
 		cam_pose_p = cam->get_pose(j_p);
-		u_p = (cam_pose_p*u_cam_pose).block<3,1>(0,3);
-		v_p = object - u_p; // v
+		sd_in_world_p = (cam_pose_p*sd_pose_in_cam).block<3,1>(0,3);
+		voxel_p = vgrid->exact_voxel_from_point(sd_in_world_p);
+		sd_p = sd_sign*ODF.trilinear_interpolation(voxel_p);
+		// find cos(theta)
+		u_p = sd_in_world_p - cam_pose_p.block<3,1>(0,3);
+		costheta_p = 0;//(obj_in_fov) ? 0 : (u_p.dot(v)) / (u_p.norm()*v.norm());
+		// calculate delta
+		sd_sigmoid_p = 1.0 - 1.0/(1.0+exp(-alpha*sd_p*(1-costheta_p)));
 
-		sd_p = sd_sign*v_p.norm();
-//		cos_theta_p = (obj_in_fov) ? 0 : (u_p.dot(v_p)) / (u_p.norm()*v_p.norm());
-//		cos_theta_p = (obj_in_fov) ? 0 : (u_p.dot(v)) / (u_p.norm()*v.norm());
-		cos_theta_p = 0;
-		sd_sigmoid_p = 1.0 - 1.0/(1.0+exp(-alpha*sd_p*(1-cos_theta_p)));
 
 		grad(i) = (sd_sigmoid_p - sd_sigmoid_m) / (2*step);
-
-		j_m = j;
-		j_p = j;
 	}
 
 	return grad;
@@ -408,8 +411,8 @@ void test_gradient() {
 	srand(time(0));
 
 	Vector3d table(3.5, -1.2, 0.74);
-//	Vector3d object = table + Vector3d(0, .5, .05);
-	Vector3d object = table + Vector3d(.1, -.1, -.1);
+	Vector3d object = table + Vector3d(0, .5, .05);
+//	Vector3d object = table + Vector3d(.1, -.1, -.1);
 	Arm::ArmType arm_type = Arm::ArmType::right;
 	bool view = true;
 	PR2System sys(object, arm_type, view);
@@ -424,11 +427,6 @@ void test_gradient() {
 	sleep(1);
 
 	VectorJ j = arm->get_joint_values();
-
-//	std::cout << "Updating internal TSDF and kinfu\n";
-//	StdVector3d pc = cam->get_pc(j);
-//	Matrix<double,HEIGHT_FULL,WIDTH_FULL> full_zbuffer = cam->get_full_zbuffer(j, pc);
-//	sys.update(pc, full_zbuffer);
 
 	while(true) {
 		std::cout << "Updating internal TSDF and kinfu\n";
@@ -451,12 +449,12 @@ void test_gradient() {
 		tc.print_all_elapsed();
 		tc.clear_all();
 
-//		std::cout << "grad\n" << grad << "\n";
+		std::cout << "grad\n" << grad.transpose() << "\n";
 
 		rave_utils::plot_point(env, object, Vector3d(1,0,0), .05);
 		vgrid->plot_TSDF(env);
-//		vgrid->plot_FOV(env, cam, vgrid->get_zbuffer(cam->get_pose(j)), cam->get_pose(j));
-		vgrid->plot_kinfu_tsdf(env);
+		vgrid->plot_FOV(env, cam, vgrid->get_zbuffer(cam->get_pose(j)), cam->get_pose(j));
+//		vgrid->plot_kinfu_tsdf(env);
 
 		if (grad.norm() > epsilon) {
 			grad /= grad.norm();
@@ -530,6 +528,58 @@ void test_raycaster() {
 	std::cin.ignore();
 }
 
+void test_tri_interp() {
+	srand(time(0));
+
+	Vector3d table(3.5, -1.2, 0.74);
+//	Vector3d object = table + Vector3d(0, .5, .05);
+	Vector3d object = table + Vector3d(.1, -.1, -.1);
+	Arm::ArmType arm_type = Arm::ArmType::right;
+	bool view = true;
+	PR2System sys(object, arm_type, view);
+
+	PR2* brett = sys.get_brett();
+	Arm* arm = sys.get_arm();
+	Camera* cam = sys.get_camera();
+	VoxelGrid* vgrid = sys.get_voxel_grid();
+	rave::EnvironmentBasePtr env = brett->get_env();
+
+	arm->set_posture(Arm::Posture::mantis);
+	sleep(1);
+
+	VectorJ j = arm->get_joint_values();
+
+	std::cout << "Updating internal TSDF and kinfu\n";
+	StdVector3d pc = cam->get_pc(j);
+	Matrix<double,HEIGHT_FULL,WIDTH_FULL> full_zbuffer = cam->get_full_zbuffer(j, pc);
+	Matrix4d cam_pose = cam->get_pose(j);
+	sys.update(pc, full_zbuffer, cam_pose);
+
+	std::cout << "get_ODF\n";
+	Cube ODF = sys.get_ODF(object);
+
+	Vector3d voxel(1, 1, 1);
+	double od;
+
+	od = ODF.trilinear_interpolation(voxel);
+	std::cout << od << "\n";
+
+	od = ODF.trilinear_interpolation(voxel + Vector3d(.1,0,0));
+	std::cout << od << "\n";
+
+	od = ODF.trilinear_interpolation(voxel + Vector3d(0,.1,0));
+	std::cout << od << "\n";
+
+	od = ODF.trilinear_interpolation(voxel + Vector3d(0,0,.1));
+	std::cout << od << "\n";
+
+	od = ODF.trilinear_interpolation(Vector3d(20,20,20) + Vector3d(0,0,.1));
+	std::cout << od << "\n";
+
+	od = ODF.trilinear_interpolation(Vector3d(20,20,20) + Vector3d(0,0,-.1));
+	std::cout << od << "\n";
+}
+
 int main() {
 //	test_particle_update();
 //	test_figtree();
@@ -540,5 +590,6 @@ int main() {
 //	test_greedy();
 	test_gradient();
 //	test_raycaster();
+//	test_tri_interp();
 	return 0;
 }

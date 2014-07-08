@@ -110,15 +110,17 @@ public:
 	 * RIPPED APART VERSIONS
 	 */
 
-	MatrixZ delta_matrix_ripped(const VectorJ& j, const Vector3d& object, const double alpha, const Matrix4d& sd_vec, const bool& obj_in_fov);
-	void belief_dynamics_ripped(const VectorX& x_t, const MatrixX& sigma_t, const VectorU& u_t, const double alpha, const Matrix4d& sd_vec, const bool& obj_in_fov,
+	MatrixZ delta_matrix_ripped(const VectorJ& j, const Vector3d& object, const double alpha,
+			const Cube& ODF, const Matrix4d& sd_pose_in_cam, const bool& obj_in_fov);
+	void belief_dynamics_ripped(const VectorX& x_t, const MatrixX& sigma_t, const VectorU& u_t, const double alpha,
+			const Cube& ODF, const Matrix4d& sd_pose_in_cam, const bool& obj_in_fov,
 			VectorX& x_tp1, MatrixX& sigma_tp1);
 
 	double cost_ripped(const StdVectorJ& J, const Vector3d& obj, const MatrixX& sigma0, const StdVectorU& U,
-			const double alpha, const StdMatrix4d& sd_vecs, const std::vector<bool>& obj_in_fovs);
+			const double alpha, const Cube& ODF, const StdMatrix4d& sd_poses_in_cam, const std::vector<bool>& obj_in_fovs);
 	double cost_gmm_ripped(const StdVectorJ& J, const MatrixJ& j_sigma0, const StdVectorU& U,
 					const std::vector<ParticleGaussian>& particle_gmm, const double alpha,
-					const std::vector<StdMatrix4d>& objs_sd_vecs, const std::vector<std::vector<bool> >& objs_in_fovs);
+					const std::vector<StdMatrix4d>& objs_sd_poses_in_cam, const std::vector<std::vector<bool> >& objs_in_fovs);
 	VectorTOTAL cost_gmm_grad_ripped(StdVectorJ& J, const MatrixJ& j_sigma0, StdVectorU& U,
 			const std::vector<ParticleGaussian>& particle_gmm, const double alpha);
 

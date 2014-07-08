@@ -20,7 +20,7 @@ struct VoxelDist {
  */
 
 // adapted from http://www.geometrictools.com/LibMathematics/Interpolation/Wm5IntpTrilinear3.cpp
-double Cube::trilinear_interpolation(const Vector3d& voxel) {
+double Cube::trilinear_interpolation(const Vector3d& voxel) const {
     // Check for inputs not in the domain of the function.
 	double x = voxel(0), y = voxel(1), z = voxel(2);
     if (x < 0 || x > x_size ||  y < 0 || y > y_size ||  z < 0 || y > z_size) {
@@ -75,7 +75,10 @@ double Cube::trilinear_interpolation(const Vector3d& voxel) {
                     x_clamp = x_size - 1;
                 }
 
-                result += P(col)*Q(row)*R(slice)*get(x_clamp, y_clamp, z_clamp);
+                double val = get(x_clamp, y_clamp, z_clamp);
+                if (val < INFINITY) {
+                	result += P(col)*Q(row)*R(slice)*val;
+                }
             }
         }
     }
@@ -400,6 +403,17 @@ Matrix<double,H_SUB,W_SUB> VoxelGrid::get_zbuffer(const Matrix4d& cam_pose) {
 	return zbuffer;
 }
 
+Vector3d VoxelGrid::exact_voxel_from_point(const Vector3d& point) {
+	Vector3d relative = point - bottom_corner;
+	Vector3d voxel(relative(0)/dx, relative(1)/dy, relative(2)/dz);
+
+	if ((voxel.minCoeff() >= 0) && (voxel.maxCoeff() < resolution)) {
+		return voxel;
+	}
+
+	LOG_WARN("Point is outside of VoxelGrid");
+	return Vector3d(-1,-1,-1);
+}
 
 /**
  * VoxelGrid Display methods
@@ -604,18 +618,6 @@ Vector3i VoxelGrid::voxel_from_point(const Vector3d& point) {
 
 	LOG_WARN("Point is outside of VoxelGrid");
 	return Vector3i(-1,-1,-1);
-}
-
-Vector3d VoxelGrid::exact_voxel_from_point(const Vector3d& point) {
-	Vector3d relative = point - bottom_corner;
-	Vector3d voxel(relative(0)/dx, relative(1)/dy, relative(2)/dz);
-
-	if ((voxel.minCoeff() >= 0) && (voxel.maxCoeff() < resolution)) {
-		return voxel;
-	}
-
-	LOG_WARN("Point is outside of VoxelGrid");
-	return Vector3d(-1,-1,-1);
 }
 
 Vector3d VoxelGrid::point_from_voxel(const Vector3i& voxel) {

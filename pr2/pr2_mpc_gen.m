@@ -17,6 +17,7 @@ disp(strcat(rootDir,'bsp/forces'));
 N = timesteps - 1;
 nx = 7;
 nu = 7;
+ng = 3; % 3-d
 DT = 1;
 stages = MultistageProblem(N+1);
 
@@ -86,7 +87,7 @@ stages(i).dims.n = nx;    % number of stage variables
 stages(i).dims.r = nx;    % number of equality constraints
 stages(i).dims.l = nx;    % number of lower bounds
 stages(i).dims.u = nx;    % number of upper bounds
-stages(i).dims.p = 0;     % number of polytopic constraints
+stages(i).dims.p = 2*ng;  % number of polytopic constraints
 stages(i).dims.q = 0;     % number of quadratic constraints
 
 % cost
@@ -105,6 +106,10 @@ params(end+1) = newParam(['ub',istr], i, 'ineq.b.ub');
 stages(i).eq.c = zeros(nx,1);
 stages(i).eq.D = -eye(nx);
 
+% affine inequality
+params(end+1) = newParam(['A',istr], i, 'ineq.p.A');
+params(end+1) = newParam(['b',istr], i, 'ineq.p.b');
+
 %--------------------------------------------------------------------------
 % define outputs of the solver
 for i=1:N
@@ -118,7 +123,7 @@ outputs(i) = newOutput(var,i,1:nx);
 % solver settings
 mpcname = 'pr2MPC';
 codeoptions = getOptions(mpcname);
-codeoptions.printlevel = 0;
+codeoptions.printlevel = 2;
 codeoptions.timing=0;
 codeoptions.maxit=100;
 

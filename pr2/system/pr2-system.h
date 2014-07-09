@@ -15,12 +15,13 @@ using namespace Eigen;
 #define TIMESTEPS 5
 #define DT 1.0 // Note: if you change this, must change the FORCES matlab file
 
-#define X_DIM (ARM_DIM+3)	// arm + object
+#define G_DIM 3					// 3-d
+#define X_DIM (ARM_DIM+G_DIM)	// arm + object
 #define J_DIM ARM_DIM
 #define U_DIM ARM_DIM
 #define Q_DIM ARM_DIM
-#define Z_DIM (ARM_DIM+3)	// relative object position
-#define R_DIM (ARM_DIM+3)
+#define Z_DIM (ARM_DIM+G_DIM)	// relative object position
+#define R_DIM (ARM_DIM+G_DIM)
 
 #define TOTAL_VARS (TIMESTEPS*J_DIM + (TIMESTEPS-1)*U_DIM)
 
@@ -42,6 +43,7 @@ typedef Matrix<double,Q_DIM,Q_DIM> MatrixQ;
 typedef Matrix<double,Z_DIM,Z_DIM> MatrixZ;
 typedef Matrix<double,R_DIM,R_DIM> MatrixR;
 typedef Matrix<double,TOTAL_VARS,TOTAL_VARS> MatrixTOTAL;
+typedef Matrix<double,G_DIM,J_DIM> MatrixJac;
 
 typedef Matrix<double,3,M_DIM> MatrixP;
 
@@ -73,10 +75,10 @@ class PR2System {
 	const double step = 0.0078125*0.0078125;
 	const double INFTY = 1e10;
 
-	const double alpha_control = 0; // .01
-	const double alpha_belief = 1; // 1
-	const double alpha_final_belief = 1; // 1
-	const double alpha_goal = .5; // .5
+	const double alpha_control = .01; // .01
+	const double alpha_belief = 1e3; // 1
+	const double alpha_final_belief = 1e3; // 1
+	const double alpha_goal = 0; // .5
 
 public:
 	PR2System(Vector3d& object);

@@ -6,23 +6,25 @@
 
 extern "C" {
 #include "pr2MPC.h"
-pr2MPC_FLOAT **H, **f, **lb, **ub, **z, *c;
+pr2MPC_FLOAT **H, **f, **lb, **ub, **z, *c, *A, *b;
 }
 
 const int T = TIMESTEPS;
 const double INFTY = 1e10;
 
 namespace cfg {
-const double alpha_init = .01; // 1
+const double alpha_init = .01; // .01
 const double alpha_gain = 3; // 3
-const double alpha_epsilon = .1; // .001
-const double alpha_max_increases = 5; // 10
+const double alpha_epsilon = .1; // .1
+const double alpha_max_increases = 5; // 5
 
+const double Xeps_initial = .1; // .1
+const double Ueps_initial = .1; // .1
 const double improve_ratio_threshold = 1e-1; // .1
 const double min_approx_improve = 1e-1; // 1
 const double min_trust_box_size = .1; // .1
-const double trust_shrink_ratio = .5; // .5
-const double trust_expand_ratio = 1.5; // 1.5
+const double trust_shrink_ratio = .75; // .5
+const double trust_expand_ratio = 1.25; // 1.5
 }
 
 void setup_mpc_vars(pr2MPC_params& problem, pr2MPC_output& output) {
@@ -32,6 +34,8 @@ void setup_mpc_vars(pr2MPC_params& problem, pr2MPC_output& output) {
 	lb = new pr2MPC_FLOAT*[T];
 	ub = new pr2MPC_FLOAT*[T];
 	c = problem.c1;
+	A = problem.A5; // TODO: hard-coded
+	b = problem.b5;
 
 	// output
 	z = new pr2MPC_FLOAT*[T];
@@ -48,6 +52,8 @@ void setup_mpc_vars(pr2MPC_params& problem, pr2MPC_output& output) {
 #include BOOST_PP_LOCAL_ITERATE()
 
 	for(int i=0; i < J_DIM; ++i) { c[i] = INFTY; }
+	for(int i=0; i < (2*G_DIM)*J_DIM; ++i) { A[i] = INFTY; }
+	for(int i=0; i < (2*G_DIM); ++i) { b[i] = INFTY; }
 
 	for(int t=0; t < T-1; ++t) {
 		for(int i=0; i < (J_DIM+U_DIM); ++i) { H[t][i] = INFTY; }
@@ -71,6 +77,18 @@ void cleanup_mpc_vars() {
 	delete[] ub;
 	delete[] z;
 	delete c;
+	delete A;
+	delete b;
+}
+
+template<typename Derived>
+inline void fill_col_major(double *X, const MatrixBase<Derived>& M) {
+	int index = 0;
+	for(int j=0; j < M.cols(); ++j) {
+		for(int i=0; i < M.rows(); ++i) {
+			X[index++] = M(i,j);
+		}
+	}
 }
 
 bool is_valid_inputs()
@@ -127,12 +145,28 @@ bool is_valid_inputs()
 //		std::cout << ub[T-1][i] << " ";
 //	}
 //
+//	std::cout << "\nA[" << T-1 << "]:\n";
+//	for(int i=0; i < 2*G_DIM; ++i) {
+//		for(int j=0; j < J_DIM; ++j) {
+//			std::cout << A[i+j*(2*G_DIM)] << " ";
+//		}
+//		std::cout << "\n";
+//	}
+//	std::cout << "\n";
+//
+//	std::cout << "b[" << T-1 << "]: ";
+//	for(int i=0; i < 2*G_DIM; ++i) {
+//		std::cout << b[i] << " ";
+//	}
 //
 //	std::cout << "\n\n";
 
 	for(int i=0; i < (J_DIM); ++i) { if (c[i] > INFTY/2) { LOG_ERROR("isValid0"); return false; } }
 	for(int i=0; i < (J_DIM); ++i) { if (c[i] < lb[0][i]) { LOG_ERROR("isValid1"); return false; } }
 	for(int i=0; i < (J_DIM); ++i) { if (c[i] > ub[0][i]) { LOG_ERROR("isValid2"); return false; } }
+
+	for(int i=0; i < (2*G_DIM)*J_DIM; ++i) { if (A[i] > INFTY/2) { LOG_ERROR("isValid3"); return false; } }
+	for(int i=0; i < (2*G_DIM); ++i) { if (b[i] > INFTY/2) { LOG_ERROR("isValid4"); return false; } }
 
 	for(int t = 0; t < T-1; ++t) {
 		for(int i=0; i < (J_DIM+U_DIM); ++i) { if (H[t][i] > INFTY/2) { LOG_ERROR("isValid5"); return false; } }
@@ -185,8 +219,8 @@ double pr2_approximate_collocation(StdVectorJ& J, StdVectorU& U, const MatrixJ& 
 		const std::vector<ParticleGaussian>& particle_gmm, const double alpha,
 		PR2System& sys, pr2MPC_params &problem, pr2MPC_output &output, pr2MPC_info &info) {
 	int max_iter = 100;
-	double Xeps = .1; // .5
-	double Ueps = .1; // .5
+	double Xeps = cfg::Xeps_initial;
+	double Ueps = cfg::Ueps_initial;
 
 	double merit = 0, meritopt = 0;
 	double constant_cost, hessian_constant, jac_constant;
@@ -302,6 +336,26 @@ double pr2_approximate_collocation(StdVectorJ& J, StdVectorU& U, const MatrixJ& 
 				}
 			}
 		}
+
+		// end goal constraint on end effector
+		Arm* arm = sys.get_arm();
+		Vector3d goal_pos = arm->get_position(J.back());//particle_gmm[0].mean;
+		double goal_delta = .1;
+
+		Vector3d arm_pos = arm->get_position(J.back());
+		MatrixJac arm_pos_jac = arm->get_position_jacobian(J.back());
+
+		Matrix<double,2*G_DIM,J_DIM> Amat;
+		Amat.block<G_DIM,J_DIM>(0,0) = arm_pos_jac;
+		Amat.block<G_DIM,J_DIM>(G_DIM,0) = -arm_pos_jac;
+		Amat.setZero(); // TODO: tmp
+		fill_col_major(A, Amat);
+
+		Matrix<double,2*G_DIM,1> bVec;
+		bVec.segment<G_DIM>(0) = goal_pos - arm_pos + arm_pos_jac*J.back() + goal_delta*Matrix<double,G_DIM,1>::Ones();
+		bVec.segment<G_DIM>(G_DIM) = -goal_pos + arm_pos - arm_pos_jac*J.back() + goal_delta*Matrix<double,G_DIM,1>::Ones();
+		bVec.setZero(); // TODO: tmp
+		fill_col_major(b, bVec);
 
 		// Verify problem inputs
 		if (!is_valid_inputs()) {
@@ -431,19 +485,22 @@ void init_collocation(const VectorJ& j0, const MatrixP& P, PR2System& sys,
 
 	// only take max gaussian
 	particle_gmm = std::vector<ParticleGaussian>(1, particle_gmm[0]);
-//	particle_gmm[0].cov = .01*Matrix3d::Identity();
-//	particle_gmm[0].cov *= 5000;
 
 	for(int i=0; i < particle_gmm.size(); ++i) {
-		particle_gmm[i].cov *= 1000; // 5000
+//		particle_gmm[i].cov *= 1000; // 5000
 		std::cout << particle_gmm[i].pct << "\n";
 		std::cout << particle_gmm[i].cov << "\n\n";
 
 		particle_gmm[i].ODF = sys.get_ODF(particle_gmm[i].mean);
 	}
 
+	Arm* arm = sys.get_arm();
+	VectorJ j = j0;
+	arm->ik(.99*arm->get_position(j0) + .01*particle_gmm[0].mean, j);
+
 	// TODO: try a non-zero initialization
 	VectorU uinit = VectorU::Zero();
+//	VectorU uinit = (j - j0) / (DT*(TIMESTEPS-1));
 
 	// integrate trajectory
 	J[0] = j0;
@@ -467,12 +524,20 @@ MatrixP init_particles(rave::EnvironmentBasePtr env) {
 //	z_min = table_pos.z + extents.z;
 //	z_max = table_pos.z + extents.z + .2;
 
+//	x_min = table_pos.x - extents.x;
+//	x_max = table_pos.x + extents.x;
+//	y_min = table_pos.y - extents.y;
+//	y_max = table_pos.y;// + extents.y;
+//	z_min = table_pos.z + extents.z - .1;
+//	z_max = table_pos.z + extents.z - .2;// + .2;
+
 	x_min = table_pos.x - extents.x;
 	x_max = table_pos.x + extents.x;
-	y_min = table_pos.y - extents.y;
-	y_max = table_pos.y;// + extents.y;
+	y_min = table_pos.y;// - extents.y;
+	y_max = table_pos.y + extents.y;
 	z_min = table_pos.z + extents.z - .1;
-	z_max = table_pos.z + extents.z - .2;// + .2;
+	z_max = table_pos.z + extents.z + .2;
+
 
 	MatrixP P;
 
@@ -501,7 +566,8 @@ MatrixP init_particles(rave::EnvironmentBasePtr env) {
 
 int main(int argc, char* argv[]) {
 //	Vector3d object(3.35, -1.11, 0.8);
-	Vector3d object = Vector3d(3.5+.1, -1.2-.1, .74-.1);
+	Vector3d object = Vector3d(3.5+0, -1.2+.5, .74+.05);
+//	Vector3d object = Vector3d(3.5+.1, -1.2-.1, .74-.1);
 	Arm::ArmType arm_type = Arm::ArmType::right;
 	bool view = true;
 	PR2System sys(object, arm_type, view);
@@ -517,7 +583,7 @@ int main(int argc, char* argv[]) {
 	j_t = arm->get_joint_values();
 	j_t_real = j_t; // TODO: have them be different
 
-	MatrixJ j_sigma0 = .01*MatrixJ::Identity(); // TODO: never actually update it in MPC
+	MatrixJ j_sigma0 = .2*MatrixJ::Identity(); // TODO: never actually update it in MPC
 
 	MatrixP P_t, P_tp1;
 	P_t = init_particles(env);

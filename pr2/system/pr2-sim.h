@@ -33,7 +33,7 @@ namespace rave = OpenRAVE;
 
 namespace intrinsics {
 const double FOCAL_LENGTH = .01;
-const double MAX_RANGE = 5.0;
+const double MAX_RANGE = 0.75; // 5.0
 const double MIN_RANGE = 0.2;
 
 const double fx  = WIDTH_FULL*2.0;
@@ -80,6 +80,8 @@ private:
 };
 
 class Arm {
+	const double step = 1e-5;
+
 public:
 	enum ArmType { left, right };
 	enum Posture { untucked, tucked, up, side, mantis };
@@ -89,6 +91,10 @@ public:
 	Matrix<double,ARM_DIM,1> get_joint_values();
 	void get_limits(Matrix<double,ARM_DIM,1>& lower, Matrix<double,ARM_DIM,1>& upper);
 	Matrix4d get_pose(const Matrix<double,ARM_DIM,1>& j);
+	Vector3d get_position(const Matrix<double,ARM_DIM,1>& j) { return get_pose(j).block<3,1>(0,3); }
+
+	Matrix<double,3,ARM_DIM> get_position_jacobian(const Matrix<double,ARM_DIM,1>& j);
+	bool ik(const Vector3d& pos, Matrix<double,ARM_DIM,1>& j);
 
 	void set_joint_values(const Matrix<double,ARM_DIM,1>& j);
 	void set_pose(const rave::Transform &pose, std::string ref_frame="world");

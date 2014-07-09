@@ -34,7 +34,13 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
 /* SYSTEM INCLUDES FOR PRINTING ---------------------------------------- */
-
+#ifndef USEMEXPRINTS
+#include <stdio.h>
+#define PRINTTEXT printf
+#else
+#include "mex.h"
+#define PRINTTEXT mexPrintf
+#endif
 
 
 
@@ -66,12 +72,12 @@ void pr2MPC_LA_INITIALIZEVECTOR_35(pr2MPC_FLOAT* vec, pr2MPC_FLOAT value)
 
 
 /*
- * Initializes a vector of length 126 with a value.
+ * Initializes a vector of length 132 with a value.
  */
-void pr2MPC_LA_INITIALIZEVECTOR_126(pr2MPC_FLOAT* vec, pr2MPC_FLOAT value)
+void pr2MPC_LA_INITIALIZEVECTOR_132(pr2MPC_FLOAT* vec, pr2MPC_FLOAT value)
 {
 	int i;
-	for( i=0; i<126; i++ )
+	for( i=0; i<132; i++ )
 	{
 		vec[i] = value;
 	}
@@ -80,12 +86,12 @@ void pr2MPC_LA_INITIALIZEVECTOR_126(pr2MPC_FLOAT* vec, pr2MPC_FLOAT value)
 
 /* 
  * Calculates a dot product and adds it to a variable: z += x'*y; 
- * This function is for vectors of length 126.
+ * This function is for vectors of length 132.
  */
-void pr2MPC_LA_DOTACC_126(pr2MPC_FLOAT *x, pr2MPC_FLOAT *y, pr2MPC_FLOAT *z)
+void pr2MPC_LA_DOTACC_132(pr2MPC_FLOAT *x, pr2MPC_FLOAT *y, pr2MPC_FLOAT *z)
 {
 	int i;
-	for( i=0; i<126; i++ ){
+	for( i=0; i<132; i++ ){
 		*z += x[i]*y[i];
 	}
 }
@@ -410,6 +416,48 @@ void pr2MPC_LA_VSUBADD2_7(pr2MPC_FLOAT* t, int* tidx, pr2MPC_FLOAT* u, pr2MPC_FL
 }
 
 
+/* 
+ * Computes r = A*x - b + s
+ * and      y = max([norm(r,inf), y])
+ * and      z -= l'*(Ax-b)
+ * where A is stored in column major format
+ */
+void pr2MPC_LA_MVSUBADD_6_7(pr2MPC_FLOAT *A, pr2MPC_FLOAT *x, pr2MPC_FLOAT *b, pr2MPC_FLOAT *s, pr2MPC_FLOAT *l, pr2MPC_FLOAT *r, pr2MPC_FLOAT *z, pr2MPC_FLOAT *y)
+{
+	int i;
+	int j;
+	int k = 0;
+	pr2MPC_FLOAT Ax[6];
+	pr2MPC_FLOAT Axlessb;
+	pr2MPC_FLOAT norm = *y;
+	pr2MPC_FLOAT lAxlessb = 0;
+
+	/* do A*x first */
+	for( i=0; i<6; i++ ){
+		Ax[i] = A[k++]*x[0];				
+	}	
+	for( j=1; j<7; j++ ){		
+		for( i=0; i<6; i++ ){
+			Ax[i] += A[k++]*x[j];
+		}
+	}
+
+	for( i=0; i<6; i++ ){
+		Axlessb = Ax[i] - b[i];
+		r[i] = Axlessb + s[i];
+		lAxlessb += l[i]*Axlessb;
+		if( r[i] > norm ){
+			norm = r[i];
+		}
+		if( -r[i] > norm ){
+			norm = -r[i];
+		}
+	}
+	*y = norm;
+	*z -= lAxlessb;
+}
+
+
 /*
  * Computes inequality constraints gradient-
  * Special function for box constraints of length 14
@@ -450,6 +498,32 @@ void pr2MPC_LA_INEQ_B_GRAD_7_7_7(pr2MPC_FLOAT *lu, pr2MPC_FLOAT *su, pr2MPC_FLOA
 	for( i=0; i<7; i++ ){
 		lubysu[i] = lu[i] / su[i];
 		grad[ubIdx[i]] += lubysu[i]*ru[i];
+	}
+}
+
+
+/*
+ * Special function for gradient of inequality constraints
+ * Calculates grad += A'*(L/S)*rI
+ */
+void pr2MPC_LA_INEQ_P_6_7(pr2MPC_FLOAT *A, pr2MPC_FLOAT *lp, pr2MPC_FLOAT *sp, pr2MPC_FLOAT *rip, pr2MPC_FLOAT *grad, pr2MPC_FLOAT *lpbysp)
+{
+	int i;
+	int j;
+	int k = 0;
+
+	pr2MPC_FLOAT lsr[6];
+	
+	/* do (L/S)*ri first */
+	for( j=0; j<6; j++ ){
+		lpbysp[j] = lp[j] / sp[j];
+		lsr[j] = lpbysp[j]*rip[j];
+	}
+
+	for( i=0; i<7; i++ ){		
+		for( j=0; j<6; j++ ){
+			grad[i] += A[k++]*lsr[j];
+		}
 	}
 }
 
@@ -590,75 +664,228 @@ void pr2MPC_LA_DIAG_FORWARDSUB_14(pr2MPC_FLOAT *L, pr2MPC_FLOAT *b, pr2MPC_FLOAT
 
 
 /*
- * Special function to compute the diagonal cholesky factorization of the 
- * positive definite augmented Hessian for block size 7.
+ * Special function to compute the Dense positive definite 
+ * augmented Hessian for block size 7.
  *
  * Inputs: - H = diagonal cost Hessian in diagonal storage format
  *         - llbysl = L / S of lower bounds
  *         - lubysu = L / S of upper bounds
  *
- * Output: Phi = sqrt(H + diag(llbysl) + diag(lubysu))
- * where Phi is stored in diagonal storage format
+ * Output: Phi = H + diag(llbysl) + diag(lubysu)
+ * where Phi is stored in lower triangular row major format
  */
-void pr2MPC_LA_DIAG_CHOL_ONELOOP_LBUB_7_7_7(pr2MPC_FLOAT *H, pr2MPC_FLOAT *llbysl, int* lbIdx, pr2MPC_FLOAT *lubysu, int* ubIdx, pr2MPC_FLOAT *Phi)
-
-
+void pr2MPC_LA_INEQ_DENSE_DIAG_HESS_7_7_7(pr2MPC_FLOAT *H, pr2MPC_FLOAT *llbysl, int* lbIdx, pr2MPC_FLOAT *lubysu, int* ubIdx, pr2MPC_FLOAT *Phi)
 {
 	int i;
+	int j;
+	int k = 0;
 	
-	/* compute cholesky */
+	/* copy diagonal of H into PHI and set lower part of PHI = 0*/
 	for( i=0; i<7; i++ ){
-		Phi[i] = H[i] + llbysl[i] + lubysu[i];
+		for( j=0; j<i; j++ ){
+			Phi[k++] = 0;
+		}		
+		/* we are on the diagonal */
+		Phi[k++] = H[i];
+	}
 
+	/* add llbysl onto Phi where necessary */
+	for( i=0; i<7; i++ ){
+		j = lbIdx[i];
+		Phi[((j+1)*(j+2))/2-1] += llbysl[i];
+	}
+
+	/* add lubysu onto Phi where necessary */
+	for( i=0; i<7; i++){
+		j = ubIdx[i];
+		Phi[((j+1)*(j+2))/2-1] +=  lubysu[i];
+	}
+
+}
+
+
+/**
+ * Compute X = X + A'*D*A, where A is a general full matrix, D is
+ * is a diagonal matrix stored in the vector d and X is a symmetric
+ * positive definite matrix in lower triangular storage format. 
+ * A is stored in column major format and is of size [6 x 7]
+ * Phi is of size [7 x 7].
+ */
+void pr2MPC_LA_DENSE_ADDMTDM_6_7(pr2MPC_FLOAT *A, pr2MPC_FLOAT *d, pr2MPC_FLOAT *X)
+{    
+    int i,j,k,ii,di;
+    pr2MPC_FLOAT x;
+    
+    di = 0; ii = 0;
+    for( i=0; i<7; i++ ){        
+        for( j=0; j<=i; j++ ){
+            x = 0;
+            for( k=0; k<6; k++ ){
+                x += A[i*6+k]*A[j*6+k]*d[k];
+            }
+            X[ii+j] += x;
+        }
+        ii += ++di;
+    }
+}
+
+
+/**
+ * Cholesky factorization as above, but working on a matrix in 
+ * lower triangular storage format of size 7.
+ */
+void pr2MPC_LA_DENSE_CHOL2_7(pr2MPC_FLOAT *A)
+{
+    int i, j, k, di, dj;
+	 int ii, jj;
+    pr2MPC_FLOAT l;
+    pr2MPC_FLOAT Mii;
+    
+	ii=0; di=0;
+    for( i=0; i<7; i++ ){
+        l = 0;
+        for( k=0; k<i; k++ ){
+            l += A[ii+k]*A[ii+k];
+        }        
+        
+        Mii = A[ii+i] - l;
+        
 #if pr2MPC_SET_PRINTLEVEL > 0 && defined PRINTNUMERICALWARNINGS
-		if( Phi[i] < 1.0000000000000000E-013 )
+        if( Mii < 1.0000000000000000E-013 ){
+             PRINTTEXT("WARNING (CHOL2): small %d-th pivot in Cholesky fact. (=%3.1e < eps=%3.1e), regularizing to %3.1e\n",i,Mii,1.0000000000000000E-013,4.0000000000000002E-004);
+			 A[ii+i] = 2.0000000000000000E-002;
+		} else
 		{
-            PRINTTEXT("WARNING: small pivot in Cholesky fact. (=%3.1e < eps=%3.1e), regularizing to %3.1e\n",Phi[i],1.0000000000000000E-013,4.0000000000000002E-004);
-			Phi[i] = 2.0000000000000000E-002;
-		}
-		else
-		{
-			Phi[i] = sqrt(Phi[i]);
+			A[ii+i] = sqrt(Mii);
 		}
 #else
-		Phi[i] = Phi[i] < 1.0000000000000000E-013 ? 2.0000000000000000E-002 : sqrt(Phi[i]);
+		A[ii+i] = Mii < 1.0000000000000000E-013 ? 2.0000000000000000E-002 : sqrt(Mii);
 #endif
-	}
-	
+                    
+		jj = ((i+1)*(i+2))/2; dj = i+1;
+        for( j=i+1; j<7; j++ ){
+            l = 0;            
+            for( k=0; k<i; k++ ){
+                l += A[jj+k]*A[ii+k];
+            }
+
+			/* saturate values for numerical stability */
+			l = MIN(l,  BIGMM);
+			l = MAX(l, -BIGMM);
+
+            A[jj+i] = (A[jj+i] - l)/A[ii+i];            
+			jj += ++dj;
+        }
+		ii += ++di;
+    }
 }
 
 
 /**
  * Forward substitution for the matrix equation A*L' = B
  * where A is to be computed and is of size [7 x 7],
- * B is given and of size [7 x 7], L is a diagonal
- *  matrix of size 7 stored in diagonal 
+ * B is given and of size [7 x 7] stored in 
+ * diagzero storage format, L is a lower tri-
+ * angular matrix of size 7 stored in lower triangular 
  * storage format. Note the transpose of L!
  *
- * Result: A in diagonalzero storage format.
+ * Result: A in column major storage format.
  *
  */
-void pr2MPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_7_7(pr2MPC_FLOAT *L, pr2MPC_FLOAT *B, pr2MPC_FLOAT *A)
+void pr2MPC_LA_DENSE_DIAGZERO_MATRIXFORWARDSUB_7_7(pr2MPC_FLOAT *L, pr2MPC_FLOAT *B, pr2MPC_FLOAT *A)
 {
-	int j;
-    for( j=0; j<7; j++ ){   
-		A[j] = B[j]/L[j];
-     }
+    int i,j,k,di;
+	 int ii;
+    pr2MPC_FLOAT a;
+	
+	/*
+	* The matrix A has the form
+	*
+	* d u u u r r r r r 
+	* 0 d u u r r r r r 
+	* 0 0 d u r r r r r 
+	* 0 0 0 d r r r r r
+	*
+	* |Part1|| Part 2 |
+	* 
+	* d: diagonal
+	* u: upper
+	* r: right
+	*/
+	
+	
+    /* Part 1 */
+    ii=0; di=0;
+    for( j=0; j<7; j++ ){        
+        for( i=0; i<j; i++ ){
+            /* Calculate part of A which is non-zero and not diagonal "u"
+             * i < j */
+            a = 0;
+			
+            for( k=i; k<j; k++ ){
+                a -= A[k*7+i]*L[ii+k];
+            }
+            A[j*7+i] = a/L[ii+j];
+        }
+        /* do the diagonal "d"
+         * i = j */
+        A[j*7+j] = B[i]/L[ii+j];
+        
+        /* fill lower triangular part with zeros "0"
+         * n > i > j */
+        for( i=j+1     ; i < 7; i++ ){
+            A[j*7+i] = 0;
+        }
+        
+        /* increment index of L */
+        ii += ++di;	
+    }
+	
+	/* Part 2 */ 
+	for( j=7; j<7; j++ ){        
+        for( i=0; i<7; i++ ){
+            /* Calculate part of A which is non-zero and not diagonal "r" */
+            a = 0;
+			
+            for( k=i; k<j; k++ ){
+                a -= A[k*7+i]*L[ii+k];
+            }
+            A[j*7+i] = a/L[ii+j];
+        }
+        
+        /* increment index of L */
+        ii += ++di;	
+    }
+	
+	
+	
 }
 
 
 /**
  * Forward substitution to solve L*y = b where L is a
- * diagonal matrix in vector storage format.
+ * lower triangular matrix in triangular storage format.
  * 
  * The dimensions involved are 7.
  */
-void pr2MPC_LA_DIAG_FORWARDSUB_7(pr2MPC_FLOAT *L, pr2MPC_FLOAT *b, pr2MPC_FLOAT *y)
+void pr2MPC_LA_DENSE_FORWARDSUB_7(pr2MPC_FLOAT *L, pr2MPC_FLOAT *b, pr2MPC_FLOAT *y)
 {
-    int i;
-
+    int i,j,ii,di;
+    pr2MPC_FLOAT yel;
+            
+    ii = 0; di = 0;
     for( i=0; i<7; i++ ){
-		y[i] = b[i]/L[i];
+        yel = b[i];        
+        for( j=0; j<i; j++ ){
+            yel -= y[j]*L[ii+j];
+        }
+
+		/* saturate for numerical stability  */
+		yel = MIN(yel, BIGM);
+		yel = MAX(yel, -BIGM);
+
+        y[i] = yel / L[ii+i];
+        ii += ++di;
     }
 }
 
@@ -755,14 +982,14 @@ void pr2MPC_LA_DENSE_DIAGZERO_2MVMSUB2_7_14_14(pr2MPC_FLOAT *A, pr2MPC_FLOAT *x,
 /**
  * Compute L = A*A' + B*B', where L is lower triangular of size NXp1
  * and A is a dense matrix of size [7 x 14] in column
- * storage format, and B is of size [7 x 7] diagonalzero
+ * storage format, and B is of size [7 x 7] also in column
  * storage format.
  * 
  * THIS ONE HAS THE WORST ACCES PATTERN POSSIBLE. 
  * POSSIBKE FIX: PUT A AND B INTO ROW MAJOR FORMAT FIRST.
  * 
  */
-void pr2MPC_LA_DENSE_DIAGZERO_MMT2_7_14_7(pr2MPC_FLOAT *A, pr2MPC_FLOAT *B, pr2MPC_FLOAT *L)
+void pr2MPC_LA_DENSE_MMT2_7_14_7(pr2MPC_FLOAT *A, pr2MPC_FLOAT *B, pr2MPC_FLOAT *L)
 {
     int i, j, k, ii, di;
     pr2MPC_FLOAT ltemp;
@@ -773,12 +1000,12 @@ void pr2MPC_LA_DENSE_DIAGZERO_MMT2_7_14_7(pr2MPC_FLOAT *A, pr2MPC_FLOAT *B, pr2M
             ltemp = 0; 
             for( k=0; k<14; k++ ){
                 ltemp += A[k*7+i]*A[k*7+j];
-            }		
+            }			
+			for( k=0; k<7; k++ ){
+                ltemp += B[k*7+i]*B[k*7+j];
+            }
             L[ii+j] = ltemp;
         }
-		/* work on the diagonal
-		 * there might be i == j, but j has already been incremented so it is i == j-1 */
-		L[ii+i] += B[i]*B[i];
         ii += ++di;
     }
 }
@@ -786,25 +1013,30 @@ void pr2MPC_LA_DENSE_DIAGZERO_MMT2_7_14_7(pr2MPC_FLOAT *A, pr2MPC_FLOAT *B, pr2M
 
 /* 
  * Computes r = b - A*x - B*u
- * where A is stored in column major format
- * and B is stored in diagzero format
+ * where A an B are stored in column major format
  */
-void pr2MPC_LA_DENSE_DIAGZERO_2MVMSUB2_7_14_7(pr2MPC_FLOAT *A, pr2MPC_FLOAT *x, pr2MPC_FLOAT *B, pr2MPC_FLOAT *u, pr2MPC_FLOAT *b, pr2MPC_FLOAT *r)
+void pr2MPC_LA_DENSE_MVMSUB2_7_14_7(pr2MPC_FLOAT *A, pr2MPC_FLOAT *x, pr2MPC_FLOAT *B, pr2MPC_FLOAT *u, pr2MPC_FLOAT *b, pr2MPC_FLOAT *r)
 {
 	int i;
 	int j;
 	int k = 0;
+	int m = 0;
+	int n;
 
 	for( i=0; i<7; i++ ){
-		r[i] = b[i] - A[k++]*x[0] - B[i]*u[i];
+		r[i] = b[i] - A[k++]*x[0] - B[m++]*u[0];
 	}	
-
 	for( j=1; j<14; j++ ){		
 		for( i=0; i<7; i++ ){
 			r[i] -= A[k++]*x[j];
 		}
 	}
 	
+	for( n=1; n<7; n++ ){
+		for( i=0; i<7; i++ ){
+			r[i] -= B[m++]*u[n];
+		}		
+	}
 }
 
 
@@ -869,34 +1101,6 @@ void pr2MPC_LA_DENSE_CHOL_7(pr2MPC_FLOAT *A, pr2MPC_FLOAT *L)
         }
 		ii += ++di;
     }	
-}
-
-
-/**
- * Forward substitution to solve L*y = b where L is a
- * lower triangular matrix in triangular storage format.
- * 
- * The dimensions involved are 7.
- */
-void pr2MPC_LA_DENSE_FORWARDSUB_7(pr2MPC_FLOAT *L, pr2MPC_FLOAT *b, pr2MPC_FLOAT *y)
-{
-    int i,j,ii,di;
-    pr2MPC_FLOAT yel;
-            
-    ii = 0; di = 0;
-    for( i=0; i<7; i++ ){
-        yel = b[i];        
-        for( j=0; j<i; j++ ){
-            yel -= y[j]*L[ii+j];
-        }
-
-		/* saturate for numerical stability  */
-		yel = MIN(yel, BIGM);
-		yel = MAX(yel, -BIGM);
-
-        y[i] = yel / L[ii+i];
-        ii += ++di;
-    }
 }
 
 
@@ -1064,18 +1268,49 @@ void pr2MPC_LA_DIAG_FORWARDBACKWARDSUB_14(pr2MPC_FLOAT *L, pr2MPC_FLOAT *b, pr2M
 
 /**
  * Forward-Backward-Substitution to solve L*L^T*x = b where L is a
- * diagonal matrix of size 7 in vector
+ * lower triangular matrix of size 7 in lower triangular
  * storage format.
  */
-void pr2MPC_LA_DIAG_FORWARDBACKWARDSUB_7(pr2MPC_FLOAT *L, pr2MPC_FLOAT *b, pr2MPC_FLOAT *x)
+void pr2MPC_LA_DENSE_FORWARDBACKWARDSUB_7(pr2MPC_FLOAT *L, pr2MPC_FLOAT *b, pr2MPC_FLOAT *x)
 {
-    int i;
+    int i, ii, di, j, jj, dj;
+    pr2MPC_FLOAT y[7];
+    pr2MPC_FLOAT yel,xel;
+	int start = 21;
             
-    /* solve Ly = b by forward and backward substitution */
+    /* first solve Ly = b by forward substitution */
+     ii = 0; di = 0;
     for( i=0; i<7; i++ ){
-		x[i] = b[i]/(L[i]*L[i]);
+        yel = b[i];        
+        for( j=0; j<i; j++ ){
+            yel -= y[j]*L[ii+j];
+        }
+
+		/* saturate for numerical stability */
+		yel = MIN(yel, BIGM);
+		yel = MAX(yel, -BIGM); 
+
+        y[i] = yel / L[ii+i];
+        ii += ++di;
     }
     
+    /* now solve L^T*x = y by backward substitution */
+    ii = start; di = 6;
+    for( i=6; i>=0; i-- ){        
+        xel = y[i];        
+        jj = start; dj = 6;
+        for( j=6; j>i; j-- ){
+            xel -= x[j]*L[jj+i];
+            jj -= dj--;
+        }
+
+		/* saturate for numerical stability */
+		xel = MIN(xel, BIGM);
+		xel = MAX(xel, -BIGM); 
+
+        x[i] = xel / L[ii+i];
+        ii -= di--;
+    }
 }
 
 
@@ -1155,6 +1390,39 @@ void pr2MPC_LA_VSUB2_INDEXED_7(pr2MPC_FLOAT *x, pr2MPC_FLOAT *y, int* yidx, pr2M
 }
 
 
+/* 
+ * Computes r = -b - A*x
+ * where A is stored in column major format
+ */
+void pr2MPC_LA_DENSE_MVMSUB4_6_7(pr2MPC_FLOAT *A, pr2MPC_FLOAT *x, pr2MPC_FLOAT *b, pr2MPC_FLOAT *r)
+{
+	int i;
+	int j;
+	int k = 0;
+
+	for( i=0; i<6; i++ ){
+		r[i] = -b[i] - A[k++]*x[0];
+	}	
+	for( j=1; j<7; j++ ){		
+		for( i=0; i<6; i++ ){
+			r[i] -= A[k++]*x[j];
+		}
+	}
+}
+
+
+/*
+ * Vector subtraction x = -u.*v - w for vectors of length 6.
+ */
+void pr2MPC_LA_VSUB3_6(pr2MPC_FLOAT *u, pr2MPC_FLOAT *v, pr2MPC_FLOAT *w, pr2MPC_FLOAT *x)
+{
+	int i;
+	for( i=0; i<6; i++){
+		x[i] = -u[i]*v[i] - w[i];
+	}
+}
+
+
 /**
  * Backtracking line search.
  * 
@@ -1181,7 +1449,7 @@ int pr2MPC_LINESEARCH_BACKTRACKING_AFFINE(pr2MPC_FLOAT *l, pr2MPC_FLOAT *s, pr2M
          * values might be in registers, so it should be cheaper.
          */
         mymu = 0;
-        for( i=0; i<126; i++ ){
+        for( i=0; i<132; i++ ){
             dltemp = l[i] + mya*dl[i];
             dstemp = s[i] + mya*ds[i];
             if( dltemp < 0 || dstemp < 0 ){
@@ -1196,7 +1464,7 @@ int pr2MPC_LINESEARCH_BACKTRACKING_AFFINE(pr2MPC_FLOAT *l, pr2MPC_FLOAT *s, pr2M
          * If no early termination of the for-loop above occurred, we
          * found the required value of a and we can quit the while loop.
          */
-        if( i == 126 ){
+        if( i == 132 ){
             break;
         } else {
             mya *= pr2MPC_SET_LS_SCALE_AFF;
@@ -1208,19 +1476,19 @@ int pr2MPC_LINESEARCH_BACKTRACKING_AFFINE(pr2MPC_FLOAT *l, pr2MPC_FLOAT *s, pr2M
     
     /* return new values and iteration counter */
     *a = mya;
-    *mu_aff = mymu / (pr2MPC_FLOAT)126;
+    *mu_aff = mymu / (pr2MPC_FLOAT)132;
     return lsIt;
 }
 
 
 /*
  * Vector subtraction x = (u.*v - mu)*sigma where a is a scalar
-*  and x,u,v are vectors of length 126.
+*  and x,u,v are vectors of length 132.
  */
-void pr2MPC_LA_VSUB5_126(pr2MPC_FLOAT *u, pr2MPC_FLOAT *v, pr2MPC_FLOAT mu,  pr2MPC_FLOAT sigma, pr2MPC_FLOAT *x)
+void pr2MPC_LA_VSUB5_132(pr2MPC_FLOAT *u, pr2MPC_FLOAT *v, pr2MPC_FLOAT mu,  pr2MPC_FLOAT sigma, pr2MPC_FLOAT *x)
 {
 	int i;
-	for( i=0; i<126; i++){
+	for( i=0; i<132; i++){
 		x[i] = u[i]*v[i] - mu;
 		x[i] *= sigma;
 	}
@@ -1304,19 +1572,43 @@ void pr2MPC_LA_VSUB6_INDEXED_7_7_7(pr2MPC_FLOAT *u, pr2MPC_FLOAT *su, int* uidx,
 }
 
 
+/*
+ * Matrix vector multiplication z = z + A'*(x./s) where A is of size [6 x 7]
+ * and stored in column major format. Note the transpose of M!
+ */
+void pr2MPC_LA_DENSE_MTVMADD2_6_7(pr2MPC_FLOAT *A, pr2MPC_FLOAT *x, pr2MPC_FLOAT *s, pr2MPC_FLOAT *z)
+{
+	int i;
+	int j;
+	int k = 0; 
+	pr2MPC_FLOAT temp[6];
+
+	for( j=0; j<6; j++ ){
+		temp[j] = x[j] / s[j];
+	}
+
+	for( i=0; i<7; i++ ){
+		for( j=0; j<6; j++ ){
+			z[i] += A[k++]*temp[j];
+		}
+	}
+}
+
+
 /* 
  * Computes r = A*x + B*u
- * where A is stored in column major format
- * and B is stored in diagzero format
+ * where A an B are stored in column major format
  */
-void pr2MPC_LA_DENSE_DIAGZERO_2MVMADD_7_14_7(pr2MPC_FLOAT *A, pr2MPC_FLOAT *x, pr2MPC_FLOAT *B, pr2MPC_FLOAT *u, pr2MPC_FLOAT *r)
+void pr2MPC_LA_DENSE_2MVMADD_7_14_7(pr2MPC_FLOAT *A, pr2MPC_FLOAT *x, pr2MPC_FLOAT *B, pr2MPC_FLOAT *u, pr2MPC_FLOAT *r)
 {
 	int i;
 	int j;
 	int k = 0;
+	int m = 0;
+	int n;
 
 	for( i=0; i<7; i++ ){
-		r[i] = A[k++]*x[0] + B[i]*u[i];
+		r[i] = A[k++]*x[0] + B[m++]*u[0];
 	}	
 
 	for( j=1; j<14; j++ ){		
@@ -1325,6 +1617,11 @@ void pr2MPC_LA_DENSE_DIAGZERO_2MVMADD_7_14_7(pr2MPC_FLOAT *A, pr2MPC_FLOAT *x, p
 		}
 	}
 	
+	for( n=1; n<7; n++ ){
+		for( i=0; i<7; i++ ){
+			r[i] += B[m++]*u[n];
+		}		
+	}
 }
 
 
@@ -1392,13 +1689,44 @@ void pr2MPC_LA_VEC_DIVSUB_MULTADD_INDEXED_7(pr2MPC_FLOAT *r, pr2MPC_FLOAT *s, pr
 }
 
 
-/*
- * Computes ds = -l.\(r + s.*dl) for vectors of length 126.
+/* 
+ * Computes r = (-b + l.*(A*x))./s
+ * where A is stored in column major format
  */
-void pr2MPC_LA_VSUB7_126(pr2MPC_FLOAT *l, pr2MPC_FLOAT *r, pr2MPC_FLOAT *s, pr2MPC_FLOAT *dl, pr2MPC_FLOAT *ds)
+void pr2MPC_LA_DENSE_MVMSUB5_6_7(pr2MPC_FLOAT *A, pr2MPC_FLOAT *x, pr2MPC_FLOAT *b, pr2MPC_FLOAT *s, pr2MPC_FLOAT *l, pr2MPC_FLOAT *r)
 {
 	int i;
-	for( i=0; i<126; i++){
+	int j;
+	int k = 0;
+
+	pr2MPC_FLOAT temp[6];
+
+	
+	for( i=0; i<6; i++ ){
+		temp[i] = A[k++]*x[0];
+	}
+	
+
+	for( j=1; j<7; j++ ){		
+		for( i=0; i<6; i++ ){
+			temp[i] += A[k++]*x[j];
+		}
+	}
+
+	for( i=0; i<6; i++ ){
+		r[i] = (-b[i] + l[i]*temp[i])/s[i]; 
+	}	
+	
+}
+
+
+/*
+ * Computes ds = -l.\(r + s.*dl) for vectors of length 132.
+ */
+void pr2MPC_LA_VSUB7_132(pr2MPC_FLOAT *l, pr2MPC_FLOAT *r, pr2MPC_FLOAT *s, pr2MPC_FLOAT *dl, pr2MPC_FLOAT *ds)
+{
+	int i;
+	for( i=0; i<132; i++){
 		ds[i] = -(r[i] + s[i]*dl[i])/l[i];
 	}
 }
@@ -1429,12 +1757,12 @@ void pr2MPC_LA_VADD_35(pr2MPC_FLOAT *x, pr2MPC_FLOAT *y)
 
 
 /*
- * Vector addition x = x + y for vectors of length 126.
+ * Vector addition x = x + y for vectors of length 132.
  */
-void pr2MPC_LA_VADD_126(pr2MPC_FLOAT *x, pr2MPC_FLOAT *y)
+void pr2MPC_LA_VADD_132(pr2MPC_FLOAT *x, pr2MPC_FLOAT *y)
 {
 	int i;
-	for( i=0; i<126; i++){
+	for( i=0; i<132; i++){
 		x[i] += y[i];
 	}
 }
@@ -1456,7 +1784,7 @@ int pr2MPC_LINESEARCH_BACKTRACKING_COMBINED(pr2MPC_FLOAT *z, pr2MPC_FLOAT *v, pr
     while( 1 ){                        
 
         /* check whether search criterion is fulfilled */
-        for( i=0; i<126; i++ ){
+        for( i=0; i<132; i++ ){
             dltemp = l[i] + (*a)*dl[i];
             dstemp = s[i] + (*a)*ds[i];
             if( dltemp < 0 || dstemp < 0 ){
@@ -1469,7 +1797,7 @@ int pr2MPC_LINESEARCH_BACKTRACKING_COMBINED(pr2MPC_FLOAT *z, pr2MPC_FLOAT *v, pr
          * If no early termination of the for-loop above occurred, we
          * found the required value of a and we can quit the while loop.
          */
-        if( i == 126 ){
+        if( i == 132 ){
             break;
         } else {
             *a *= pr2MPC_SET_LS_SCALE;
@@ -1494,14 +1822,14 @@ int pr2MPC_LINESEARCH_BACKTRACKING_COMBINED(pr2MPC_FLOAT *z, pr2MPC_FLOAT *v, pr
     
     /* inequality constraint multipliers & slacks, also update mu */
     *mu = 0;
-    for( i=0; i<126; i++ ){
+    for( i=0; i<132; i++ ){
         dltemp = l[i] + a_gamma*dl[i]; l[i] = dltemp;
         dstemp = s[i] + a_gamma*ds[i]; s[i] = dstemp;
         *mu += dltemp*dstemp;
     }
     
     *a = a_gamma;
-    *mu /= (pr2MPC_FLOAT)126;
+    *mu /= (pr2MPC_FLOAT)132;
     return lsIt;
 }
 
@@ -1516,16 +1844,16 @@ pr2MPC_FLOAT pr2MPC_dv_aff[35];
 pr2MPC_FLOAT pr2MPC_grad_cost[63];
 pr2MPC_FLOAT pr2MPC_grad_eq[63];
 pr2MPC_FLOAT pr2MPC_rd[63];
-pr2MPC_FLOAT pr2MPC_l[126];
-pr2MPC_FLOAT pr2MPC_s[126];
-pr2MPC_FLOAT pr2MPC_lbys[126];
-pr2MPC_FLOAT pr2MPC_dl_aff[126];
-pr2MPC_FLOAT pr2MPC_ds_aff[126];
+pr2MPC_FLOAT pr2MPC_l[132];
+pr2MPC_FLOAT pr2MPC_s[132];
+pr2MPC_FLOAT pr2MPC_lbys[132];
+pr2MPC_FLOAT pr2MPC_dl_aff[132];
+pr2MPC_FLOAT pr2MPC_ds_aff[132];
 pr2MPC_FLOAT pr2MPC_dz_cc[63];
 pr2MPC_FLOAT pr2MPC_dv_cc[35];
-pr2MPC_FLOAT pr2MPC_dl_cc[126];
-pr2MPC_FLOAT pr2MPC_ds_cc[126];
-pr2MPC_FLOAT pr2MPC_ccrhs[126];
+pr2MPC_FLOAT pr2MPC_dl_cc[132];
+pr2MPC_FLOAT pr2MPC_ds_cc[132];
+pr2MPC_FLOAT pr2MPC_ccrhs[132];
 pr2MPC_FLOAT pr2MPC_grad_ineq[63];
 pr2MPC_FLOAT* pr2MPC_z0 = pr2MPC_z + 0;
 pr2MPC_FLOAT* pr2MPC_dzaff0 = pr2MPC_dz_aff + 0;
@@ -1773,7 +2101,16 @@ pr2MPC_FLOAT* pr2MPC_dsubaff4 = pr2MPC_ds_aff + 119;
 pr2MPC_FLOAT* pr2MPC_dlubcc4 = pr2MPC_dl_cc + 119;
 pr2MPC_FLOAT* pr2MPC_dsubcc4 = pr2MPC_ds_cc + 119;
 pr2MPC_FLOAT* pr2MPC_ccrhsub4 = pr2MPC_ccrhs + 119;
-pr2MPC_FLOAT pr2MPC_Phi4[7];
+pr2MPC_FLOAT* pr2MPC_sp4 = pr2MPC_s + 126;
+pr2MPC_FLOAT* pr2MPC_lp4 = pr2MPC_l + 126;
+pr2MPC_FLOAT* pr2MPC_lpbysp4 = pr2MPC_lbys + 126;
+pr2MPC_FLOAT* pr2MPC_dlp_aff4 = pr2MPC_dl_aff + 126;
+pr2MPC_FLOAT* pr2MPC_dsp_aff4 = pr2MPC_ds_aff + 126;
+pr2MPC_FLOAT* pr2MPC_dlp_cc4 = pr2MPC_dl_cc + 126;
+pr2MPC_FLOAT* pr2MPC_dsp_cc4 = pr2MPC_ds_cc + 126;
+pr2MPC_FLOAT* pr2MPC_ccrhsp4 = pr2MPC_ccrhs + 126;
+pr2MPC_FLOAT pr2MPC_rip4[6];
+pr2MPC_FLOAT pr2MPC_Phi4[28];
 pr2MPC_FLOAT pr2MPC_D4[7] = {-1.0000000000000000E+000, 
 -1.0000000000000000E+000, 
 -1.0000000000000000E+000, 
@@ -1781,7 +2118,7 @@ pr2MPC_FLOAT pr2MPC_D4[7] = {-1.0000000000000000E+000,
 -1.0000000000000000E+000, 
 -1.0000000000000000E+000, 
 -1.0000000000000000E+000};
-pr2MPC_FLOAT pr2MPC_W4[7];
+pr2MPC_FLOAT pr2MPC_W4[49];
 pr2MPC_FLOAT pr2MPC_Ysd4[49];
 pr2MPC_FLOAT pr2MPC_Lsd4[49];
 pr2MPC_FLOAT musigma;
@@ -1806,11 +2143,15 @@ int exitcode;
 info->it = 0;
 pr2MPC_LA_INITIALIZEVECTOR_63(pr2MPC_z, 0);
 pr2MPC_LA_INITIALIZEVECTOR_35(pr2MPC_v, 1);
-pr2MPC_LA_INITIALIZEVECTOR_126(pr2MPC_l, 10);
-pr2MPC_LA_INITIALIZEVECTOR_126(pr2MPC_s, 10);
+pr2MPC_LA_INITIALIZEVECTOR_132(pr2MPC_l, 10);
+pr2MPC_LA_INITIALIZEVECTOR_132(pr2MPC_s, 10);
 info->mu = 0;
-pr2MPC_LA_DOTACC_126(pr2MPC_l, pr2MPC_s, &info->mu);
-info->mu /= 126;
+pr2MPC_LA_DOTACC_132(pr2MPC_l, pr2MPC_s, &info->mu);
+info->mu /= 132;
+PRINTTEXT("This is pr2MPC, a solver generated by FORCES (forces.ethz.ch).\n");
+PRINTTEXT("(c) Alexander Domahidi, Automatic Control Laboratory, ETH Zurich, 2011-2014.\n");
+PRINTTEXT("\n  #it  res_eq   res_ineq     pobj         dobj       dgap     rdgap     mu\n");
+PRINTTEXT("  ---------------------------------------------------------------------------\n");
 while( 1 ){
 info->pobj = 0;
 pr2MPC_LA_DIAG_QUADFCN_14(params->H1, params->f1, pr2MPC_z0, pr2MPC_grad_cost0, &info->pobj);
@@ -1841,20 +2182,25 @@ pr2MPC_LA_VSUBADD3_14(params->lb4, pr2MPC_z3, pr2MPC_lbIdx3, pr2MPC_llb3, pr2MPC
 pr2MPC_LA_VSUBADD2_14(pr2MPC_z3, pr2MPC_ubIdx3, params->ub4, pr2MPC_lub3, pr2MPC_sub3, pr2MPC_riub3, &info->dgap, &info->res_ineq);
 pr2MPC_LA_VSUBADD3_7(params->lb5, pr2MPC_z4, pr2MPC_lbIdx4, pr2MPC_llb4, pr2MPC_slb4, pr2MPC_rilb4, &info->dgap, &info->res_ineq);
 pr2MPC_LA_VSUBADD2_7(pr2MPC_z4, pr2MPC_ubIdx4, params->ub5, pr2MPC_lub4, pr2MPC_sub4, pr2MPC_riub4, &info->dgap, &info->res_ineq);
+pr2MPC_LA_MVSUBADD_6_7(params->A5, pr2MPC_z4, params->b5, pr2MPC_sp4, pr2MPC_lp4, pr2MPC_rip4, &info->dgap, &info->res_ineq);
 pr2MPC_LA_INEQ_B_GRAD_14_14_14(pr2MPC_lub0, pr2MPC_sub0, pr2MPC_riub0, pr2MPC_llb0, pr2MPC_slb0, pr2MPC_rilb0, pr2MPC_lbIdx0, pr2MPC_ubIdx0, pr2MPC_grad_ineq0, pr2MPC_lubbysub0, pr2MPC_llbbyslb0);
 pr2MPC_LA_INEQ_B_GRAD_14_14_14(pr2MPC_lub1, pr2MPC_sub1, pr2MPC_riub1, pr2MPC_llb1, pr2MPC_slb1, pr2MPC_rilb1, pr2MPC_lbIdx1, pr2MPC_ubIdx1, pr2MPC_grad_ineq1, pr2MPC_lubbysub1, pr2MPC_llbbyslb1);
 pr2MPC_LA_INEQ_B_GRAD_14_14_14(pr2MPC_lub2, pr2MPC_sub2, pr2MPC_riub2, pr2MPC_llb2, pr2MPC_slb2, pr2MPC_rilb2, pr2MPC_lbIdx2, pr2MPC_ubIdx2, pr2MPC_grad_ineq2, pr2MPC_lubbysub2, pr2MPC_llbbyslb2);
 pr2MPC_LA_INEQ_B_GRAD_14_14_14(pr2MPC_lub3, pr2MPC_sub3, pr2MPC_riub3, pr2MPC_llb3, pr2MPC_slb3, pr2MPC_rilb3, pr2MPC_lbIdx3, pr2MPC_ubIdx3, pr2MPC_grad_ineq3, pr2MPC_lubbysub3, pr2MPC_llbbyslb3);
 pr2MPC_LA_INEQ_B_GRAD_7_7_7(pr2MPC_lub4, pr2MPC_sub4, pr2MPC_riub4, pr2MPC_llb4, pr2MPC_slb4, pr2MPC_rilb4, pr2MPC_lbIdx4, pr2MPC_ubIdx4, pr2MPC_grad_ineq4, pr2MPC_lubbysub4, pr2MPC_llbbyslb4);
+pr2MPC_LA_INEQ_P_6_7(params->A5, pr2MPC_lp4, pr2MPC_sp4, pr2MPC_rip4, pr2MPC_grad_ineq4, pr2MPC_lpbysp4);
 info->dobj = info->pobj - info->dgap;
 info->rdgap = info->pobj ? info->dgap / info->pobj : 1e6;
 if( info->rdgap < 0 ) info->rdgap = -info->rdgap;
+PRINTTEXT("  %3d  %3.1e  %3.1e  %+6.4e  %+6.4e  %+3.1e  %3.1e  %3.1e\n",info->it, info->res_eq, info->res_ineq, info->pobj, info->dobj, info->dgap, info->rdgap, info->mu);
 if( info->mu < pr2MPC_SET_ACC_KKTCOMPL
     && (info->rdgap < pr2MPC_SET_ACC_RDGAP || info->dgap < pr2MPC_SET_ACC_KKTCOMPL)
     && info->res_eq < pr2MPC_SET_ACC_RESEQ
     && info->res_ineq < pr2MPC_SET_ACC_RESINEQ ){
+PRINTTEXT("OPTIMAL (within RESEQ=%2.1e, RESINEQ=%2.1e, (R)DGAP=(%2.1e)%2.1e, MU=%2.1e).\n",pr2MPC_SET_ACC_RESEQ, pr2MPC_SET_ACC_RESINEQ,pr2MPC_SET_ACC_KKTCOMPL,pr2MPC_SET_ACC_RDGAP,pr2MPC_SET_ACC_KKTCOMPL);
 exitcode = pr2MPC_OPTIMAL; break; }
 if( info->it == pr2MPC_SET_MAXIT ){
+PRINTTEXT("Maximum number of iterations reached, exiting.\n");
 exitcode = pr2MPC_MAXITREACHED; break; }
 pr2MPC_LA_VVADD3_63(pr2MPC_grad_cost, pr2MPC_grad_eq, pr2MPC_grad_ineq, pr2MPC_rd);
 pr2MPC_LA_DIAG_CHOL_ONELOOP_LBUB_14_14_14(params->H1, pr2MPC_llbbyslb0, pr2MPC_lbIdx0, pr2MPC_lubbysub0, pr2MPC_ubIdx0, pr2MPC_Phi0);
@@ -1877,9 +2223,11 @@ pr2MPC_LA_DIAG_MATRIXFORWARDSUB_7_14(pr2MPC_Phi3, pr2MPC_C0, pr2MPC_V3);
 pr2MPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_7_14(pr2MPC_Phi3, pr2MPC_D1, pr2MPC_W3);
 pr2MPC_LA_DENSE_DIAGZERO_MMTM_7_14_7(pr2MPC_W3, pr2MPC_V3, pr2MPC_Ysd4);
 pr2MPC_LA_DIAG_FORWARDSUB_14(pr2MPC_Phi3, pr2MPC_rd3, pr2MPC_Lbyrd3);
-pr2MPC_LA_DIAG_CHOL_ONELOOP_LBUB_7_7_7(params->H5, pr2MPC_llbbyslb4, pr2MPC_lbIdx4, pr2MPC_lubbysub4, pr2MPC_ubIdx4, pr2MPC_Phi4);
-pr2MPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_7_7(pr2MPC_Phi4, pr2MPC_D4, pr2MPC_W4);
-pr2MPC_LA_DIAG_FORWARDSUB_7(pr2MPC_Phi4, pr2MPC_rd4, pr2MPC_Lbyrd4);
+pr2MPC_LA_INEQ_DENSE_DIAG_HESS_7_7_7(params->H5, pr2MPC_llbbyslb4, pr2MPC_lbIdx4, pr2MPC_lubbysub4, pr2MPC_ubIdx4, pr2MPC_Phi4);
+pr2MPC_LA_DENSE_ADDMTDM_6_7(params->A5, pr2MPC_lpbysp4, pr2MPC_Phi4);
+pr2MPC_LA_DENSE_CHOL2_7(pr2MPC_Phi4);
+pr2MPC_LA_DENSE_DIAGZERO_MATRIXFORWARDSUB_7_7(pr2MPC_Phi4, pr2MPC_D4, pr2MPC_W4);
+pr2MPC_LA_DENSE_FORWARDSUB_7(pr2MPC_Phi4, pr2MPC_rd4, pr2MPC_Lbyrd4);
 pr2MPC_LA_DIAGZERO_MMT_7(pr2MPC_W0, pr2MPC_Yd0);
 pr2MPC_LA_DIAGZERO_MVMSUB7_7(pr2MPC_W0, pr2MPC_Lbyrd0, pr2MPC_re0, pr2MPC_beta0);
 pr2MPC_LA_DENSE_DIAGZERO_MMT2_7_14_14(pr2MPC_V0, pr2MPC_W1, pr2MPC_Yd1);
@@ -1888,8 +2236,8 @@ pr2MPC_LA_DENSE_DIAGZERO_MMT2_7_14_14(pr2MPC_V1, pr2MPC_W2, pr2MPC_Yd2);
 pr2MPC_LA_DENSE_DIAGZERO_2MVMSUB2_7_14_14(pr2MPC_V1, pr2MPC_Lbyrd1, pr2MPC_W2, pr2MPC_Lbyrd2, pr2MPC_re2, pr2MPC_beta2);
 pr2MPC_LA_DENSE_DIAGZERO_MMT2_7_14_14(pr2MPC_V2, pr2MPC_W3, pr2MPC_Yd3);
 pr2MPC_LA_DENSE_DIAGZERO_2MVMSUB2_7_14_14(pr2MPC_V2, pr2MPC_Lbyrd2, pr2MPC_W3, pr2MPC_Lbyrd3, pr2MPC_re3, pr2MPC_beta3);
-pr2MPC_LA_DENSE_DIAGZERO_MMT2_7_14_7(pr2MPC_V3, pr2MPC_W4, pr2MPC_Yd4);
-pr2MPC_LA_DENSE_DIAGZERO_2MVMSUB2_7_14_7(pr2MPC_V3, pr2MPC_Lbyrd3, pr2MPC_W4, pr2MPC_Lbyrd4, pr2MPC_re4, pr2MPC_beta4);
+pr2MPC_LA_DENSE_MMT2_7_14_7(pr2MPC_V3, pr2MPC_W4, pr2MPC_Yd4);
+pr2MPC_LA_DENSE_MVMSUB2_7_14_7(pr2MPC_V3, pr2MPC_Lbyrd3, pr2MPC_W4, pr2MPC_Lbyrd4, pr2MPC_re4, pr2MPC_beta4);
 pr2MPC_LA_DENSE_CHOL_7(pr2MPC_Yd0, pr2MPC_Ld0);
 pr2MPC_LA_DENSE_FORWARDSUB_7(pr2MPC_Ld0, pr2MPC_beta0, pr2MPC_yy0);
 pr2MPC_LA_DENSE_MATRIXTFORWARDSUB_7_7(pr2MPC_Ld0, pr2MPC_Ysd1, pr2MPC_Lsd1);
@@ -1931,7 +2279,7 @@ pr2MPC_LA_DIAG_FORWARDBACKWARDSUB_14(pr2MPC_Phi0, pr2MPC_rd0, pr2MPC_dzaff0);
 pr2MPC_LA_DIAG_FORWARDBACKWARDSUB_14(pr2MPC_Phi1, pr2MPC_rd1, pr2MPC_dzaff1);
 pr2MPC_LA_DIAG_FORWARDBACKWARDSUB_14(pr2MPC_Phi2, pr2MPC_rd2, pr2MPC_dzaff2);
 pr2MPC_LA_DIAG_FORWARDBACKWARDSUB_14(pr2MPC_Phi3, pr2MPC_rd3, pr2MPC_dzaff3);
-pr2MPC_LA_DIAG_FORWARDBACKWARDSUB_7(pr2MPC_Phi4, pr2MPC_rd4, pr2MPC_dzaff4);
+pr2MPC_LA_DENSE_FORWARDBACKWARDSUB_7(pr2MPC_Phi4, pr2MPC_rd4, pr2MPC_dzaff4);
 pr2MPC_LA_VSUB_INDEXED_14(pr2MPC_dzaff0, pr2MPC_lbIdx0, pr2MPC_rilb0, pr2MPC_dslbaff0);
 pr2MPC_LA_VSUB3_14(pr2MPC_llbbyslb0, pr2MPC_dslbaff0, pr2MPC_llb0, pr2MPC_dllbaff0);
 pr2MPC_LA_VSUB2_INDEXED_14(pr2MPC_riub0, pr2MPC_dzaff0, pr2MPC_ubIdx0, pr2MPC_dsubaff0);
@@ -1952,14 +2300,17 @@ pr2MPC_LA_VSUB_INDEXED_7(pr2MPC_dzaff4, pr2MPC_lbIdx4, pr2MPC_rilb4, pr2MPC_dslb
 pr2MPC_LA_VSUB3_7(pr2MPC_llbbyslb4, pr2MPC_dslbaff4, pr2MPC_llb4, pr2MPC_dllbaff4);
 pr2MPC_LA_VSUB2_INDEXED_7(pr2MPC_riub4, pr2MPC_dzaff4, pr2MPC_ubIdx4, pr2MPC_dsubaff4);
 pr2MPC_LA_VSUB3_7(pr2MPC_lubbysub4, pr2MPC_dsubaff4, pr2MPC_lub4, pr2MPC_dlubaff4);
+pr2MPC_LA_DENSE_MVMSUB4_6_7(params->A5, pr2MPC_dzaff4, pr2MPC_rip4, pr2MPC_dsp_aff4);
+pr2MPC_LA_VSUB3_6(pr2MPC_lpbysp4, pr2MPC_dsp_aff4, pr2MPC_lp4, pr2MPC_dlp_aff4);
 info->lsit_aff = pr2MPC_LINESEARCH_BACKTRACKING_AFFINE(pr2MPC_l, pr2MPC_s, pr2MPC_dl_aff, pr2MPC_ds_aff, &info->step_aff, &info->mu_aff);
 if( info->lsit_aff == pr2MPC_NOPROGRESS ){
+PRINTTEXT("Affine line search could not proceed at iteration %d.\nThe problem might be infeasible -- exiting.\n",info->it+1);
 exitcode = pr2MPC_NOPROGRESS; break;
 }
 sigma_3rdroot = info->mu_aff / info->mu;
 info->sigma = sigma_3rdroot*sigma_3rdroot*sigma_3rdroot;
 musigma = info->mu * info->sigma;
-pr2MPC_LA_VSUB5_126(pr2MPC_ds_aff, pr2MPC_dl_aff, info->mu, info->sigma, pr2MPC_ccrhs);
+pr2MPC_LA_VSUB5_132(pr2MPC_ds_aff, pr2MPC_dl_aff, info->mu, info->sigma, pr2MPC_ccrhs);
 pr2MPC_LA_VSUB6_INDEXED_14_14_14(pr2MPC_ccrhsub0, pr2MPC_sub0, pr2MPC_ubIdx0, pr2MPC_ccrhsl0, pr2MPC_slb0, pr2MPC_lbIdx0, pr2MPC_rd0);
 pr2MPC_LA_VSUB6_INDEXED_14_14_14(pr2MPC_ccrhsub1, pr2MPC_sub1, pr2MPC_ubIdx1, pr2MPC_ccrhsl1, pr2MPC_slb1, pr2MPC_lbIdx1, pr2MPC_rd1);
 pr2MPC_LA_DIAG_FORWARDSUB_14(pr2MPC_Phi0, pr2MPC_rd0, pr2MPC_Lbyrd0);
@@ -1980,8 +2331,9 @@ pr2MPC_LA_DENSE_DIAGZERO_2MVMADD_7_14_14(pr2MPC_V2, pr2MPC_Lbyrd2, pr2MPC_W3, pr
 pr2MPC_LA_DENSE_MVMSUB1_7_7(pr2MPC_Lsd3, pr2MPC_yy2, pr2MPC_beta3, pr2MPC_bmy3);
 pr2MPC_LA_DENSE_FORWARDSUB_7(pr2MPC_Ld3, pr2MPC_bmy3, pr2MPC_yy3);
 pr2MPC_LA_VSUB6_INDEXED_7_7_7(pr2MPC_ccrhsub4, pr2MPC_sub4, pr2MPC_ubIdx4, pr2MPC_ccrhsl4, pr2MPC_slb4, pr2MPC_lbIdx4, pr2MPC_rd4);
-pr2MPC_LA_DIAG_FORWARDSUB_7(pr2MPC_Phi4, pr2MPC_rd4, pr2MPC_Lbyrd4);
-pr2MPC_LA_DENSE_DIAGZERO_2MVMADD_7_14_7(pr2MPC_V3, pr2MPC_Lbyrd3, pr2MPC_W4, pr2MPC_Lbyrd4, pr2MPC_beta4);
+pr2MPC_LA_DENSE_MTVMADD2_6_7(params->A5, pr2MPC_ccrhsp4, pr2MPC_sp4, pr2MPC_rd4);
+pr2MPC_LA_DENSE_FORWARDSUB_7(pr2MPC_Phi4, pr2MPC_rd4, pr2MPC_Lbyrd4);
+pr2MPC_LA_DENSE_2MVMADD_7_14_7(pr2MPC_V3, pr2MPC_Lbyrd3, pr2MPC_W4, pr2MPC_Lbyrd4, pr2MPC_beta4);
 pr2MPC_LA_DENSE_MVMSUB1_7_7(pr2MPC_Lsd4, pr2MPC_yy3, pr2MPC_beta4, pr2MPC_bmy4);
 pr2MPC_LA_DENSE_FORWARDSUB_7(pr2MPC_Ld4, pr2MPC_bmy4, pr2MPC_yy4);
 pr2MPC_LA_DENSE_BACKWARDSUB_7(pr2MPC_Ld4, pr2MPC_yy4, pr2MPC_dvcc4);
@@ -2003,7 +2355,7 @@ pr2MPC_LA_DIAG_FORWARDBACKWARDSUB_14(pr2MPC_Phi0, pr2MPC_rd0, pr2MPC_dzcc0);
 pr2MPC_LA_DIAG_FORWARDBACKWARDSUB_14(pr2MPC_Phi1, pr2MPC_rd1, pr2MPC_dzcc1);
 pr2MPC_LA_DIAG_FORWARDBACKWARDSUB_14(pr2MPC_Phi2, pr2MPC_rd2, pr2MPC_dzcc2);
 pr2MPC_LA_DIAG_FORWARDBACKWARDSUB_14(pr2MPC_Phi3, pr2MPC_rd3, pr2MPC_dzcc3);
-pr2MPC_LA_DIAG_FORWARDBACKWARDSUB_7(pr2MPC_Phi4, pr2MPC_rd4, pr2MPC_dzcc4);
+pr2MPC_LA_DENSE_FORWARDBACKWARDSUB_7(pr2MPC_Phi4, pr2MPC_rd4, pr2MPC_dzcc4);
 pr2MPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_14(pr2MPC_ccrhsl0, pr2MPC_slb0, pr2MPC_llbbyslb0, pr2MPC_dzcc0, pr2MPC_lbIdx0, pr2MPC_dllbcc0);
 pr2MPC_LA_VEC_DIVSUB_MULTADD_INDEXED_14(pr2MPC_ccrhsub0, pr2MPC_sub0, pr2MPC_lubbysub0, pr2MPC_dzcc0, pr2MPC_ubIdx0, pr2MPC_dlubcc0);
 pr2MPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_14(pr2MPC_ccrhsl1, pr2MPC_slb1, pr2MPC_llbbyslb1, pr2MPC_dzcc1, pr2MPC_lbIdx1, pr2MPC_dllbcc1);
@@ -2014,13 +2366,15 @@ pr2MPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_14(pr2MPC_ccrhsl3, pr2MPC_slb3, pr2MPC_llbb
 pr2MPC_LA_VEC_DIVSUB_MULTADD_INDEXED_14(pr2MPC_ccrhsub3, pr2MPC_sub3, pr2MPC_lubbysub3, pr2MPC_dzcc3, pr2MPC_ubIdx3, pr2MPC_dlubcc3);
 pr2MPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_7(pr2MPC_ccrhsl4, pr2MPC_slb4, pr2MPC_llbbyslb4, pr2MPC_dzcc4, pr2MPC_lbIdx4, pr2MPC_dllbcc4);
 pr2MPC_LA_VEC_DIVSUB_MULTADD_INDEXED_7(pr2MPC_ccrhsub4, pr2MPC_sub4, pr2MPC_lubbysub4, pr2MPC_dzcc4, pr2MPC_ubIdx4, pr2MPC_dlubcc4);
-pr2MPC_LA_VSUB7_126(pr2MPC_l, pr2MPC_ccrhs, pr2MPC_s, pr2MPC_dl_cc, pr2MPC_ds_cc);
+pr2MPC_LA_DENSE_MVMSUB5_6_7(params->A5, pr2MPC_dzcc4, pr2MPC_ccrhsp4, pr2MPC_sp4, pr2MPC_lp4, pr2MPC_dlp_cc4);
+pr2MPC_LA_VSUB7_132(pr2MPC_l, pr2MPC_ccrhs, pr2MPC_s, pr2MPC_dl_cc, pr2MPC_ds_cc);
 pr2MPC_LA_VADD_63(pr2MPC_dz_cc, pr2MPC_dz_aff);
 pr2MPC_LA_VADD_35(pr2MPC_dv_cc, pr2MPC_dv_aff);
-pr2MPC_LA_VADD_126(pr2MPC_dl_cc, pr2MPC_dl_aff);
-pr2MPC_LA_VADD_126(pr2MPC_ds_cc, pr2MPC_ds_aff);
+pr2MPC_LA_VADD_132(pr2MPC_dl_cc, pr2MPC_dl_aff);
+pr2MPC_LA_VADD_132(pr2MPC_ds_cc, pr2MPC_ds_aff);
 info->lsit_cc = pr2MPC_LINESEARCH_BACKTRACKING_COMBINED(pr2MPC_z, pr2MPC_v, pr2MPC_l, pr2MPC_s, pr2MPC_dz_cc, pr2MPC_dv_cc, pr2MPC_dl_cc, pr2MPC_ds_cc, &info->step_cc, &info->mu);
 if( info->lsit_cc == pr2MPC_NOPROGRESS ){
+PRINTTEXT("Line search could not proceed at iteration %d, exiting.\n",info->it+1);
 exitcode = pr2MPC_NOPROGRESS; break;
 }
 info->it++;

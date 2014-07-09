@@ -271,6 +271,32 @@ void test_fk() {
 	std::cout << "fk_cam_pose:\n" << fk_cam_pose << "\n\n";
 }
 
+void test_ik() {
+	Vector3d object(3.35, -1.11, 0.8);
+	Arm::ArmType arm_type = Arm::ArmType::right;
+	bool view = true;
+	PR2System sys(object, arm_type, view);
+
+	PR2* brett = sys.get_brett();
+	Arm* arm = sys.get_arm();
+	rave::EnvironmentBasePtr env = brett->get_env();
+
+	arm->set_posture(Arm::Posture::mantis);
+	sleep(1);
+
+	for(int iter=0; iter < 10; ++iter) {
+		std::cout << "iter: " << iter << "\n";
+		Vector3d pos = object + .2*Vector3d::Random();
+		rave_utils::plot_point(env, pos, Vector3d(1,0,0), .05);
+
+		VectorJ j = arm->get_joint_values();
+		bool success = arm->ik(pos, j);
+		std::cout << "success: " << success << "\n";
+		arm->set_joint_values(j);
+		std::cin.ignore();
+	}
+}
+
 void test_greedy() {
 	srand(time(0));
 
@@ -358,7 +384,7 @@ VectorJ sd_gradient(VectorJ j, const Vector3d& object, const Cube& ODF, Camera* 
 	bool obj_in_fov = cam->is_in_fov(object, zbuffer, cam_pose);
 	double sd_sign = (obj_in_fov) ? -1 : 1;
 
-	Vector3d v = object - sd_pose_in_cam.block<3,1>(0,3);
+	Vector3d v = object - sd_pose_in_world.block<3,1>(0,3);
 
 	if (obj_in_fov) {
 		std::cout << "obj is in fov\n";
@@ -366,6 +392,11 @@ VectorJ sd_gradient(VectorJ j, const Vector3d& object, const Cube& ODF, Camera* 
 		std::cout << "obj is not in fov\n";
 	}
 
+	Matrix4d object_pose = Matrix4d::Identity();
+	object_pose.block<3,1>(0,3) = object;
+	Vector3d z(0,0,1);
+
+	Vector3d object_in_cam_m, object_in_cam_p;
 	Matrix4d cam_pose_m, cam_pose_p;
 	Vector3d sd_in_world_m, sd_in_world_p, voxel_m, voxel_p;
 	Vector3d u_m, u_p;
@@ -383,22 +414,30 @@ VectorJ sd_gradient(VectorJ j, const Vector3d& object, const Cube& ODF, Camera* 
 		sd_in_world_m = (cam_pose_m*sd_pose_in_cam).block<3,1>(0,3);
 		voxel_m = vgrid->exact_voxel_from_point(sd_in_world_m);
 		sd_m = sd_sign*ODF.trilinear_interpolation(voxel_m);
-		// find cos(theta)
-		u_m = sd_in_world_m - cam_pose_m.block<3,1>(0,3);
-		costheta_m = 0;//(obj_in_fov) ? 0 : (u_m.dot(v)) / (u_m.norm()*v.norm());
+//		// find cos(theta)
+//		u_m = sd_in_world_m - cam_pose_m.block<3,1>(0,3);
+//		costheta_m = (obj_in_fov) ? 0 : .1*(u_m.dot(v)) / (u_m.norm()*v.norm()) + .45;
+		// find cos(theta) between camera center axis and object
+		object_in_cam_m = (cam_pose_m.inverse()*object_pose).block<3,1>(0,3);
+		costheta_m = (object_in_cam_m.dot(z)) / (object_in_cam_m.norm()*z.norm());
 		// calculate delta
-		sd_sigmoid_m = 1.0 - 1.0/(1.0+exp(-alpha*sd_m*(1-costheta_m)));
+//		sd_sigmoid_m = 1.0 - 1.0/(1.0+exp(-alpha*sd_m));
+		sd_sigmoid_m = costheta_m;
 
 		// find sd
 		cam_pose_p = cam->get_pose(j_p);
 		sd_in_world_p = (cam_pose_p*sd_pose_in_cam).block<3,1>(0,3);
 		voxel_p = vgrid->exact_voxel_from_point(sd_in_world_p);
 		sd_p = sd_sign*ODF.trilinear_interpolation(voxel_p);
-		// find cos(theta)
-		u_p = sd_in_world_p - cam_pose_p.block<3,1>(0,3);
-		costheta_p = 0;//(obj_in_fov) ? 0 : (u_p.dot(v)) / (u_p.norm()*v.norm());
+//		// find cos(theta)
+//		u_p = sd_in_world_p - cam_pose_p.block<3,1>(0,3);
+//		costheta_p = (obj_in_fov) ? 0 : .1*(u_p.dot(v)) / (u_p.norm()*v.norm()) + .45;
+		// find cos(theta) between camera center axis and object
+		object_in_cam_p = (cam_pose_p.inverse()*object_pose).block<3,1>(0,3);
+		costheta_p = (object_in_cam_p.dot(z)) / (object_in_cam_p.norm()*z.norm());
 		// calculate delta
-		sd_sigmoid_p = 1.0 - 1.0/(1.0+exp(-alpha*sd_p*(1-costheta_p)));
+//		sd_sigmoid_p = 1.0 - 1.0/(1.0+exp(-alpha*sd_p));
+		sd_sigmoid_p = costheta_p;
 
 
 		grad(i) = (sd_sigmoid_p - sd_sigmoid_m) / (2*step);
@@ -408,7 +447,7 @@ VectorJ sd_gradient(VectorJ j, const Vector3d& object, const Cube& ODF, Camera* 
 }
 
 void test_gradient() {
-	srand(time(0));
+//	srand(time(0));
 
 	Vector3d table(3.5, -1.2, 0.74);
 	Vector3d object = table + Vector3d(0, .5, .05);
@@ -454,12 +493,12 @@ void test_gradient() {
 		rave_utils::plot_point(env, object, Vector3d(1,0,0), .05);
 		vgrid->plot_TSDF(env);
 		vgrid->plot_FOV(env, cam, vgrid->get_zbuffer(cam->get_pose(j)), cam->get_pose(j));
-//		vgrid->plot_kinfu_tsdf(env);
+		vgrid->plot_kinfu_tsdf(env);
 
 		if (grad.norm() > epsilon) {
 			grad /= grad.norm();
 		}
-		j = j + (M_PI/32)*(grad);
+		j = j + (M_PI/16)*(grad);
 	}
 }
 
@@ -586,6 +625,7 @@ int main() {
 //	test_pr2_system();
 //	test_camera();
 //	test_fk();
+//	test_ik();
 //	test_voxel_grid();
 //	test_greedy();
 	test_gradient();

@@ -54,7 +54,7 @@ void PR2System::init() {
 	Vector3d table_center(3.5, -1.2, 0.74);
 	double x_height = 2, y_height = 2, z_height = 2; // x and y must be equal!
 //	double x_height = 3, y_height = 3, z_height = 3;
-	int resolution = 100; // must be {32, 64, 128, 256, 512}
+	int resolution = 100;
 	vgrid = new VoxelGrid(table_center, x_height, y_height, z_height, resolution, cam->get_pose(arm->get_joint_values()));
 }
 
@@ -301,12 +301,26 @@ double PR2System::cost_ripped(const StdVectorJ& J, const Vector3d& obj, const Ma
 			cost += alpha_final_belief*sigma_tp1.trace();
 		}
 		sigma_t = sigma_tp1;
+
+//		Vector3d final_pos = arm->get_pose(x_tp1.segment<J_DIM>(0)).block<3,1>(0,3);
+//		Vector3d final_pos_voxel = vgrid->exact_voxel_from_point(final_pos);
+//		double dist = ODF.trilinear_interpolation(final_pos_voxel);
+//		cost += alpha_goal*dist;
+
+//		Vector3d final_pos = arm->get_pose(x_tp1.segment<J_DIM>(0)).block<3,1>(0,3);
+//		Vector3d e = obj - final_pos;
+//		cost += alpha_goal*e.squaredNorm();
 	}
 
-	Vector3d final_pos = cam->get_position(J.back());
-	Vector3d final_pos_voxel = vgrid->exact_voxel_from_point(final_pos);
-	double dist = ODF.trilinear_interpolation(final_pos_voxel);
-	cost += alpha_goal*dist;
+//	VectorJ j = J[0];
+//	for(int t=0; t < TIMESTEPS-1; ++t) {
+//		j = dynfunc(j, U[t], VectorQ::Zero());
+//	}
+//
+//	Vector3d final_pos = cam->get_position(j);
+//	Vector3d final_pos_voxel = vgrid->exact_voxel_from_point(final_pos);
+//	double dist = ODF.trilinear_interpolation(final_pos_voxel);
+//	cost += alpha_goal*dist;
 
 //	Vector3d final_pos = cam->get_position(J.back());
 //	Vector3d e = obj - final_pos;
@@ -529,6 +543,10 @@ void PR2System::display(const StdVectorJ& J, const std::vector<ParticleGaussian>
 
 	vgrid->plot_TSDF(brett->get_env());
 	vgrid->plot_FOV(brett->get_env(), cam, vgrid->get_zbuffer(cam->get_pose(J.back())), cam->get_pose(J.back()));
+
+	Matrix<double,H_SUB,W_SUB> zbuffer = vgrid->get_zbuffer(cam->get_pose(J.back()));
+	Matrix4d cam_pose = cam->get_pose(J.back());
+	vgrid->signed_distance_greedy_voxel_center(object, particle_gmm[0].ODF, cam, zbuffer, cam_pose);
 
 
 	VectorJ j_orig = arm->get_joint_values();

@@ -171,6 +171,58 @@ Matrix4d Arm::get_pose(const Matrix<double,ARM_DIM,1>& j) {
 	return rave_utils::rave_to_eigen(pose_mat);
 }
 
+Matrix<double,3,ARM_DIM> Arm::get_position_jacobian(const Matrix<double,ARM_DIM,1>& j) {
+	Matrix<double,3,ARM_DIM> jac;
+	jac.setZero();
+
+	Matrix<double,ARM_DIM,1> j_p = j, j_m = j;
+	for(int i=0; i < ARM_DIM; ++i) {
+		j_p(i) = j(i) + step;
+		j_m(i) = j(i) - step;
+
+		jac.block<3,1>(0,i) = (get_position(j_p) - get_position(j_m)) / (2*step);
+
+		j_p(i) = j(i);
+		j_m(i) = j(i);
+	}
+
+	return jac;
+}
+
+/**
+ * \brief Find 3d translation IK
+ * \param pos position to solve for
+ * \param j   initial joints when searching for solution, and final solution
+ * \return success/failure
+ */
+bool Arm::ik(const Vector3d& goal_pos, Matrix<double,ARM_DIM,1>& j) {
+	Vector3d arm_pos, error, jac_jacT_error;
+	Matrix<double,3,ARM_DIM> arm_pos_jac;
+
+	int iter = 0, max_iter = 1000;
+	while((goal_pos - get_position(j)).norm() > epsilon) {
+		arm_pos = get_position(j);
+		arm_pos_jac = get_position_jacobian(j);
+
+		error = goal_pos - arm_pos;
+
+		jac_jacT_error = arm_pos_jac*arm_pos_jac.transpose()*error;
+		double alpha = error.dot(jac_jacT_error) / jac_jacT_error.dot(jac_jacT_error);
+		j += alpha*arm_pos_jac.transpose()*error;
+
+		if (iter++ > max_iter) {
+			LOG_WARN("IK failed: reached max iterations");
+			return false;
+		}
+	}
+
+	if (((j - lower).minCoeff() < 0) || ((upper - j).minCoeff() < 0)) {
+		return false;
+	}
+
+	return true;
+}
+
 void Arm::set_joint_values(const Matrix<double,ARM_DIM,1>& j) {
 	std::vector<double> joint_values_vec(ARM_DIM);
 	for(int i=0; i < num_joints; ++i) {

@@ -28,7 +28,7 @@ typedef double pr2MPC_FLOAT;
 /* SOLVER SETTINGS ------------------------------------------------------*/
 /* print level */
 #ifndef pr2MPC_SET_PRINTLEVEL
-#define pr2MPC_SET_PRINTLEVEL    (0)
+#define pr2MPC_SET_PRINTLEVEL    (2)
 #endif
 
 /* timing */
@@ -146,6 +146,12 @@ typedef struct pr2MPC_params
 
     /* vector of size 7 */
     pr2MPC_FLOAT ub5[7];
+
+    /* matrix of size [6 x 7] (column major format) */
+    pr2MPC_FLOAT A5[42];
+
+    /* vector of size 6 */
+    pr2MPC_FLOAT b5[6];
 
 } pr2MPC_params;
 

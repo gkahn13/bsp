@@ -116,7 +116,7 @@ void plot_segment(rave::EnvironmentBasePtr env, const Vector3d& p0, const Vector
 	handles.push_back(env->drawlinestrip(points, 2, sizeof(float)*3, 1.0f, c));
 }
 
-void plot_transform(rave::EnvironmentBasePtr env, rave::Transform T) {
+void plot_transform(rave::EnvironmentBasePtr env, rave::Transform T, float length) {
 	Matrix4d M = rave_to_eigen(T);
 
 	Vector3d o = M.block<3,1>(0,3);
@@ -127,7 +127,7 @@ void plot_transform(rave::EnvironmentBasePtr env, rave::Transform T) {
 	for(int i=0; i < 3; ++i) { ppoints[i] = o(i); }
 	float colors[6];
 	for(int i=0; i < 3; ++i) {
-		Vector3d endpt = o + 0.1*M.block<3,1>(0,i);
+		Vector3d endpt = o + length*M.block<3,1>(0,i);
 		for(int i=0; i < 3; ++i) { ppoints[i+3] = endpt(i); }
 
 		Matrix<double,6,1> c = I.block<6,1>(0,i);

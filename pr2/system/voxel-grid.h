@@ -108,6 +108,7 @@ public:
 	Matrix<double,H_SUB,W_SUB> get_zbuffer(const Matrix4d& cam_pose);
 
 	Vector3d exact_voxel_from_point(const Vector3d& point);
+	Vector3d exact_point_from_voxel(const Vector3d& voxel);
 
 	void plot_kinfu_tsdf(rave::EnvironmentBasePtr env);
 	void plot_TSDF(rave::EnvironmentBasePtr env);

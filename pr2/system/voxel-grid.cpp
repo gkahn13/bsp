@@ -204,7 +204,7 @@ Cube VoxelGrid::get_ODF(const Vector3d& obj) {
 	typedef boost::heap::fibonacci_heap<VoxelDist>::handle_type handle_t;
 
 	Cube ODF(resolution, resolution, resolution);
-	ODF.set_all(INFINITY);
+	ODF.set_all(dx*resolution*dy*resolution*dz*resolution);
 
 	Vector3i obj_voxel = voxel_from_point(obj);
 
@@ -415,6 +415,11 @@ Vector3d VoxelGrid::exact_voxel_from_point(const Vector3d& point) {
 	return Vector3d(-1,-1,-1);
 }
 
+Vector3d VoxelGrid::exact_point_from_voxel(const Vector3d& voxel) {
+	Vector3d center(voxel(0)*dx, voxel(1)*dy, voxel(2)*dz);
+	return (bottom_corner + center);
+}
+
 /**
  * VoxelGrid Display methods
  */
@@ -511,7 +516,7 @@ void VoxelGrid::plot_ODF(Cube& ODF, rave::EnvironmentBasePtr env) {
 }
 
 void VoxelGrid::plot_FOV(rave::EnvironmentBasePtr env, Camera* cam, const Matrix<double,H_SUB,W_SUB>& zbuffer, const Matrix4d& cam_pose) {
-	int step = 2;
+	int step = 1;
 
 	for(int i=0; i < resolution; i+=step) {
 		for(int j=0; j < resolution; j+=step) {

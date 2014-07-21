@@ -166,7 +166,7 @@ int main ( int argc, char** argv ) {
 	propagator.setDirectSoundIsEnabled(true);
 	propagator.setTransmissionIsEnabled(true);
 	propagator.setReflectionIsEnabled(false);
-	propagator.setDiffractionIsEnabled(false);
+	propagator.setDiffractionIsEnabled(true);
 	propagator.setReverbIsEnabled(false);
 
 	//***********************************************************************
@@ -181,16 +181,7 @@ int main ( int argc, char** argv ) {
 
 	// Set the listener's starting position, at head height and centered at the XZ origin.
 	Vector3d listener_pos(0, 1.5, 0);
-	Matrix3d listener_ori;
-	listener_ori << -1,  0,  0,
-					 0,  1,  0,
-					 0,  0, -1;
-//	listener_ori << 0, -1, 0,
-//					1,  0, 0,
-//					0,  0, 1;
-//	listener_ori << 1,  0, 0,
-//					0,  1, 0,
-//					0,  0, 1;
+	Matrix3d listener_ori = Matrix3d::Identity();
 
 	listener.setPosition(eigen_to_gsound(listener_pos));
 	listener.setOrientation(eigen_to_gsound(listener_ori));
@@ -254,7 +245,7 @@ int main ( int argc, char** argv ) {
 
 	// Set the reverb distance attenuation for the source to slightly less
 	// than the normal distance attenuation.
-	source->setDistanceAttenuation(SoundDistanceAttenuation(1, 0.5, 0));
+	source->setReverbDistanceAttenuation(SoundDistanceAttenuation(1, 0.5, 0));
 
 	// Add the sound source to the scene.
 	scene.addSource( source );
@@ -262,7 +253,7 @@ int main ( int argc, char** argv ) {
 	// Create a buffer to hold the output of the propagation system.
 	SoundPropagationPathBuffer pathBuffer;
 
-	double pos_step = .01;
+	double pos_step = .05;
 	std::map<int,rave::Vector> delta_position =
 	{
 			{'a' , rave::Vector(0, pos_step, 0)},
@@ -329,7 +320,7 @@ int main ( int argc, char** argv ) {
 		int num_prop_paths = sourcePathBuffer.getNumberOfPropagationPaths();
 		std::cout << "Number of propagation paths: " << num_prop_paths << "\n";
 		double total_avg_gain = 0;
-		double max_gain = 0;
+		double max_gain = 0, min_gain = INFINITY;
 		for(int i=0; i < num_prop_paths; ++i) {
 			PropagationPath propPath = sourcePathBuffer.getPropagationPath(i);
 			FrequencyResponse fr = propPath.getFrequencyAttenuation();
@@ -337,10 +328,12 @@ int main ( int argc, char** argv ) {
 //			std::cout << "gain " << i << ": " << avg_gain << "\n";
 			total_avg_gain += avg_gain;
 			max_gain = (max_gain > avg_gain) ? max_gain : avg_gain;
+			min_gain = (min_gain < avg_gain) ? min_gain : avg_gain;
 		}
 		double all_avg_gain = total_avg_gain / double(num_prop_paths);
 		std::cout << "all_avg_gain: " << all_avg_gain << "\n";
 		std::cout << "max_gain: " << max_gain << "\n";
+		std::cout << "min_gain: " << min_gain << "\n";
 
 		elapsed += my_util::Timer_toc(&timer);
 		my_util::Timer_tic(&timer);

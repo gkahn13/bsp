@@ -496,7 +496,7 @@ StdVector3d Camera::get_pc(const Matrix<double,ARM_DIM,1>& j) {
 }
 
 Matrix<double,HEIGHT_FULL,WIDTH_FULL> Camera::get_full_zbuffer(const Matrix<double,ARM_DIM,1>& j, const StdVector3d& obstacles) {
-	Matrix<double,HEIGHT_FULL,WIDTH_FULL> zbuffer = intrinsics::MAX_RANGE*Matrix<double,HEIGHT_FULL,WIDTH_FULL>::Ones();
+	Matrix<double,HEIGHT_FULL,WIDTH_FULL> zbuffer = INFINITY*Matrix<double,HEIGHT_FULL,WIDTH_FULL>::Ones(); // if initialize to MAX_RANGE, causes incorrect depths in kinfu TSDF
 	Matrix4d cam_pose = get_pose(j);
 
 	for(int i=0; i < obstacles.size(); ++i) {

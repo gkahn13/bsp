@@ -106,9 +106,11 @@ public:
 			Camera* cam, const Matrix<double,H_SUB,W_SUB>& zbuffer, const Matrix4d& cam_pose);
 
 	Matrix<double,H_SUB,W_SUB> get_zbuffer(const Matrix4d& cam_pose);
+	double distance_to_TSDF(const Vector3d& cam_pos);
 
 	Vector3d exact_voxel_from_point(const Vector3d& point);
 	Vector3d exact_point_from_voxel(const Vector3d& voxel);
+	bool contains(const Vector3d& point);
 
 	void plot_kinfu_tsdf(rave::EnvironmentBasePtr env);
 	void plot_TSDF(rave::EnvironmentBasePtr env);

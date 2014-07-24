@@ -33,7 +33,7 @@ namespace rave = OpenRAVE;
 
 namespace intrinsics {
 const double FOCAL_LENGTH = .01;
-const double MAX_RANGE = 0.75; // 5.0
+const double MAX_RANGE = 0.75; // 0.75
 const double MIN_RANGE = 0.2;
 
 const double fx  = WIDTH_FULL*2.0;

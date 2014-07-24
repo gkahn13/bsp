@@ -53,6 +53,34 @@ double Cube::trilinear_interpolation(const Vector3d& voxel) const {
     Vector2d Q = M*V;
     Vector2d R = M*W;
 
+    double max_val = -INFINITY;
+    for (int slice = 0; slice < 2; ++slice)
+    {
+    	int z_clamp = z_index + slice;
+    	if (z_clamp >= z_size) {
+    		z_clamp = z_size - 1;
+    	}
+
+    	for(int row=0; row < 2; ++row) {
+    		int y_clamp = y_index + row;
+    		if (y_clamp >= y_size) {
+    			y_clamp = y_size - 1;
+    		}
+
+    		for (int col = 0; col < 2; ++col) {
+    			int x_clamp = x_index + col;
+    			if (x_clamp >= x_size) {
+    				x_clamp = x_size - 1;
+    			}
+
+    			double val = get(x_clamp, y_clamp, z_clamp);
+    			if (val < INFINITY) {
+    				max_val = (max_val > val) ? max_val : val;
+    			}
+    		}
+    	}
+    }
+
     // compute the tensor product (M*U)(M*V)(M*W)*D where D is the 2x2x2
     // subimage containing (x,y,z)
     double result = 0;
@@ -78,6 +106,8 @@ double Cube::trilinear_interpolation(const Vector3d& voxel) const {
                 double val = get(x_clamp, y_clamp, z_clamp);
                 if (val < INFINITY) {
                 	result += P(col)*Q(row)*R(slice)*val;
+                } else if (max_val > -INFINITY) {
+                	result += P(col)*Q(row)*R(slice)*max_val;
                 }
             }
         }
@@ -204,7 +234,8 @@ Cube VoxelGrid::get_ODF(const Vector3d& obj) {
 	typedef boost::heap::fibonacci_heap<VoxelDist>::handle_type handle_t;
 
 	Cube ODF(resolution, resolution, resolution);
-	ODF.set_all(dx*resolution*dy*resolution*dz*resolution);
+//	ODF.set_all(dx*resolution*dy*resolution*dz*resolution);
+	ODF.set_all(INFINITY);
 
 	Vector3i obj_voxel = voxel_from_point(obj);
 
@@ -396,11 +427,31 @@ Matrix<double,H_SUB,W_SUB> VoxelGrid::get_zbuffer(const Matrix4d& cam_pose) {
 	for(int i=0; i < H_SUB; ++i) {
 		for(int j=0; j < W_SUB; ++j) {
 			zbuffer(i,j) = 1e-3*data[index++]; // mm to m
-			zbuffer(i,j) = (zbuffer(i,j) < intrinsics::MIN_RANGE) ? intrinsics::MAX_RANGE : zbuffer(i,j);
+//			zbuffer(i,j) = (zbuffer(i,j) < intrinsics::MIN_RANGE) ? intrinsics::MAX_RANGE : zbuffer(i,j);
+			if ((zbuffer(i,j) < intrinsics::MIN_RANGE) || (zbuffer(i,j) > intrinsics::MAX_RANGE)) {
+				zbuffer(i,j) = intrinsics::MAX_RANGE;
+			}
 		}
 	}
 
 	return zbuffer;
+}
+
+double VoxelGrid::distance_to_TSDF(const Vector3d& cam_pos) {
+	double min_dist = INFINITY;
+
+	for(int i=0; i < resolution; ++i) {
+		for(int j=0; j < resolution; ++j) {
+			for(int k=0; k < resolution; ++k) {
+				if (TSDF->get(i,j,k) == 0) {
+					double dist = (cam_pos - point_from_voxel(Vector3i(i,j,k))).norm();
+					min_dist = (min_dist < dist) ? min_dist : dist;
+				}
+			}
+		}
+	}
+
+	return min_dist;
 }
 
 Vector3d VoxelGrid::exact_voxel_from_point(const Vector3d& point) {
@@ -418,6 +469,17 @@ Vector3d VoxelGrid::exact_voxel_from_point(const Vector3d& point) {
 Vector3d VoxelGrid::exact_point_from_voxel(const Vector3d& voxel) {
 	Vector3d center(voxel(0)*dx, voxel(1)*dy, voxel(2)*dz);
 	return (bottom_corner + center);
+}
+
+bool VoxelGrid::contains(const Vector3d& point) {
+	Vector3d relative = point - bottom_corner;
+	Vector3d voxel(relative(0)/dx, relative(1)/dy, relative(2)/dz);
+
+	if ((voxel.minCoeff() >= 0) && (voxel.maxCoeff() < resolution)) {
+		return true;
+	}
+
+	return false;
 }
 
 /**

@@ -85,6 +85,15 @@ set_target_properties(test-pr2-system PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFL
 set_target_properties(test-pr2-system PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 target_link_libraries(test-pr2-system ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES} ${Boost_LIBRARIES} ${FIGTREE_LIBRARIES} ${PCL_LIBRARIES})
 
+add_executable(test-avg-sd  tests/test-avg-sd.cpp
+								geometry/geometry2d.cpp geometry/geometry3d.cpp
+								system/pr2-sim.cpp system/pr2-system.cpp system/voxel-grid.cpp
+								utils/pr2-utils.cpp utils/rave-utils.cpp
+		                        ../util/logging.cpp)
+set_target_properties(test-avg-sd PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
+set_target_properties(test-avg-sd PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
+target_link_libraries(test-avg-sd ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES} ${Boost_LIBRARIES} ${FIGTREE_LIBRARIES} ${PCL_LIBRARIES})
+
 
 add_executable(test-fov tests/test-fov.cpp
 						geometry/geometry2d.cpp geometry/geometry3d.cpp

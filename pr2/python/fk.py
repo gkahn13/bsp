@@ -121,7 +121,7 @@ def test_fk():
     env.SetViewer('qtcoin')
     time.sleep(1)
     
-    arm_name = 'right'
+    arm_name = 'left'
     lr = arm_name[0]
     
     robot = env.GetRobots()[0]
@@ -143,8 +143,9 @@ def test_fk():
     robot_fk = RobotFK(robot, lr, gripper_tool_to_sensor)
     
     #joints = [np.random.random(7)-.5, np.random.random(7)-.5]
-    joints = [[-2.03018, -0.0547499   ,  -1.011 ,  -1.47619,  -0.559956 ,  -1.42856  , -3.96467]]
-    
+    #joints = [[-2.03018, -0.0547499   ,  -1.011 ,  -1.47619,  -0.559956 ,  -1.42856  , -3.96467]]
+    joints = [[-0.0035595997252855227, -0.0001802885031949586, 0.009552644767137686, 0.0011127307030500688, -0.2960540594183074, -0.41989261289657076, 0.0005531658788795468]]
+
     for j in joints:
         robot.SetDOFValues(j, arm.GetArmIndices())
         

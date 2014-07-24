@@ -619,78 +619,7 @@ void test_tri_interp() {
 	std::cout << od << "\n";
 }
 
-StdVector3d get_voxel_centers_cam(const Cube& ODF, const VectorJ& j, VoxelGrid* vgrid, Camera* cam, rave::EnvironmentBasePtr env) {
-	Matrix4d cam_pose = cam->get_pose(j);
-	Matrix<double,H_SUB,W_SUB> zbuffer = vgrid->get_zbuffer(cam_pose);
-	std::cout << zbuffer << "\n";
-
-//	std::cout << "get all voxel centers in the FOV (in the camera frame)\n";
-	StdVector3d voxel_centers_cam;
-	Vector3i size = ODF.size();
-	for(int i=0; i < size(0); ++i) {
-		for(int j=0; j < size(1); ++j) {
-			for(int k=0; k < size(2); ++k) {
-				Vector3d voxel_center_world = vgrid->exact_point_from_voxel(Vector3d(i,j,k));
-				if (cam->is_in_fov(voxel_center_world, zbuffer, cam_pose)) {
-					rave_utils::plot_point(env, voxel_center_world, Vector3d(0,1,0), .005);
-					Matrix4d voxel_center_pose_world = Matrix4d::Identity();
-					voxel_center_pose_world.block<3,1>(0,3) = voxel_center_world;
-					Matrix4d voxel_center_pose_cam = cam_pose.inverse()*voxel_center_pose_world;
-					voxel_centers_cam.push_back(voxel_center_pose_cam.block<3,1>(0,3));
-				}
-			}
-		}
-	}
-//	std::cout << "total number of voxels: " << size.prod() << "\n";
-//	std::cout << "num voxels in FOV: " << voxel_centers_cam.size() << "\n";
-
-	return voxel_centers_cam;
-}
-
-double average_object_distance(const VectorJ& j, const StdVector3d& voxel_centers_cam, const Cube& ODF, VoxelGrid* vgrid, Camera* cam) {
-	Matrix4d cam_pose = cam->get_pose(j);
-
-//	std::cout << "convert all voxel centers in the FOV to world frame, then get voxels\n";
-	StdVector3d voxels_world;
-	for(int i=0; i < voxel_centers_cam.size(); ++i) {
-		Matrix4d voxel_center_pose_cam = Matrix4d::Identity();
-		voxel_center_pose_cam.block<3,1>(0,3) = voxel_centers_cam[i];
-		Matrix4d voxel_center_pose_world = cam_pose*voxel_center_pose_cam;
-		Vector3d voxel = vgrid->exact_voxel_from_point(voxel_center_pose_world.block<3,1>(0,3));
-		voxels_world.push_back(voxel);
-	}
-
-//	std::cout << "calculate average object-distance for voxels in FOV\n";
-	double total_od = 0;
-	for(int i=0; i < voxels_world.size(); ++i) {
-		total_od += ODF.trilinear_interpolation(voxels_world[i]);
-	}
-	double avg_od = total_od / double(voxels_world.size());
-
-	return avg_od;
-}
-
-VectorJ average_object_distance_grad(const VectorJ& j, const StdVector3d& voxel_centers_cam, const Cube& ODF, VoxelGrid* vgrid, Camera* cam) {
-	const double step = 1e-5;
-	VectorJ grad;
-
-	VectorJ j_p, j_m;
-	for(int i=0; i < J_DIM; ++i) {
-		j_p = j;
-		j_m = j;
-
-		j_p(i) = j(i) + step;
-		j_m(i) = j(i) - step;
-
-		grad(i) = (average_object_distance(j_p, voxel_centers_cam, ODF, vgrid, cam) - average_object_distance(j_m, voxel_centers_cam, ODF, vgrid, cam)) / (2*step);
-	}
-
-	return grad;
-}
-
-void test_avg_dist() {
-//	srand(time(0));
-
+void test_distance_to_TSDF() {
 	Vector3d table(3.5, -1.2, 0.74);
 //	Vector3d object = table + Vector3d(0, .5, .05);
 	Vector3d object = table + Vector3d(.1, -.1, -.1);
@@ -715,38 +644,15 @@ void test_avg_dist() {
 	Matrix4d cam_pose = cam->get_pose(j);
 	sys.update(pc, full_zbuffer, cam_pose);
 
-	std::cout << "get_ODF\n";
-	Cube ODF = sys.get_ODF(object);
+	rave_utils::plot_point(env, object, Vector3d(0,0,1), .05);
+	vgrid->plot_TSDF(env);
 
 	while(true) {
 		arm->teleop();
-//		std::cout << "Press enter\n";
-//		std::cin.ignore();
-//		arm->set_joint_values(j);
-		j = arm->get_joint_values();
 
-		rave_utils::clear_plots();
-		rave_utils::plot_point(env, object, Vector3d(0,0,1), .05);
-		vgrid->plot_TSDF(env);
-		StdVector3d voxel_centers_cam = get_voxel_centers_cam(ODF, j, vgrid, cam, env);
-
-//		VectorJ grad = average_object_distance_grad(j, voxel_centers_cam, ODF, vgrid, cam);
-//		std::cout << "avg_od grad: " << grad.transpose() << "\n";
-//
-//		rave_utils::clear_plots();
-//		rave_utils::plot_point(env, object, Vector3d(0,0,1), .05);
-//		vgrid->plot_TSDF(env);
-//		Matrix<double,H_SUB,W_SUB> zbuffer = vgrid->get_zbuffer(cam->get_pose(j));
-//		std::cout << zbuffer << "\n";
-//		vgrid->plot_FOV(env, cam, vgrid->get_zbuffer(cam->get_pose(j)), cam->get_pose(j));
-//		double avg_od = average_object_distance(j, voxel_centers_cam, ODF, vgrid, cam);
-//		std::cout << "avg_od: " << avg_od << "\n";
-//
-//		j -= (M_PI/32)*(grad/grad.norm());
+		double dist = vgrid->distance_to_TSDF(cam->get_position(arm->get_joint_values()));
+		std::cout << "dist: " << dist << "\n";
 	}
-
-	std::cout << "Press enter to exit\n";
-	std::cin.ignore();
 }
 
 int main() {
@@ -761,6 +667,6 @@ int main() {
 //	test_gradient();
 //	test_raycaster();
 //	test_tri_interp();
-	test_avg_dist();
+	test_distance_to_TSDF();
 	return 0;
 }

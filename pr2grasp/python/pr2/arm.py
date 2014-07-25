@@ -35,6 +35,14 @@ class Arm:
                            "_wrist_flex_joint",
                            "_wrist_roll_joint"]
     
+    L_POSTURES = {
+                  'untucked' : [0.4,  1.0,    0.0,  -2.05,  0.0,  -0.1,   0.0],
+                  'tucked'   : [0.06, 1.25,   1.79, -1.68, -1.73, -0.10, -0.09],
+                  'up'       : [0.33, -0.35,  2.59, -0.15,  0.59, -1.41, -0.27],
+                  'side'     : [1.83, -0.33,  1.01, -1.43,  1.1,  -2.10,  3.07],
+                  'mantis'   : [2.03, -0.054, 1.01, -1.47,  0.55, -1.42,  3.96]
+                  }
+    
     
     def __init__(self, arm_name, default_speed=.05):
         """
@@ -53,7 +61,7 @@ class Arm:
         self.joint_state_sub = rospy.Subscriber('/joint_states', sm.JointState, self._joint_state_callback)
         
         rospy.loginfo('Waiting for /joint_states...')
-        while self.current_joints is None or self.current_grasp is None:
+        while not rospy.is_shutdown() and self.current_joints is None or self.current_grasp is None:
             rospy.sleep(.01)
         
         self.joint_command_pub = rospy.Publisher('{0}_arm_controller/command'.format(arm_name[0]), tm.JointTrajectory)
@@ -131,6 +139,18 @@ class Arm:
     # command methods   #
     #####################
     
+    def go_to_posture(self, posture, block=True, speed=None):
+        """
+        :param posture: 'untucked', 'tucked', 'up', 'side', 'mantis'
+        :param block: if True, waits until trajectory is completed
+        :param speed: execution speed in meters/sec
+        """
+        assert posture in self.L_POSTURES.keys()
+        
+        l_joints = self.L_POSTURES[posture]
+        joints = l_joints if self.arm_name == "left" else Arm._mirror_arm_joints(l_joints)
+        self.go_to_joints(joints, block=block, speed=speed)
+    
     def go_to_pose(self, pose, block=True, speed=None):
         """
         :param pose: tfx.pose
@@ -175,8 +195,10 @@ class Arm:
         if block:
             timeout = utils.Timeout(10)
             timeout.start()
-            while(np.abs(self.current_grasp - max(grasp,0)) > .005 and not timeout.has_timed_out()):
-                rospy.sleep(.005)
+            last_grasp = self.current_grasp
+            while(np.abs(self.current_grasp - max(grasp,0)) > .005 and np.abs(last_grasp - self.current_grasp) > .001 and not timeout.has_timed_out()):
+                last_grasp = self.current_grasp
+                rospy.sleep(.01)
         
     
     #######################
@@ -214,6 +236,7 @@ class Arm:
         self._update_rave()
         goal_pose_mat = rave_utils.transform_relative_pose_for_ik(self.manip, pose.matrix, 'base_link', self.tool_frame)
         joints = self.manip.FindIKSolution(goal_pose_mat, 0) # rave.IkFilterOptions.CheckEnvCollisions
+        joints = self._closer_joint_angles(joints, self.current_joints)
         
         return joints
         
@@ -257,6 +280,24 @@ class Arm:
                 self.current_grasp = value
                 break
         
+    ##################
+    # helper methods #
+    ##################
+    
+    @staticmethod
+    def _mirror_arm_joints(x):
+        """"
+        Mirror image of joints (r->l or l->r)
+        
+        :param x: joints
+        """
+        return np.array([-x[0],x[1],-x[2],x[3],-x[4],x[5],-x[6]])
+    
+    @staticmethod
+    def _closer_joint_angles(new_joints, curr_joints):
+        for i in [2, 4, 6]:
+            new_joints[i] = utils.closer_angle(new_joints[i], curr_joints[i])
+        return new_joints
         
 def test_fk():
     arm = Arm('left')
@@ -308,9 +349,17 @@ def test_gripper():
     
     IPython.embed()
         
+def test_gripper_rot():
+    arm = Arm('right')
+    
+    curr_pose = arm.get_pose()
+    
+    IPython.embed()
+        
 if __name__ == '__main__':
     rospy.init_node('test_arm', anonymous=True)
     #test_fk()
     #test_ik()
     #test_commands()
-    test_gripper()
+    #test_gripper()
+    test_gripper_rot()

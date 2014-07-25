@@ -83,3 +83,4 @@ def save_view(env, file_name):
     I = env.GetViewer().GetCameraImage(640,480,  env.GetViewer().GetCameraTransform(),[640,640,320,240])
     scipy.misc.imsave(file_name ,I)
     env.GetViewer().SendCommand('SetFiguresInCamera 0')
+    

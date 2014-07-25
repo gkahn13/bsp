@@ -5,6 +5,7 @@ import roslib
 import actionlib
 roslib.load_manifest("pr2_controllers_msgs")
 roslib.load_manifest("move_base_msgs")
+#from pr2_controllers_msgs.msg import JointTrajectoryAction, JointTrajectoryGoal
 import trajectory_msgs.msg as tm
 import sensor_msgs.msg as sm
 import pr2_controllers_msgs.msg as pcm
@@ -68,7 +69,15 @@ class Arm:
             rospy.sleep(.01)
         
         self.joint_command_pub = rospy.Publisher('{0}_arm_controller/command'.format(arm_name[0]), tm.JointTrajectory)
+        #self.joint_command_client = actionlib.SimpleActionClient('/{0}_arm_controller/joint_trajectory_action'.format(arm_name[0]),
+        #                                            pcm.JointTrajectoryAction)
+        #rospy.loginfo('Waiting for joint command server...')
+        #self.joint_command_client.wait_for_server()
+        
+        #self.gripper_command_pub = rospy.Publisher('{0}_gripper_controller/command'.format(arm_name[0]), pcm.Pr2GripperCommand)
         self.gripper_command_client = actionlib.SimpleActionClient('{0}_gripper_controller/gripper_action'.format(arm_name[0]), pcm.Pr2GripperCommandAction)
+        rospy.loginfo('Waiting for gripper command server...')
+        self.gripper_command_client.wait_for_server()
         
         self.sim = sim
         if self.sim is None:
@@ -89,7 +98,6 @@ class Arm:
         :param speed: execution speed in meters/sec
         """
         joint_traj = [self.ik(pose) for pose in pose_traj]
-        print joint_traj
         self.execute_joint_trajectory(joint_traj, block=block, speed=speed)
     
     def execute_joint_trajectory(self, joint_traj, block=True, speed=None):
@@ -103,9 +111,11 @@ class Arm:
             assert len(joints) == len(self.current_joints)
         speed = float(speed) if speed is not None else self.default_speed
         
-        joint_trajectory = tm.JointTrajectory()
-        joint_trajectory.joint_names = self.joint_names
-        joint_trajectory.header.stamp = rospy.Time.now()
+        goal = pcm.JointTrajectoryGoal()
+        
+        #joint_trajectory = tm.JointTrajectory()
+        goal.trajectory.joint_names = self.joint_names
+        goal.trajectory.header.stamp = rospy.Time.now()
         
         curr_joints = self.current_joints
         time_from_start = 0.
@@ -113,18 +123,23 @@ class Arm:
             next_position = self.fk(next_joints).position
             curr_position = self.fk(curr_joints).position
             duration = ((next_position - curr_position).norm)/speed
+            print('Duration: {0}'.format(duration))
             time_from_start += duration
             
             waypoint = tm.JointTrajectoryPoint()
             waypoint.positions = next_joints
-            waypoint.velocities = [0 for _ in xrange(len(self.joint_names))]
+            #waypoint.velocities = [0 for _ in xrange(len(self.joint_names))]
             waypoint.time_from_start = rospy.Duration(time_from_start)
             
-            joint_trajectory.points.append(waypoint)
+            goal.trajectory.points.append(waypoint)
             
             curr_joints = next_joints
-            
-        self.joint_command_pub.publish(joint_trajectory)
+         
+        #self.joint_command_client.send_goal(goal)   
+        self.joint_command_pub.publish(goal.trajectory)
+        
+        print('Goal:\n{0}'.format(goal))
+        print('Total time: {0}'.format(time_from_start))
         
         if block:
             rospy.sleep(time_from_start)
@@ -187,6 +202,7 @@ class Arm:
         max_effort = max_effort if max_effort is not None else self.default_max_effort
         
         self.gripper_command_client.send_goal(pcm.Pr2GripperCommandGoal(pcm.Pr2GripperCommand(position=grasp,max_effort=max_effort)))
+        #self.gripper_command_pub.publish(pcm.Pr2GripperCommand(position=grasp,max_effort=max_effort))
         
         if block:
             timeout = utils.Timeout(10)
@@ -230,7 +246,7 @@ class Arm:
         assert pose.frame.count('base_link') == 1
         
         self.sim.update()
-        joints = ku.ik_for_link(pose.matrix, self.manip, self.tool_frame, 0)
+        joints = ku.ik_for_link(np.array(pose.matrix), self.manip, self.tool_frame, 0)
         
         #goal_pose_mat = self.sim.transform_relative_pose_for_ik(self.manip, pose.matrix, 'base_link', self.tool_frame)
         #joints = self.manip.FindIKSolution(goal_pose_mat, 0) # rave.IkFilterOptions.CheckEnvCollisions
@@ -314,26 +330,23 @@ def test_ik():
     print('position difference: {0}'.format((curr_pose.position - fk_curr_joints.position).norm))
     
 def test_commands():
-    arm = Arm('left')
+    arm = Arm('right')
+    rospy.sleep(1)
     curr_pose = arm.get_pose()
     
-    #next_pose = curr_pose + [0,0,.2]
-    #arm.go_to_pose(next_pose)
+    #arm.open_gripper()
+    #rospy.sleep(1)
+    #arm.close_gripper()
     
-    pose_traj = [curr_pose + [0,0,-.2],
-                 curr_pose + [-.1,.2,-.1],
-                 curr_pose + [0,0,0]]
-    
-    print('pose_traj:')
-    for pose in pose_traj:
-        print(pose)
-    
-    arm.execute_pose_trajectory(pose_traj)
+    next_pose = curr_pose + [0,0,-.2]
+    next_joints = arm.ik(next_pose)
+        
+    arm.go_to_joints(next_joints)
     
     IPython.embed()
     
 def test_gripper():
-    arm = Arm('left')
+    arm = Arm('right')
     
     #arm.open_gripper()
     arm.close_gripper()
@@ -344,5 +357,5 @@ if __name__ == '__main__':
     rospy.init_node('test_arm', anonymous=True)
     #test_fk()
     #test_ik()
-    #test_commands()
-    test_gripper()
+    test_commands()
+    #test_gripper()

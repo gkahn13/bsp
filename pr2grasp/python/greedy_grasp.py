@@ -26,20 +26,24 @@ class HandleDetector:
         
     def callback(self, msg):
         #rospy.loginfo('Received handle list! Frame: {0}'.format(msg.header.frame_id))
-        self.last_time_received = msg.header.stamp
-        self.last_msg = msg
-        self.last_pose = tfx.pose(msg.handles[0].cylinders[0].pose, stamp=msg.header.stamp, frame=msg.header.frame_id)
+        if len(msg.handles) > 0 and len(msg.handles[0].cylinders) > 0:
+            self.last_time_received = msg.header.stamp
+            self.last_msg = msg
+            
+            self.last_pose = tfx.pose(msg.handles[0].cylinders[0].pose, stamp=msg.header.stamp, frame=msg.header.frame_id)
         
-        rot = np.array(self.last_pose.orientation.matrix)
-        if rot[2,2] > 0:
-            # facing wrong way
-            new_rot = np.zeros((3,3))
-            new_rot[:3,0] = rot[:3,1]
-            new_rot[:3,1] = rot[:3,0]
-            new_rot[:3,2] = -rot[:3,2]
-            self.last_pose.orientation = tfx.tb_angles(new_rot) 
-        
-        self.pose_pub.publish(self.last_pose.msg.PoseStamped())
+            """
+            rot = np.array(self.last_pose.orientation.matrix)
+            if rot[2,2] > 0:
+                # facing wrong way
+                new_rot = np.zeros((3,3))
+                new_rot[:3,0] = rot[:3,1]
+                new_rot[:3,1] = rot[:3,0]
+                new_rot[:3,2] = -rot[:3,2]
+                self.last_pose.orientation = tfx.tb_angles(new_rot)
+            """ 
+            
+            self.pose_pub.publish(self.last_pose.msg.PoseStamped())
         
     def get_new_handle(self):
         if self.last_pose is None:
@@ -65,7 +69,7 @@ class GreedyGrasp:
         
         self.sim.env.Load('../envs/SDHtable.xml')
         
-        self.arm.go_to_posture('mantis')
+        #self.arm.go_to_posture('mantis')
         self.home_pose = self.arm.get_pose()
         
         self.handle_pose = None
@@ -98,9 +102,14 @@ class GreedyGrasp:
         rospy.loginfo('Waiting for handle pose...')
         handle_pose_cam = self.hd.get_new_handle()
         #handle_pose_cam = tfx.pose([-0.069, -0.008,  0.471],tfx.tb_angles(169.5, 14.5, 63.1), frame='/camera_rgb_optical_frame') # TEMP stub
-        self.handle_pose = tfx.lookupTransform('base_link', handle_pose_cam.frame)*handle_pose_cam
+        #self.handle_pose = tfx.lookupTransform('base_link', handle_pose_cam.frame)*handle_pose_cam
+        #self.handle_pose = tfx.convertToFrame(tfx.convertToFrame(handle_pose_cam, self.arm.tool_frame), 'base_link')
+        cam_to_tool_frame = tfx.lookupTransform(self.arm.tool_frame, handle_pose_cam.frame)
+        tool_frame_to_base = tfx.lookupTransform('base_link', self.arm.tool_frame)
+        self.handle_pose = tool_frame_to_base*(cam_to_tool_frame*handle_pose_cam)
         self.handle_pose_pub.publish(self.handle_pose.msg.PoseStamped())
         rospy.loginfo('Received new handle pose')
+        print(self.handle_pose)
     
         self.grab_handle()
     
@@ -170,9 +179,14 @@ def test_planner():
     print('joint_traj end pose:\n{0}'.format(a.fk(joint_traj[-1]).matrix))
     
     IPython.embed()
+    
+def test_tf():
+    tfx.lookupTransform('camera_rgb_optical_frame','r_gripper_tool_frame')
+    IPython.embed()
 
 if __name__ == '__main__':
     rospy.init_node('greedy_grasp', anonymous=True)
     test_greedy_grasp()
     #test_handle_detector()
     #test_planner()
+    #test_tf()

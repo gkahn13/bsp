@@ -10,8 +10,7 @@ import tfx
 import handle_detector.msg as hd_msg
 import geometry_msgs.msg as geom_msg
 
-from pr2 import arm
-from pr2 import utils
+from pr2 import arm, planner, simulator, utils
 
 import IPython
 
@@ -140,7 +139,28 @@ def test_handle_detector():
     
     IPython.embed()
 
+def test_planner():
+    arm_name='right'
+    sim = simulator.Simulator(view=False)
+    a = arm.Arm(arm_name, sim=sim)
+    p = planner.Planner(arm_name, sim=sim, interact=True)
+    
+    a.go_to_posture('untucked', speed=.2)
+    
+    current_joints = a.get_joints()
+    current_pose = a.get_pose()
+    target_pose = current_pose + [.2,0,0]
+    
+    print('Calling trajopt')
+    joint_traj = p.get_joint_trajectory(current_joints, target_pose)
+    
+    print('\ndesired end pose:\n{0}'.format(target_pose.matrix))
+    print('joint_traj end pose:\n{0}'.format(a.fk(joint_traj[-1]).matrix))
+    
+    IPython.embed()
+
 if __name__ == '__main__':
     rospy.init_node('greedy_grasp', anonymous=True)
-    test_greedy_grasp()
+    #test_greedy_grasp()
     #test_handle_detector()
+    test_planner()

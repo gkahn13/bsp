@@ -17,7 +17,7 @@ import tf.transformations as tft
 
 import openravepy as rave # only for IK
 
-import rave_utils
+import simulator
 import utils
 
 import IPython
@@ -44,11 +44,14 @@ class Arm:
                   }
     
     
-    def __init__(self, arm_name, default_speed=.05):
+    def __init__(self, arm_name, sim=None, default_speed=.05):
         """
         :param arm_name: "left" or "right"
+        :param sim: OpenRave simulator (or create if None)
         :param default_speed: speed in meters/second
         """
+        assert arm_name == 'left' or arm_name == 'right'
+        
         self.arm_name = arm_name
         self.default_speed = default_speed
         self.tool_frame = '{0}_gripper_tool_frame'.format(arm_name[0])
@@ -65,20 +68,13 @@ class Arm:
             rospy.sleep(.01)
         
         self.joint_command_pub = rospy.Publisher('{0}_arm_controller/command'.format(arm_name[0]), tm.JointTrajectory)
-        #self.gripper_command_pub = rospy.Publisher('{0}_gripper_controller/command'.format(arm_name[0]), pcm.Pr2GripperCommand)
-        #self.gripper_command_pub = rospy.Publisher('{0}_gripper_traj_diagnostic'.format(arm_name[0]), tm.JointTrajectory)
         self.gripper_command_client = actionlib.SimpleActionClient('{0}_gripper_controller/gripper_action'.format(arm_name[0]), pcm.Pr2GripperCommandAction)
         
-        # initialize openrave for IK
-        self.env = rave.Environment()
-        self.env.StopSimulation()
-        self.env.Load("robots/pr2-beta-static.zae") # todo: use up-to-date urdf
-        self.robot = self.env.GetRobots()[0]
-        self.robot.SetActiveManipulator('{0}arm'.format(arm_name))
-        self.manip = self.robot.GetActiveManipulator()
-        ikmodel = rave.databases.inversekinematics.InverseKinematicsModel(self.robot,iktype=rave.IkParameterization.Type.Transform6D)
-        if not ikmodel.load():
-            ikmodel.autogenerate()
+        self.sim = sim
+        if self.sim is None:
+            self.sim = simulator.Simulator()
+            
+        self.manip = self.sim.larm if arm_name == 'left' else self.sim.rarm
         
         rospy.sleep(1)
     
@@ -221,9 +217,9 @@ class Arm:
         """
         :return tfx.pose of tool_frame pose
         """
-        self._update_rave()
-        self.robot.SetDOFValues(joints, self.manip.GetArmIndices())
-        pose_mat = rave_utils.transform_from_to(self.robot, np.eye(4), self.tool_frame, 'base_link')
+        self.sim.update()
+        self.sim.robot.SetDOFValues(joints, self.manip.GetArmIndices())
+        pose_mat = self.sim.transform_from_to(np.eye(4), self.tool_frame, 'base_link')
         return tfx.pose(pose_mat, frame='base_link')
     
     def ik(self, pose):
@@ -233,25 +229,12 @@ class Arm:
         """
         assert pose.frame.count('base_link') == 1
         
-        self._update_rave()
-        goal_pose_mat = rave_utils.transform_relative_pose_for_ik(self.manip, pose.matrix, 'base_link', self.tool_frame)
+        self.sim.update()
+        goal_pose_mat = self.sim.transform_relative_pose_for_ik(self.manip, pose.matrix, 'base_link', self.tool_frame)
         joints = self.manip.FindIKSolution(goal_pose_mat, 0) # rave.IkFilterOptions.CheckEnvCollisions
         joints = self._closer_joint_angles(joints, self.current_joints)
         
         return joints
-        
-    def _update_rave(self):
-        msg = self.joint_state_msg
-        
-        indices, joint_values = list(), list()
-        for name, joint_value in zip(msg.name, msg.position):
-            for joint in self.robot.GetJoints():
-                if joint.GetName() == name:
-                    indices.append(joint.GetDOFIndex())
-                    joint_values.append(joint_value)
-                    break
-                
-        self.robot.SetDOFValues(joint_values, indices)
     
     #############
     # callbacks #
@@ -298,6 +281,12 @@ class Arm:
         for i in [2, 4, 6]:
             new_joints[i] = utils.closer_angle(new_joints[i], curr_joints[i])
         return new_joints
+
+
+        
+#########
+# tests #
+#########
         
 def test_fk():
     arm = Arm('left')
@@ -348,18 +337,10 @@ def test_gripper():
     arm.close_gripper()
     
     IPython.embed()
-        
-def test_gripper_rot():
-    arm = Arm('right')
-    
-    curr_pose = arm.get_pose()
-    
-    IPython.embed()
-        
+            
 if __name__ == '__main__':
     rospy.init_node('test_arm', anonymous=True)
     #test_fk()
     #test_ik()
     #test_commands()
-    #test_gripper()
-    test_gripper_rot()
+    test_gripper()

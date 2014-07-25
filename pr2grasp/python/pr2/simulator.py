@@ -4,6 +4,8 @@ import sensor_msgs.msg as sm
 import openravepy as rave
 import numpy as np
 
+import IPython
+
 class Simulator:
     """ OpenRave simulator """
     def __init__(self, env_file='robots/pr2-beta-static.zae', view=False):
@@ -45,6 +47,10 @@ class Simulator:
                     indices.append(joint.GetDOFIndex())
                     joint_values.append(joint_value)
                     break
+        
+        lower_limits, upper_limits = self.robot.GetDOFLimits(indices)
+        joint_values = np.maximum(joint_values, lower_limits)
+        joint_values = np.minimum(joint_values, upper_limits)
                 
         self.robot.SetDOFValues(joint_values, indices)
         
@@ -163,3 +169,13 @@ class Simulator:
         self.env.GetViewer().SendCommand('SetFiguresInCamera 0')
        
     
+    
+def test_simulator():
+    sim = Simulator()
+    
+    robot = sim.robot
+    
+    IPython.embed()
+    
+if __name__ == '__main__':
+    test_simulator()

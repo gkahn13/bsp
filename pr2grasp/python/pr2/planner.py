@@ -15,7 +15,7 @@ import simulator
 import IPython
 
 class Planner:
-    def __init__(self, arm_name, sim=None, interact=True):
+    def __init__(self, arm_name, sim=None, interact=False):
         """
         :param arm_name: "left" or "right"
         :param sim: OpenRave simulator (or create if None)
@@ -53,13 +53,14 @@ class Planner:
         self.robot.SetDOFValues(start_joints, self.joint_indices)
         
         # initialize trajopt inputs
-        quat = target_pose.orientation
-        xyz = target_pose.position
+        rave_pose = tfx.pose(self.sim.transform_from_to(target_pose.matrix, target_pose.frame, 'world'))
+        quat = rave_pose.orientation
+        xyz = rave_pose.position
         quat_target = [quat.w, quat.x, quat.y, quat.z]
         xyz_target = [xyz.x, xyz.y, xyz.z]
-        target_mat = rave.matrixFromPose(np.r_[quat_target, xyz_target])
+        rave_mat = rave.matrixFromPose(np.r_[quat_target, xyz_target])
         
-        init_joint_target = ku.ik_for_link(target_mat, self.manip, self.tool_frame, filter_options=rave.IkFilterOptions.CheckEnvCollisions)
+        init_joint_target = ku.ik_for_link(rave_mat, self.manip, self.tool_frame, filter_options=rave.IkFilterOptions.CheckEnvCollisions)
         
         #return [init_joint_target]
         
@@ -80,18 +81,12 @@ class Planner:
         
     def _get_trajopt_request(self, xyz_target, quat_target, init_joint_target, n_steps):
         """
-        :param target_pose: tfx.pose
+        :param xyz_target: 3d list
+        :param quat_target: [w,x,y,z]
         :param init_joint_target: joint initialization of target_pose for trajopt
         :param n_steps: trajopt discretization
         :return trajopt json request
         """
-        #ik_pose = tfx.pose(self.sim.transform_relative_pose_for_ik(self.manip, target_pose.matrix, target_pose.frame, self.tool_frame))
-        #ik_pose = target_pose
-        
-        #xyz_target = ik_pose.position.array.tolist()
-        #q = ik_pose.orientation
-        #quat_target = [q.w, q.x, q.y, q.z] 
-        
         request = {
             "basic_info" : {
                 "n_steps" : n_steps,

@@ -57,7 +57,13 @@ class GreedyGrasp:
     """ Grasp pipeline which plans towards handles in state-space """
     def __init__(self):
         self.hd = HandleDetector()
-        self.arm = arm.Arm('right')
+        
+        self.arm_name = 'right'
+        self.sim = simulator.Simulator(view=True)
+        self.arm = arm.Arm(self.arm_name, sim=self.sim)
+        self.planner = planner.Planner(self.arm_name, sim=self.sim, interact=False)
+        
+        self.sim.env.Load('../envs/SDHtable.xml')
         
         self.arm.go_to_posture('mantis')
         self.home_pose = self.arm.get_pose()
@@ -77,7 +83,9 @@ class GreedyGrasp:
         utils.press_enter_to_continue('go_to_home')
         
         rospy.loginfo('Moving to home pose')
-        self.arm.go_to_pose(self.home_pose)
+        joint_traj = self.planner.get_joint_trajectory(self.arm.get_joints(), self.home_pose)
+        self.arm.execute_joint_trajectory(joint_traj)
+        #self.arm.go_to_pose(self.home_pose)
         
         rospy.loginfo('Opening gripper')
         self.arm.open_gripper()
@@ -90,7 +98,6 @@ class GreedyGrasp:
         rospy.loginfo('Waiting for handle pose...')
         handle_pose_cam = self.hd.get_new_handle()
         #handle_pose_cam = tfx.pose([-0.069, -0.008,  0.471],tfx.tb_angles(169.5, 14.5, 63.1), frame='/camera_rgb_optical_frame') # TEMP stub
-        print('handle_pose_cam frame: {0}'.format(handle_pose_cam.frame))
         self.handle_pose = tfx.lookupTransform('base_link', handle_pose_cam.frame)*handle_pose_cam
         self.handle_pose_pub.publish(self.handle_pose.msg.PoseStamped())
         rospy.loginfo('Received new handle pose')
@@ -101,7 +108,9 @@ class GreedyGrasp:
         utils.press_enter_to_continue('grab_handle')
         
         rospy.loginfo('Going to handle')
-        self.arm.go_to_pose(self.handle_pose)
+        joint_traj = self.planner.get_joint_trajectory(self.arm.get_joints(), self.handle_pose)
+        self.arm.execute_joint_trajectory(joint_traj)
+        #self.arm.go_to_pose(self.handle_pose)
         
         rospy.loginfo('Closing gripper')
         self.arm.close_gripper()
@@ -113,11 +122,14 @@ class GreedyGrasp:
         
         rospy.loginfo('Moving vertical')
         current_pose = self.arm.get_pose()
-        self.arm.go_to_pose(current_pose + [0,0,.05])
+        joint_traj = self.planner.get_joint_trajectory(self.arm.get_joints(), current_pose + [0,0,.05])
+        self.arm.execute_joint_trajectory(joint_traj)
+        #self.arm.go_to_pose(current_pose + [0,0,.05])
         
         rospy.loginfo('Moving to home pose')
-        self.arm.go_to_pose(self.home_pose)
-        
+        joint_traj = self.planner.get_joint_trajectory(self.arm.get_joints(), self.home_pose)
+        self.arm.execute_joint_trajectory(joint_traj)
+        #self.arm.go_to_pose(self.home_pose)
         rospy.loginfo('Opening gripper')
         self.arm.open_gripper()
 
@@ -143,7 +155,7 @@ def test_planner():
     arm_name='right'
     sim = simulator.Simulator(view=False)
     a = arm.Arm(arm_name, sim=sim)
-    p = planner.Planner(arm_name, sim=sim, interact=True)
+    p = planner.Planner(arm_name, sim=sim, interact=False)
     
     a.go_to_posture('untucked', speed=.2)
     
@@ -161,6 +173,6 @@ def test_planner():
 
 if __name__ == '__main__':
     rospy.init_node('greedy_grasp', anonymous=True)
-    #test_greedy_grasp()
+    test_greedy_grasp()
     #test_handle_detector()
-    test_planner()
+    #test_planner()

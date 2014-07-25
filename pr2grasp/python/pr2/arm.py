@@ -6,7 +6,6 @@ import actionlib
 roslib.load_manifest("pr2_controllers_msgs")
 roslib.load_manifest("move_base_msgs")
 import trajectory_msgs.msg as tm
-import geometry_msgs.msg as gm
 import sensor_msgs.msg as sm
 import pr2_controllers_msgs.msg as pcm
 
@@ -15,7 +14,8 @@ roslib.load_manifest('tfx')
 import tfx
 import tf.transformations as tft
 
-import openravepy as rave # only for IK
+import openravepy as rave
+import trajoptpy.kin_utils as ku
 
 import simulator
 import utils
@@ -192,7 +192,7 @@ class Arm:
             timeout = utils.Timeout(10)
             timeout.start()
             last_grasp = self.current_grasp
-            while(np.abs(self.current_grasp - max(grasp,0)) > .005 and np.abs(last_grasp - self.current_grasp) > .001 and not timeout.has_timed_out()):
+            while(np.abs(self.current_grasp - max(grasp,0)) > .005 and np.abs(last_grasp - self.current_grasp) > 1e-5 and not timeout.has_timed_out()):
                 last_grasp = self.current_grasp
                 rospy.sleep(.01)
         
@@ -230,9 +230,11 @@ class Arm:
         assert pose.frame.count('base_link') == 1
         
         self.sim.update()
-        goal_pose_mat = self.sim.transform_relative_pose_for_ik(self.manip, pose.matrix, 'base_link', self.tool_frame)
-        joints = self.manip.FindIKSolution(goal_pose_mat, 0) # rave.IkFilterOptions.CheckEnvCollisions
-        joints = self._closer_joint_angles(joints, self.current_joints)
+        joints = ku.ik_for_link(pose.matrix, self.manip, self.tool_frame, 0)
+        
+        #goal_pose_mat = self.sim.transform_relative_pose_for_ik(self.manip, pose.matrix, 'base_link', self.tool_frame)
+        #joints = self.manip.FindIKSolution(goal_pose_mat, 0) # rave.IkFilterOptions.CheckEnvCollisions
+        #joints = self._closer_joint_angles(joints, self.current_joints)
         
         return joints
     

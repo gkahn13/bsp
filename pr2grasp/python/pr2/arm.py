@@ -68,11 +68,11 @@ class Arm:
         while not rospy.is_shutdown() and self.current_joints is None or self.current_grasp is None:
             rospy.sleep(.01)
         
-        self.joint_command_pub = rospy.Publisher('{0}_arm_controller/command'.format(arm_name[0]), tm.JointTrajectory)
-        #self.joint_command_client = actionlib.SimpleActionClient('/{0}_arm_controller/joint_trajectory_action'.format(arm_name[0]),
-        #                                            pcm.JointTrajectoryAction)
-        #rospy.loginfo('Waiting for joint command server...')
-        #self.joint_command_client.wait_for_server()
+        #self.joint_command_pub = rospy.Publisher('{0}_arm_controller/command'.format(arm_name[0]), tm.JointTrajectory)
+        self.joint_command_client = actionlib.SimpleActionClient('/{0}_arm_controller/joint_trajectory_action'.format(arm_name[0]),
+                                                    pcm.JointTrajectoryAction)
+        rospy.loginfo('Waiting for joint command server...')
+        self.joint_command_client.wait_for_server()
         
         #self.gripper_command_pub = rospy.Publisher('{0}_gripper_controller/command'.format(arm_name[0]), pcm.Pr2GripperCommand)
         self.gripper_command_client = actionlib.SimpleActionClient('{0}_gripper_controller/gripper_action'.format(arm_name[0]), pcm.Pr2GripperCommandAction)
@@ -135,8 +135,8 @@ class Arm:
             
             curr_joints = next_joints
          
-        #self.joint_command_client.send_goal(goal)   
-        self.joint_command_pub.publish(goal.trajectory)
+        self.joint_command_client.send_goal(goal)   
+        #self.joint_command_pub.publish(goal.trajectory)
         
         print('Goal:\n{0}'.format(goal))
         print('Total time: {0}'.format(time_from_start))
@@ -334,11 +334,11 @@ def test_commands():
     rospy.sleep(1)
     curr_pose = arm.get_pose()
     
-    #arm.open_gripper()
-    #rospy.sleep(1)
-    #arm.close_gripper()
+    arm.open_gripper()
+    rospy.sleep(1)
+    arm.close_gripper()
     
-    next_pose = curr_pose + [0,0,-.2]
+    next_pose = curr_pose + [0,0,0.1]
     next_joints = arm.ik(next_pose)
         
     arm.go_to_joints(next_joints)

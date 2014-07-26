@@ -60,13 +60,11 @@ class Planner:
         xyz_target = [xyz.x, xyz.y, xyz.z]
         rave_mat = rave.matrixFromPose(np.r_[quat_target, xyz_target])
         
-        init_joint_target = ku.ik_for_link(rave_mat, self.manip, self.tool_frame, filter_options=rave.IkFilterOptions.CheckEnvCollisions)
-        
-        #return [init_joint_target]
-        
-        if init_joint_target is None:
-            rospy.loginfo('get_traj: IK failed')
-            return False
+        #init_joint_target = ku.ik_for_link(rave_mat, self.manip, self.tool_frame, filter_options=rave.IkFilterOptions.CheckEnvCollisions)
+        #if init_joint_target is None:
+        #    rospy.loginfo('get_traj: IK failed')
+        #    return False
+        init_joint_target = None
         
         request = self._get_trajopt_request(xyz_target, quat_target, init_joint_target, n_steps)
         
@@ -135,6 +133,21 @@ class Planner:
                 "type" : "stationary"
                 }
             }
+        
+        """
+        for t in xrange(n_steps):
+            request["costs"].append({
+                        "type" : "pose",
+                        "name" : "target_pose",
+                        "params" : {"xyz" : xyz_target, 
+                                    "wxyz" : quat_target,
+                                    "link": self.tool_frame,
+                                    "rot_coeffs" : [1,1,1],
+                                    "pos_coeffs" : [0,0,0],
+                                    "timestep" : t
+                                    }
+                        })
+        """
         
         return request
         

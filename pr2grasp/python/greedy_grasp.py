@@ -59,7 +59,7 @@ class GreedyGrasp:
         rospy.loginfo('Waiting for handle pose...')
         
         last_handle_pose = self.handle_pose_callback
-        while last_handle_pose.stamp == self.handle_pose_callback.stamp:
+        while (self.handle_pose_callback is None) or (last_handle_pose.stamp == self.handle_pose_callback.stamp):
             rospy.sleep(.01)
         self.handle_pose = self.handle_pose_callback
         
@@ -92,7 +92,7 @@ class GreedyGrasp:
         
         rospy.loginfo('Moving vertical')
         current_pose = self.arm.get_pose()
-        joint_traj = self.planner.get_joint_trajectory(self.arm.get_joints(), current_pose + [0,0,.05])
+        joint_traj = self.planner.get_joint_trajectory(self.arm.get_joints(), current_pose + [0,0,.08])
         self.arm.execute_joint_trajectory(joint_traj)
         #self.arm.go_to_pose(current_pose + [0,0,.05])
         
@@ -102,6 +102,8 @@ class GreedyGrasp:
         #self.arm.go_to_pose(self.home_pose)
         rospy.loginfo('Opening gripper')
         self.arm.open_gripper()
+        
+        self.go_to_home()
 
 
 def test_greedy_grasp():

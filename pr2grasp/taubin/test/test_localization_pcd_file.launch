@@ -1,0 +1,10 @@
+<launch>
+	<!-- number of threads to use -->
+	<param name="num_threads" value="4" />
+
+	<node name="test0_localization" pkg="handle_detector" type="handle_detector_localization" output="screen">
+		<!-- affordance search parameters -->
+        <param name="file" value="/home/gkahn/Research/bsp/pr2grasp/taubin/test/test0.pcd" />
+        <rosparam command="load" file="test.yaml" />
+	</node>
+</launch>

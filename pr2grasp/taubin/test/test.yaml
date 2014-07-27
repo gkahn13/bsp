@@ -1,0 +1,23 @@
+target_radius : 0.025
+target_radius_error : 0.025
+affordance_gap : 0.008
+sample_size : 20000
+use_clearance_filter : true
+use_occlusion_filter : true
+curvature_estimator : 0
+point_cloud_source : 0
+update_interval : 3.0
+
+ransac_runs : 5
+ransac_min_inliers : 8
+ransac_dist_radius : 0.02
+ransac_orient_radius : 0.4
+ransac_radius_radius : 0.003
+
+max_range : 5
+workspace_min_x : -2
+workspace_max_x : 1.1
+workspace_min_y : -.7
+workspace_max_y : 2
+workspace_min_z : 0
+workspace_max_z : 2

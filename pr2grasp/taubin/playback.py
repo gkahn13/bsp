@@ -24,9 +24,10 @@ class Playback:
         self.bag_msgs = list()
         for topic, msg, t in self.bag.read_messages():
             self.bag_msgs.append((topic, msg, t))
-            if topic == 'save_pc':
+            if topic.count('save_pc') == 1:
                 self.num_pcs += 1
                 
+        print('Number of messages in {0}.bag: {1}'.format(bag_name, len(self.bag_msgs)))
         print('Number of point-clouds read: {0}'.format(self.num_pcs))
 
         self.handles_sub = rospy.Subscriber('/localization/handle_list', hd_msg.HandleListMsg, self._handles_callback)
@@ -79,18 +80,18 @@ class Playback:
         while continuously publishing the transforms
         """
         curr_index, topic = 0, ''
-        while topic != 'save_pc':
+        while topic.count('save_pc') == 0:
             curr_index += 1
             topic, msg, t = self.bag_msgs[curr_index]
             
-            if topic == 'tf':
+            if topic.count('tf') == 1:
                 for t in msg.transforms:
                     key = (t.child_frame_id, t.header.frame_id)
                     if key in self.tfs.keys():
                         self.tfs[key].append(t)
                     else:
                         self.tfs[key] = [t]
-            elif topic == 'save_pc':
+            elif topic.count('save_pc') == 1:
                 msg.header.stamp = rospy.Time.now()
                 self.pc_pub.publish(msg)
         
@@ -114,18 +115,18 @@ class Playback:
                     curr_pc += incr
                     
                 topic = ''
-                while topic != 'save_pc':
+                while topic.count('save_pc') == 0:
                     curr_index += incr
                     topic, msg, t = self.bag_msgs[curr_index]
                     
-                    if topic == 'tf':
+                    if topic.count('tf') == 1:
                         for t in msg.transforms:
                             key = (t.child_frame_id, t.header.frame_id)
                             if key in self.tfs.keys():
                                 self.tfs[key].append(t)
                             else:
                                 self.tfs[key] = [t]
-                    elif topic == 'save_pc':
+                    elif topic.count('save_pc') == 1:
                         msg.header.stamp = rospy.Time.now()
                         self.pc_pub.publish(msg)
                         

@@ -6,6 +6,8 @@ import sensor_msgs.msg as sm
 
 import argparse
 
+# rosbag record -O {file}.bag /tf /save_pc
+
 class PublishPCs:
     def __init__(self, subscribe_topic, publish_topic):
         rospy.loginfo('Listening for point-cloud topic: {0}'.format(subscribe_topic))

@@ -96,7 +96,7 @@ class Getch:
             termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
         return ch
     
-    import heapq
+import heapq
  
  
 class PriorityQueue(object):

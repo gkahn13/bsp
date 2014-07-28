@@ -1,5 +1,7 @@
 <launch>
 	<node name="localization" pkg="handle_detector" type="handle_detector_localization" output="screen">
+		<remap from="save_pc" to="camera/depth_registered/points" />
+	
 		<!-- affordance search parameters -->
     	<param name="file" value="" />
 		<param name="target_radius" value="0.025" />

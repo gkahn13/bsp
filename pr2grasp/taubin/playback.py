@@ -1,10 +1,16 @@
 import rospy, roslib, rosbag
 import tf
 roslib.load_manifest('sensor_msgs')
+roslib.load_manifest('handle_detector')
 import sensor_msgs.msg as sm
+import geometry_msgs.msg as gm
+import handle_detector.msg as hd_msg
 
+import sys
 import argparse
 import threading
+
+import utils
 
 import IPython
 
@@ -13,106 +19,37 @@ import IPython
 
 class Playback:
     def __init__(self, bag_name, pc_publish_topic='/camera/depth_registered/points'):
-        self.pcs = list()
-        self.tfs = list()
-        
+        self.num_pcs = 0
         self.bag = rosbag.Bag(bag_name + '.bag')
+        self.bag_msgs = list()
         for topic, msg, t in self.bag.read_messages():
-            if topic == 'tf':
-                self.tfs.append(msg)
+            self.bag_msgs.append((topic, msg, t))
             if topic == 'save_pc':
-                self.pcs.append(msg)
+                self.num_pcs += 1
                 
-        self.playback_bag = rosbag.Bag(bag_name + '_playback.bag', 'w')
+        print('Number of point-clouds read: {0}'.format(self.num_pcs))
+
+        self.handles_sub = rospy.Subscriber('/localization/handle_list', hd_msg.HandleListMsg, self._handles_callback)
+        self.handles_pose_pub = rospy.Publisher('/localization/handle_poses', gm.PoseArray)
         
-        rospy.loginfo('Number of point-clouds read: {0}'.format(len(self.pcs)))
-        rospy.loginfo('Number of tfs saved: {0}'.format(len(self.tfs)))
-        
-        self.pub = rospy.Publisher(pc_publish_topic, sm.PointCloud2)
+        self.pc_pub = rospy.Publisher(pc_publish_topic, sm.PointCloud2)
         self.br = tf.TransformBroadcaster()
         
         self.tfs = dict()
+        self.exited = False
         self.tfs_thread = threading.Thread(target=self._tfs_loop)
         self.tfs_thread.start()
         
     def _tfs_loop(self):
-        while not rospy.is_shutdown():
-            tfs = dict(self.tfs)
-            for t_list in tfs.values():
-                t = t_list[-1]
-                trans = [t.transform.translation.x, t.transform.translation.y, t.transform.translation.z]
-                rot = [t.transform.rotation.x, t.transform.rotation.y, t.transform.rotation.z, t.transform.rotation.w]
-                self.br.sendTransform(trans,
-                                      rot,
-                                      rospy.Time.now(),
-                                      t.child_frame_id,
-                                      t.header.frame_id)
-                
-            rospy.sleep(.001)
-            
-    def play(self):
-        pass
-        
-    def create_playback_bag(self):
-        save_pc_indices = [i for i, (topic, msg, t) in enumerate(self.bag.read_messages()) if topic == 'save_pc']
-        print save_pc_indices
-        
-        bag_msgs = list()
-        for (topic, msg, t) in self.bag.read_messages():
-            bag_msgs.append((topic, msg, t))
-        new_bag_msgs = [None for _ in xrange(save_pc_indices[-1]+1)]
-        
-        prev_pc_index = 0
-        new_bag_msgs[0] = bag_msgs[0]
-        for curr_pc_index in save_pc_indices:
-            new_bag_msgs[curr_pc_index] = bag_msgs[curr_pc_index]
-            #print bag_msgs[prev_pc_index][-1]
-            
-            tfs = dict()
-            for index in xrange(curr_pc_index-1, prev_pc_index, -1):
-                topic, msg, t = bag_msgs[index]
-                if topic == 'tf':
-                    new_bag_msgs[index] = (topic, msg, t)
-                    
-                    """
-                    for transform in msg.transforms:
-                        key = (transform.child_frame_id, transform.header.frame_id)
-                        if key in tfs.keys():
-                            #future_msg = tf.msg.tfMessage(tfs[key])
-                            #future_msg.transforms.transforms[0].header.stamp = t
-                            new_bag_msgs[index] = (topic, tfs[key], t)
-                        else:
-                            new_bag_msgs[index] = (topic, msg, t)
-                            tfs[key] = msg
-                    """
-            
-            prev_pc_index = curr_pc_index
-        
-        for i, item in enumerate(new_bag_msgs):
-            if item is None:
-                print i        
-        new_bag_msgs = [item for item in new_bag_msgs if item is not None]
-        
-        for (topic, msg, t) in new_bag_msgs:
-            self.playback_bag.write(topic, msg, t=t)
-            
-        self.playback_bag.close()
-    
-    def run_all(self):
-        num_pcs_published = 0
-        tfs = dict()
-        
-        for topic, msg, t in self.bag.read_messages():
-            
-            if topic == 'tf':
-                for t in msg.transforms:
-                    key = (t.child_frame_id, t.header.frame_id)
-                    if key in tfs.keys():
-                        self.tfs[key].append(t)
-                    else:
-                        self.tfs[key] = [t]
-                    """
-                    # translation, rotation, time, child, parent
+        """
+        For each transform in self.tfs,
+        continuously publishes the last one
+        """
+        try:
+            while not rospy.is_shutdown() and not self.exited:
+                tfs = dict(self.tfs)
+                for t_list in tfs.values():
+                    t = t_list[-1]
                     trans = [t.transform.translation.x, t.transform.translation.y, t.transform.translation.z]
                     rot = [t.transform.rotation.x, t.transform.rotation.y, t.transform.rotation.z, t.transform.rotation.w]
                     self.br.sendTransform(trans,
@@ -120,51 +57,84 @@ class Playback:
                                           rospy.Time.now(),
                                           t.child_frame_id,
                                           t.header.frame_id)
-                    """
-            if topic == 'save_pc':
-                msg.header.stamp = rospy.Time.now()
-                self.pub.publish(msg)
+                    
+                rospy.sleep(.001)
+        except (KeyboardInterrupt, SystemExit):
+            sys.exit()
+            
+    def _handles_callback(self, msg):
+        pose_array = gm.PoseArray()
+        
+        pose_array.header = msg.header
+        for handle in msg.handles:
+            for cylinder in handle.cylinders:
+                pose_array.poses.append(cylinder.pose)
                 
-                """
-                rospy.loginfo('publishing loop')
-                while not rospy.is_shutdown(): # put this loop on a separate thread
+        if len(pose_array.poses) > 0:
+            self.handles_pose_pub.publish(pose_array)
+            
+    def play(self):
+        """
+        Switches between point-clouds in the bag file
+        while continuously publishing the transforms
+        """
+        curr_index, topic = 0, ''
+        while topic != 'save_pc':
+            curr_index += 1
+            topic, msg, t = self.bag_msgs[curr_index]
+            
+            if topic == 'tf':
+                for t in msg.transforms:
+                    key = (t.child_frame_id, t.header.frame_id)
+                    if key in self.tfs.keys():
+                        self.tfs[key].append(t)
+                    else:
+                        self.tfs[key] = [t]
+            elif topic == 'save_pc':
+                msg.header.stamp = rospy.Time.now()
+                self.pc_pub.publish(msg)
+        
+        curr_pc = 0
+        input = ''
+        while not rospy.is_shutdown():
+            print('At point-cloud {0} (of range [{1},{2}])'.format(curr_pc, 0, self.num_pcs-1))
+            print('Enter -/+ to proceed')
+            input = utils.Getch.getch()
+            print('')
+            
+            self.tfs = dict()
+            
+            if input == '-' or input == '+':
+                incr = -1 if input == '-' else 1
+                
+                if (input == '-' and curr_pc <= 0) or (input == '+' and curr_pc >= self.num_pcs -1):
+                    print('Point-cloud {0} out of range'.format(curr_pc + incr))
+                    continue
+                else:
+                    curr_pc += incr
                     
-                    #self.br.sendTransform([-0.106925711716, -0.00652973239027, -0.0566985277547],
-                    #              [0.501389436235, 0.466364575859, 0.509987956093, 0.520600614921],
-                    #              rospy.Time.now(),
-                    #              'camera_rgb_optical_frame',
-                    #              'r_gripper_tool_frame')
+                topic = ''
+                while topic != 'save_pc':
+                    curr_index += incr
+                    topic, msg, t = self.bag_msgs[curr_index]
                     
-                    for t_list in tfs.values():
-                        t = t_list[-1]
-                        trans = [t.transform.translation.x, t.transform.translation.y, t.transform.translation.z]
-                        rot = [t.transform.rotation.x, t.transform.rotation.y, t.transform.rotation.z, t.transform.rotation.w]
-                        self.br.sendTransform(trans,
-                                              rot,
-                                              rospy.Time.now(),
-                                              t.child_frame_id,
-                                              t.header.frame_id)
+                    if topic == 'tf':
+                        for t in msg.transforms:
+                            key = (t.child_frame_id, t.header.frame_id)
+                            if key in self.tfs.keys():
+                                self.tfs[key].append(t)
+                            else:
+                                self.tfs[key] = [t]
+                    elif topic == 'save_pc':
+                        msg.header.stamp = rospy.Time.now()
+                        self.pc_pub.publish(msg)
                         
                     rospy.sleep(.001)
-                """
-                   
-                    
-                rospy.loginfo('Published pc {0}'.format(num_pcs_published))
-                num_pcs_published += 1
-                
-                print('Press enter')
-                raw_input()
-            
-            if rospy.is_shutdown():
+            elif input == 'q':
+                print('Exiting')
+                self.exited = True
                 break
-            
-            rospy.sleep(.001)
-        #for i, pc in enumerate(self.pcs):
-        #    rospy.loginfo('Press enter to publish pc {0}'.format(i))
-        #    raw_input()
-        #    
-        #    self.pub.publish(pc)
-    
+  
 if __name__ == '__main__':
     rospy.init_node('playback', anonymous=True)
     
@@ -173,6 +143,5 @@ if __name__ == '__main__':
     args = parser.parse_args()
     
     playback = Playback(args.bag)
-    #playback.create_playback_bag()
-    
-    IPython.embed()
+    playback.play()
+    sys.exit()

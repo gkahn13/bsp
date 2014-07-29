@@ -2,13 +2,16 @@ import rospy, roslib, rosbag
 import tf
 roslib.load_manifest('sensor_msgs')
 roslib.load_manifest('handle_detector')
+roslib.load_manifest('tfx')
 import sensor_msgs.msg as sm
 import geometry_msgs.msg as gm
 import handle_detector.msg as hd_msg
+import tfx
 
 import sys
 import argparse
 import threading
+import numpy as np
 
 import utils
 
@@ -32,6 +35,7 @@ class Playback:
 
         self.handles_sub = rospy.Subscriber('/localization/handle_list', hd_msg.HandleListMsg, self._handles_callback)
         self.handles_pose_pub = rospy.Publisher('/localization/handle_poses', gm.PoseArray)
+        self.handle_pose_0_pub = rospy.Publisher('/localization/handle_pose_0', gm.PoseStamped)
         
         self.pc_pub = rospy.Publisher(pc_publish_topic, sm.PointCloud2)
         self.br = tf.TransformBroadcaster()
@@ -40,6 +44,8 @@ class Playback:
         self.exited = False
         self.tfs_thread = threading.Thread(target=self._tfs_loop)
         self.tfs_thread.start()
+        
+        self.handle_list_msg = hd_msg.HandleListMsg()
         
     def _tfs_loop(self):
         """
@@ -63,16 +69,117 @@ class Playback:
         except (KeyboardInterrupt, SystemExit):
             sys.exit()
             
+    def _handles_loop(self):
+        """
+        For each handle in HandleListMsg,
+        calculate average pose
+        """
+        handle_list_msg = self.handle_list_msg
+        pose_array = gm.PoseArray()
+        pose_array.header = msg.header
+
+        cam_to_base = tfx.lookupTransform('base_link', handle_list_msg.header.frame_id).matrix[:3,:3]
+        switch = np.matrix([[0, 1, 0],
+                            [1, 0, 0],
+                            [0, 0, 1]])        
+        for handle in msg.handles[:1]:
+            all_poses = [tfx.pose(cylinder.pose, stamp=rospy.Time.now(), frame=msg.header.frame_id) for cylinder in handle.cylinders]
+            
+            rotated_poses = [tfx.pose(p.position, tfx.tb_angles(p.orientation.matrix*switch)) for p in all_poses]
+            filtered_poses = list()
+            for rot_pose in rotated_poses:
+                r_base = cam_to_base*rot_pose.orientation.matrix
+                if r_base[0,0] > 0:
+                    if r_base[2,2] > 0:
+                        rot_pose.orientation = tfx.tb_angles(rot_pose.orientation.matrix*tfx.tb_angles(0,0,180).matrix) 
+                    filtered_poses.append(rot_pose)
+            """
+            filtered_poses = list()
+            for pose, pose_base in zip(all_poses, all_poses_base):
+                if pose_base.orientation.matrix[2,2] < 0:
+                    filtered_poses.append(pose)
+            """
+            pose_array.poses += [pose.msg.Pose() for pose in filtered_poses]
+            
+            # transform all poses to camera_rgb_optical_frame
+            # filter out all poses with angle > 90 deg
+            
+            #avg_position = sum([p.position.array for p in all_poses])/float(len(all_poses))
+            
+        if len(pose_array.poses) > 0:
+            #pose_array.poses = [pose_array.poses[0]] # TEMP
+            self.handles_pose_pub.publish(pose_array)
+   
+            pose_array_size = len(pose_array.poses)
+            avg_position = sum([tfx.pose(p).position.array for p in pose_array.poses])/float(pose_array_size)
+            avg_quat = sum([tfx.pose(p).orientation.quaternion for p in pose_array.poses])/float(pose_array_size)
+            
+            pose = tfx.pose(avg_position, avg_quat, frame=msg.header.frame_id) 
+            #pose = tfx.pose(np.random.choice(pose_array.poses), frame=msg.header.frame_id)
+            self.handle_pose_0_pub.publish(pose.msg.PoseStamped())
+            
     def _handles_callback(self, msg):
         pose_array = gm.PoseArray()
         
         pose_array.header = msg.header
+        pose_array.header.stamp = rospy.Time.now()
         for handle in msg.handles:
             for cylinder in handle.cylinders:
                 pose_array.poses.append(cylinder.pose)
                 
+        if len(pose_array.poses) >= 0:
+            #self.handles_pose_pub.publish(pose_array)
+            self.publish_avg_handles(msg)
+            
+    def publish_avg_handles(self, msg):
+        """
+        For each handle in msg,
+        publishes average cylinder/pose
+        """
+        pose_array = gm.PoseArray()
+        pose_array.header = msg.header
+
+        cam_to_base = tfx.lookupTransform('base_link', msg.header.frame_id).matrix[:3,:3]
+        switch = np.matrix([[0, 1, 0],
+                            [1, 0, 0],
+                            [0, 0, 1]])        
+        for handle in msg.handles[:1]:
+            all_poses = [tfx.pose(cylinder.pose, stamp=rospy.Time.now(), frame=msg.header.frame_id) for cylinder in handle.cylinders]
+            #all_poses_base = [cam_to_base*pose for pose in all_poses]
+            
+            rotated_poses = [tfx.pose(p.position, tfx.tb_angles(p.orientation.matrix*switch)) for p in all_poses]
+            filtered_poses = list()
+            for rot_pose in rotated_poses:
+                r_base = cam_to_base*rot_pose.orientation.matrix
+                if r_base[0,0] > 0:
+                    if r_base[2,2] > 0:
+                        rot_pose.orientation = tfx.tb_angles(rot_pose.orientation.matrix*tfx.tb_angles(0,0,180).matrix) 
+                    filtered_poses.append(rot_pose)
+            """
+            filtered_poses = list()
+            for pose, pose_base in zip(all_poses, all_poses_base):
+                if pose_base.orientation.matrix[2,2] < 0:
+                    filtered_poses.append(pose)
+            """
+            pose_array.poses += [pose.msg.Pose() for pose in filtered_poses]
+            
+            # transform all poses to camera_rgb_optical_frame
+            # filter out all poses with angle > 90 deg
+            
+            #avg_position = sum([p.position.array for p in all_poses])/float(len(all_poses))
+            
         if len(pose_array.poses) > 0:
+            #pose_array.poses = [pose_array.poses[0]] # TEMP
             self.handles_pose_pub.publish(pose_array)
+   
+            pose_array_size = len(pose_array.poses)
+            avg_position = sum([tfx.pose(p).position.array for p in pose_array.poses])/float(pose_array_size)
+            avg_quat = sum([tfx.pose(p).orientation.quaternion for p in pose_array.poses])/float(pose_array_size)
+            
+            pose = tfx.pose(avg_position, avg_quat, frame=msg.header.frame_id) 
+            #pose = tfx.pose(np.random.choice(pose_array.poses), frame=msg.header.frame_id)
+            self.handle_pose_0_pub.publish(pose.msg.PoseStamped())
+            
             
     def play(self):
         """

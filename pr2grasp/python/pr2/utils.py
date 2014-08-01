@@ -1,3 +1,4 @@
+import sys, termios, tty
 import time
 import numpy as np
 
@@ -7,6 +8,18 @@ def press_enter_to_continue(name=None):
     else:
         print('\n{0}: Press enter to continue'.format(name))
     raw_input()
+    
+class Getch:
+    @staticmethod
+    def getch(block=True):
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(sys.stdin.fileno())
+            ch = sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        return ch
 
 class Timeout():
     def __init__(self, timeout_time):

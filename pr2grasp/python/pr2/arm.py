@@ -68,7 +68,7 @@ class Arm:
         while not rospy.is_shutdown() and self.current_joints is None or self.current_grasp is None:
             rospy.sleep(.01)
         
-        #self.joint_command_pub = rospy.Publisher('{0}_arm_controller/command'.format(arm_name[0]), tm.JointTrajectory)
+        self.joint_command_pub = rospy.Publisher('{0}_arm_controller/command'.format(arm_name[0]), tm.JointTrajectory)
         self.joint_command_client = actionlib.SimpleActionClient('/{0}_arm_controller/joint_trajectory_action'.format(arm_name[0]),
                                                     pcm.JointTrajectoryAction)
         rospy.loginfo('Waiting for joint command server...')
@@ -123,12 +123,10 @@ class Arm:
             next_position = self.fk(next_joints).position
             curr_position = self.fk(curr_joints).position
             duration = ((next_position - curr_position).norm)/speed
-            print('Duration: {0}'.format(duration))
             time_from_start += duration
             
             waypoint = tm.JointTrajectoryPoint()
             waypoint.positions = next_joints
-            #waypoint.velocities = [0 for _ in xrange(len(self.joint_names))]
             waypoint.time_from_start = rospy.Duration(time_from_start)
             
             goal.trajectory.points.append(waypoint)
@@ -137,9 +135,6 @@ class Arm:
          
         self.joint_command_client.send_goal(goal)   
         #self.joint_command_pub.publish(goal.trajectory)
-        
-        print('Goal:\n{0}'.format(goal))
-        print('Total time: {0}'.format(time_from_start))
         
         if block:
             rospy.sleep(time_from_start)
@@ -212,6 +207,47 @@ class Arm:
                 last_grasp = self.current_grasp
                 rospy.sleep(.01)
         
+    def teleop(self):
+        rospy.loginfo('{0} arm teleop'.format(self.arm_name))
+        
+        pos_step = .05
+        delta_position = {'a' : [0, pos_step, 0],
+                          'd' : [0, -pos_step, 0],
+                          'w' : [pos_step, 0, 0],
+                          'x' : [-pos_step, 0, 0],
+                          '+' : [0, 0, pos_step],
+                          '-' : [0, 0, -pos_step]}
+        
+        angle_step = 2.0
+        delta_angle = {'o' : [angle_step, 0, 0],
+                       'p' : [-angle_step, 0, 0],
+                       'k' : [0, angle_step, 0],
+                       'l' : [0, -angle_step, 0],
+                       'n' : [0, 0, angle_step],
+                       'm' : [0, 0, -angle_step]}
+        
+        char = ''
+        while char != 'q':
+            char = utils.Getch.getch()
+            pose = self.get_pose()
+            print('pose: {0}'.format(pose))
+            new_pose = tfx.pose(pose)
+            if delta_position.has_key(char):
+                print('delta_position: {0}'.format(delta_position[char]))
+                new_pose.position = pose.position.array + delta_position[char]
+            ypr = np.array([pose.tb_angles.yaw_deg, pose.tb_angles.pitch_deg, pose.tb_angles.roll_deg])
+            if delta_angle.has_key(char):
+                print('delta_angle: {0}'.format(delta_angle[char]))
+                ypr += np.array(delta_angle[char])
+                new_pose = tfx.pose(pose.position, tfx.tb_angles(ypr[0], ypr[1], ypr[2]))
+            print('new_pose: {0}'.format(new_pose))
+            new_joints = self.ik(new_pose)
+            if new_joints is not None:
+                rospy.loginfo('Invalid pose')
+                self.go_to_joints(new_joints)
+            rospy.sleep(.01)
+            
+        rospy.loginfo('{0} arm end teleop'.format(self.arm_name))
     
     #######################
     # state info methods  #
@@ -247,10 +283,6 @@ class Arm:
         
         self.sim.update()
         joints = ku.ik_for_link(np.array(pose.matrix), self.manip, self.tool_frame, 0)
-        
-        #goal_pose_mat = self.sim.transform_relative_pose_for_ik(self.manip, pose.matrix, 'base_link', self.tool_frame)
-        #joints = self.manip.FindIKSolution(goal_pose_mat, 0) # rave.IkFilterOptions.CheckEnvCollisions
-        #joints = self._closer_joint_angles(joints, self.current_joints)
         
         return joints
     
@@ -352,10 +384,17 @@ def test_gripper():
     arm.close_gripper()
     
     IPython.embed()
+    
+def test_teleop():
+    arm = Arm('right')
+    arm.sim.env.SetViewer('qtcoin')
+    
+    arm.teleop()
             
 if __name__ == '__main__':
     rospy.init_node('test_arm', anonymous=True)
     #test_fk()
     #test_ik()
-    test_commands()
+    #test_commands()
     #test_gripper()
+    test_teleop()

@@ -655,6 +655,22 @@ void test_distance_to_TSDF() {
 	}
 }
 
+void test_plot_kinfu_tsdf() {
+	Vector3d table(3.5, -1.2, 0.74);
+	Vector3d object = table + Vector3d(.1, -.1, -.1);
+	Arm::ArmType arm_type = Arm::ArmType::right;
+	bool view = true;
+	PR2System sys(object, arm_type, view);
+
+	PR2* brett = sys.get_brett();
+	VoxelGrid* vgrid = sys.get_voxel_grid();
+	rave::EnvironmentBasePtr env = brett->get_env();
+
+	std::cout << "Plot kinfu tsdf\n";
+	vgrid->plot_kinfu_tsdf(env);
+	std::cin.ignore();
+}
+
 int main() {
 //	test_particle_update();
 //	test_figtree();
@@ -667,6 +683,7 @@ int main() {
 //	test_gradient();
 //	test_raycaster();
 //	test_tri_interp();
-	test_distance_to_TSDF();
+//	test_distance_to_TSDF();
+	test_plot_kinfu_tsdf();
 	return 0;
 }

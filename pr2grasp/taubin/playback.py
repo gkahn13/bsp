@@ -21,22 +21,25 @@ import IPython
 # roslaunch localization_sensor.launch
 
 class Playback:
-    def __init__(self, bag_name, pc_publish_topic='/camera/depth_registered/points'):
+    def __init__(self, bag_name, pc_topic, pc_publish_topic='/camera/depth_registered/points'):
+        self.pc_topic = pc_topic
+        
         self.num_pcs = 0
         self.bag = rosbag.Bag(bag_name + '.bag')
         self.bag_msgs = list()
         for topic, msg, t in self.bag.read_messages():
             self.bag_msgs.append((topic, msg, t))
-            if topic.count('save_pc') == 1:
+            if topic.count(self.pc_topic) == 1:
                 self.num_pcs += 1
                 
         print('Number of messages in {0}.bag: {1}'.format(bag_name, len(self.bag_msgs)))
         print('Number of point-clouds read: {0}'.format(self.num_pcs))
+        print('Publishing to point-cloud topic: {0}'.format(pc_publish_topic))
 
-        self.handles_sub = rospy.Subscriber('/localization/handle_list', hd_msg.HandleListMsg, self._handles_callback)
-        self.handles_pose_pub = rospy.Publisher('/localization/handle_poses', gm.PoseArray)
-        self.avg_handles_pose_pub = rospy.Publisher('/localization/avg_handle_poses', gm.PoseArray)
-        self.handle_pose_0_pub = rospy.Publisher('/localization/handle_pose_0', gm.PoseStamped)
+        self.handles_sub = rospy.Subscriber('/handle_detector/handle_list', hd_msg.HandleListMsg, self._handles_callback)
+        self.handles_pose_pub = rospy.Publisher('/handle_detector/handle_poses', gm.PoseArray)
+        self.avg_handles_pose_pub = rospy.Publisher('/handle_detector/avg_handle_poses', gm.PoseArray)
+        self.handle_pose_0_pub = rospy.Publisher('/handle_detector/handle_pose_0', gm.PoseStamped)
         
         self.pc_pub = rospy.Publisher(pc_publish_topic, sm.PointCloud2)
         self.br = tf.TransformBroadcaster()
@@ -131,7 +134,7 @@ class Playback:
         while continuously publishing the transforms
         """
         curr_index, topic = 0, ''
-        while topic.count('save_pc') == 0:
+        while topic.count(self.pc_topic) == 0:
             curr_index += 1
             topic, msg, t = self.bag_msgs[curr_index]
             
@@ -142,7 +145,7 @@ class Playback:
                         self.tfs[key].append(t)
                     else:
                         self.tfs[key] = [t]
-            elif topic.count('save_pc') == 1:
+            elif topic.count(self.pc_topic) == 1:
                 msg.header.stamp = rospy.Time.now()
                 self.pc_pub.publish(msg)
         
@@ -166,7 +169,7 @@ class Playback:
                     curr_pc += incr
                     
                 topic = ''
-                while topic.count('save_pc') == 0:
+                while topic.count(self.pc_topic) == 0:
                     curr_index += incr
                     topic, msg, t = self.bag_msgs[curr_index]
                     
@@ -177,7 +180,7 @@ class Playback:
                                 self.tfs[key].append(t)
                             else:
                                 self.tfs[key] = [t]
-                    elif topic.count('save_pc') == 1:
+                    elif topic.count(self.pc_topic) == 1:
                         msg.header.stamp = rospy.Time.now()
                         self.pc_pub.publish(msg)
                         
@@ -195,8 +198,9 @@ if __name__ == '__main__':
     
     parser = argparse.ArgumentParser()
     parser.add_argument('--bag',type=str,default='bags/spray_can')
+    parser.add_argument('--topic',type=str,default='save_pc')
     args = parser.parse_args()
     
-    playback = Playback(args.bag)
+    playback = Playback(args.bag, args.topic)
     playback.play()
     sys.exit()

@@ -22,10 +22,10 @@ const double alpha_max_increases = 5; // 5
 const double Xeps_initial = .1; // .1
 const double Ueps_initial = .1; // .1
 const double improve_ratio_threshold = 1e-1; // .1
-const double min_approx_improve = 1e-1; // 1
+const double min_approx_improve = 1e-1; // .1
 const double min_trust_box_size = .1; // .1
-const double trust_shrink_ratio = .75; // .5
-const double trust_expand_ratio = 1.25; // 1.5
+const double trust_shrink_ratio = .75; // .75
+const double trust_expand_ratio = 1.25; // 1.25
 }
 
 void setup_mpc_vars(pr2eihMPC_params& problem, pr2eihMPC_output& output) {
@@ -359,6 +359,9 @@ double pr2_eih_approximate_collocation(StdVectorJ& J, StdVectorU& U, const Matri
 			return INFINITY;
 		}
 
+//		LOG_INFO("Plotting Jopt");
+//		sys.plot(Jopt, obj, obj_sigma0, obstacles);
+
 		model_merit = optcost + constant_cost; // need to add constant terms that were dropped
 
 		new_merit = sys.cost(Jopt, j_sigma0, Uopt, obj, obj_sigma0, alpha, obstacles);
@@ -430,19 +433,19 @@ double pr2_eih_collocation(StdVectorJ& J, StdVectorU& U, const MatrixJ& j_sigma0
 			J[t+1] = sys.dynfunc(J[t], U[t], VectorQ::Zero());
 		}
 
-//		double max_delta_diff = -INFINITY;
-//		for(int t=0; t < T; ++t) {
-//			double delta_alpha = sys.delta_matrix(J[t], particle_gmm[0].mean, alpha, particle_gmm[0].ODF)(J_DIM,J_DIM);
-//			double delta_inf = sys.delta_matrix(J[t], particle_gmm[0].mean, INFINITY, particle_gmm[0].ODF)(J_DIM,J_DIM);
-//			max_delta_diff = std::max(max_delta_diff, fabs(delta_alpha - delta_inf));
-//		}
-//
-//		LOG_DEBUG(" ");
-//		LOG_DEBUG("Max delta difference: %4.2f", max_delta_diff);
-//		if (max_delta_diff < cfg::alpha_epsilon) {
-//			LOG_DEBUG("Max delta difference < %4.10f, exiting minimize merit", cfg::alpha_epsilon);
-//			break;
-//		}
+		double max_delta_diff = -INFINITY;
+		for(int t=0; t < T; ++t) {
+			double delta_alpha = sys.delta_matrix(J[t], obj, alpha, obstacles)(J_DIM,J_DIM);
+			double delta_inf = sys.delta_matrix(J[t], obj, INFINITY, obstacles)(J_DIM,J_DIM);
+			max_delta_diff = std::max(max_delta_diff, fabs(delta_alpha - delta_inf));
+		}
+
+		LOG_DEBUG(" ");
+		LOG_DEBUG("Max delta difference: %4.2f", max_delta_diff);
+		if (max_delta_diff < cfg::alpha_epsilon) {
+			LOG_DEBUG("Max delta difference < %4.10f, exiting minimize merit", cfg::alpha_epsilon);
+			break;
+		}
 
 		LOG_DEBUG("Increasing alpha by gain %4.5f", cfg::alpha_gain);
 		alpha *= cfg::alpha_gain;
@@ -475,12 +478,12 @@ int main(int argc, char* argv[]) {
 	// setup initial state
 	arm.set_posture(pr2_sim::Arm::Posture::mantis);
 	VectorJ j_0 = arm.get_joints();
-	MatrixJ j_sigma0 = .2*MatrixJ::Identity();
+	MatrixJ j_sigma0 = .02*MatrixJ::Identity();
 
 //	Vector3d obj(0.640, -0.170, 0.560);
-	Vector3d obj(0.750, -0.00, 0.560);
+	Vector3d obj(0.600, 0.05, 0.560);
 //	Vector3d obj(0.500, -0.170, 0.560);
-	Matrix3d obj_sigma = Vector3d(.1,.1,.1).asDiagonal();
+	Matrix3d obj_sigma = Vector3d(.02,.02,.1).asDiagonal();
 
 	// initialize state and controls
 	StdVectorU U(T-1, VectorU::Zero());
@@ -496,6 +499,9 @@ int main(int argc, char* argv[]) {
 
 	LOG_INFO("Current state");
 	sys.plot(J, obj, obj_sigma, obstacles);
+
+	double initial_cost = sys.cost(J, j_sigma0, U, obj, obj_sigma, INFINITY, obstacles);
+	LOG_INFO("Initial cost: %4.5f", initial_cost);
 
 	// optimize
 	util::Timer_tic(&forces_timer);

@@ -137,6 +137,8 @@ double PR2EihSystem::cost(const StdVectorJ& J, const MatrixJ& j_sigma0, const St
 		x_t << J[t], obj;
 		belief_dynamics(x_t, sigma_t, U[t], alpha, obstacles, x_tp1, sigma_tp1);
 
+		cost += alpha_control*U[t].squaredNorm();
+		// TODO: only penalize object?
 		if (t < TIMESTEPS-2) {
 			cost += alpha_belief*sigma_tp1.trace();
 		} else {
@@ -205,7 +207,11 @@ void PR2EihSystem::plot(const StdVectorJ& J, const Vector3d& obj, const Matrix3d
 		obstacle.plot(*sim, "base_link", {0,0,1}, true, 0.25);
 	}
 
-	cam->plot({1,0,0});
+//	cam->plot({1,0,0});
+	std::vector<geometry3d::Pyramid> truncated_frustum = cam->truncated_view_frustum(obstacles, false);
+	for(const geometry3d::Pyramid& pyramid : truncated_frustum) {
+		pyramid.plot(*sim, "base_link", {1,0,0}, true, true, 0.15);
+	}
 
 	arm->set_joints(curr_joints);
 

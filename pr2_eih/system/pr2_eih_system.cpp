@@ -210,7 +210,7 @@ void PR2EihSystem::plot(const StdVectorJ& J, const Vector3d& obj, const Matrix3d
 	arm->set_joints(curr_joints);
 
 	if (pause) {
-		std::cout << "Plotted, press enter\n";
+		LOG_INFO("Plotted, press enter");
 		std::cin.ignore();
 	}
 }

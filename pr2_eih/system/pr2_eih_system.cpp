@@ -23,9 +23,11 @@ PR2EihSystem::PR2EihSystem(pr2_sim::Simulator *s, pr2_sim::Arm *a, pr2_sim::Came
 	u_min = j_min;
 	u_max = j_max;
 
-	Q = (M_PI/4)*MatrixQ::Identity();
+//	Q = (M_PI/4)*MatrixQ::Identity();
+	Q = 1e-2*MatrixQ::Identity();
 	VectorR R_diag;
-	R_diag << (M_PI/4)*VectorJ::Ones(), 5*Vector3d::Ones();
+//	R_diag << (M_PI/4)*VectorJ::Ones(), 5*Vector3d::Ones();
+	R_diag << 1e-2*VectorJ::Ones(), 5*Vector3d::Ones();
 	R = R_diag.asDiagonal();
 
 	arm->set_posture(pr2_sim::Arm::Posture::mantis);
@@ -118,6 +120,33 @@ void PR2EihSystem::belief_dynamics(const VectorX& x_t, const MatrixX& sigma_t, c
 	sigma_tp1 = (MatrixX::Identity() - K*H)*sigma_tp1_bar;
 }
 
+void PR2EihSystem::execute_control_step(const VectorJ& j_t_real, const VectorJ& j_t, const VectorU& u_t,
+		const std::vector<Gaussian3d>& obj_gaussians_t,
+		const std::vector<geometry3d::Triangle>& obstacles,
+		VectorJ& j_tp1_real, VectorJ& j_tp1, std::vector<Gaussian3d>& obj_gaussians_tp1) {
+	// find next real state from input + noise
+	VectorQ control_noise = VectorQ::Zero();// + chol(.2*Q)*randn<vec>(Q_DIM);
+	VectorR obs_noise = VectorR::Zero();// + chol(.2*R)*randn<vec>(R_DIM);
+	j_tp1_real = dynfunc(j_t_real, u_t, control_noise, true);
+
+	// max-likelihood dynfunc estimate
+	j_tp1 = dynfunc(j_t, u_t, VectorQ::Zero(), true);
+
+	arm->set_joints(j_tp1_real);
+	std::vector<geometry3d::Pyramid> truncated_frustum = cam->truncated_view_frustum(obstacles, true);
+
+	obj_gaussians_tp1.clear();
+	for(const Gaussian3d& obj_gaussian_t : obj_gaussians_t) {
+		MatrixP P_t = obj_gaussian_t.particles, P_tp1;
+
+		double delta_real = 0; //(cam->is_in_fov(P_t.rowwise().mean(), truncated_frustum)) ? 1 : 0;
+		VectorZ z_tp1_real = obsfunc(j_tp1_real, obj_gaussian_t.mean, obs_noise);
+		update_particles(j_tp1, delta_real, z_tp1_real, P_t, obstacles, P_tp1);
+
+		obj_gaussians_tp1.push_back(Gaussian3d(P_tp1));
+	}
+}
+
 void PR2EihSystem::get_limits(VectorJ& j_min, VectorJ& j_max, VectorU& u_min, VectorU& u_max) {
 	j_min = this->j_min;
 	j_max = this->j_max;
@@ -125,32 +154,34 @@ void PR2EihSystem::get_limits(VectorJ& j_min, VectorJ& j_max, VectorU& u_min, Ve
 	u_max = this->u_max;
 }
 
-double PR2EihSystem::cost(const StdVectorJ& J, const MatrixJ& j_sigma0, const StdVectorU& U, const Vector3d& obj, const Matrix3d& obj_sigma0,
+double PR2EihSystem::cost(const StdVectorJ& J, const MatrixJ& j_sigma0, const StdVectorU& U, const std::vector<Gaussian3d>& obj_gaussians,
 		const double alpha, const std::vector<geometry3d::Triangle>& obstacles) {
 	double cost = 0;
 
-	VectorX x_t, x_tp1 = VectorX::Zero();
-	MatrixX sigma_t = MatrixX::Zero(), sigma_tp1 = MatrixX::Zero();
-	sigma_t.block<J_DIM,J_DIM>(0,0) = j_sigma0;
-	sigma_t.block<3,3>(J_DIM,J_DIM) = obj_sigma0;
-	for(int t=0; t < TIMESTEPS-1; ++t) {
-		x_t << J[t], obj;
-		belief_dynamics(x_t, sigma_t, U[t], alpha, obstacles, x_tp1, sigma_tp1);
+	for(const Gaussian3d& obj_gaussian : obj_gaussians) {
+		VectorX x_t, x_tp1 = VectorX::Zero();
+		MatrixX sigma_t = MatrixX::Zero(), sigma_tp1 = MatrixX::Zero();
+		sigma_t.block<J_DIM,J_DIM>(0,0) = j_sigma0;
+		sigma_t.block<3,3>(J_DIM,J_DIM) = obj_gaussian.cov;
+		for(int t=0; t < TIMESTEPS-1; ++t) {
+			x_t << J[t], obj_gaussian.mean;
+			belief_dynamics(x_t, sigma_t, U[t], alpha, obstacles, x_tp1, sigma_tp1);
 
-		cost += alpha_control*U[t].squaredNorm();
-		// TODO: only penalize object?
-		if (t < TIMESTEPS-2) {
-			cost += alpha_belief*sigma_tp1.trace();
-		} else {
-			cost += alpha_final_belief*sigma_tp1.trace();
+			cost += alpha_control*U[t].squaredNorm();
+			// TODO: only penalize object?
+			if (t < TIMESTEPS-2) {
+				cost += alpha_belief*sigma_tp1.trace();
+			} else {
+				cost += alpha_final_belief*sigma_tp1.trace();
+			}
+			sigma_t = sigma_tp1;
 		}
-		sigma_t = sigma_tp1;
 	}
 
 	return cost;
 }
 
-VectorTOTAL PR2EihSystem::cost_grad(StdVectorJ& J, const MatrixJ& j_sigma0, StdVectorU& U, const Vector3d& obj, const Matrix3d& obj_sigma0,
+VectorTOTAL PR2EihSystem::cost_grad(StdVectorJ& J, const MatrixJ& j_sigma0, StdVectorU& U, const std::vector<Gaussian3d>& obj_gaussians,
 		const double alpha, const std::vector<geometry3d::Triangle>& obstacles) {
 	VectorTOTAL grad;
 
@@ -161,10 +192,10 @@ VectorTOTAL PR2EihSystem::cost_grad(StdVectorJ& J, const MatrixJ& j_sigma0, StdV
 			orig = J[t][i];
 
 			J[t](i) = orig + step;
-			cost_p = cost(J, j_sigma0, U, obj, obj_sigma0, alpha, obstacles);
+			cost_p = cost(J, j_sigma0, U, obj_gaussians, alpha, obstacles);
 
 			J[t](i) = orig - step;
-			cost_m = cost(J, j_sigma0, U, obj, obj_sigma0, alpha, obstacles);
+			cost_m = cost(J, j_sigma0, U, obj_gaussians, alpha, obstacles);
 
 			grad(index++) = (cost_p - cost_m) / (2*step);
 		}
@@ -174,10 +205,10 @@ VectorTOTAL PR2EihSystem::cost_grad(StdVectorJ& J, const MatrixJ& j_sigma0, StdV
 				orig = U[t][i];
 
 				U[t](i) = orig + step;
-				cost_p = cost(J, j_sigma0, U, obj, obj_sigma0, alpha, obstacles);
+				cost_p = cost(J, j_sigma0, U, obj_gaussians, alpha, obstacles);
 
 				U[t](i) = orig - step;
-				cost_m = cost(J, j_sigma0, U, obj, obj_sigma0, alpha, obstacles);
+				cost_m = cost(J, j_sigma0, U, obj_gaussians, alpha, obstacles);
 
 				grad(index++) = (cost_p - cost_m) / (2*step);
 			}
@@ -186,7 +217,7 @@ VectorTOTAL PR2EihSystem::cost_grad(StdVectorJ& J, const MatrixJ& j_sigma0, StdV
 	return grad;
 }
 
-void PR2EihSystem::plot(const StdVectorJ& J, const Vector3d& obj, const Matrix3d& obj_sigma,
+void PR2EihSystem::plot(const StdVectorJ& J, const std::vector<Gaussian3d>& obj_gaussians,
 		const std::vector<geometry3d::Triangle>& obstacles, bool pause) {
 	VectorJ curr_joints = arm->get_joints();
 
@@ -197,23 +228,31 @@ void PR2EihSystem::plot(const StdVectorJ& J, const Vector3d& obj, const Matrix3d
 		sim->plot_transform(pose_world);
 	}
 
-	Vector3d obj_world = sim->transform_from_to(obj, "base_link", "world");
-	Matrix4d obj_sigma_T = Matrix4d::Zero();
-	obj_sigma_T.block<3,3>(0,0) = obj_sigma;
-	Matrix3d obj_sigma_world = sim->transform_from_to(obj_sigma_T, "base_link", "world").block<3,3>(0,0);
-	sim->plot_gaussian(obj_world, obj_sigma_world, {0,1,0});
-
 	for(const geometry3d::Triangle& obstacle : obstacles) {
 		obstacle.plot(*sim, "base_link", {0,0,1}, true, 0.25);
 	}
 
+	for(const Gaussian3d& obj_gaussian : obj_gaussians) {
+		Vector3d obj_world = sim->transform_from_to(obj_gaussian.mean, "base_link", "world");
+		Matrix4d obj_sigma_T = Matrix4d::Zero();
+		obj_sigma_T.block<3,3>(0,0) = obj_gaussian.cov;
+		Matrix3d obj_sigma_world = sim->transform_from_to(obj_sigma_T, "base_link", "world").block<3,3>(0,0);
+		sim->plot_gaussian(obj_world, obj_sigma_world, {0,1,0});
+
+		for(int m=0; m < M_DIM; ++m) {
+			Vector3d particle = obj_gaussian.particles.col(m);
+			sim->plot_point(sim->transform_from_to(particle, "base_link", "world"), {0,1,0}, .001);
+		}
+	}
+
+	arm->set_joints(J.back());
 //	cam->plot({1,0,0});
 	std::vector<geometry3d::Pyramid> truncated_frustum = cam->truncated_view_frustum(obstacles, false);
 	for(const geometry3d::Pyramid& pyramid : truncated_frustum) {
 		pyramid.plot(*sim, "base_link", {1,0,0}, true, true, 0.15);
 	}
 
-	arm->set_joints(curr_joints);
+	arm->set_joints(J[0]);
 
 	if (pause) {
 		LOG_INFO("Plotted, press enter");
@@ -268,4 +307,59 @@ void PR2EihSystem::linearize_obsfunc(const VectorX& x, const VectorR& r,
 //				obsfunc(x_m.segment<J_DIM>(0), x_m.segment<3>(J_DIM), r)) / (2*step);
 //		x_p(i) = x(i); x_m(i) = x(i);
 //	}
+}
+
+void PR2EihSystem::update_particles(const VectorJ& j_tp1_t, const double delta_fov_real, const VectorZ& z_tp1_real, const MatrixP& P_t,
+		const std::vector<geometry3d::Triangle>& obstacles, MatrixP& P_tp1) {
+	const double epsilon = 1e-5;
+	Vector3d z_obj_real = z_tp1_real.segment<3>(J_DIM);
+
+	arm->set_joints(j_tp1_t);
+	std::vector<geometry3d::Pyramid> truncated_frustum = cam->truncated_view_frustum(obstacles, true);
+
+	VectorM W = VectorM::Zero();
+	// for each particle, weight by gauss_likelihood of that measurement given particle/agent observation
+	for(int m=0; m < M_DIM; ++m) {
+		bool inside = cam->is_in_fov(P_t.col(m), truncated_frustum);
+		W(m) = (inside) ? 0 : 1;
+//		if (delta_fov_real < epsilon) {
+//			W(m) = (inside) ? 0 : 1;
+//		} else {
+//			if (inside) {
+//				Vector3d z_obj_m = obsfunc(j_tp1_t, P_t.col(m), VectorR::Zero()).segment<3>(J_DIM);
+//				Vector3d e = z_obj_real - z_obj_m;
+//				W(m) = gauss_likelihood(e, .1*R.block<3,3>(J_DIM,J_DIM));
+//			} else {
+//				W(m) = 0;
+//			}
+//		}
+	}
+	W = W / W.sum();
+
+	low_variance_sampler(P_t, W, P_tp1);
+
+}
+
+double PR2EihSystem::gauss_likelihood(const Vector3d& v, const Matrix3d& S) {
+	Matrix3d Sf = S.llt().matrixL();
+	Vector3d M = Sf.lu().solve(v);
+
+	double E = -0.5*M.dot(M);
+	double C = pow(2*M_PI, S.cols()/2) * Sf.diagonal().prod();
+	double w = exp(E) / C;
+
+	return w;
+}
+
+void PR2EihSystem::low_variance_sampler(const MatrixP& P, const VectorM& W, MatrixP& P_sampled) {
+	double r = (1/double(M_DIM))*(rand() / double(RAND_MAX));
+	double c = W(0);
+	int i = 0;
+	for(int m=0; m < M_DIM; ++m) {
+		double u = r + m * (1/double(M_DIM));
+		while (u > c) {
+			c += W(++i);
+		}
+		P_sampled.col(m) = P.col(i);
+	}
 }

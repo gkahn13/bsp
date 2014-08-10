@@ -27,6 +27,11 @@ set_target_properties(pr2-eih PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
 set_target_properties(pr2-eih PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 target_link_libraries(pr2-eih ${catkin_LIBRARIES} ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES} ${Boost_LIBRARIES})
 
+add_executable(pr2-eih-entropy  pr2_eih_entropy.cpp system/pr2_eih_system.cpp pr2eihMPC.c ../util/logging.cpp)
+set_target_properties(pr2-eih-entropy PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
+set_target_properties(pr2-eih-entropy PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
+target_link_libraries(pr2-eih-entropy ${catkin_LIBRARIES} ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES} ${Boost_LIBRARIES})
+
 add_executable(test-pr2-eih-system  tests/test_pr2_eih_system.cpp system/pr2_eih_system.cpp ../util/logging.cpp)
 set_target_properties(test-pr2-eih-system PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
 set_target_properties(test-pr2-eih-system PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")

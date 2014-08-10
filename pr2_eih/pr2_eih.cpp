@@ -404,7 +404,7 @@ double pr2_eih_approximate_collocation(StdVectorJ& J, StdVectorU& U, const Matri
 			LOG_DEBUG("Accepted, Increasing trust region size to:  %2.6f %2.6f", Xeps, Ueps);
 
 			meritopt = sys.cost(Jopt, j_sigma0, Uopt, obj_gaussians, alpha, obstacles);
-			grad = sys.cost_grad(Jopt, j_sigma0, Uopt, obj_gaussians, alpha, obstacles);
+			gradopt = sys.cost_grad(Jopt, j_sigma0, Uopt, obj_gaussians, alpha, obstacles);
 
 			L_BFGS(J, U, grad, Jopt, Uopt, gradopt, hess);
 
@@ -542,7 +542,7 @@ int main(int argc, char* argv[]) {
 	VectorJ j_t, j_t_real, j_tp1, j_tp1_real;
 	j_t = arm.get_joints();
 	j_t_real = j_t; // TODO
-	MatrixJ j_sigma0_t = 1e-4*MatrixJ::Identity(); // TODO: never update it in MPC loop
+	MatrixJ j_sigma0_t = (M_PI/4)*MatrixJ::Identity(); // TODO: never update it in MPC loop
 
 	// initialize state and controls
 	StdVectorU U(T-1, VectorU::Zero());

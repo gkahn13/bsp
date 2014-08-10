@@ -24,7 +24,7 @@ using namespace Eigen;
 
 #define TOTAL_VARS (TIMESTEPS*J_DIM + (TIMESTEPS-1)*U_DIM)
 
-#define M_DIM 1000 // number of particles per object gaussian
+#define M_DIM 100 // number of particles per object gaussian
 
 typedef Matrix<double,X_DIM,1> VectorX;
 //typedef Matrix<double,J_DIM,1> VectorJ;
@@ -33,7 +33,7 @@ typedef Matrix<double,Q_DIM,1> VectorQ;
 typedef Matrix<double,Z_DIM,1> VectorZ;
 typedef Matrix<double,R_DIM,1> VectorR;
 typedef Matrix<double,TOTAL_VARS,1> VectorTOTAL;
-typedef Matrix<double,M_DIM,1> VectorM;
+typedef Matrix<double,M_DIM,1> VectorP;
 
 typedef Matrix<double,X_DIM,X_DIM> MatrixX;
 typedef Matrix<double,J_DIM,J_DIM> MatrixJ;
@@ -74,11 +74,14 @@ class PR2EihSystem {
 	const double alpha_belief = 1e7; // 1e7
 	const double alpha_final_belief = 1e7; // 1e7
 
+	const double alpha_particle_sd = 1e3; // 100
+
 public:
 	PR2EihSystem(pr2_sim::Simulator *s, pr2_sim::Arm *a, pr2_sim::Camera *c);
 	PR2EihSystem() : PR2EihSystem(NULL, NULL, NULL) { }
 
 	VectorJ dynfunc(const VectorJ& j, const VectorU& u, const VectorQ& q, bool enforce_limits=false);
+	void get_limits(VectorJ& j_min, VectorJ& j_max, VectorU& u_min, VectorU& u_max);
 	VectorZ obsfunc(const VectorJ& j, const Vector3d& object, const VectorR& r);
 
 	MatrixZ delta_matrix(const VectorJ& j, const Vector3d& object, const double alpha,
@@ -91,14 +94,20 @@ public:
 			const std::vector<geometry3d::Triangle>& obstacles,
 			VectorJ& j_tp1_real, VectorJ& j_tp1, std::vector<Gaussian3d>& obj_gaussians_tp1);
 
-	void get_limits(VectorJ& j_min, VectorJ& j_max, VectorU& u_min, VectorU& u_max);
-
 	double cost(const StdVectorJ& J, const MatrixJ& j_sigma0, const StdVectorU& U, const std::vector<Gaussian3d>& obj_gaussians,
 			const double alpha, const std::vector<geometry3d::Triangle>& obstacles);
 	VectorTOTAL cost_grad(StdVectorJ& J, const MatrixJ& j_sigma0, StdVectorU& U, const std::vector<Gaussian3d>& obj_gaussians,
 			const double alpha, const std::vector<geometry3d::Triangle>& obstacles);
 
+	VectorP update_particle_weights(const VectorJ& j_tp1, const MatrixP& P_t, const VectorP& W_t, const std::vector<geometry3d::Triangle>& obstacles);
+	MatrixP low_variance_sampler(const MatrixP& P, const VectorP& W);
+
+	double entropy(const StdVectorJ& J, const StdVectorU& U, const MatrixP& P, const std::vector<geometry3d::Triangle>& obstacles);
+	VectorTOTAL entropy_grad(StdVectorJ& J, StdVectorU& U, const MatrixP& P, const std::vector<geometry3d::Triangle>& obstacles);
+
 	void plot(const StdVectorJ& J, const std::vector<Gaussian3d>& obj_gaussians,
+			const std::vector<geometry3d::Triangle>& obstacles, bool pause=true);
+	void plot(const StdVectorJ& J, const MatrixP& P,
 			const std::vector<geometry3d::Triangle>& obstacles, bool pause=true);
 
 private:
@@ -115,10 +124,7 @@ private:
 	void linearize_obsfunc(const VectorX& x, const VectorR& r,
 			Matrix<double,Z_DIM,X_DIM>& H);
 
-	void update_particles(const VectorJ& j_tp1_t, const double delta_fov_real, const VectorZ& z_tp1_real, const MatrixP& P_t,
-			const std::vector<geometry3d::Triangle>& obstacles, MatrixP& P_tp1);
 	double gauss_likelihood(const Vector3d& v, const Matrix3d& S);
-	void low_variance_sampler(const MatrixP& P, const VectorM& W, MatrixP& P_sampled);
 };
 
 #endif

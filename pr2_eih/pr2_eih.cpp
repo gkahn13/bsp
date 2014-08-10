@@ -458,32 +458,6 @@ inline double uniform(double low, double high) {
 	return (high - low)*(rand() / double(RAND_MAX)) + low;
 }
 
-//void init_obstacles_and_objects(const Matrix4d& cam_pose,
-//		std::vector<geometry3d::Triangle>& obstacles, std::vector<Gaussian3d>& obj_gaussians) {
-//	Matrix3d cam_rot = cam_pose.block<3,3>(0,0);
-//	Vector3d cam_pos = cam_pose.block<3,1>(0,3);
-//
-//	std::vector<geometry3d::Triangle> obstacles_cam;
-//	std::vector<Gaussian3d> obj_gaussians_cam;
-//
-//	obstacles_cam.push_back(geometry3d::Triangle({0,.2,.75}, {0,.3,.75},{.05,.3,.75}));
-//	obstacles_cam.push_back(geometry3d::Triangle({0,.2,.75}, {.05,.2,.75},{.05,.3,.75}));
-//	obj_gaussians_cam.push_back(Gaussian3d({.03, .25, .85}, Vector3d(.0025, .005, .01).asDiagonal()));
-//
-//	obstacles.clear();
-//	for(const geometry3d::Triangle& obstacle_cam : obstacles_cam) {
-//		obstacles.push_back(geometry3d::Triangle(cam_rot*obstacle_cam.a+cam_pos,
-//				cam_rot*obstacle_cam.b+cam_pos,
-//				cam_rot*obstacle_cam.c+cam_pos));
-//	}
-//
-//	obj_gaussians.clear();
-//	for(const Gaussian3d& obj_gaussian_cam : obj_gaussians_cam) {
-//		obj_gaussians.push_back(Gaussian3d(cam_rot*obj_gaussian_cam.mean+cam_pos,
-//				cam_rot*obj_gaussian_cam.cov*cam_rot.transpose()));
-//	}
-//}
-
 void init_obstacles_and_objects(pr2_sim::Camera& cam,
 		std::vector<geometry3d::Triangle>& obstacles, std::vector<Gaussian3d>& obj_gaussians) {
 	Matrix4d cam_pose = cam.get_pose();
@@ -492,8 +466,11 @@ void init_obstacles_and_objects(pr2_sim::Camera& cam,
 
 	std::vector<geometry3d::Triangle> obstacles_cam;
 
-	obstacles_cam.push_back(geometry3d::Triangle({0,0,.75}, {0,.1,.75},{.05,.1,.75}));
-	obstacles_cam.push_back(geometry3d::Triangle({0,0,.75}, {.05,0,.75},{.05,.1,.75}));
+	obstacles_cam.push_back(geometry3d::Triangle({0,0,.75}, {0,.1,.75}, {.05,.1,.75}));
+	obstacles_cam.push_back(geometry3d::Triangle({0,0,.75}, {.05,0,.75}, {.05,.1,.75}));
+
+	obstacles_cam.push_back(geometry3d::Triangle({-.2,0,.75}, {-.2,.1,.75}, {-.25,.1,.75}));
+	obstacles_cam.push_back(geometry3d::Triangle({-.2,0,.75}, {-.25,0,.75}, {-.25,.1,.75}));
 
 	obstacles.clear();
 	for(const geometry3d::Triangle& obstacle_cam : obstacles_cam) {
@@ -504,7 +481,8 @@ void init_obstacles_and_objects(pr2_sim::Camera& cam,
 
 	std::vector<geometry3d::Pyramid> truncated_frustum = cam.truncated_view_frustum(obstacles, true);
 	obj_gaussians.clear();
-	for(const geometry3d::Triangle& obstacle_cam : obstacles_cam) {
+	for(int i=0; i < obstacles_cam.size(); i+=2) {
+		geometry3d::Triangle& obstacle_cam = obstacles_cam[i];
 		double x_min = std::min(obstacle_cam.a(0), std::min(obstacle_cam.b(0), obstacle_cam.c(0))) - .1;
 		double x_max = std::max(obstacle_cam.a(0), std::max(obstacle_cam.b(0), obstacle_cam.c(0))) + .1;
 		double y_min = std::min(obstacle_cam.a(1), std::min(obstacle_cam.b(1), obstacle_cam.c(1))) - .1;
@@ -522,6 +500,25 @@ void init_obstacles_and_objects(pr2_sim::Camera& cam,
 			}
 		}
 		obj_gaussians.push_back(Gaussian3d(particles));
+	}
+}
+
+void init_trajectory(StdVectorJ& J, StdVectorU& U, pr2_sim::Arm& arm, PR2EihSystem& sys) {
+	Matrix4d start_pose = arm.fk(J[0]);
+	Matrix4d next_pose = start_pose;
+	VectorJ next_joints;
+	for(int t=0; t < T-1; ++t) {
+		U[t].setZero();
+//		next_pose.block<3,1>(0,3) += Vector3d(0, 0, .005);
+//		if (arm.ik(next_pose, next_joints)) {
+//			U[t] = next_joints - J[t];
+//		} else {
+//			U[t] = VectorU::Zero();
+//		}
+	}
+
+	for(int t=0; t < T-1; ++t) {
+		J[t+1] = sys.dynfunc(J[t], U[t], VectorQ::Zero());
 	}
 }
 
@@ -560,6 +557,8 @@ int main(int argc, char* argv[]) {
 	util::Timer forces_timer;
 
 	while(true) {
+		init_trajectory(J, U, arm, sys);
+
 		LOG_INFO("Current state");
 		sys.plot(J, obj_gaussians_t, obstacles);
 

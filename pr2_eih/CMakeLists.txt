@@ -31,3 +31,13 @@ add_executable(test-pr2-eih-system  tests/test_pr2_eih_system.cpp system/pr2_eih
 set_target_properties(test-pr2-eih-system PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
 set_target_properties(test-pr2-eih-system PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 target_link_libraries(test-pr2-eih-system ${catkin_LIBRARIES} ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES})
+
+add_executable(test-particles-sd  tests/test_particles_sd.cpp system/pr2_eih_system.cpp ../util/logging.cpp)
+set_target_properties(test-particles-sd PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
+set_target_properties(test-particles-sd PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
+target_link_libraries(test-particles-sd ${catkin_LIBRARIES} ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES})
+
+add_executable(test-entropy  tests/test_entropy.cpp system/pr2_eih_system.cpp ../util/logging.cpp)
+set_target_properties(test-entropy PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
+set_target_properties(test-entropy PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
+target_link_libraries(test-entropy ${catkin_LIBRARIES} ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES})

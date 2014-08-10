@@ -237,11 +237,11 @@ void PR2EihSystem::plot(const StdVectorJ& J, const std::vector<Gaussian3d>& obj_
 		Matrix4d obj_sigma_T = Matrix4d::Zero();
 		obj_sigma_T.block<3,3>(0,0) = obj_gaussian.cov;
 		Matrix3d obj_sigma_world = sim->transform_from_to(obj_sigma_T, "base_link", "world").block<3,3>(0,0);
-		sim->plot_gaussian(obj_world, obj_sigma_world, {0,1,0});
+//		sim->plot_gaussian(obj_world, obj_sigma_world, {0,1,0});
 
 		for(int m=0; m < M_DIM; ++m) {
 			Vector3d particle = obj_gaussian.particles.col(m);
-			sim->plot_point(sim->transform_from_to(particle, "base_link", "world"), {0,1,0}, .001);
+			sim->plot_point(sim->transform_from_to(particle, "base_link", "world"), {0,1,0}, .005);
 		}
 	}
 

@@ -71,8 +71,8 @@ class PR2EihSystem {
 	const double step = 0.0078125*0.0078125;
 
 	const double alpha_control = 0; // .01
-	const double alpha_belief = 1e7; // 1
-	const double alpha_final_belief = 1e7; // 1
+	const double alpha_belief = 1e7; // 1e7
+	const double alpha_final_belief = 1e7; // 1e7
 
 public:
 	PR2EihSystem(pr2_sim::Simulator *s, pr2_sim::Arm *a, pr2_sim::Camera *c);

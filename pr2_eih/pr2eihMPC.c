@@ -40,12 +40,12 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 /* LINEAR ALGEBRA LIBRARY ---------------------------------------------- */
 /*
- * Initializes a vector of length 63 with a value.
+ * Initializes a vector of length 21 with a value.
  */
-void pr2eihMPC_LA_INITIALIZEVECTOR_63(pr2eihMPC_FLOAT* vec, pr2eihMPC_FLOAT value)
+void pr2eihMPC_LA_INITIALIZEVECTOR_21(pr2eihMPC_FLOAT* vec, pr2eihMPC_FLOAT value)
 {
 	int i;
-	for( i=0; i<63; i++ )
+	for( i=0; i<21; i++ )
 	{
 		vec[i] = value;
 	}
@@ -53,12 +53,12 @@ void pr2eihMPC_LA_INITIALIZEVECTOR_63(pr2eihMPC_FLOAT* vec, pr2eihMPC_FLOAT valu
 
 
 /*
- * Initializes a vector of length 35 with a value.
+ * Initializes a vector of length 14 with a value.
  */
-void pr2eihMPC_LA_INITIALIZEVECTOR_35(pr2eihMPC_FLOAT* vec, pr2eihMPC_FLOAT value)
+void pr2eihMPC_LA_INITIALIZEVECTOR_14(pr2eihMPC_FLOAT* vec, pr2eihMPC_FLOAT value)
 {
 	int i;
-	for( i=0; i<35; i++ )
+	for( i=0; i<14; i++ )
 	{
 		vec[i] = value;
 	}
@@ -66,12 +66,12 @@ void pr2eihMPC_LA_INITIALIZEVECTOR_35(pr2eihMPC_FLOAT* vec, pr2eihMPC_FLOAT valu
 
 
 /*
- * Initializes a vector of length 126 with a value.
+ * Initializes a vector of length 42 with a value.
  */
-void pr2eihMPC_LA_INITIALIZEVECTOR_126(pr2eihMPC_FLOAT* vec, pr2eihMPC_FLOAT value)
+void pr2eihMPC_LA_INITIALIZEVECTOR_42(pr2eihMPC_FLOAT* vec, pr2eihMPC_FLOAT value)
 {
 	int i;
-	for( i=0; i<126; i++ )
+	for( i=0; i<42; i++ )
 	{
 		vec[i] = value;
 	}
@@ -80,12 +80,12 @@ void pr2eihMPC_LA_INITIALIZEVECTOR_126(pr2eihMPC_FLOAT* vec, pr2eihMPC_FLOAT val
 
 /* 
  * Calculates a dot product and adds it to a variable: z += x'*y; 
- * This function is for vectors of length 126.
+ * This function is for vectors of length 42.
  */
-void pr2eihMPC_LA_DOTACC_126(pr2eihMPC_FLOAT *x, pr2eihMPC_FLOAT *y, pr2eihMPC_FLOAT *z)
+void pr2eihMPC_LA_DOTACC_42(pr2eihMPC_FLOAT *x, pr2eihMPC_FLOAT *y, pr2eihMPC_FLOAT *z)
 {
 	int i;
-	for( i=0; i<126; i++ ){
+	for( i=0; i<42; i++ ){
 		*z += x[i]*y[i];
 	}
 }
@@ -155,47 +155,6 @@ void pr2eihMPC_LA_DIAGZERO_MVMSUB6_7(pr2eihMPC_FLOAT *B, pr2eihMPC_FLOAT *u, pr2
 
 	for( i=0; i<7; i++ ){
 		r[i] = Bu[i] - b[i];
-		lr += l[i]*r[i];
-		if( r[i] > norm ){
-			norm = r[i];
-		}
-		if( -r[i] > norm ){
-			norm = -r[i];
-		}
-	}
-	*y = norm;
-	*z -= lr;
-}
-
-
-/* 
- * Computes r = A*x + B*u - b
- * and      y = max([norm(r,inf), y])
- * and      z -= l'*r
- * where A is stored in column major format
- */
-void pr2eihMPC_LA_DENSE_DIAGZERO_MVMSUB3_7_14_14(pr2eihMPC_FLOAT *A, pr2eihMPC_FLOAT *x, pr2eihMPC_FLOAT *B, pr2eihMPC_FLOAT *u, pr2eihMPC_FLOAT *b, pr2eihMPC_FLOAT *l, pr2eihMPC_FLOAT *r, pr2eihMPC_FLOAT *z, pr2eihMPC_FLOAT *y)
-{
-	int i;
-	int j;
-	int k = 0;
-	pr2eihMPC_FLOAT AxBu[7];
-	pr2eihMPC_FLOAT norm = *y;
-	pr2eihMPC_FLOAT lr = 0;
-
-	/* do A*x + B*u first */
-	for( i=0; i<7; i++ ){
-		AxBu[i] = A[k++]*x[0] + B[i]*u[i];
-	}	
-
-	for( j=1; j<14; j++ ){		
-		for( i=0; i<7; i++ ){
-			AxBu[i] += A[k++]*x[j];
-		}
-	}
-
-	for( i=0; i<7; i++ ){
-		r[i] = AxBu[i] - b[i];
 		lr += l[i]*r[i];
 		if( r[i] > norm ){
 			norm = r[i];
@@ -456,12 +415,12 @@ void pr2eihMPC_LA_INEQ_B_GRAD_7_7_7(pr2eihMPC_FLOAT *lu, pr2eihMPC_FLOAT *su, pr
 
 /*
  * Addition of three vectors  z = u + w + v
- * of length 63.
+ * of length 21.
  */
-void pr2eihMPC_LA_VVADD3_63(pr2eihMPC_FLOAT *u, pr2eihMPC_FLOAT *v, pr2eihMPC_FLOAT *w, pr2eihMPC_FLOAT *z)
+void pr2eihMPC_LA_VVADD3_21(pr2eihMPC_FLOAT *u, pr2eihMPC_FLOAT *v, pr2eihMPC_FLOAT *w, pr2eihMPC_FLOAT *z)
 {
 	int i;
-	for( i=0; i<63; i++ ){
+	for( i=0; i<21; i++ ){
 		z[i] = u[i] + v[i] + w[i];
 	}
 }
@@ -692,62 +651,6 @@ void pr2eihMPC_LA_DIAGZERO_MVMSUB7_7(pr2eihMPC_FLOAT *B, pr2eihMPC_FLOAT *u, pr2
 	for( i=0; i<7; i++ ){
 		r[i] = b[i] - B[i]*u[i];
 	}	
-	
-}
-
-
-/**
- * Compute L = A*A' + B*B', where L is lower triangular of size NXp1
- * and A is a dense matrix of size [7 x 14] in column
- * storage format, and B is of size [7 x 14] diagonalzero
- * storage format.
- * 
- * THIS ONE HAS THE WORST ACCES PATTERN POSSIBLE. 
- * POSSIBKE FIX: PUT A AND B INTO ROW MAJOR FORMAT FIRST.
- * 
- */
-void pr2eihMPC_LA_DENSE_DIAGZERO_MMT2_7_14_14(pr2eihMPC_FLOAT *A, pr2eihMPC_FLOAT *B, pr2eihMPC_FLOAT *L)
-{
-    int i, j, k, ii, di;
-    pr2eihMPC_FLOAT ltemp;
-    
-    ii = 0; di = 0;
-    for( i=0; i<7; i++ ){        
-        for( j=0; j<=i; j++ ){
-            ltemp = 0; 
-            for( k=0; k<14; k++ ){
-                ltemp += A[k*7+i]*A[k*7+j];
-            }		
-            L[ii+j] = ltemp;
-        }
-		/* work on the diagonal
-		 * there might be i == j, but j has already been incremented so it is i == j-1 */
-		L[ii+i] += B[i]*B[i];
-        ii += ++di;
-    }
-}
-
-
-/* 
- * Computes r = b - A*x - B*u
- * where A is stored in column major format
- * and B is stored in diagzero format
- */
-void pr2eihMPC_LA_DENSE_DIAGZERO_2MVMSUB2_7_14_14(pr2eihMPC_FLOAT *A, pr2eihMPC_FLOAT *x, pr2eihMPC_FLOAT *B, pr2eihMPC_FLOAT *u, pr2eihMPC_FLOAT *b, pr2eihMPC_FLOAT *r)
-{
-	int i;
-	int j;
-	int k = 0;
-
-	for( i=0; i<7; i++ ){
-		r[i] = b[i] - A[k++]*x[0] - B[i]*u[i];
-	}	
-
-	for( j=1; j<14; j++ ){		
-		for( i=0; i<7; i++ ){
-			r[i] -= A[k++]*x[j];
-		}
-	}
 	
 }
 
@@ -1034,12 +937,12 @@ void pr2eihMPC_LA_DENSE_MTVMSUB_7_7(pr2eihMPC_FLOAT *A, pr2eihMPC_FLOAT *x, pr2e
 
 
 /*
- * Vector subtraction z = -x - y for vectors of length 63.
+ * Vector subtraction z = -x - y for vectors of length 21.
  */
-void pr2eihMPC_LA_VSUB2_63(pr2eihMPC_FLOAT *x, pr2eihMPC_FLOAT *y, pr2eihMPC_FLOAT *z)
+void pr2eihMPC_LA_VSUB2_21(pr2eihMPC_FLOAT *x, pr2eihMPC_FLOAT *y, pr2eihMPC_FLOAT *z)
 {
 	int i;
-	for( i=0; i<63; i++){
+	for( i=0; i<21; i++){
 		z[i] = -x[i] - y[i];
 	}
 }
@@ -1181,7 +1084,7 @@ int pr2eihMPC_LINESEARCH_BACKTRACKING_AFFINE(pr2eihMPC_FLOAT *l, pr2eihMPC_FLOAT
          * values might be in registers, so it should be cheaper.
          */
         mymu = 0;
-        for( i=0; i<126; i++ ){
+        for( i=0; i<42; i++ ){
             dltemp = l[i] + mya*dl[i];
             dstemp = s[i] + mya*ds[i];
             if( dltemp < 0 || dstemp < 0 ){
@@ -1196,7 +1099,7 @@ int pr2eihMPC_LINESEARCH_BACKTRACKING_AFFINE(pr2eihMPC_FLOAT *l, pr2eihMPC_FLOAT
          * If no early termination of the for-loop above occurred, we
          * found the required value of a and we can quit the while loop.
          */
-        if( i == 126 ){
+        if( i == 42 ){
             break;
         } else {
             mya *= pr2eihMPC_SET_LS_SCALE_AFF;
@@ -1208,19 +1111,19 @@ int pr2eihMPC_LINESEARCH_BACKTRACKING_AFFINE(pr2eihMPC_FLOAT *l, pr2eihMPC_FLOAT
     
     /* return new values and iteration counter */
     *a = mya;
-    *mu_aff = mymu / (pr2eihMPC_FLOAT)126;
+    *mu_aff = mymu / (pr2eihMPC_FLOAT)42;
     return lsIt;
 }
 
 
 /*
  * Vector subtraction x = (u.*v - mu)*sigma where a is a scalar
-*  and x,u,v are vectors of length 126.
+*  and x,u,v are vectors of length 42.
  */
-void pr2eihMPC_LA_VSUB5_126(pr2eihMPC_FLOAT *u, pr2eihMPC_FLOAT *v, pr2eihMPC_FLOAT mu,  pr2eihMPC_FLOAT sigma, pr2eihMPC_FLOAT *x)
+void pr2eihMPC_LA_VSUB5_42(pr2eihMPC_FLOAT *u, pr2eihMPC_FLOAT *v, pr2eihMPC_FLOAT mu,  pr2eihMPC_FLOAT sigma, pr2eihMPC_FLOAT *x)
 {
 	int i;
-	for( i=0; i<126; i++){
+	for( i=0; i<42; i++){
 		x[i] = u[i]*v[i] - mu;
 		x[i] *= sigma;
 	}
@@ -1246,45 +1149,6 @@ void pr2eihMPC_LA_VSUB6_INDEXED_14_14_14(pr2eihMPC_FLOAT *u, pr2eihMPC_FLOAT *su
 }
 
 
-/* 
- * Computes r =  B*u
- * where B is stored in diagzero format
- */
-void pr2eihMPC_LA_DIAGZERO_MVM_7(pr2eihMPC_FLOAT *B, pr2eihMPC_FLOAT *u, pr2eihMPC_FLOAT *r)
-{
-	int i;
-
-	for( i=0; i<7; i++ ){
-		r[i] = B[i]*u[i];
-	}	
-	
-}
-
-
-/* 
- * Computes r = A*x + B*u
- * where A is stored in column major format
- * and B is stored in diagzero format
- */
-void pr2eihMPC_LA_DENSE_DIAGZERO_2MVMADD_7_14_14(pr2eihMPC_FLOAT *A, pr2eihMPC_FLOAT *x, pr2eihMPC_FLOAT *B, pr2eihMPC_FLOAT *u, pr2eihMPC_FLOAT *r)
-{
-	int i;
-	int j;
-	int k = 0;
-
-	for( i=0; i<7; i++ ){
-		r[i] = A[k++]*x[0] + B[i]*u[i];
-	}	
-
-	for( j=1; j<14; j++ ){		
-		for( i=0; i<7; i++ ){
-			r[i] += A[k++]*x[j];
-		}
-	}
-	
-}
-
-
 /*
  * Computes x=0; x(uidx) += u/su; x(vidx) -= v/sv where x is of length 7,
  * u, su, uidx are of length 7 and v, sv, vidx are of length 7.
@@ -1301,6 +1165,21 @@ void pr2eihMPC_LA_VSUB6_INDEXED_7_7_7(pr2eihMPC_FLOAT *u, pr2eihMPC_FLOAT *su, i
 	for( i=0; i<7; i++){
 		x[vidx[i]] -= v[i]/sv[i];
 	}
+}
+
+
+/* 
+ * Computes r =  B*u
+ * where B is stored in diagzero format
+ */
+void pr2eihMPC_LA_DIAGZERO_MVM_7(pr2eihMPC_FLOAT *B, pr2eihMPC_FLOAT *u, pr2eihMPC_FLOAT *r)
+{
+	int i;
+
+	for( i=0; i<7; i++ ){
+		r[i] = B[i]*u[i];
+	}	
+	
 }
 
 
@@ -1329,12 +1208,12 @@ void pr2eihMPC_LA_DENSE_DIAGZERO_2MVMADD_7_14_7(pr2eihMPC_FLOAT *A, pr2eihMPC_FL
 
 
 /*
- * Vector subtraction z = x - y for vectors of length 63.
+ * Vector subtraction z = x - y for vectors of length 21.
  */
-void pr2eihMPC_LA_VSUB_63(pr2eihMPC_FLOAT *x, pr2eihMPC_FLOAT *y, pr2eihMPC_FLOAT *z)
+void pr2eihMPC_LA_VSUB_21(pr2eihMPC_FLOAT *x, pr2eihMPC_FLOAT *y, pr2eihMPC_FLOAT *z)
 {
 	int i;
-	for( i=0; i<63; i++){
+	for( i=0; i<21; i++){
 		z[i] = x[i] - y[i];
 	}
 }
@@ -1393,48 +1272,48 @@ void pr2eihMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_7(pr2eihMPC_FLOAT *r, pr2eihMPC_FLO
 
 
 /*
- * Computes ds = -l.\(r + s.*dl) for vectors of length 126.
+ * Computes ds = -l.\(r + s.*dl) for vectors of length 42.
  */
-void pr2eihMPC_LA_VSUB7_126(pr2eihMPC_FLOAT *l, pr2eihMPC_FLOAT *r, pr2eihMPC_FLOAT *s, pr2eihMPC_FLOAT *dl, pr2eihMPC_FLOAT *ds)
+void pr2eihMPC_LA_VSUB7_42(pr2eihMPC_FLOAT *l, pr2eihMPC_FLOAT *r, pr2eihMPC_FLOAT *s, pr2eihMPC_FLOAT *dl, pr2eihMPC_FLOAT *ds)
 {
 	int i;
-	for( i=0; i<126; i++){
+	for( i=0; i<42; i++){
 		ds[i] = -(r[i] + s[i]*dl[i])/l[i];
 	}
 }
 
 
 /*
- * Vector addition x = x + y for vectors of length 63.
+ * Vector addition x = x + y for vectors of length 21.
  */
-void pr2eihMPC_LA_VADD_63(pr2eihMPC_FLOAT *x, pr2eihMPC_FLOAT *y)
+void pr2eihMPC_LA_VADD_21(pr2eihMPC_FLOAT *x, pr2eihMPC_FLOAT *y)
 {
 	int i;
-	for( i=0; i<63; i++){
+	for( i=0; i<21; i++){
 		x[i] += y[i];
 	}
 }
 
 
 /*
- * Vector addition x = x + y for vectors of length 35.
+ * Vector addition x = x + y for vectors of length 14.
  */
-void pr2eihMPC_LA_VADD_35(pr2eihMPC_FLOAT *x, pr2eihMPC_FLOAT *y)
+void pr2eihMPC_LA_VADD_14(pr2eihMPC_FLOAT *x, pr2eihMPC_FLOAT *y)
 {
 	int i;
-	for( i=0; i<35; i++){
+	for( i=0; i<14; i++){
 		x[i] += y[i];
 	}
 }
 
 
 /*
- * Vector addition x = x + y for vectors of length 126.
+ * Vector addition x = x + y for vectors of length 42.
  */
-void pr2eihMPC_LA_VADD_126(pr2eihMPC_FLOAT *x, pr2eihMPC_FLOAT *y)
+void pr2eihMPC_LA_VADD_42(pr2eihMPC_FLOAT *x, pr2eihMPC_FLOAT *y)
 {
 	int i;
-	for( i=0; i<126; i++){
+	for( i=0; i<42; i++){
 		x[i] += y[i];
 	}
 }
@@ -1456,7 +1335,7 @@ int pr2eihMPC_LINESEARCH_BACKTRACKING_COMBINED(pr2eihMPC_FLOAT *z, pr2eihMPC_FLO
     while( 1 ){                        
 
         /* check whether search criterion is fulfilled */
-        for( i=0; i<126; i++ ){
+        for( i=0; i<42; i++ ){
             dltemp = l[i] + (*a)*dl[i];
             dstemp = s[i] + (*a)*ds[i];
             if( dltemp < 0 || dstemp < 0 ){
@@ -1469,7 +1348,7 @@ int pr2eihMPC_LINESEARCH_BACKTRACKING_COMBINED(pr2eihMPC_FLOAT *z, pr2eihMPC_FLO
          * If no early termination of the for-loop above occurred, we
          * found the required value of a and we can quit the while loop.
          */
-        if( i == 126 ){
+        if( i == 42 ){
             break;
         } else {
             *a *= pr2eihMPC_SET_LS_SCALE;
@@ -1483,25 +1362,25 @@ int pr2eihMPC_LINESEARCH_BACKTRACKING_COMBINED(pr2eihMPC_FLOAT *z, pr2eihMPC_FLO
     a_gamma = (*a)*pr2eihMPC_SET_LS_MAXSTEP;
     
     /* primal variables */
-    for( i=0; i<63; i++ ){
+    for( i=0; i<21; i++ ){
         z[i] += a_gamma*dz[i];
     }
     
     /* equality constraint multipliers */
-    for( i=0; i<35; i++ ){
+    for( i=0; i<14; i++ ){
         v[i] += a_gamma*dv[i];
     }
     
     /* inequality constraint multipliers & slacks, also update mu */
     *mu = 0;
-    for( i=0; i<126; i++ ){
+    for( i=0; i<42; i++ ){
         dltemp = l[i] + a_gamma*dl[i]; l[i] = dltemp;
         dstemp = s[i] + a_gamma*ds[i]; s[i] = dstemp;
         *mu += dltemp*dstemp;
     }
     
     *a = a_gamma;
-    *mu /= (pr2eihMPC_FLOAT)126;
+    *mu /= (pr2eihMPC_FLOAT)42;
     return lsIt;
 }
 
@@ -1509,24 +1388,24 @@ int pr2eihMPC_LINESEARCH_BACKTRACKING_COMBINED(pr2eihMPC_FLOAT *z, pr2eihMPC_FLO
 
 
 /* VARIABLE DEFINITIONS ------------------------------------------------ */
-pr2eihMPC_FLOAT pr2eihMPC_z[63];
-pr2eihMPC_FLOAT pr2eihMPC_v[35];
-pr2eihMPC_FLOAT pr2eihMPC_dz_aff[63];
-pr2eihMPC_FLOAT pr2eihMPC_dv_aff[35];
-pr2eihMPC_FLOAT pr2eihMPC_grad_cost[63];
-pr2eihMPC_FLOAT pr2eihMPC_grad_eq[63];
-pr2eihMPC_FLOAT pr2eihMPC_rd[63];
-pr2eihMPC_FLOAT pr2eihMPC_l[126];
-pr2eihMPC_FLOAT pr2eihMPC_s[126];
-pr2eihMPC_FLOAT pr2eihMPC_lbys[126];
-pr2eihMPC_FLOAT pr2eihMPC_dl_aff[126];
-pr2eihMPC_FLOAT pr2eihMPC_ds_aff[126];
-pr2eihMPC_FLOAT pr2eihMPC_dz_cc[63];
-pr2eihMPC_FLOAT pr2eihMPC_dv_cc[35];
-pr2eihMPC_FLOAT pr2eihMPC_dl_cc[126];
-pr2eihMPC_FLOAT pr2eihMPC_ds_cc[126];
-pr2eihMPC_FLOAT pr2eihMPC_ccrhs[126];
-pr2eihMPC_FLOAT pr2eihMPC_grad_ineq[63];
+pr2eihMPC_FLOAT pr2eihMPC_z[21];
+pr2eihMPC_FLOAT pr2eihMPC_v[14];
+pr2eihMPC_FLOAT pr2eihMPC_dz_aff[21];
+pr2eihMPC_FLOAT pr2eihMPC_dv_aff[14];
+pr2eihMPC_FLOAT pr2eihMPC_grad_cost[21];
+pr2eihMPC_FLOAT pr2eihMPC_grad_eq[21];
+pr2eihMPC_FLOAT pr2eihMPC_rd[21];
+pr2eihMPC_FLOAT pr2eihMPC_l[42];
+pr2eihMPC_FLOAT pr2eihMPC_s[42];
+pr2eihMPC_FLOAT pr2eihMPC_lbys[42];
+pr2eihMPC_FLOAT pr2eihMPC_dl_aff[42];
+pr2eihMPC_FLOAT pr2eihMPC_ds_aff[42];
+pr2eihMPC_FLOAT pr2eihMPC_dz_cc[21];
+pr2eihMPC_FLOAT pr2eihMPC_dv_cc[14];
+pr2eihMPC_FLOAT pr2eihMPC_dl_cc[42];
+pr2eihMPC_FLOAT pr2eihMPC_ds_cc[42];
+pr2eihMPC_FLOAT pr2eihMPC_ccrhs[42];
+pr2eihMPC_FLOAT pr2eihMPC_grad_ineq[21];
 pr2eihMPC_FLOAT* pr2eihMPC_z0 = pr2eihMPC_z + 0;
 pr2eihMPC_FLOAT* pr2eihMPC_dzaff0 = pr2eihMPC_dz_aff + 0;
 pr2eihMPC_FLOAT* pr2eihMPC_dzcc0 = pr2eihMPC_dz_cc + 0;
@@ -1594,196 +1473,54 @@ pr2eihMPC_FLOAT* pr2eihMPC_z1 = pr2eihMPC_z + 14;
 pr2eihMPC_FLOAT* pr2eihMPC_dzaff1 = pr2eihMPC_dz_aff + 14;
 pr2eihMPC_FLOAT* pr2eihMPC_dzcc1 = pr2eihMPC_dz_cc + 14;
 pr2eihMPC_FLOAT* pr2eihMPC_rd1 = pr2eihMPC_rd + 14;
-pr2eihMPC_FLOAT pr2eihMPC_Lbyrd1[14];
+pr2eihMPC_FLOAT pr2eihMPC_Lbyrd1[7];
 pr2eihMPC_FLOAT* pr2eihMPC_grad_cost1 = pr2eihMPC_grad_cost + 14;
 pr2eihMPC_FLOAT* pr2eihMPC_grad_eq1 = pr2eihMPC_grad_eq + 14;
 pr2eihMPC_FLOAT* pr2eihMPC_grad_ineq1 = pr2eihMPC_grad_ineq + 14;
-pr2eihMPC_FLOAT pr2eihMPC_ctv1[14];
+pr2eihMPC_FLOAT pr2eihMPC_ctv1[7];
 pr2eihMPC_FLOAT* pr2eihMPC_v1 = pr2eihMPC_v + 7;
 pr2eihMPC_FLOAT pr2eihMPC_re1[7];
 pr2eihMPC_FLOAT pr2eihMPC_beta1[7];
 pr2eihMPC_FLOAT pr2eihMPC_betacc1[7];
 pr2eihMPC_FLOAT* pr2eihMPC_dvaff1 = pr2eihMPC_dv_aff + 7;
 pr2eihMPC_FLOAT* pr2eihMPC_dvcc1 = pr2eihMPC_dv_cc + 7;
-pr2eihMPC_FLOAT pr2eihMPC_V1[98];
+pr2eihMPC_FLOAT pr2eihMPC_V1[49];
 pr2eihMPC_FLOAT pr2eihMPC_Yd1[28];
 pr2eihMPC_FLOAT pr2eihMPC_Ld1[28];
 pr2eihMPC_FLOAT pr2eihMPC_yy1[7];
 pr2eihMPC_FLOAT pr2eihMPC_bmy1[7];
 pr2eihMPC_FLOAT pr2eihMPC_c1[7] = {0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000};
-int pr2eihMPC_lbIdx1[14] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13};
+int pr2eihMPC_lbIdx1[7] = {0, 1, 2, 3, 4, 5, 6};
 pr2eihMPC_FLOAT* pr2eihMPC_llb1 = pr2eihMPC_l + 28;
 pr2eihMPC_FLOAT* pr2eihMPC_slb1 = pr2eihMPC_s + 28;
 pr2eihMPC_FLOAT* pr2eihMPC_llbbyslb1 = pr2eihMPC_lbys + 28;
-pr2eihMPC_FLOAT pr2eihMPC_rilb1[14];
+pr2eihMPC_FLOAT pr2eihMPC_rilb1[7];
 pr2eihMPC_FLOAT* pr2eihMPC_dllbaff1 = pr2eihMPC_dl_aff + 28;
 pr2eihMPC_FLOAT* pr2eihMPC_dslbaff1 = pr2eihMPC_ds_aff + 28;
 pr2eihMPC_FLOAT* pr2eihMPC_dllbcc1 = pr2eihMPC_dl_cc + 28;
 pr2eihMPC_FLOAT* pr2eihMPC_dslbcc1 = pr2eihMPC_ds_cc + 28;
 pr2eihMPC_FLOAT* pr2eihMPC_ccrhsl1 = pr2eihMPC_ccrhs + 28;
-int pr2eihMPC_ubIdx1[14] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13};
-pr2eihMPC_FLOAT* pr2eihMPC_lub1 = pr2eihMPC_l + 42;
-pr2eihMPC_FLOAT* pr2eihMPC_sub1 = pr2eihMPC_s + 42;
-pr2eihMPC_FLOAT* pr2eihMPC_lubbysub1 = pr2eihMPC_lbys + 42;
-pr2eihMPC_FLOAT pr2eihMPC_riub1[14];
-pr2eihMPC_FLOAT* pr2eihMPC_dlubaff1 = pr2eihMPC_dl_aff + 42;
-pr2eihMPC_FLOAT* pr2eihMPC_dsubaff1 = pr2eihMPC_ds_aff + 42;
-pr2eihMPC_FLOAT* pr2eihMPC_dlubcc1 = pr2eihMPC_dl_cc + 42;
-pr2eihMPC_FLOAT* pr2eihMPC_dsubcc1 = pr2eihMPC_ds_cc + 42;
-pr2eihMPC_FLOAT* pr2eihMPC_ccrhsub1 = pr2eihMPC_ccrhs + 42;
-pr2eihMPC_FLOAT pr2eihMPC_Phi1[14];
-pr2eihMPC_FLOAT pr2eihMPC_D1[14] = {-1.0000000000000000E+000, 
+int pr2eihMPC_ubIdx1[7] = {0, 1, 2, 3, 4, 5, 6};
+pr2eihMPC_FLOAT* pr2eihMPC_lub1 = pr2eihMPC_l + 35;
+pr2eihMPC_FLOAT* pr2eihMPC_sub1 = pr2eihMPC_s + 35;
+pr2eihMPC_FLOAT* pr2eihMPC_lubbysub1 = pr2eihMPC_lbys + 35;
+pr2eihMPC_FLOAT pr2eihMPC_riub1[7];
+pr2eihMPC_FLOAT* pr2eihMPC_dlubaff1 = pr2eihMPC_dl_aff + 35;
+pr2eihMPC_FLOAT* pr2eihMPC_dsubaff1 = pr2eihMPC_ds_aff + 35;
+pr2eihMPC_FLOAT* pr2eihMPC_dlubcc1 = pr2eihMPC_dl_cc + 35;
+pr2eihMPC_FLOAT* pr2eihMPC_dsubcc1 = pr2eihMPC_ds_cc + 35;
+pr2eihMPC_FLOAT* pr2eihMPC_ccrhsub1 = pr2eihMPC_ccrhs + 35;
+pr2eihMPC_FLOAT pr2eihMPC_Phi1[7];
+pr2eihMPC_FLOAT pr2eihMPC_D1[7] = {-1.0000000000000000E+000, 
 -1.0000000000000000E+000, 
 -1.0000000000000000E+000, 
 -1.0000000000000000E+000, 
 -1.0000000000000000E+000, 
 -1.0000000000000000E+000, 
 -1.0000000000000000E+000};
-pr2eihMPC_FLOAT pr2eihMPC_W1[14];
+pr2eihMPC_FLOAT pr2eihMPC_W1[7];
 pr2eihMPC_FLOAT pr2eihMPC_Ysd1[49];
 pr2eihMPC_FLOAT pr2eihMPC_Lsd1[49];
-pr2eihMPC_FLOAT* pr2eihMPC_z2 = pr2eihMPC_z + 28;
-pr2eihMPC_FLOAT* pr2eihMPC_dzaff2 = pr2eihMPC_dz_aff + 28;
-pr2eihMPC_FLOAT* pr2eihMPC_dzcc2 = pr2eihMPC_dz_cc + 28;
-pr2eihMPC_FLOAT* pr2eihMPC_rd2 = pr2eihMPC_rd + 28;
-pr2eihMPC_FLOAT pr2eihMPC_Lbyrd2[14];
-pr2eihMPC_FLOAT* pr2eihMPC_grad_cost2 = pr2eihMPC_grad_cost + 28;
-pr2eihMPC_FLOAT* pr2eihMPC_grad_eq2 = pr2eihMPC_grad_eq + 28;
-pr2eihMPC_FLOAT* pr2eihMPC_grad_ineq2 = pr2eihMPC_grad_ineq + 28;
-pr2eihMPC_FLOAT pr2eihMPC_ctv2[14];
-pr2eihMPC_FLOAT* pr2eihMPC_v2 = pr2eihMPC_v + 14;
-pr2eihMPC_FLOAT pr2eihMPC_re2[7];
-pr2eihMPC_FLOAT pr2eihMPC_beta2[7];
-pr2eihMPC_FLOAT pr2eihMPC_betacc2[7];
-pr2eihMPC_FLOAT* pr2eihMPC_dvaff2 = pr2eihMPC_dv_aff + 14;
-pr2eihMPC_FLOAT* pr2eihMPC_dvcc2 = pr2eihMPC_dv_cc + 14;
-pr2eihMPC_FLOAT pr2eihMPC_V2[98];
-pr2eihMPC_FLOAT pr2eihMPC_Yd2[28];
-pr2eihMPC_FLOAT pr2eihMPC_Ld2[28];
-pr2eihMPC_FLOAT pr2eihMPC_yy2[7];
-pr2eihMPC_FLOAT pr2eihMPC_bmy2[7];
-pr2eihMPC_FLOAT pr2eihMPC_c2[7] = {0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000};
-int pr2eihMPC_lbIdx2[14] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13};
-pr2eihMPC_FLOAT* pr2eihMPC_llb2 = pr2eihMPC_l + 56;
-pr2eihMPC_FLOAT* pr2eihMPC_slb2 = pr2eihMPC_s + 56;
-pr2eihMPC_FLOAT* pr2eihMPC_llbbyslb2 = pr2eihMPC_lbys + 56;
-pr2eihMPC_FLOAT pr2eihMPC_rilb2[14];
-pr2eihMPC_FLOAT* pr2eihMPC_dllbaff2 = pr2eihMPC_dl_aff + 56;
-pr2eihMPC_FLOAT* pr2eihMPC_dslbaff2 = pr2eihMPC_ds_aff + 56;
-pr2eihMPC_FLOAT* pr2eihMPC_dllbcc2 = pr2eihMPC_dl_cc + 56;
-pr2eihMPC_FLOAT* pr2eihMPC_dslbcc2 = pr2eihMPC_ds_cc + 56;
-pr2eihMPC_FLOAT* pr2eihMPC_ccrhsl2 = pr2eihMPC_ccrhs + 56;
-int pr2eihMPC_ubIdx2[14] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13};
-pr2eihMPC_FLOAT* pr2eihMPC_lub2 = pr2eihMPC_l + 70;
-pr2eihMPC_FLOAT* pr2eihMPC_sub2 = pr2eihMPC_s + 70;
-pr2eihMPC_FLOAT* pr2eihMPC_lubbysub2 = pr2eihMPC_lbys + 70;
-pr2eihMPC_FLOAT pr2eihMPC_riub2[14];
-pr2eihMPC_FLOAT* pr2eihMPC_dlubaff2 = pr2eihMPC_dl_aff + 70;
-pr2eihMPC_FLOAT* pr2eihMPC_dsubaff2 = pr2eihMPC_ds_aff + 70;
-pr2eihMPC_FLOAT* pr2eihMPC_dlubcc2 = pr2eihMPC_dl_cc + 70;
-pr2eihMPC_FLOAT* pr2eihMPC_dsubcc2 = pr2eihMPC_ds_cc + 70;
-pr2eihMPC_FLOAT* pr2eihMPC_ccrhsub2 = pr2eihMPC_ccrhs + 70;
-pr2eihMPC_FLOAT pr2eihMPC_Phi2[14];
-pr2eihMPC_FLOAT pr2eihMPC_W2[14];
-pr2eihMPC_FLOAT pr2eihMPC_Ysd2[49];
-pr2eihMPC_FLOAT pr2eihMPC_Lsd2[49];
-pr2eihMPC_FLOAT* pr2eihMPC_z3 = pr2eihMPC_z + 42;
-pr2eihMPC_FLOAT* pr2eihMPC_dzaff3 = pr2eihMPC_dz_aff + 42;
-pr2eihMPC_FLOAT* pr2eihMPC_dzcc3 = pr2eihMPC_dz_cc + 42;
-pr2eihMPC_FLOAT* pr2eihMPC_rd3 = pr2eihMPC_rd + 42;
-pr2eihMPC_FLOAT pr2eihMPC_Lbyrd3[14];
-pr2eihMPC_FLOAT* pr2eihMPC_grad_cost3 = pr2eihMPC_grad_cost + 42;
-pr2eihMPC_FLOAT* pr2eihMPC_grad_eq3 = pr2eihMPC_grad_eq + 42;
-pr2eihMPC_FLOAT* pr2eihMPC_grad_ineq3 = pr2eihMPC_grad_ineq + 42;
-pr2eihMPC_FLOAT pr2eihMPC_ctv3[14];
-pr2eihMPC_FLOAT* pr2eihMPC_v3 = pr2eihMPC_v + 21;
-pr2eihMPC_FLOAT pr2eihMPC_re3[7];
-pr2eihMPC_FLOAT pr2eihMPC_beta3[7];
-pr2eihMPC_FLOAT pr2eihMPC_betacc3[7];
-pr2eihMPC_FLOAT* pr2eihMPC_dvaff3 = pr2eihMPC_dv_aff + 21;
-pr2eihMPC_FLOAT* pr2eihMPC_dvcc3 = pr2eihMPC_dv_cc + 21;
-pr2eihMPC_FLOAT pr2eihMPC_V3[98];
-pr2eihMPC_FLOAT pr2eihMPC_Yd3[28];
-pr2eihMPC_FLOAT pr2eihMPC_Ld3[28];
-pr2eihMPC_FLOAT pr2eihMPC_yy3[7];
-pr2eihMPC_FLOAT pr2eihMPC_bmy3[7];
-pr2eihMPC_FLOAT pr2eihMPC_c3[7] = {0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000};
-int pr2eihMPC_lbIdx3[14] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13};
-pr2eihMPC_FLOAT* pr2eihMPC_llb3 = pr2eihMPC_l + 84;
-pr2eihMPC_FLOAT* pr2eihMPC_slb3 = pr2eihMPC_s + 84;
-pr2eihMPC_FLOAT* pr2eihMPC_llbbyslb3 = pr2eihMPC_lbys + 84;
-pr2eihMPC_FLOAT pr2eihMPC_rilb3[14];
-pr2eihMPC_FLOAT* pr2eihMPC_dllbaff3 = pr2eihMPC_dl_aff + 84;
-pr2eihMPC_FLOAT* pr2eihMPC_dslbaff3 = pr2eihMPC_ds_aff + 84;
-pr2eihMPC_FLOAT* pr2eihMPC_dllbcc3 = pr2eihMPC_dl_cc + 84;
-pr2eihMPC_FLOAT* pr2eihMPC_dslbcc3 = pr2eihMPC_ds_cc + 84;
-pr2eihMPC_FLOAT* pr2eihMPC_ccrhsl3 = pr2eihMPC_ccrhs + 84;
-int pr2eihMPC_ubIdx3[14] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13};
-pr2eihMPC_FLOAT* pr2eihMPC_lub3 = pr2eihMPC_l + 98;
-pr2eihMPC_FLOAT* pr2eihMPC_sub3 = pr2eihMPC_s + 98;
-pr2eihMPC_FLOAT* pr2eihMPC_lubbysub3 = pr2eihMPC_lbys + 98;
-pr2eihMPC_FLOAT pr2eihMPC_riub3[14];
-pr2eihMPC_FLOAT* pr2eihMPC_dlubaff3 = pr2eihMPC_dl_aff + 98;
-pr2eihMPC_FLOAT* pr2eihMPC_dsubaff3 = pr2eihMPC_ds_aff + 98;
-pr2eihMPC_FLOAT* pr2eihMPC_dlubcc3 = pr2eihMPC_dl_cc + 98;
-pr2eihMPC_FLOAT* pr2eihMPC_dsubcc3 = pr2eihMPC_ds_cc + 98;
-pr2eihMPC_FLOAT* pr2eihMPC_ccrhsub3 = pr2eihMPC_ccrhs + 98;
-pr2eihMPC_FLOAT pr2eihMPC_Phi3[14];
-pr2eihMPC_FLOAT pr2eihMPC_W3[14];
-pr2eihMPC_FLOAT pr2eihMPC_Ysd3[49];
-pr2eihMPC_FLOAT pr2eihMPC_Lsd3[49];
-pr2eihMPC_FLOAT* pr2eihMPC_z4 = pr2eihMPC_z + 56;
-pr2eihMPC_FLOAT* pr2eihMPC_dzaff4 = pr2eihMPC_dz_aff + 56;
-pr2eihMPC_FLOAT* pr2eihMPC_dzcc4 = pr2eihMPC_dz_cc + 56;
-pr2eihMPC_FLOAT* pr2eihMPC_rd4 = pr2eihMPC_rd + 56;
-pr2eihMPC_FLOAT pr2eihMPC_Lbyrd4[7];
-pr2eihMPC_FLOAT* pr2eihMPC_grad_cost4 = pr2eihMPC_grad_cost + 56;
-pr2eihMPC_FLOAT* pr2eihMPC_grad_eq4 = pr2eihMPC_grad_eq + 56;
-pr2eihMPC_FLOAT* pr2eihMPC_grad_ineq4 = pr2eihMPC_grad_ineq + 56;
-pr2eihMPC_FLOAT pr2eihMPC_ctv4[7];
-pr2eihMPC_FLOAT* pr2eihMPC_v4 = pr2eihMPC_v + 28;
-pr2eihMPC_FLOAT pr2eihMPC_re4[7];
-pr2eihMPC_FLOAT pr2eihMPC_beta4[7];
-pr2eihMPC_FLOAT pr2eihMPC_betacc4[7];
-pr2eihMPC_FLOAT* pr2eihMPC_dvaff4 = pr2eihMPC_dv_aff + 28;
-pr2eihMPC_FLOAT* pr2eihMPC_dvcc4 = pr2eihMPC_dv_cc + 28;
-pr2eihMPC_FLOAT pr2eihMPC_V4[49];
-pr2eihMPC_FLOAT pr2eihMPC_Yd4[28];
-pr2eihMPC_FLOAT pr2eihMPC_Ld4[28];
-pr2eihMPC_FLOAT pr2eihMPC_yy4[7];
-pr2eihMPC_FLOAT pr2eihMPC_bmy4[7];
-pr2eihMPC_FLOAT pr2eihMPC_c4[7] = {0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000, 0.0000000000000000E+000};
-int pr2eihMPC_lbIdx4[7] = {0, 1, 2, 3, 4, 5, 6};
-pr2eihMPC_FLOAT* pr2eihMPC_llb4 = pr2eihMPC_l + 112;
-pr2eihMPC_FLOAT* pr2eihMPC_slb4 = pr2eihMPC_s + 112;
-pr2eihMPC_FLOAT* pr2eihMPC_llbbyslb4 = pr2eihMPC_lbys + 112;
-pr2eihMPC_FLOAT pr2eihMPC_rilb4[7];
-pr2eihMPC_FLOAT* pr2eihMPC_dllbaff4 = pr2eihMPC_dl_aff + 112;
-pr2eihMPC_FLOAT* pr2eihMPC_dslbaff4 = pr2eihMPC_ds_aff + 112;
-pr2eihMPC_FLOAT* pr2eihMPC_dllbcc4 = pr2eihMPC_dl_cc + 112;
-pr2eihMPC_FLOAT* pr2eihMPC_dslbcc4 = pr2eihMPC_ds_cc + 112;
-pr2eihMPC_FLOAT* pr2eihMPC_ccrhsl4 = pr2eihMPC_ccrhs + 112;
-int pr2eihMPC_ubIdx4[7] = {0, 1, 2, 3, 4, 5, 6};
-pr2eihMPC_FLOAT* pr2eihMPC_lub4 = pr2eihMPC_l + 119;
-pr2eihMPC_FLOAT* pr2eihMPC_sub4 = pr2eihMPC_s + 119;
-pr2eihMPC_FLOAT* pr2eihMPC_lubbysub4 = pr2eihMPC_lbys + 119;
-pr2eihMPC_FLOAT pr2eihMPC_riub4[7];
-pr2eihMPC_FLOAT* pr2eihMPC_dlubaff4 = pr2eihMPC_dl_aff + 119;
-pr2eihMPC_FLOAT* pr2eihMPC_dsubaff4 = pr2eihMPC_ds_aff + 119;
-pr2eihMPC_FLOAT* pr2eihMPC_dlubcc4 = pr2eihMPC_dl_cc + 119;
-pr2eihMPC_FLOAT* pr2eihMPC_dsubcc4 = pr2eihMPC_ds_cc + 119;
-pr2eihMPC_FLOAT* pr2eihMPC_ccrhsub4 = pr2eihMPC_ccrhs + 119;
-pr2eihMPC_FLOAT pr2eihMPC_Phi4[7];
-pr2eihMPC_FLOAT pr2eihMPC_D4[7] = {-1.0000000000000000E+000, 
--1.0000000000000000E+000, 
--1.0000000000000000E+000, 
--1.0000000000000000E+000, 
--1.0000000000000000E+000, 
--1.0000000000000000E+000, 
--1.0000000000000000E+000};
-pr2eihMPC_FLOAT pr2eihMPC_W4[7];
-pr2eihMPC_FLOAT pr2eihMPC_Ysd4[49];
-pr2eihMPC_FLOAT pr2eihMPC_Lsd4[49];
 pr2eihMPC_FLOAT musigma;
 pr2eihMPC_FLOAT sigma_3rdroot;
 pr2eihMPC_FLOAT pr2eihMPC_Diag1_0[14];
@@ -1804,48 +1541,30 @@ int exitcode;
 #endif
 /* FUNCTION CALLS INTO LA LIBRARY -------------------------------------- */
 info->it = 0;
-pr2eihMPC_LA_INITIALIZEVECTOR_63(pr2eihMPC_z, 0);
-pr2eihMPC_LA_INITIALIZEVECTOR_35(pr2eihMPC_v, 1);
-pr2eihMPC_LA_INITIALIZEVECTOR_126(pr2eihMPC_l, 10);
-pr2eihMPC_LA_INITIALIZEVECTOR_126(pr2eihMPC_s, 10);
+pr2eihMPC_LA_INITIALIZEVECTOR_21(pr2eihMPC_z, 0);
+pr2eihMPC_LA_INITIALIZEVECTOR_14(pr2eihMPC_v, 1);
+pr2eihMPC_LA_INITIALIZEVECTOR_42(pr2eihMPC_l, 10);
+pr2eihMPC_LA_INITIALIZEVECTOR_42(pr2eihMPC_s, 10);
 info->mu = 0;
-pr2eihMPC_LA_DOTACC_126(pr2eihMPC_l, pr2eihMPC_s, &info->mu);
-info->mu /= 126;
+pr2eihMPC_LA_DOTACC_42(pr2eihMPC_l, pr2eihMPC_s, &info->mu);
+info->mu /= 42;
 while( 1 ){
 info->pobj = 0;
 pr2eihMPC_LA_DIAG_QUADFCN_14(params->H1, params->f1, pr2eihMPC_z0, pr2eihMPC_grad_cost0, &info->pobj);
-pr2eihMPC_LA_DIAG_QUADFCN_14(params->H2, params->f2, pr2eihMPC_z1, pr2eihMPC_grad_cost1, &info->pobj);
-pr2eihMPC_LA_DIAG_QUADFCN_14(params->H3, params->f3, pr2eihMPC_z2, pr2eihMPC_grad_cost2, &info->pobj);
-pr2eihMPC_LA_DIAG_QUADFCN_14(params->H4, params->f4, pr2eihMPC_z3, pr2eihMPC_grad_cost3, &info->pobj);
-pr2eihMPC_LA_DIAG_QUADFCN_7(params->H5, params->f5, pr2eihMPC_z4, pr2eihMPC_grad_cost4, &info->pobj);
+pr2eihMPC_LA_DIAG_QUADFCN_7(params->H2, params->f2, pr2eihMPC_z1, pr2eihMPC_grad_cost1, &info->pobj);
 info->res_eq = 0;
 info->dgap = 0;
 pr2eihMPC_LA_DIAGZERO_MVMSUB6_7(pr2eihMPC_D0, pr2eihMPC_z0, params->c1, pr2eihMPC_v0, pr2eihMPC_re0, &info->dgap, &info->res_eq);
-pr2eihMPC_LA_DENSE_DIAGZERO_MVMSUB3_7_14_14(pr2eihMPC_C0, pr2eihMPC_z0, pr2eihMPC_D1, pr2eihMPC_z1, pr2eihMPC_c1, pr2eihMPC_v1, pr2eihMPC_re1, &info->dgap, &info->res_eq);
-pr2eihMPC_LA_DENSE_DIAGZERO_MVMSUB3_7_14_14(pr2eihMPC_C0, pr2eihMPC_z1, pr2eihMPC_D1, pr2eihMPC_z2, pr2eihMPC_c2, pr2eihMPC_v2, pr2eihMPC_re2, &info->dgap, &info->res_eq);
-pr2eihMPC_LA_DENSE_DIAGZERO_MVMSUB3_7_14_14(pr2eihMPC_C0, pr2eihMPC_z2, pr2eihMPC_D1, pr2eihMPC_z3, pr2eihMPC_c3, pr2eihMPC_v3, pr2eihMPC_re3, &info->dgap, &info->res_eq);
-pr2eihMPC_LA_DENSE_DIAGZERO_MVMSUB3_7_14_7(pr2eihMPC_C0, pr2eihMPC_z3, pr2eihMPC_D4, pr2eihMPC_z4, pr2eihMPC_c4, pr2eihMPC_v4, pr2eihMPC_re4, &info->dgap, &info->res_eq);
+pr2eihMPC_LA_DENSE_DIAGZERO_MVMSUB3_7_14_7(pr2eihMPC_C0, pr2eihMPC_z0, pr2eihMPC_D1, pr2eihMPC_z1, pr2eihMPC_c1, pr2eihMPC_v1, pr2eihMPC_re1, &info->dgap, &info->res_eq);
 pr2eihMPC_LA_DENSE_DIAGZERO_MTVM2_7_14_7(pr2eihMPC_C0, pr2eihMPC_v1, pr2eihMPC_D0, pr2eihMPC_v0, pr2eihMPC_grad_eq0);
-pr2eihMPC_LA_DENSE_DIAGZERO_MTVM2_7_14_7(pr2eihMPC_C0, pr2eihMPC_v2, pr2eihMPC_D1, pr2eihMPC_v1, pr2eihMPC_grad_eq1);
-pr2eihMPC_LA_DENSE_DIAGZERO_MTVM2_7_14_7(pr2eihMPC_C0, pr2eihMPC_v3, pr2eihMPC_D1, pr2eihMPC_v2, pr2eihMPC_grad_eq2);
-pr2eihMPC_LA_DENSE_DIAGZERO_MTVM2_7_14_7(pr2eihMPC_C0, pr2eihMPC_v4, pr2eihMPC_D1, pr2eihMPC_v3, pr2eihMPC_grad_eq3);
-pr2eihMPC_LA_DIAGZERO_MTVM_7_7(pr2eihMPC_D4, pr2eihMPC_v4, pr2eihMPC_grad_eq4);
+pr2eihMPC_LA_DIAGZERO_MTVM_7_7(pr2eihMPC_D1, pr2eihMPC_v1, pr2eihMPC_grad_eq1);
 info->res_ineq = 0;
 pr2eihMPC_LA_VSUBADD3_14(params->lb1, pr2eihMPC_z0, pr2eihMPC_lbIdx0, pr2eihMPC_llb0, pr2eihMPC_slb0, pr2eihMPC_rilb0, &info->dgap, &info->res_ineq);
 pr2eihMPC_LA_VSUBADD2_14(pr2eihMPC_z0, pr2eihMPC_ubIdx0, params->ub1, pr2eihMPC_lub0, pr2eihMPC_sub0, pr2eihMPC_riub0, &info->dgap, &info->res_ineq);
-pr2eihMPC_LA_VSUBADD3_14(params->lb2, pr2eihMPC_z1, pr2eihMPC_lbIdx1, pr2eihMPC_llb1, pr2eihMPC_slb1, pr2eihMPC_rilb1, &info->dgap, &info->res_ineq);
-pr2eihMPC_LA_VSUBADD2_14(pr2eihMPC_z1, pr2eihMPC_ubIdx1, params->ub2, pr2eihMPC_lub1, pr2eihMPC_sub1, pr2eihMPC_riub1, &info->dgap, &info->res_ineq);
-pr2eihMPC_LA_VSUBADD3_14(params->lb3, pr2eihMPC_z2, pr2eihMPC_lbIdx2, pr2eihMPC_llb2, pr2eihMPC_slb2, pr2eihMPC_rilb2, &info->dgap, &info->res_ineq);
-pr2eihMPC_LA_VSUBADD2_14(pr2eihMPC_z2, pr2eihMPC_ubIdx2, params->ub3, pr2eihMPC_lub2, pr2eihMPC_sub2, pr2eihMPC_riub2, &info->dgap, &info->res_ineq);
-pr2eihMPC_LA_VSUBADD3_14(params->lb4, pr2eihMPC_z3, pr2eihMPC_lbIdx3, pr2eihMPC_llb3, pr2eihMPC_slb3, pr2eihMPC_rilb3, &info->dgap, &info->res_ineq);
-pr2eihMPC_LA_VSUBADD2_14(pr2eihMPC_z3, pr2eihMPC_ubIdx3, params->ub4, pr2eihMPC_lub3, pr2eihMPC_sub3, pr2eihMPC_riub3, &info->dgap, &info->res_ineq);
-pr2eihMPC_LA_VSUBADD3_7(params->lb5, pr2eihMPC_z4, pr2eihMPC_lbIdx4, pr2eihMPC_llb4, pr2eihMPC_slb4, pr2eihMPC_rilb4, &info->dgap, &info->res_ineq);
-pr2eihMPC_LA_VSUBADD2_7(pr2eihMPC_z4, pr2eihMPC_ubIdx4, params->ub5, pr2eihMPC_lub4, pr2eihMPC_sub4, pr2eihMPC_riub4, &info->dgap, &info->res_ineq);
+pr2eihMPC_LA_VSUBADD3_7(params->lb2, pr2eihMPC_z1, pr2eihMPC_lbIdx1, pr2eihMPC_llb1, pr2eihMPC_slb1, pr2eihMPC_rilb1, &info->dgap, &info->res_ineq);
+pr2eihMPC_LA_VSUBADD2_7(pr2eihMPC_z1, pr2eihMPC_ubIdx1, params->ub2, pr2eihMPC_lub1, pr2eihMPC_sub1, pr2eihMPC_riub1, &info->dgap, &info->res_ineq);
 pr2eihMPC_LA_INEQ_B_GRAD_14_14_14(pr2eihMPC_lub0, pr2eihMPC_sub0, pr2eihMPC_riub0, pr2eihMPC_llb0, pr2eihMPC_slb0, pr2eihMPC_rilb0, pr2eihMPC_lbIdx0, pr2eihMPC_ubIdx0, pr2eihMPC_grad_ineq0, pr2eihMPC_lubbysub0, pr2eihMPC_llbbyslb0);
-pr2eihMPC_LA_INEQ_B_GRAD_14_14_14(pr2eihMPC_lub1, pr2eihMPC_sub1, pr2eihMPC_riub1, pr2eihMPC_llb1, pr2eihMPC_slb1, pr2eihMPC_rilb1, pr2eihMPC_lbIdx1, pr2eihMPC_ubIdx1, pr2eihMPC_grad_ineq1, pr2eihMPC_lubbysub1, pr2eihMPC_llbbyslb1);
-pr2eihMPC_LA_INEQ_B_GRAD_14_14_14(pr2eihMPC_lub2, pr2eihMPC_sub2, pr2eihMPC_riub2, pr2eihMPC_llb2, pr2eihMPC_slb2, pr2eihMPC_rilb2, pr2eihMPC_lbIdx2, pr2eihMPC_ubIdx2, pr2eihMPC_grad_ineq2, pr2eihMPC_lubbysub2, pr2eihMPC_llbbyslb2);
-pr2eihMPC_LA_INEQ_B_GRAD_14_14_14(pr2eihMPC_lub3, pr2eihMPC_sub3, pr2eihMPC_riub3, pr2eihMPC_llb3, pr2eihMPC_slb3, pr2eihMPC_rilb3, pr2eihMPC_lbIdx3, pr2eihMPC_ubIdx3, pr2eihMPC_grad_ineq3, pr2eihMPC_lubbysub3, pr2eihMPC_llbbyslb3);
-pr2eihMPC_LA_INEQ_B_GRAD_7_7_7(pr2eihMPC_lub4, pr2eihMPC_sub4, pr2eihMPC_riub4, pr2eihMPC_llb4, pr2eihMPC_slb4, pr2eihMPC_rilb4, pr2eihMPC_lbIdx4, pr2eihMPC_ubIdx4, pr2eihMPC_grad_ineq4, pr2eihMPC_lubbysub4, pr2eihMPC_llbbyslb4);
+pr2eihMPC_LA_INEQ_B_GRAD_7_7_7(pr2eihMPC_lub1, pr2eihMPC_sub1, pr2eihMPC_riub1, pr2eihMPC_llb1, pr2eihMPC_slb1, pr2eihMPC_rilb1, pr2eihMPC_lbIdx1, pr2eihMPC_ubIdx1, pr2eihMPC_grad_ineq1, pr2eihMPC_lubbysub1, pr2eihMPC_llbbyslb1);
 info->dobj = info->pobj - info->dgap;
 info->rdgap = info->pobj ? info->dgap / info->pobj : 1e6;
 if( info->rdgap < 0 ) info->rdgap = -info->rdgap;
@@ -1856,40 +1575,19 @@ if( info->mu < pr2eihMPC_SET_ACC_KKTCOMPL
 exitcode = pr2eihMPC_OPTIMAL; break; }
 if( info->it == pr2eihMPC_SET_MAXIT ){
 exitcode = pr2eihMPC_MAXITREACHED; break; }
-pr2eihMPC_LA_VVADD3_63(pr2eihMPC_grad_cost, pr2eihMPC_grad_eq, pr2eihMPC_grad_ineq, pr2eihMPC_rd);
+pr2eihMPC_LA_VVADD3_21(pr2eihMPC_grad_cost, pr2eihMPC_grad_eq, pr2eihMPC_grad_ineq, pr2eihMPC_rd);
 pr2eihMPC_LA_DIAG_CHOL_ONELOOP_LBUB_14_14_14(params->H1, pr2eihMPC_llbbyslb0, pr2eihMPC_lbIdx0, pr2eihMPC_lubbysub0, pr2eihMPC_ubIdx0, pr2eihMPC_Phi0);
 pr2eihMPC_LA_DIAG_MATRIXFORWARDSUB_7_14(pr2eihMPC_Phi0, pr2eihMPC_C0, pr2eihMPC_V0);
 pr2eihMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_7_14(pr2eihMPC_Phi0, pr2eihMPC_D0, pr2eihMPC_W0);
 pr2eihMPC_LA_DENSE_DIAGZERO_MMTM_7_14_7(pr2eihMPC_W0, pr2eihMPC_V0, pr2eihMPC_Ysd1);
 pr2eihMPC_LA_DIAG_FORWARDSUB_14(pr2eihMPC_Phi0, pr2eihMPC_rd0, pr2eihMPC_Lbyrd0);
-pr2eihMPC_LA_DIAG_CHOL_ONELOOP_LBUB_14_14_14(params->H2, pr2eihMPC_llbbyslb1, pr2eihMPC_lbIdx1, pr2eihMPC_lubbysub1, pr2eihMPC_ubIdx1, pr2eihMPC_Phi1);
-pr2eihMPC_LA_DIAG_MATRIXFORWARDSUB_7_14(pr2eihMPC_Phi1, pr2eihMPC_C0, pr2eihMPC_V1);
-pr2eihMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_7_14(pr2eihMPC_Phi1, pr2eihMPC_D1, pr2eihMPC_W1);
-pr2eihMPC_LA_DENSE_DIAGZERO_MMTM_7_14_7(pr2eihMPC_W1, pr2eihMPC_V1, pr2eihMPC_Ysd2);
-pr2eihMPC_LA_DIAG_FORWARDSUB_14(pr2eihMPC_Phi1, pr2eihMPC_rd1, pr2eihMPC_Lbyrd1);
-pr2eihMPC_LA_DIAG_CHOL_ONELOOP_LBUB_14_14_14(params->H3, pr2eihMPC_llbbyslb2, pr2eihMPC_lbIdx2, pr2eihMPC_lubbysub2, pr2eihMPC_ubIdx2, pr2eihMPC_Phi2);
-pr2eihMPC_LA_DIAG_MATRIXFORWARDSUB_7_14(pr2eihMPC_Phi2, pr2eihMPC_C0, pr2eihMPC_V2);
-pr2eihMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_7_14(pr2eihMPC_Phi2, pr2eihMPC_D1, pr2eihMPC_W2);
-pr2eihMPC_LA_DENSE_DIAGZERO_MMTM_7_14_7(pr2eihMPC_W2, pr2eihMPC_V2, pr2eihMPC_Ysd3);
-pr2eihMPC_LA_DIAG_FORWARDSUB_14(pr2eihMPC_Phi2, pr2eihMPC_rd2, pr2eihMPC_Lbyrd2);
-pr2eihMPC_LA_DIAG_CHOL_ONELOOP_LBUB_14_14_14(params->H4, pr2eihMPC_llbbyslb3, pr2eihMPC_lbIdx3, pr2eihMPC_lubbysub3, pr2eihMPC_ubIdx3, pr2eihMPC_Phi3);
-pr2eihMPC_LA_DIAG_MATRIXFORWARDSUB_7_14(pr2eihMPC_Phi3, pr2eihMPC_C0, pr2eihMPC_V3);
-pr2eihMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_7_14(pr2eihMPC_Phi3, pr2eihMPC_D1, pr2eihMPC_W3);
-pr2eihMPC_LA_DENSE_DIAGZERO_MMTM_7_14_7(pr2eihMPC_W3, pr2eihMPC_V3, pr2eihMPC_Ysd4);
-pr2eihMPC_LA_DIAG_FORWARDSUB_14(pr2eihMPC_Phi3, pr2eihMPC_rd3, pr2eihMPC_Lbyrd3);
-pr2eihMPC_LA_DIAG_CHOL_ONELOOP_LBUB_7_7_7(params->H5, pr2eihMPC_llbbyslb4, pr2eihMPC_lbIdx4, pr2eihMPC_lubbysub4, pr2eihMPC_ubIdx4, pr2eihMPC_Phi4);
-pr2eihMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_7_7(pr2eihMPC_Phi4, pr2eihMPC_D4, pr2eihMPC_W4);
-pr2eihMPC_LA_DIAG_FORWARDSUB_7(pr2eihMPC_Phi4, pr2eihMPC_rd4, pr2eihMPC_Lbyrd4);
+pr2eihMPC_LA_DIAG_CHOL_ONELOOP_LBUB_7_7_7(params->H2, pr2eihMPC_llbbyslb1, pr2eihMPC_lbIdx1, pr2eihMPC_lubbysub1, pr2eihMPC_ubIdx1, pr2eihMPC_Phi1);
+pr2eihMPC_LA_DIAG_DIAGZERO_MATRIXTFORWARDSUB_7_7(pr2eihMPC_Phi1, pr2eihMPC_D1, pr2eihMPC_W1);
+pr2eihMPC_LA_DIAG_FORWARDSUB_7(pr2eihMPC_Phi1, pr2eihMPC_rd1, pr2eihMPC_Lbyrd1);
 pr2eihMPC_LA_DIAGZERO_MMT_7(pr2eihMPC_W0, pr2eihMPC_Yd0);
 pr2eihMPC_LA_DIAGZERO_MVMSUB7_7(pr2eihMPC_W0, pr2eihMPC_Lbyrd0, pr2eihMPC_re0, pr2eihMPC_beta0);
-pr2eihMPC_LA_DENSE_DIAGZERO_MMT2_7_14_14(pr2eihMPC_V0, pr2eihMPC_W1, pr2eihMPC_Yd1);
-pr2eihMPC_LA_DENSE_DIAGZERO_2MVMSUB2_7_14_14(pr2eihMPC_V0, pr2eihMPC_Lbyrd0, pr2eihMPC_W1, pr2eihMPC_Lbyrd1, pr2eihMPC_re1, pr2eihMPC_beta1);
-pr2eihMPC_LA_DENSE_DIAGZERO_MMT2_7_14_14(pr2eihMPC_V1, pr2eihMPC_W2, pr2eihMPC_Yd2);
-pr2eihMPC_LA_DENSE_DIAGZERO_2MVMSUB2_7_14_14(pr2eihMPC_V1, pr2eihMPC_Lbyrd1, pr2eihMPC_W2, pr2eihMPC_Lbyrd2, pr2eihMPC_re2, pr2eihMPC_beta2);
-pr2eihMPC_LA_DENSE_DIAGZERO_MMT2_7_14_14(pr2eihMPC_V2, pr2eihMPC_W3, pr2eihMPC_Yd3);
-pr2eihMPC_LA_DENSE_DIAGZERO_2MVMSUB2_7_14_14(pr2eihMPC_V2, pr2eihMPC_Lbyrd2, pr2eihMPC_W3, pr2eihMPC_Lbyrd3, pr2eihMPC_re3, pr2eihMPC_beta3);
-pr2eihMPC_LA_DENSE_DIAGZERO_MMT2_7_14_7(pr2eihMPC_V3, pr2eihMPC_W4, pr2eihMPC_Yd4);
-pr2eihMPC_LA_DENSE_DIAGZERO_2MVMSUB2_7_14_7(pr2eihMPC_V3, pr2eihMPC_Lbyrd3, pr2eihMPC_W4, pr2eihMPC_Lbyrd4, pr2eihMPC_re4, pr2eihMPC_beta4);
+pr2eihMPC_LA_DENSE_DIAGZERO_MMT2_7_14_7(pr2eihMPC_V0, pr2eihMPC_W1, pr2eihMPC_Yd1);
+pr2eihMPC_LA_DENSE_DIAGZERO_2MVMSUB2_7_14_7(pr2eihMPC_V0, pr2eihMPC_Lbyrd0, pr2eihMPC_W1, pr2eihMPC_Lbyrd1, pr2eihMPC_re1, pr2eihMPC_beta1);
 pr2eihMPC_LA_DENSE_CHOL_7(pr2eihMPC_Yd0, pr2eihMPC_Ld0);
 pr2eihMPC_LA_DENSE_FORWARDSUB_7(pr2eihMPC_Ld0, pr2eihMPC_beta0, pr2eihMPC_yy0);
 pr2eihMPC_LA_DENSE_MATRIXTFORWARDSUB_7_7(pr2eihMPC_Ld0, pr2eihMPC_Ysd1, pr2eihMPC_Lsd1);
@@ -1897,61 +1595,22 @@ pr2eihMPC_LA_DENSE_MMTSUB_7_7(pr2eihMPC_Lsd1, pr2eihMPC_Yd1);
 pr2eihMPC_LA_DENSE_CHOL_7(pr2eihMPC_Yd1, pr2eihMPC_Ld1);
 pr2eihMPC_LA_DENSE_MVMSUB1_7_7(pr2eihMPC_Lsd1, pr2eihMPC_yy0, pr2eihMPC_beta1, pr2eihMPC_bmy1);
 pr2eihMPC_LA_DENSE_FORWARDSUB_7(pr2eihMPC_Ld1, pr2eihMPC_bmy1, pr2eihMPC_yy1);
-pr2eihMPC_LA_DENSE_MATRIXTFORWARDSUB_7_7(pr2eihMPC_Ld1, pr2eihMPC_Ysd2, pr2eihMPC_Lsd2);
-pr2eihMPC_LA_DENSE_MMTSUB_7_7(pr2eihMPC_Lsd2, pr2eihMPC_Yd2);
-pr2eihMPC_LA_DENSE_CHOL_7(pr2eihMPC_Yd2, pr2eihMPC_Ld2);
-pr2eihMPC_LA_DENSE_MVMSUB1_7_7(pr2eihMPC_Lsd2, pr2eihMPC_yy1, pr2eihMPC_beta2, pr2eihMPC_bmy2);
-pr2eihMPC_LA_DENSE_FORWARDSUB_7(pr2eihMPC_Ld2, pr2eihMPC_bmy2, pr2eihMPC_yy2);
-pr2eihMPC_LA_DENSE_MATRIXTFORWARDSUB_7_7(pr2eihMPC_Ld2, pr2eihMPC_Ysd3, pr2eihMPC_Lsd3);
-pr2eihMPC_LA_DENSE_MMTSUB_7_7(pr2eihMPC_Lsd3, pr2eihMPC_Yd3);
-pr2eihMPC_LA_DENSE_CHOL_7(pr2eihMPC_Yd3, pr2eihMPC_Ld3);
-pr2eihMPC_LA_DENSE_MVMSUB1_7_7(pr2eihMPC_Lsd3, pr2eihMPC_yy2, pr2eihMPC_beta3, pr2eihMPC_bmy3);
-pr2eihMPC_LA_DENSE_FORWARDSUB_7(pr2eihMPC_Ld3, pr2eihMPC_bmy3, pr2eihMPC_yy3);
-pr2eihMPC_LA_DENSE_MATRIXTFORWARDSUB_7_7(pr2eihMPC_Ld3, pr2eihMPC_Ysd4, pr2eihMPC_Lsd4);
-pr2eihMPC_LA_DENSE_MMTSUB_7_7(pr2eihMPC_Lsd4, pr2eihMPC_Yd4);
-pr2eihMPC_LA_DENSE_CHOL_7(pr2eihMPC_Yd4, pr2eihMPC_Ld4);
-pr2eihMPC_LA_DENSE_MVMSUB1_7_7(pr2eihMPC_Lsd4, pr2eihMPC_yy3, pr2eihMPC_beta4, pr2eihMPC_bmy4);
-pr2eihMPC_LA_DENSE_FORWARDSUB_7(pr2eihMPC_Ld4, pr2eihMPC_bmy4, pr2eihMPC_yy4);
-pr2eihMPC_LA_DENSE_BACKWARDSUB_7(pr2eihMPC_Ld4, pr2eihMPC_yy4, pr2eihMPC_dvaff4);
-pr2eihMPC_LA_DENSE_MTVMSUB_7_7(pr2eihMPC_Lsd4, pr2eihMPC_dvaff4, pr2eihMPC_yy3, pr2eihMPC_bmy3);
-pr2eihMPC_LA_DENSE_BACKWARDSUB_7(pr2eihMPC_Ld3, pr2eihMPC_bmy3, pr2eihMPC_dvaff3);
-pr2eihMPC_LA_DENSE_MTVMSUB_7_7(pr2eihMPC_Lsd3, pr2eihMPC_dvaff3, pr2eihMPC_yy2, pr2eihMPC_bmy2);
-pr2eihMPC_LA_DENSE_BACKWARDSUB_7(pr2eihMPC_Ld2, pr2eihMPC_bmy2, pr2eihMPC_dvaff2);
-pr2eihMPC_LA_DENSE_MTVMSUB_7_7(pr2eihMPC_Lsd2, pr2eihMPC_dvaff2, pr2eihMPC_yy1, pr2eihMPC_bmy1);
-pr2eihMPC_LA_DENSE_BACKWARDSUB_7(pr2eihMPC_Ld1, pr2eihMPC_bmy1, pr2eihMPC_dvaff1);
+pr2eihMPC_LA_DENSE_BACKWARDSUB_7(pr2eihMPC_Ld1, pr2eihMPC_yy1, pr2eihMPC_dvaff1);
 pr2eihMPC_LA_DENSE_MTVMSUB_7_7(pr2eihMPC_Lsd1, pr2eihMPC_dvaff1, pr2eihMPC_yy0, pr2eihMPC_bmy0);
 pr2eihMPC_LA_DENSE_BACKWARDSUB_7(pr2eihMPC_Ld0, pr2eihMPC_bmy0, pr2eihMPC_dvaff0);
 pr2eihMPC_LA_DENSE_DIAGZERO_MTVM2_7_14_7(pr2eihMPC_C0, pr2eihMPC_dvaff1, pr2eihMPC_D0, pr2eihMPC_dvaff0, pr2eihMPC_grad_eq0);
-pr2eihMPC_LA_DENSE_DIAGZERO_MTVM2_7_14_7(pr2eihMPC_C0, pr2eihMPC_dvaff2, pr2eihMPC_D1, pr2eihMPC_dvaff1, pr2eihMPC_grad_eq1);
-pr2eihMPC_LA_DENSE_DIAGZERO_MTVM2_7_14_7(pr2eihMPC_C0, pr2eihMPC_dvaff3, pr2eihMPC_D1, pr2eihMPC_dvaff2, pr2eihMPC_grad_eq2);
-pr2eihMPC_LA_DENSE_DIAGZERO_MTVM2_7_14_7(pr2eihMPC_C0, pr2eihMPC_dvaff4, pr2eihMPC_D1, pr2eihMPC_dvaff3, pr2eihMPC_grad_eq3);
-pr2eihMPC_LA_DIAGZERO_MTVM_7_7(pr2eihMPC_D4, pr2eihMPC_dvaff4, pr2eihMPC_grad_eq4);
-pr2eihMPC_LA_VSUB2_63(pr2eihMPC_rd, pr2eihMPC_grad_eq, pr2eihMPC_rd);
+pr2eihMPC_LA_DIAGZERO_MTVM_7_7(pr2eihMPC_D1, pr2eihMPC_dvaff1, pr2eihMPC_grad_eq1);
+pr2eihMPC_LA_VSUB2_21(pr2eihMPC_rd, pr2eihMPC_grad_eq, pr2eihMPC_rd);
 pr2eihMPC_LA_DIAG_FORWARDBACKWARDSUB_14(pr2eihMPC_Phi0, pr2eihMPC_rd0, pr2eihMPC_dzaff0);
-pr2eihMPC_LA_DIAG_FORWARDBACKWARDSUB_14(pr2eihMPC_Phi1, pr2eihMPC_rd1, pr2eihMPC_dzaff1);
-pr2eihMPC_LA_DIAG_FORWARDBACKWARDSUB_14(pr2eihMPC_Phi2, pr2eihMPC_rd2, pr2eihMPC_dzaff2);
-pr2eihMPC_LA_DIAG_FORWARDBACKWARDSUB_14(pr2eihMPC_Phi3, pr2eihMPC_rd3, pr2eihMPC_dzaff3);
-pr2eihMPC_LA_DIAG_FORWARDBACKWARDSUB_7(pr2eihMPC_Phi4, pr2eihMPC_rd4, pr2eihMPC_dzaff4);
+pr2eihMPC_LA_DIAG_FORWARDBACKWARDSUB_7(pr2eihMPC_Phi1, pr2eihMPC_rd1, pr2eihMPC_dzaff1);
 pr2eihMPC_LA_VSUB_INDEXED_14(pr2eihMPC_dzaff0, pr2eihMPC_lbIdx0, pr2eihMPC_rilb0, pr2eihMPC_dslbaff0);
 pr2eihMPC_LA_VSUB3_14(pr2eihMPC_llbbyslb0, pr2eihMPC_dslbaff0, pr2eihMPC_llb0, pr2eihMPC_dllbaff0);
 pr2eihMPC_LA_VSUB2_INDEXED_14(pr2eihMPC_riub0, pr2eihMPC_dzaff0, pr2eihMPC_ubIdx0, pr2eihMPC_dsubaff0);
 pr2eihMPC_LA_VSUB3_14(pr2eihMPC_lubbysub0, pr2eihMPC_dsubaff0, pr2eihMPC_lub0, pr2eihMPC_dlubaff0);
-pr2eihMPC_LA_VSUB_INDEXED_14(pr2eihMPC_dzaff1, pr2eihMPC_lbIdx1, pr2eihMPC_rilb1, pr2eihMPC_dslbaff1);
-pr2eihMPC_LA_VSUB3_14(pr2eihMPC_llbbyslb1, pr2eihMPC_dslbaff1, pr2eihMPC_llb1, pr2eihMPC_dllbaff1);
-pr2eihMPC_LA_VSUB2_INDEXED_14(pr2eihMPC_riub1, pr2eihMPC_dzaff1, pr2eihMPC_ubIdx1, pr2eihMPC_dsubaff1);
-pr2eihMPC_LA_VSUB3_14(pr2eihMPC_lubbysub1, pr2eihMPC_dsubaff1, pr2eihMPC_lub1, pr2eihMPC_dlubaff1);
-pr2eihMPC_LA_VSUB_INDEXED_14(pr2eihMPC_dzaff2, pr2eihMPC_lbIdx2, pr2eihMPC_rilb2, pr2eihMPC_dslbaff2);
-pr2eihMPC_LA_VSUB3_14(pr2eihMPC_llbbyslb2, pr2eihMPC_dslbaff2, pr2eihMPC_llb2, pr2eihMPC_dllbaff2);
-pr2eihMPC_LA_VSUB2_INDEXED_14(pr2eihMPC_riub2, pr2eihMPC_dzaff2, pr2eihMPC_ubIdx2, pr2eihMPC_dsubaff2);
-pr2eihMPC_LA_VSUB3_14(pr2eihMPC_lubbysub2, pr2eihMPC_dsubaff2, pr2eihMPC_lub2, pr2eihMPC_dlubaff2);
-pr2eihMPC_LA_VSUB_INDEXED_14(pr2eihMPC_dzaff3, pr2eihMPC_lbIdx3, pr2eihMPC_rilb3, pr2eihMPC_dslbaff3);
-pr2eihMPC_LA_VSUB3_14(pr2eihMPC_llbbyslb3, pr2eihMPC_dslbaff3, pr2eihMPC_llb3, pr2eihMPC_dllbaff3);
-pr2eihMPC_LA_VSUB2_INDEXED_14(pr2eihMPC_riub3, pr2eihMPC_dzaff3, pr2eihMPC_ubIdx3, pr2eihMPC_dsubaff3);
-pr2eihMPC_LA_VSUB3_14(pr2eihMPC_lubbysub3, pr2eihMPC_dsubaff3, pr2eihMPC_lub3, pr2eihMPC_dlubaff3);
-pr2eihMPC_LA_VSUB_INDEXED_7(pr2eihMPC_dzaff4, pr2eihMPC_lbIdx4, pr2eihMPC_rilb4, pr2eihMPC_dslbaff4);
-pr2eihMPC_LA_VSUB3_7(pr2eihMPC_llbbyslb4, pr2eihMPC_dslbaff4, pr2eihMPC_llb4, pr2eihMPC_dllbaff4);
-pr2eihMPC_LA_VSUB2_INDEXED_7(pr2eihMPC_riub4, pr2eihMPC_dzaff4, pr2eihMPC_ubIdx4, pr2eihMPC_dsubaff4);
-pr2eihMPC_LA_VSUB3_7(pr2eihMPC_lubbysub4, pr2eihMPC_dsubaff4, pr2eihMPC_lub4, pr2eihMPC_dlubaff4);
+pr2eihMPC_LA_VSUB_INDEXED_7(pr2eihMPC_dzaff1, pr2eihMPC_lbIdx1, pr2eihMPC_rilb1, pr2eihMPC_dslbaff1);
+pr2eihMPC_LA_VSUB3_7(pr2eihMPC_llbbyslb1, pr2eihMPC_dslbaff1, pr2eihMPC_llb1, pr2eihMPC_dllbaff1);
+pr2eihMPC_LA_VSUB2_INDEXED_7(pr2eihMPC_riub1, pr2eihMPC_dzaff1, pr2eihMPC_ubIdx1, pr2eihMPC_dsubaff1);
+pr2eihMPC_LA_VSUB3_7(pr2eihMPC_lubbysub1, pr2eihMPC_dsubaff1, pr2eihMPC_lub1, pr2eihMPC_dlubaff1);
 info->lsit_aff = pr2eihMPC_LINESEARCH_BACKTRACKING_AFFINE(pr2eihMPC_l, pr2eihMPC_s, pr2eihMPC_dl_aff, pr2eihMPC_ds_aff, &info->step_aff, &info->mu_aff);
 if( info->lsit_aff == pr2eihMPC_NOPROGRESS ){
 exitcode = pr2eihMPC_NOPROGRESS; break;
@@ -1959,66 +1618,33 @@ exitcode = pr2eihMPC_NOPROGRESS; break;
 sigma_3rdroot = info->mu_aff / info->mu;
 info->sigma = sigma_3rdroot*sigma_3rdroot*sigma_3rdroot;
 musigma = info->mu * info->sigma;
-pr2eihMPC_LA_VSUB5_126(pr2eihMPC_ds_aff, pr2eihMPC_dl_aff, info->mu, info->sigma, pr2eihMPC_ccrhs);
+pr2eihMPC_LA_VSUB5_42(pr2eihMPC_ds_aff, pr2eihMPC_dl_aff, info->mu, info->sigma, pr2eihMPC_ccrhs);
 pr2eihMPC_LA_VSUB6_INDEXED_14_14_14(pr2eihMPC_ccrhsub0, pr2eihMPC_sub0, pr2eihMPC_ubIdx0, pr2eihMPC_ccrhsl0, pr2eihMPC_slb0, pr2eihMPC_lbIdx0, pr2eihMPC_rd0);
-pr2eihMPC_LA_VSUB6_INDEXED_14_14_14(pr2eihMPC_ccrhsub1, pr2eihMPC_sub1, pr2eihMPC_ubIdx1, pr2eihMPC_ccrhsl1, pr2eihMPC_slb1, pr2eihMPC_lbIdx1, pr2eihMPC_rd1);
+pr2eihMPC_LA_VSUB6_INDEXED_7_7_7(pr2eihMPC_ccrhsub1, pr2eihMPC_sub1, pr2eihMPC_ubIdx1, pr2eihMPC_ccrhsl1, pr2eihMPC_slb1, pr2eihMPC_lbIdx1, pr2eihMPC_rd1);
 pr2eihMPC_LA_DIAG_FORWARDSUB_14(pr2eihMPC_Phi0, pr2eihMPC_rd0, pr2eihMPC_Lbyrd0);
-pr2eihMPC_LA_DIAG_FORWARDSUB_14(pr2eihMPC_Phi1, pr2eihMPC_rd1, pr2eihMPC_Lbyrd1);
+pr2eihMPC_LA_DIAG_FORWARDSUB_7(pr2eihMPC_Phi1, pr2eihMPC_rd1, pr2eihMPC_Lbyrd1);
 pr2eihMPC_LA_DIAGZERO_MVM_7(pr2eihMPC_W0, pr2eihMPC_Lbyrd0, pr2eihMPC_beta0);
 pr2eihMPC_LA_DENSE_FORWARDSUB_7(pr2eihMPC_Ld0, pr2eihMPC_beta0, pr2eihMPC_yy0);
-pr2eihMPC_LA_DENSE_DIAGZERO_2MVMADD_7_14_14(pr2eihMPC_V0, pr2eihMPC_Lbyrd0, pr2eihMPC_W1, pr2eihMPC_Lbyrd1, pr2eihMPC_beta1);
+pr2eihMPC_LA_DENSE_DIAGZERO_2MVMADD_7_14_7(pr2eihMPC_V0, pr2eihMPC_Lbyrd0, pr2eihMPC_W1, pr2eihMPC_Lbyrd1, pr2eihMPC_beta1);
 pr2eihMPC_LA_DENSE_MVMSUB1_7_7(pr2eihMPC_Lsd1, pr2eihMPC_yy0, pr2eihMPC_beta1, pr2eihMPC_bmy1);
 pr2eihMPC_LA_DENSE_FORWARDSUB_7(pr2eihMPC_Ld1, pr2eihMPC_bmy1, pr2eihMPC_yy1);
-pr2eihMPC_LA_VSUB6_INDEXED_14_14_14(pr2eihMPC_ccrhsub2, pr2eihMPC_sub2, pr2eihMPC_ubIdx2, pr2eihMPC_ccrhsl2, pr2eihMPC_slb2, pr2eihMPC_lbIdx2, pr2eihMPC_rd2);
-pr2eihMPC_LA_DIAG_FORWARDSUB_14(pr2eihMPC_Phi2, pr2eihMPC_rd2, pr2eihMPC_Lbyrd2);
-pr2eihMPC_LA_DENSE_DIAGZERO_2MVMADD_7_14_14(pr2eihMPC_V1, pr2eihMPC_Lbyrd1, pr2eihMPC_W2, pr2eihMPC_Lbyrd2, pr2eihMPC_beta2);
-pr2eihMPC_LA_DENSE_MVMSUB1_7_7(pr2eihMPC_Lsd2, pr2eihMPC_yy1, pr2eihMPC_beta2, pr2eihMPC_bmy2);
-pr2eihMPC_LA_DENSE_FORWARDSUB_7(pr2eihMPC_Ld2, pr2eihMPC_bmy2, pr2eihMPC_yy2);
-pr2eihMPC_LA_VSUB6_INDEXED_14_14_14(pr2eihMPC_ccrhsub3, pr2eihMPC_sub3, pr2eihMPC_ubIdx3, pr2eihMPC_ccrhsl3, pr2eihMPC_slb3, pr2eihMPC_lbIdx3, pr2eihMPC_rd3);
-pr2eihMPC_LA_DIAG_FORWARDSUB_14(pr2eihMPC_Phi3, pr2eihMPC_rd3, pr2eihMPC_Lbyrd3);
-pr2eihMPC_LA_DENSE_DIAGZERO_2MVMADD_7_14_14(pr2eihMPC_V2, pr2eihMPC_Lbyrd2, pr2eihMPC_W3, pr2eihMPC_Lbyrd3, pr2eihMPC_beta3);
-pr2eihMPC_LA_DENSE_MVMSUB1_7_7(pr2eihMPC_Lsd3, pr2eihMPC_yy2, pr2eihMPC_beta3, pr2eihMPC_bmy3);
-pr2eihMPC_LA_DENSE_FORWARDSUB_7(pr2eihMPC_Ld3, pr2eihMPC_bmy3, pr2eihMPC_yy3);
-pr2eihMPC_LA_VSUB6_INDEXED_7_7_7(pr2eihMPC_ccrhsub4, pr2eihMPC_sub4, pr2eihMPC_ubIdx4, pr2eihMPC_ccrhsl4, pr2eihMPC_slb4, pr2eihMPC_lbIdx4, pr2eihMPC_rd4);
-pr2eihMPC_LA_DIAG_FORWARDSUB_7(pr2eihMPC_Phi4, pr2eihMPC_rd4, pr2eihMPC_Lbyrd4);
-pr2eihMPC_LA_DENSE_DIAGZERO_2MVMADD_7_14_7(pr2eihMPC_V3, pr2eihMPC_Lbyrd3, pr2eihMPC_W4, pr2eihMPC_Lbyrd4, pr2eihMPC_beta4);
-pr2eihMPC_LA_DENSE_MVMSUB1_7_7(pr2eihMPC_Lsd4, pr2eihMPC_yy3, pr2eihMPC_beta4, pr2eihMPC_bmy4);
-pr2eihMPC_LA_DENSE_FORWARDSUB_7(pr2eihMPC_Ld4, pr2eihMPC_bmy4, pr2eihMPC_yy4);
-pr2eihMPC_LA_DENSE_BACKWARDSUB_7(pr2eihMPC_Ld4, pr2eihMPC_yy4, pr2eihMPC_dvcc4);
-pr2eihMPC_LA_DENSE_MTVMSUB_7_7(pr2eihMPC_Lsd4, pr2eihMPC_dvcc4, pr2eihMPC_yy3, pr2eihMPC_bmy3);
-pr2eihMPC_LA_DENSE_BACKWARDSUB_7(pr2eihMPC_Ld3, pr2eihMPC_bmy3, pr2eihMPC_dvcc3);
-pr2eihMPC_LA_DENSE_MTVMSUB_7_7(pr2eihMPC_Lsd3, pr2eihMPC_dvcc3, pr2eihMPC_yy2, pr2eihMPC_bmy2);
-pr2eihMPC_LA_DENSE_BACKWARDSUB_7(pr2eihMPC_Ld2, pr2eihMPC_bmy2, pr2eihMPC_dvcc2);
-pr2eihMPC_LA_DENSE_MTVMSUB_7_7(pr2eihMPC_Lsd2, pr2eihMPC_dvcc2, pr2eihMPC_yy1, pr2eihMPC_bmy1);
-pr2eihMPC_LA_DENSE_BACKWARDSUB_7(pr2eihMPC_Ld1, pr2eihMPC_bmy1, pr2eihMPC_dvcc1);
+pr2eihMPC_LA_DENSE_BACKWARDSUB_7(pr2eihMPC_Ld1, pr2eihMPC_yy1, pr2eihMPC_dvcc1);
 pr2eihMPC_LA_DENSE_MTVMSUB_7_7(pr2eihMPC_Lsd1, pr2eihMPC_dvcc1, pr2eihMPC_yy0, pr2eihMPC_bmy0);
 pr2eihMPC_LA_DENSE_BACKWARDSUB_7(pr2eihMPC_Ld0, pr2eihMPC_bmy0, pr2eihMPC_dvcc0);
 pr2eihMPC_LA_DENSE_DIAGZERO_MTVM2_7_14_7(pr2eihMPC_C0, pr2eihMPC_dvcc1, pr2eihMPC_D0, pr2eihMPC_dvcc0, pr2eihMPC_grad_eq0);
-pr2eihMPC_LA_DENSE_DIAGZERO_MTVM2_7_14_7(pr2eihMPC_C0, pr2eihMPC_dvcc2, pr2eihMPC_D1, pr2eihMPC_dvcc1, pr2eihMPC_grad_eq1);
-pr2eihMPC_LA_DENSE_DIAGZERO_MTVM2_7_14_7(pr2eihMPC_C0, pr2eihMPC_dvcc3, pr2eihMPC_D1, pr2eihMPC_dvcc2, pr2eihMPC_grad_eq2);
-pr2eihMPC_LA_DENSE_DIAGZERO_MTVM2_7_14_7(pr2eihMPC_C0, pr2eihMPC_dvcc4, pr2eihMPC_D1, pr2eihMPC_dvcc3, pr2eihMPC_grad_eq3);
-pr2eihMPC_LA_DIAGZERO_MTVM_7_7(pr2eihMPC_D4, pr2eihMPC_dvcc4, pr2eihMPC_grad_eq4);
-pr2eihMPC_LA_VSUB_63(pr2eihMPC_rd, pr2eihMPC_grad_eq, pr2eihMPC_rd);
+pr2eihMPC_LA_DIAGZERO_MTVM_7_7(pr2eihMPC_D1, pr2eihMPC_dvcc1, pr2eihMPC_grad_eq1);
+pr2eihMPC_LA_VSUB_21(pr2eihMPC_rd, pr2eihMPC_grad_eq, pr2eihMPC_rd);
 pr2eihMPC_LA_DIAG_FORWARDBACKWARDSUB_14(pr2eihMPC_Phi0, pr2eihMPC_rd0, pr2eihMPC_dzcc0);
-pr2eihMPC_LA_DIAG_FORWARDBACKWARDSUB_14(pr2eihMPC_Phi1, pr2eihMPC_rd1, pr2eihMPC_dzcc1);
-pr2eihMPC_LA_DIAG_FORWARDBACKWARDSUB_14(pr2eihMPC_Phi2, pr2eihMPC_rd2, pr2eihMPC_dzcc2);
-pr2eihMPC_LA_DIAG_FORWARDBACKWARDSUB_14(pr2eihMPC_Phi3, pr2eihMPC_rd3, pr2eihMPC_dzcc3);
-pr2eihMPC_LA_DIAG_FORWARDBACKWARDSUB_7(pr2eihMPC_Phi4, pr2eihMPC_rd4, pr2eihMPC_dzcc4);
+pr2eihMPC_LA_DIAG_FORWARDBACKWARDSUB_7(pr2eihMPC_Phi1, pr2eihMPC_rd1, pr2eihMPC_dzcc1);
 pr2eihMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_14(pr2eihMPC_ccrhsl0, pr2eihMPC_slb0, pr2eihMPC_llbbyslb0, pr2eihMPC_dzcc0, pr2eihMPC_lbIdx0, pr2eihMPC_dllbcc0);
 pr2eihMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_14(pr2eihMPC_ccrhsub0, pr2eihMPC_sub0, pr2eihMPC_lubbysub0, pr2eihMPC_dzcc0, pr2eihMPC_ubIdx0, pr2eihMPC_dlubcc0);
-pr2eihMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_14(pr2eihMPC_ccrhsl1, pr2eihMPC_slb1, pr2eihMPC_llbbyslb1, pr2eihMPC_dzcc1, pr2eihMPC_lbIdx1, pr2eihMPC_dllbcc1);
-pr2eihMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_14(pr2eihMPC_ccrhsub1, pr2eihMPC_sub1, pr2eihMPC_lubbysub1, pr2eihMPC_dzcc1, pr2eihMPC_ubIdx1, pr2eihMPC_dlubcc1);
-pr2eihMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_14(pr2eihMPC_ccrhsl2, pr2eihMPC_slb2, pr2eihMPC_llbbyslb2, pr2eihMPC_dzcc2, pr2eihMPC_lbIdx2, pr2eihMPC_dllbcc2);
-pr2eihMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_14(pr2eihMPC_ccrhsub2, pr2eihMPC_sub2, pr2eihMPC_lubbysub2, pr2eihMPC_dzcc2, pr2eihMPC_ubIdx2, pr2eihMPC_dlubcc2);
-pr2eihMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_14(pr2eihMPC_ccrhsl3, pr2eihMPC_slb3, pr2eihMPC_llbbyslb3, pr2eihMPC_dzcc3, pr2eihMPC_lbIdx3, pr2eihMPC_dllbcc3);
-pr2eihMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_14(pr2eihMPC_ccrhsub3, pr2eihMPC_sub3, pr2eihMPC_lubbysub3, pr2eihMPC_dzcc3, pr2eihMPC_ubIdx3, pr2eihMPC_dlubcc3);
-pr2eihMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_7(pr2eihMPC_ccrhsl4, pr2eihMPC_slb4, pr2eihMPC_llbbyslb4, pr2eihMPC_dzcc4, pr2eihMPC_lbIdx4, pr2eihMPC_dllbcc4);
-pr2eihMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_7(pr2eihMPC_ccrhsub4, pr2eihMPC_sub4, pr2eihMPC_lubbysub4, pr2eihMPC_dzcc4, pr2eihMPC_ubIdx4, pr2eihMPC_dlubcc4);
-pr2eihMPC_LA_VSUB7_126(pr2eihMPC_l, pr2eihMPC_ccrhs, pr2eihMPC_s, pr2eihMPC_dl_cc, pr2eihMPC_ds_cc);
-pr2eihMPC_LA_VADD_63(pr2eihMPC_dz_cc, pr2eihMPC_dz_aff);
-pr2eihMPC_LA_VADD_35(pr2eihMPC_dv_cc, pr2eihMPC_dv_aff);
-pr2eihMPC_LA_VADD_126(pr2eihMPC_dl_cc, pr2eihMPC_dl_aff);
-pr2eihMPC_LA_VADD_126(pr2eihMPC_ds_cc, pr2eihMPC_ds_aff);
+pr2eihMPC_LA_VEC_DIVSUB_MULTSUB_INDEXED_7(pr2eihMPC_ccrhsl1, pr2eihMPC_slb1, pr2eihMPC_llbbyslb1, pr2eihMPC_dzcc1, pr2eihMPC_lbIdx1, pr2eihMPC_dllbcc1);
+pr2eihMPC_LA_VEC_DIVSUB_MULTADD_INDEXED_7(pr2eihMPC_ccrhsub1, pr2eihMPC_sub1, pr2eihMPC_lubbysub1, pr2eihMPC_dzcc1, pr2eihMPC_ubIdx1, pr2eihMPC_dlubcc1);
+pr2eihMPC_LA_VSUB7_42(pr2eihMPC_l, pr2eihMPC_ccrhs, pr2eihMPC_s, pr2eihMPC_dl_cc, pr2eihMPC_ds_cc);
+pr2eihMPC_LA_VADD_21(pr2eihMPC_dz_cc, pr2eihMPC_dz_aff);
+pr2eihMPC_LA_VADD_14(pr2eihMPC_dv_cc, pr2eihMPC_dv_aff);
+pr2eihMPC_LA_VADD_42(pr2eihMPC_dl_cc, pr2eihMPC_dl_aff);
+pr2eihMPC_LA_VADD_42(pr2eihMPC_ds_cc, pr2eihMPC_ds_aff);
 info->lsit_cc = pr2eihMPC_LINESEARCH_BACKTRACKING_COMBINED(pr2eihMPC_z, pr2eihMPC_v, pr2eihMPC_l, pr2eihMPC_s, pr2eihMPC_dz_cc, pr2eihMPC_dv_cc, pr2eihMPC_dl_cc, pr2eihMPC_ds_cc, &info->step_cc, &info->mu);
 if( info->lsit_cc == pr2eihMPC_NOPROGRESS ){
 exitcode = pr2eihMPC_NOPROGRESS; break;
@@ -2046,48 +1672,6 @@ output->z2[3] = pr2eihMPC_z1[3];
 output->z2[4] = pr2eihMPC_z1[4];
 output->z2[5] = pr2eihMPC_z1[5];
 output->z2[6] = pr2eihMPC_z1[6];
-output->z2[7] = pr2eihMPC_z1[7];
-output->z2[8] = pr2eihMPC_z1[8];
-output->z2[9] = pr2eihMPC_z1[9];
-output->z2[10] = pr2eihMPC_z1[10];
-output->z2[11] = pr2eihMPC_z1[11];
-output->z2[12] = pr2eihMPC_z1[12];
-output->z2[13] = pr2eihMPC_z1[13];
-output->z3[0] = pr2eihMPC_z2[0];
-output->z3[1] = pr2eihMPC_z2[1];
-output->z3[2] = pr2eihMPC_z2[2];
-output->z3[3] = pr2eihMPC_z2[3];
-output->z3[4] = pr2eihMPC_z2[4];
-output->z3[5] = pr2eihMPC_z2[5];
-output->z3[6] = pr2eihMPC_z2[6];
-output->z3[7] = pr2eihMPC_z2[7];
-output->z3[8] = pr2eihMPC_z2[8];
-output->z3[9] = pr2eihMPC_z2[9];
-output->z3[10] = pr2eihMPC_z2[10];
-output->z3[11] = pr2eihMPC_z2[11];
-output->z3[12] = pr2eihMPC_z2[12];
-output->z3[13] = pr2eihMPC_z2[13];
-output->z4[0] = pr2eihMPC_z3[0];
-output->z4[1] = pr2eihMPC_z3[1];
-output->z4[2] = pr2eihMPC_z3[2];
-output->z4[3] = pr2eihMPC_z3[3];
-output->z4[4] = pr2eihMPC_z3[4];
-output->z4[5] = pr2eihMPC_z3[5];
-output->z4[6] = pr2eihMPC_z3[6];
-output->z4[7] = pr2eihMPC_z3[7];
-output->z4[8] = pr2eihMPC_z3[8];
-output->z4[9] = pr2eihMPC_z3[9];
-output->z4[10] = pr2eihMPC_z3[10];
-output->z4[11] = pr2eihMPC_z3[11];
-output->z4[12] = pr2eihMPC_z3[12];
-output->z4[13] = pr2eihMPC_z3[13];
-output->z5[0] = pr2eihMPC_z4[0];
-output->z5[1] = pr2eihMPC_z4[1];
-output->z5[2] = pr2eihMPC_z4[2];
-output->z5[3] = pr2eihMPC_z4[3];
-output->z5[4] = pr2eihMPC_z4[4];
-output->z5[5] = pr2eihMPC_z4[5];
-output->z5[6] = pr2eihMPC_z4[6];
 
 #if pr2eihMPC_SET_TIMING == 1
 info->solvetime = pr2eihMPC_toc(&solvertimer);

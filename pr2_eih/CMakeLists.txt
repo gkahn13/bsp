@@ -46,3 +46,8 @@ add_executable(test-entropy  tests/test_entropy.cpp system/pr2_eih_system.cpp ..
 set_target_properties(test-entropy PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
 set_target_properties(test-entropy PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 target_link_libraries(test-entropy ${catkin_LIBRARIES} ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES})
+
+add_executable(test-cost-teleop  tests/test_cost_teleop.cpp system/pr2_eih_system.cpp ../util/logging.cpp)
+set_target_properties(test-cost-teleop PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
+set_target_properties(test-cost-teleop PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
+target_link_libraries(test-cost-teleop ${catkin_LIBRARIES} ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES})

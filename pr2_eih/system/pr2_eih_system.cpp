@@ -23,11 +23,11 @@ PR2EihSystem::PR2EihSystem(pr2_sim::Simulator *s, pr2_sim::Arm *a, pr2_sim::Came
 	u_min = j_min;
 	u_max = j_max;
 
-	Q = (M_PI/4)*MatrixQ::Identity();
-//	Q = 1e-2*MatrixQ::Identity();
+//	Q = (M_PI/4)*MatrixQ::Identity();
+	Q = 1e-2*MatrixQ::Identity();
 	VectorR R_diag;
-	R_diag << (M_PI/4)*VectorJ::Ones(), 5*Vector3d::Ones();
-//	R_diag << 1e-2*VectorJ::Ones(), 5*Vector3d::Ones();
+//	R_diag << (M_PI/4)*VectorJ::Ones(), 5*Vector3d::Ones();
+	R_diag << 1e-2*VectorJ::Ones(), 1e-4*Vector3d::Ones();
 	R = R_diag.asDiagonal();
 
 	arm->set_posture(pr2_sim::Arm::Posture::mantis);
@@ -123,6 +123,7 @@ void PR2EihSystem::belief_dynamics(const VectorX& x_t, const MatrixX& sigma_t, c
 	linearize_obsfunc(x_tp1, VectorR::Zero(), H);
 
 	MatrixZ delta = delta_matrix(x_tp1.segment<J_DIM>(0), x_tp1.segment<3>(J_DIM), alpha, obstacles);
+//	std::cout << "delta: " << delta.diagonal().transpose() << "\n";
 	Matrix<double,X_DIM,Z_DIM> K = sigma_tp1_bar*H.transpose()*delta*(delta*H*sigma_tp1_bar*H.transpose()*delta + R).inverse()*delta;
 	sigma_tp1 = (MatrixX::Identity() - K*H)*sigma_tp1_bar;
 }
@@ -168,9 +169,9 @@ double PR2EihSystem::cost(const StdVectorJ& J, const MatrixJ& j_sigma0, const St
 			cost += alpha_control*U[t].squaredNorm();
 			// TODO: only penalize object?
 			if (t < TIMESTEPS-2) {
-				cost += alpha_belief*sigma_tp1.trace();
+				cost += alpha_belief*sigma_tp1.block<3,3>(J_DIM,J_DIM).trace();
 			} else {
-				cost += alpha_final_belief*sigma_tp1.trace();
+				cost += alpha_final_belief*sigma_tp1.block<3,3>(J_DIM,J_DIM).trace();
 			}
 			sigma_t = sigma_tp1;
 		}
@@ -217,7 +218,7 @@ VectorTOTAL PR2EihSystem::cost_grad(StdVectorJ& J, const MatrixJ& j_sigma0, StdV
 
 VectorP PR2EihSystem::update_particle_weights(const VectorJ& j_tp1, const MatrixP& P_t, const VectorP& W_t, const std::vector<geometry3d::Triangle>& obstacles) {
 	arm->set_joints(j_tp1);
-	std::vector<geometry3d::Pyramid> truncated_frustum = cam->truncated_view_frustum(obstacles, false);
+	std::vector<geometry3d::Pyramid> truncated_frustum = cam->truncated_view_frustum(obstacles, true);
 
 	VectorP W_tp1;
 	// for each particle, weight by sigmoid of signed distance
@@ -242,7 +243,7 @@ MatrixP PR2EihSystem::low_variance_sampler(const MatrixP& P, const VectorP& W) {
 		while (u > c) {
 			c += W(++i);
 		}
-		P_sampled.col(m) = P.col(i) + .002*Vector3d::Random();
+		P_sampled.col(m) = P.col(i) + .01*Vector3d::Random();
 	}
 
 	return P_sampled;
@@ -266,6 +267,8 @@ double PR2EihSystem::entropy(const StdVectorJ& J, const StdVectorU& U, const Mat
 		}
 
 		W_t = W_tp1;
+
+		entropy += alpha_control*U[t].squaredNorm();
 
 //		// TEMP: try resampling
 //		P_tp1 = low_variance_sampler(P_t, W_tp1);
@@ -374,7 +377,7 @@ void PR2EihSystem::plot(const StdVectorJ& J, const MatrixP& P,
 
 	arm->set_joints(J.back());
 //	cam->plot({1,0,0});
-	std::vector<geometry3d::Pyramid> truncated_frustum = cam->truncated_view_frustum(obstacles, false);
+	std::vector<geometry3d::Pyramid> truncated_frustum = cam->truncated_view_frustum(obstacles, true);
 	for(const geometry3d::Pyramid& pyramid : truncated_frustum) {
 		pyramid.plot(*sim, "base_link", {1,0,0}, true, true, 0.15);
 	}

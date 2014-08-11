@@ -11,7 +11,7 @@ using namespace Eigen;
 
 #include "../../util/logging.h"
 
-#define TIMESTEPS 5
+#define TIMESTEPS 2
 #define DT 1.0 // Note: if you change this, must change the FORCES matlab file
 
 #define G_DIM 3					// 3-d
@@ -24,7 +24,7 @@ using namespace Eigen;
 
 #define TOTAL_VARS (TIMESTEPS*J_DIM + (TIMESTEPS-1)*U_DIM)
 
-#define M_DIM 100 // number of particles per object gaussian
+#define M_DIM 1000 // number of particles per object gaussian
 
 typedef Matrix<double,X_DIM,1> VectorX;
 //typedef Matrix<double,J_DIM,1> VectorJ;
@@ -70,9 +70,9 @@ public:
 class PR2EihSystem {
 	const double step = 0.0078125*0.0078125;
 
-	const double alpha_control = 0; // .01
-	const double alpha_belief = 1e7; // 1e7
-	const double alpha_final_belief = 1e7; // 1e7
+	const double alpha_control = 1; // .01
+	const double alpha_belief = 1e5; // 1e6
+	const double alpha_final_belief = 1e5; // 1e6
 
 	const double alpha_particle_sd = 1e3; // 100
 

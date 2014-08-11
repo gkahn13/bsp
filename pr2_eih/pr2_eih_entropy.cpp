@@ -21,11 +21,11 @@ const double alpha_max_increases = 5; // 5
 
 const double Xeps_initial = .1; // .1
 const double Ueps_initial = .1; // .1
-const double improve_ratio_threshold = 1e-1; // .1
+const double improve_ratio_threshold = 1; // .1
 const double min_approx_improve = 1e-1; // .1
 const double min_trust_box_size = .1; // .1
 const double trust_shrink_ratio = .75; // .75
-const double trust_expand_ratio = 1.25; // 1.25
+const double trust_expand_ratio = 1.1; // 1.25
 }
 
 void setup_mpc_vars(pr2eihMPC_params& problem, pr2eihMPC_output& output) {
@@ -74,16 +74,6 @@ void cleanup_mpc_vars() {
 	delete[] ub;
 	delete[] z;
 	delete c;
-}
-
-template<typename Derived>
-inline void fill_col_major(double *X, const MatrixBase<Derived>& M) {
-	int index = 0;
-	for(int j=0; j < M.cols(); ++j) {
-		for(int i=0; i < M.rows(); ++i) {
-			X[index++] = M(i,j);
-		}
-	}
 }
 
 bool is_valid_inputs()
@@ -207,8 +197,7 @@ void L_BFGS(const StdVectorJ& J, const StdVectorU& U, const VectorTOTAL &grad,
 	hess = hess - (hess_s*hess_s.transpose())/(s.dot(hess_s)) + (r*r.transpose())/s.dot(r);
 }
 
-double pr2_eih_approximate_collocation(StdVectorJ& J, StdVectorU& U, const MatrixJ& j_sigma0,
-		const std::vector<Gaussian3d>& obj_gaussians, const double alpha,
+double pr2_eih_collocation(StdVectorJ& J, StdVectorU& U, const MatrixP& P,
 		const std::vector<geometry3d::Triangle>& obstacles, PR2EihSystem& sys,
 		pr2eihMPC_params &problem, pr2eihMPC_output &output, pr2eihMPC_info &info) {
 	int max_iter = 100;
@@ -226,7 +215,7 @@ double pr2_eih_approximate_collocation(StdVectorJ& J, StdVectorU& U, const Matri
 	double optcost, model_merit, new_merit;
 	double approx_merit_improve, exact_merit_improve, merit_improve_ratio;
 
-	LOG_DEBUG("Initial trajectory cost: %4.10f", sys.cost(J, j_sigma0, U, obj_gaussians, alpha, obstacles));
+	LOG_DEBUG("Initial trajectory entropy: %4.10f", sys.entropy(J, U, P, obstacles));
 
 	int index = 0;
 	bool solution_accepted = true;
@@ -240,14 +229,14 @@ double pr2_eih_approximate_collocation(StdVectorJ& J, StdVectorU& U, const Matri
 		if (solution_accepted) {
 
 			if (it == 0) {
-				merit = sys.cost(J, j_sigma0, U, obj_gaussians, alpha, obstacles);
-				grad = sys.cost_grad(J, j_sigma0, U, obj_gaussians, alpha, obstacles);
+				merit = sys.entropy(J, U, P, obstacles);
+				grad = sys.entropy_grad(J, U, P, obstacles);
 			} else {
 				merit = meritopt; // since L-BFGS calculation required it
 				grad = gradopt;
 			}
 
-			std::cout << "gradient:\n" << grad << "\n";
+//			std::cout << "gradient:\n" << grad << "\n";
 
 			VectorTOTAL diaghess = hess.diagonal();
 
@@ -360,23 +349,23 @@ double pr2_eih_approximate_collocation(StdVectorJ& J, StdVectorU& U, const Matri
 		}
 
 //		LOG_INFO("Plotting Jopt");
-//		sys.plot(Jopt, obj, obj_sigma0, obstacles);
+//		sys.plot(Jopt, P, obstacles, false);
 
 		model_merit = optcost + constant_cost; // need to add constant terms that were dropped
 
-		new_merit = sys.cost(Jopt, j_sigma0, Uopt, obj_gaussians, alpha, obstacles);
+		new_merit = sys.entropy(Jopt, Uopt, P, obstacles);
 
 		LOG_DEBUG("merit: %f", merit);
 		LOG_DEBUG("model_merit: %f", model_merit);
 		LOG_DEBUG("new_merit: %f", new_merit);
 		LOG_DEBUG("constant cost term: %f", constant_cost);
 
-		approx_merit_improve = merit - model_merit;
 		exact_merit_improve = merit - new_merit;
+		approx_merit_improve = merit - model_merit;
 		merit_improve_ratio = exact_merit_improve / approx_merit_improve;
 
-		LOG_DEBUG("approx_merit_improve: %f", approx_merit_improve);
 		LOG_DEBUG("exact_merit_improve: %f", exact_merit_improve);
+		LOG_DEBUG("approx_merit_improve: %f", approx_merit_improve);
 		LOG_DEBUG("merit_improve_ratio: %f", merit_improve_ratio);
 
 		if (approx_merit_improve < -1) {
@@ -391,7 +380,7 @@ double pr2_eih_approximate_collocation(StdVectorJ& J, StdVectorU& U, const Matri
 			LOG_DEBUG("Converged: improvement small enough");
 			J = Jopt; U = Uopt;
 			solution_accepted = true;
-			return sys.cost(J, j_sigma0, U, obj_gaussians, alpha, obstacles);
+			return sys.entropy(J, U, P, obstacles);
 		} else if ((exact_merit_improve < 0) || (merit_improve_ratio < cfg::improve_ratio_threshold)) {
 			Xeps *= cfg::trust_shrink_ratio;
 			Ueps *= cfg::trust_shrink_ratio;
@@ -403,8 +392,8 @@ double pr2_eih_approximate_collocation(StdVectorJ& J, StdVectorU& U, const Matri
 			Ueps *= cfg::trust_expand_ratio;
 			LOG_DEBUG("Accepted, Increasing trust region size to:  %2.6f %2.6f", Xeps, Ueps);
 
-			meritopt = sys.cost(Jopt, j_sigma0, Uopt, obj_gaussians, alpha, obstacles);
-			gradopt = sys.cost_grad(Jopt, j_sigma0, Uopt, obj_gaussians, alpha, obstacles);
+			meritopt = sys.entropy(Jopt, Uopt, P, obstacles);
+			gradopt = sys.entropy_grad(Jopt, Uopt, P, obstacles);
 
 			L_BFGS(J, U, grad, Jopt, Uopt, gradopt, hess);
 
@@ -414,93 +403,63 @@ double pr2_eih_approximate_collocation(StdVectorJ& J, StdVectorU& U, const Matri
 
 	}
 
-	return sys.cost(J, j_sigma0, U, obj_gaussians, alpha, obstacles);
+	return sys.entropy(J, U, P, obstacles);
 }
 
-double pr2_eih_collocation(StdVectorJ& J, StdVectorU& U, const MatrixJ& j_sigma0,
-			const std::vector<Gaussian3d>& obj_gaussians,
-			const std::vector<geometry3d::Triangle>& obstacles, PR2EihSystem& sys,
-			pr2eihMPC_params &problem, pr2eihMPC_output &output, pr2eihMPC_info &info) {
-	double alpha = cfg::alpha_init;
-	double cost = INFINITY;
-
-	for(int num_alpha_increases=0; num_alpha_increases < cfg::alpha_max_increases; ++num_alpha_increases) {
-		LOG_DEBUG("Calling approximate collocation with alpha = %4.2f", alpha);
-		cost = pr2_eih_approximate_collocation(J, U, j_sigma0, obj_gaussians, alpha, obstacles, sys, problem, output, info);
-
-		LOG_DEBUG("Reintegrating trajectory");
-		for(int t=0; t < T-1; ++t) {
-			J[t+1] = sys.dynfunc(J[t], U[t], VectorQ::Zero());
-		}
-
-		double max_delta_diff = -INFINITY;
-		for(int t=0; t < T; ++t) {
-			double delta_alpha = sys.delta_matrix(J[t], obj_gaussians[0].mean, alpha, obstacles)(J_DIM,J_DIM);
-			double delta_inf = sys.delta_matrix(J[t], obj_gaussians[0].mean, INFINITY, obstacles)(J_DIM,J_DIM);
-			max_delta_diff = std::max(max_delta_diff, fabs(delta_alpha - delta_inf));
-		}
-
-		LOG_DEBUG(" ");
-		LOG_DEBUG("Max delta difference: %4.2f", max_delta_diff);
-		if (max_delta_diff < cfg::alpha_epsilon) {
-			LOG_DEBUG("Max delta difference < %4.10f, exiting minimize merit", cfg::alpha_epsilon);
-			break;
-		}
-
-		LOG_DEBUG("Increasing alpha by gain %4.5f", cfg::alpha_gain);
-		alpha *= cfg::alpha_gain;
-	}
-
-	return cost;
-}
 
 inline double uniform(double low, double high) {
 	return (high - low)*(rand() / double(RAND_MAX)) + low;
 }
 
-void init_obstacles_and_objects(pr2_sim::Camera& cam,
-		std::vector<geometry3d::Triangle>& obstacles, std::vector<Gaussian3d>& obj_gaussians) {
+void init_obstacles_and_particles(pr2_sim::Camera& cam,
+		std::vector<geometry3d::Triangle>& obstacles, MatrixP& P) {
 	Matrix4d cam_pose = cam.get_pose();
 	Matrix3d cam_rot = cam_pose.block<3,3>(0,0);
 	Vector3d cam_pos = cam_pose.block<3,1>(0,3);
 
-	std::vector<geometry3d::Triangle> obstacles_cam;
-
-	obstacles_cam.push_back(geometry3d::Triangle({0,0,.75}, {0,.1,.75}, {.05,.1,.75}));
-	obstacles_cam.push_back(geometry3d::Triangle({0,0,.75}, {.05,0,.75}, {.05,.1,.75}));
-
-	obstacles_cam.push_back(geometry3d::Triangle({-.2,0,.75}, {-.2,.1,.75}, {-.25,.1,.75}));
-	obstacles_cam.push_back(geometry3d::Triangle({-.2,0,.75}, {-.25,0,.75}, {-.25,.1,.75}));
+//	std::vector<geometry3d::Triangle> obstacles_cam;
+//
+//	obstacles_cam.push_back(geometry3d::Triangle({0,0,.75}, {0,.1,.75}, {.05,.1,.75}));
+//	obstacles_cam.push_back(geometry3d::Triangle({0,0,.75}, {.05,0,.75}, {.05,.1,.75}));
+//
+//	obstacles_cam.push_back(geometry3d::Triangle({-.2,0,.75}, {-.2,.1,.75}, {-.25,.1,.75}));
+//	obstacles_cam.push_back(geometry3d::Triangle({-.2,0,.75}, {-.25,0,.75}, {-.25,.1,.75}));
 
 	obstacles.clear();
-	for(const geometry3d::Triangle& obstacle_cam : obstacles_cam) {
-		obstacles.push_back(geometry3d::Triangle(cam_rot*obstacle_cam.a+cam_pos,
-				cam_rot*obstacle_cam.b+cam_pos,
-				cam_rot*obstacle_cam.c+cam_pos));
-	}
+//	for(const geometry3d::Triangle& obstacle_cam : obstacles_cam) {
+//		obstacles.push_back(geometry3d::Triangle(cam_rot*obstacle_cam.a+cam_pos,
+//				cam_rot*obstacle_cam.b+cam_pos,
+//				cam_rot*obstacle_cam.c+cam_pos));
+//	}
 
+	obstacles.push_back(geometry3d::Triangle({.5,-.5,.55}, {.5,-.55,.55}, {.5,-.55,.75}));
+	obstacles.push_back(geometry3d::Triangle({.5,-.5,.55}, {.5,-.5,.75}, {.5,-.55,.75}));
+
+	// table
+//	obstacles.push_back(geometry3d::Triangle({0,-1,.55}, {0,1,.55}, {1,1,.55}));
+//	obstacles.push_back(geometry3d::Triangle({0,-1,.55}, {1,-1,.55}, {1,1,.55}));
+
+	P.setZero();
 	std::vector<geometry3d::Pyramid> truncated_frustum = cam.truncated_view_frustum(obstacles, true);
-	obj_gaussians.clear();
-	for(int i=0; i < obstacles_cam.size(); i+=2) {
-		geometry3d::Triangle& obstacle_cam = obstacles_cam[i];
-		double x_min = std::min(obstacle_cam.a(0), std::min(obstacle_cam.b(0), obstacle_cam.c(0))) - .1;
-		double x_max = std::max(obstacle_cam.a(0), std::max(obstacle_cam.b(0), obstacle_cam.c(0))) + .1;
-		double y_min = std::min(obstacle_cam.a(1), std::min(obstacle_cam.b(1), obstacle_cam.c(1))) - .1;
-		double y_max = std::max(obstacle_cam.a(1), std::max(obstacle_cam.b(1), obstacle_cam.c(1))) + .1;
-		double z_min = std::max(obstacle_cam.a(2), std::max(obstacle_cam.b(2), obstacle_cam.c(2)));
-		double z_max = z_min + 2*fabs(y_max - y_min);
+	int num_particles = 0;
+	int particles_per_obstacle = double(M_DIM)/(obstacles.size());
+	for(int i=0; i < obstacles.size(); i+=2) {
+		geometry3d::Triangle& obstacle = obstacles[i];
+		double x_min = std::min(obstacle.a(0), std::min(obstacle.b(0), obstacle.c(0)));
+		double x_max = std::max(obstacle.a(0), std::max(obstacle.b(0), obstacle.c(0))) + .3;
+		double y_min = std::min(obstacle.a(1), std::min(obstacle.b(1), obstacle.c(1))) - .1;
+		double y_max = std::max(obstacle.a(1), std::max(obstacle.b(1), obstacle.c(1))) + .1;
+		double z_min = std::min(obstacle.a(2), std::min(obstacle.b(2), obstacle.c(2)));
+		double z_max = std::max(obstacle.a(2), std::max(obstacle.b(2), obstacle.c(2))) + .1;
 
-		int num_particles = 0;
-		MatrixP particles;
-		while(num_particles < M_DIM) {
-			Vector3d p_cam = Vector3d(uniform(x_min, x_max), uniform(y_min, y_max), uniform(z_min, z_max));
-			Vector3d p_world = cam_rot*p_cam + cam_pos;
-			if (!cam.is_in_fov(p_world, truncated_frustum)) {
-				particles.col(num_particles++) = p_world;
+		while(num_particles < (i+2)*particles_per_obstacle) {
+			Vector3d p = Vector3d(uniform(x_min, x_max), uniform(y_min, y_max), uniform(z_min, z_max));
+			if (!cam.is_in_fov(p, truncated_frustum)) {
+				P.col(num_particles++) = p;
 			}
 		}
-		obj_gaussians.push_back(Gaussian3d(particles));
 	}
+
 }
 
 void init_trajectory(StdVectorJ& J, StdVectorU& U, pr2_sim::Arm& arm, PR2EihSystem& sys) {
@@ -523,6 +482,8 @@ void init_trajectory(StdVectorJ& J, StdVectorU& U, pr2_sim::Arm& arm, PR2EihSyst
 }
 
 int main(int argc, char* argv[]) {
+	srand(time(0));
+
 	// setup system
 	pr2_sim::Simulator sim(true, false);
 	pr2_sim::Arm arm(pr2_sim::Arm::right, &sim);
@@ -535,14 +496,12 @@ int main(int argc, char* argv[]) {
 
 	// setup environment
 	std::vector<geometry3d::Triangle> obstacles;
-	std::vector<Gaussian3d> obj_gaussians_t, obj_gaussians_tp1;
-	init_obstacles_and_objects(cam, obstacles, obj_gaussians_t);
+	MatrixP P_t, P_tp1;
+	init_obstacles_and_particles(cam, obstacles, P_t);
 
 	// setup initial state
-	VectorJ j_t, j_t_real, j_tp1, j_tp1_real;
+	VectorJ j_t, j_tp1;
 	j_t = arm.get_joints();
-	j_t_real = j_t; // TODO
-	MatrixJ j_sigma0_t = (M_PI/4)*MatrixJ::Identity(); // TODO: never update it in MPC loop
 
 	// initialize state and controls
 	StdVectorU U(T-1, VectorU::Zero());
@@ -554,23 +513,26 @@ int main(int argc, char* argv[]) {
 	pr2eihMPC_info info;
 
 	setup_mpc_vars(problem, output);
-	util::Timer forces_timer;
+	util::Timer forces_timer, entropy_timer;
 
 	while(true) {
 		init_trajectory(J, U, arm, sys);
 
 		LOG_INFO("Current state");
-		sys.plot(J, obj_gaussians_t, obstacles);
+		sys.plot(J, P_t, obstacles);
 
-		double initial_cost = sys.cost(J, j_sigma0_t, U, obj_gaussians_t, INFINITY, obstacles);
-		LOG_INFO("Initial cost: %4.5f", initial_cost);
+		util::Timer_tic(&entropy_timer);
+		double initial_entropy = sys.entropy(J, U, P_t, obstacles);
+		double entropy_time = util::Timer_toc(&entropy_timer);
+		LOG_INFO("Initial cost: %4.5f", initial_entropy);
+		LOG_INFO("Entropy time: %5.3f ms", 1e3*entropy_time);
 
 		// optimize
 		util::Timer_tic(&forces_timer);
-		double cost = pr2_eih_collocation(J, U, j_sigma0_t, obj_gaussians_t, obstacles, sys, problem, output, info);
+		double entropy = pr2_eih_collocation(J, U, P_t, obstacles, sys, problem, output, info);
 		double forces_time = util::Timer_toc(&forces_timer);
 
-		LOG_INFO("Optimized cost: %4.5f", cost);
+		LOG_INFO("Optimized cost: %4.5f", entropy);
 		LOG_INFO("Solve time: %5.3f ms", 1e3*forces_time);
 
 		for(int t=0; t < T-1; ++t) {
@@ -578,13 +540,14 @@ int main(int argc, char* argv[]) {
 		}
 
 		LOG_INFO("Displaying optimized trajectory");
-		sys.plot(J, obj_gaussians_t, obstacles);
+		sys.plot(J, P_t, obstacles);
 
-		sys.execute_control_step(j_t_real, j_t, U[0], obj_gaussians_t, obstacles, j_tp1_real, j_tp1, obj_gaussians_tp1);
+		j_tp1 = sys.dynfunc(j_t, U[0], VectorQ::Zero());
+		VectorP W_tp1 = sys.update_particle_weights(j_tp1, P_t, (1/double(M_DIM))*VectorP::Ones(), obstacles);
+		P_tp1 = sys.low_variance_sampler(P_t, W_tp1);
 
-		j_t_real = j_tp1_real;
 		j_t = j_tp1;
-		obj_gaussians_t = obj_gaussians_tp1;
+		P_t = P_tp1;
 
 		// TODO: replace with optimization vars from [1, ..., T-1]
 		J = StdVectorJ(T, j_t);

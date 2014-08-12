@@ -99,53 +99,17 @@ typedef struct pr2eihMPC_params
     /* vector of size 7 */
     pr2eihMPC_FLOAT c1[7];
 
-    /* diagonal matrix of size [14 x 14] (only the diagonal is stored) */
-    pr2eihMPC_FLOAT H2[14];
-
-    /* vector of size 14 */
-    pr2eihMPC_FLOAT f2[14];
-
-    /* vector of size 14 */
-    pr2eihMPC_FLOAT lb2[14];
-
-    /* vector of size 14 */
-    pr2eihMPC_FLOAT ub2[14];
-
-    /* diagonal matrix of size [14 x 14] (only the diagonal is stored) */
-    pr2eihMPC_FLOAT H3[14];
-
-    /* vector of size 14 */
-    pr2eihMPC_FLOAT f3[14];
-
-    /* vector of size 14 */
-    pr2eihMPC_FLOAT lb3[14];
-
-    /* vector of size 14 */
-    pr2eihMPC_FLOAT ub3[14];
-
-    /* diagonal matrix of size [14 x 14] (only the diagonal is stored) */
-    pr2eihMPC_FLOAT H4[14];
-
-    /* vector of size 14 */
-    pr2eihMPC_FLOAT f4[14];
-
-    /* vector of size 14 */
-    pr2eihMPC_FLOAT lb4[14];
-
-    /* vector of size 14 */
-    pr2eihMPC_FLOAT ub4[14];
-
     /* diagonal matrix of size [7 x 7] (only the diagonal is stored) */
-    pr2eihMPC_FLOAT H5[7];
+    pr2eihMPC_FLOAT H2[7];
 
     /* vector of size 7 */
-    pr2eihMPC_FLOAT f5[7];
+    pr2eihMPC_FLOAT f2[7];
 
     /* vector of size 7 */
-    pr2eihMPC_FLOAT lb5[7];
+    pr2eihMPC_FLOAT lb2[7];
 
     /* vector of size 7 */
-    pr2eihMPC_FLOAT ub5[7];
+    pr2eihMPC_FLOAT ub2[7];
 
 } pr2eihMPC_params;
 
@@ -157,17 +121,8 @@ typedef struct pr2eihMPC_output
     /* vector of size 14 */
     pr2eihMPC_FLOAT z1[14];
 
-    /* vector of size 14 */
-    pr2eihMPC_FLOAT z2[14];
-
-    /* vector of size 14 */
-    pr2eihMPC_FLOAT z3[14];
-
-    /* vector of size 14 */
-    pr2eihMPC_FLOAT z4[14];
-
     /* vector of size 7 */
-    pr2eihMPC_FLOAT z5[7];
+    pr2eihMPC_FLOAT z2[7];
 
 } pr2eihMPC_output;
 

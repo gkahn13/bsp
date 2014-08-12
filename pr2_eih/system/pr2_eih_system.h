@@ -11,7 +11,7 @@ using namespace Eigen;
 
 #include "../../util/logging.h"
 
-#define TIMESTEPS 2
+#define TIMESTEPS 5
 #define DT 1.0 // Note: if you change this, must change the FORCES matlab file
 
 #define G_DIM 3					// 3-d
@@ -70,9 +70,9 @@ public:
 class PR2EihSystem {
 	const double step = 0.0078125*0.0078125;
 
-	const double alpha_control = 1; // .01
-	const double alpha_belief = 1e5; // 1e6
-	const double alpha_final_belief = 1e5; // 1e6
+	const double alpha_control = .5; // 10
+	const double alpha_belief = 1e5; // 1e5
+	const double alpha_final_belief = 1e5; // 1e5
 
 	const double alpha_particle_sd = 1e3; // 100
 
@@ -99,7 +99,8 @@ public:
 	VectorTOTAL cost_grad(StdVectorJ& J, const MatrixJ& j_sigma0, StdVectorU& U, const std::vector<Gaussian3d>& obj_gaussians,
 			const double alpha, const std::vector<geometry3d::Triangle>& obstacles);
 
-	VectorP update_particle_weights(const VectorJ& j_tp1, const MatrixP& P_t, const VectorP& W_t, const std::vector<geometry3d::Triangle>& obstacles);
+	VectorP update_particle_weights(const VectorJ& j_tp1, const MatrixP& P_t, const VectorP& W_t,
+			const std::vector<geometry3d::Triangle>& obstacles, bool add_radial_error=false);
 	MatrixP low_variance_sampler(const MatrixP& P, const VectorP& W);
 
 	double entropy(const StdVectorJ& J, const StdVectorU& U, const MatrixP& P, const std::vector<geometry3d::Triangle>& obstacles);
@@ -118,6 +119,7 @@ private:
 	VectorJ j_min, j_max, u_min, u_max;
 	MatrixQ Q;
 	MatrixR R;
+	MatrixU N; // weight quadratic U in cost function
 
 	void linearize_dynfunc(const VectorX& x, const VectorU& u, const VectorQ& q,
 			Matrix<double,X_DIM,X_DIM>& A, Matrix<double,X_DIM,Q_DIM>& M);

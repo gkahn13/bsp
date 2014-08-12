@@ -15,13 +15,13 @@ const int T = TIMESTEPS;
 
 namespace cfg {
 const double alpha_init = .01; // .01
-const double alpha_gain = 1.5; // 3
+const double alpha_gain = 3; // 1.5
 const double alpha_epsilon = .1; // .1
 const double alpha_max_increases = 5; // 5
 
-const double Xeps_initial = .1; // .1
-const double Ueps_initial = .1; // .1
-const double improve_ratio_threshold = 1e-1; // .1
+const double Xeps_initial = .5; // .1
+const double Ueps_initial = .5; // .1
+const double improve_ratio_threshold = .5; // .1
 const double min_approx_improve = 1e-1; // .1
 const double min_trust_box_size = .1; // .1
 const double trust_shrink_ratio = .75; // .75
@@ -76,85 +76,61 @@ void cleanup_mpc_vars() {
 	delete c;
 }
 
-template<typename Derived>
-inline void fill_col_major(double *X, const MatrixBase<Derived>& M) {
-	int index = 0;
-	for(int j=0; j < M.cols(); ++j) {
-		for(int i=0; i < M.rows(); ++i) {
-			X[index++] = M(i,j);
-		}
-	}
-}
-
 bool is_valid_inputs()
 {
-//	for(int t = 0; t < T-1; ++t) {
-//		std::cout << "\n\nt: " << t << "\n";
-//
-//		if (t == 0) {
-//			std::cout << "\nc[0]:\n";
-//			for(int i=0; i < (J_DIM); ++i) {
-//				std::cout << c[i] << " ";
-//			}
-//		}
-//
-//		std::cout << "\nH[" << t << "]: ";
-//		for(int i=0; i < (J_DIM+U_DIM); ++i) {
-//			std::cout << H[t][i] << " ";
-//		}
-//
-//		std::cout << "\nf[" << t << "]: ";
-//		for(int i=0; i < (J_DIM+U_DIM); ++i) {
-//			std::cout << f[t][i] << " ";
-//		}
-//
-//		std::cout << "\nlb[" << t << "]: ";
-//		for(int i=0; i < (J_DIM+U_DIM); ++i) {
-//			std::cout << lb[t][i] << " ";
-//		}
-//
-//		std::cout << "\nub[" << t << "]: ";
-//		for(int i=0; i < (J_DIM+U_DIM); ++i) {
-//			std::cout << ub[t][i] << " ";
-//		}
-//	}
-//	std::cout << "\n\nt: " << T-1 << "\n";
-//
-//	std::cout << "\nH[" << T-1 << "]: ";
-//	for(int i=0; i < (J_DIM); ++i) {
-//		std::cout << H[T-1][i] << " ";
-//	}
-//
-//	std::cout << "\nf[" << T-1 << "]: ";
-//	for(int i=0; i < (J_DIM); ++i) {
-//		std::cout << f[T-1][i] << " ";
-//	}
-//
-//	std::cout << "\nlb[" << T-1 << "]: ";
-//	for(int i=0; i < (J_DIM); ++i) {
-//		std::cout << lb[T-1][i] << " ";
-//	}
-//
-//	std::cout << "\nub[" << T-1 << "]: ";
-//	for(int i=0; i < (J_DIM); ++i) {
-//		std::cout << ub[T-1][i] << " ";
-//	}
-//
-//	std::cout << "\nA[" << T-1 << "]:\n";
-//	for(int i=0; i < 2*G_DIM; ++i) {
-//		for(int j=0; j < J_DIM; ++j) {
-//			std::cout << A[i+j*(2*G_DIM)] << " ";
-//		}
-//		std::cout << "\n";
-//	}
-//	std::cout << "\n";
-//
-//	std::cout << "b[" << T-1 << "]: ";
-//	for(int i=0; i < 2*G_DIM; ++i) {
-//		std::cout << b[i] << " ";
-//	}
-//
-//	std::cout << "\n\n";
+	for(int t = 0; t < T-1; ++t) {
+		std::cout << "\n\nt: " << t;
+
+		if (t == 0) {
+			std::cout << "\nc[0]: ";
+			for(int i=0; i < (J_DIM); ++i) {
+				std::cout << c[i] << " ";
+			}
+		}
+
+		std::cout << "\nH[" << t << "]: ";
+		for(int i=0; i < (J_DIM+U_DIM); ++i) {
+			std::cout << H[t][i] << " ";
+		}
+
+		std::cout << "\nf[" << t << "]: ";
+		for(int i=0; i < (J_DIM+U_DIM); ++i) {
+			std::cout << f[t][i] << " ";
+		}
+
+		std::cout << "\nlb[" << t << "]: ";
+		for(int i=0; i < (J_DIM+U_DIM); ++i) {
+			std::cout << lb[t][i] << " ";
+		}
+
+		std::cout << "\nub[" << t << "]: ";
+		for(int i=0; i < (J_DIM+U_DIM); ++i) {
+			std::cout << ub[t][i] << " ";
+		}
+	}
+	std::cout << "\n\nt: " << T-1;
+
+	std::cout << "\nH[" << T-1 << "]: ";
+	for(int i=0; i < (J_DIM); ++i) {
+		std::cout << H[T-1][i] << " ";
+	}
+
+	std::cout << "\nf[" << T-1 << "]: ";
+	for(int i=0; i < (J_DIM); ++i) {
+		std::cout << f[T-1][i] << " ";
+	}
+
+	std::cout << "\nlb[" << T-1 << "]: ";
+	for(int i=0; i < (J_DIM); ++i) {
+		std::cout << lb[T-1][i] << " ";
+	}
+
+	std::cout << "\nub[" << T-1 << "]: ";
+	for(int i=0; i < (J_DIM); ++i) {
+		std::cout << ub[T-1][i] << " ";
+	}
+
+	std::cout << "\n\n";
 
 	for(int i=0; i < (J_DIM); ++i) { if (c[i] > INFINITY/2) { LOG_ERROR("isValid0"); return false; } }
 	for(int i=0; i < (J_DIM); ++i) { if (c[i] < lb[0][i]) { LOG_ERROR("isValid1"); return false; } }
@@ -247,7 +223,7 @@ double pr2_eih_approximate_collocation(StdVectorJ& J, StdVectorU& U, const Matri
 				grad = gradopt;
 			}
 
-			std::cout << "gradient:\n" << grad << "\n";
+//			std::cout << "gradient:\n" << grad << "\n";
 
 			VectorTOTAL diaghess = hess.diagonal();
 
@@ -311,9 +287,6 @@ double pr2_eih_approximate_collocation(StdVectorJ& J, StdVectorU& U, const Matri
 			for(int i=0; i < J_DIM; ++i) {
 				lb[t][index] = std::max(j_min(i), J[t](i) - Xeps);
 				ub[t][index] = std::min(j_max(i), J[t](i) + Xeps);
-				if (ub[t][index] < lb[t][index]) {
-					ub[t][index] = lb[t][index] + epsilon;
-				}
 				index++;
 			}
 
@@ -323,9 +296,6 @@ double pr2_eih_approximate_collocation(StdVectorJ& J, StdVectorU& U, const Matri
 				for(int i=0; i < U_DIM; ++i) {
 					lb[t][index] = std::max(u_min(i), U[t](i) - Ueps);
 					ub[t][index] = std::min(u_max(i), U[t](i) + Ueps);
-					if (ub[t][index] < lb[t][index]) {
-						ub[t][index] = lb[t][index] + epsilon;
-					}
 					index++;
 				}
 			}
@@ -359,9 +329,6 @@ double pr2_eih_approximate_collocation(StdVectorJ& J, StdVectorU& U, const Matri
 			return INFINITY;
 		}
 
-//		LOG_INFO("Plotting Jopt");
-//		sys.plot(Jopt, obj, obj_sigma0, obstacles);
-
 		model_merit = optcost + constant_cost; // need to add constant terms that were dropped
 
 		new_merit = sys.cost(Jopt, j_sigma0, Uopt, obj_gaussians, alpha, obstacles);
@@ -378,6 +345,9 @@ double pr2_eih_approximate_collocation(StdVectorJ& J, StdVectorU& U, const Matri
 		LOG_DEBUG("approx_merit_improve: %f", approx_merit_improve);
 		LOG_DEBUG("exact_merit_improve: %f", exact_merit_improve);
 		LOG_DEBUG("merit_improve_ratio: %f", merit_improve_ratio);
+
+//		LOG_INFO("Plotting Jopt");
+//		sys.plot(Jopt, obj_gaussians, obstacles);
 
 		if (approx_merit_improve < -1) {
 			LOG_ERROR("Approximate merit function got worse: %f", approx_merit_improve);
@@ -466,11 +436,18 @@ void init_obstacles_and_objects(pr2_sim::Camera& cam,
 
 	std::vector<geometry3d::Triangle> obstacles_cam;
 
-	obstacles_cam.push_back(geometry3d::Triangle({0,0,.75}, {0,.1,.75}, {.05,.1,.75}));
-	obstacles_cam.push_back(geometry3d::Triangle({0,0,.75}, {.05,0,.75}, {.05,.1,.75}));
+//	obstacles_cam.push_back(geometry3d::Triangle({0,0,.75}, {0,.1,.75}, {.05,.1,.75}));
+//	obstacles_cam.push_back(geometry3d::Triangle({0,0,.75}, {.05,0,.75}, {.05,.1,.75}));
+//
+//	obstacles_cam.push_back(geometry3d::Triangle({-.2,0,.75}, {-.2,.1,.75}, {-.25,.1,.75}));
+//	obstacles_cam.push_back(geometry3d::Triangle({-.2,0,.75}, {-.25,0,.75}, {-.25,.1,.75}));
 
-	obstacles_cam.push_back(geometry3d::Triangle({-.2,0,.75}, {-.2,.1,.75}, {-.25,.1,.75}));
-	obstacles_cam.push_back(geometry3d::Triangle({-.2,0,.75}, {-.25,0,.75}, {-.25,.1,.75}));
+	obstacles_cam.push_back(geometry3d::Triangle({0,.1,.75}, {0,.2,.75}, {.05,.2,.75}));
+	obstacles_cam.push_back(geometry3d::Triangle({0,.1,.75}, {.05,.1,.75}, {.05,.2,.75}));
+
+	obstacles_cam.push_back(geometry3d::Triangle({-.2,.1,.75}, {-.2,.2,.75}, {-.25,.2,.75}));
+	obstacles_cam.push_back(geometry3d::Triangle({-.2,.1,.75}, {-.25,.1,.75}, {-.25,.2,.75}));
+
 
 	obstacles.clear();
 	for(const geometry3d::Triangle& obstacle_cam : obstacles_cam) {
@@ -503,23 +480,43 @@ void init_obstacles_and_objects(pr2_sim::Camera& cam,
 	}
 }
 
-void init_trajectory(StdVectorJ& J, StdVectorU& U, pr2_sim::Arm& arm, PR2EihSystem& sys) {
-	Matrix4d start_pose = arm.fk(J[0]);
-	Matrix4d next_pose = start_pose;
+void init_trajectory(StdVectorJ& J, StdVectorU& U, const std::vector<Gaussian3d>& obj_gaussians,
+		pr2_sim::Arm& arm, PR2EihSystem& sys) {
+	Vector3d avg_obj_mean = Vector3d::Zero();
+	double num_objs = obj_gaussians.size();
+	for(const Gaussian3d& obj_gaussian : obj_gaussians) {
+		avg_obj_mean += (1/num_objs)*obj_gaussian.mean;
+	}
+
+	Vector3d start_position = arm.fk(J[0]).block<3,1>(0,3);
+	Vector3d next_position;
 	VectorJ next_joints;
 	for(int t=0; t < T-1; ++t) {
-		U[t].setZero();
-//		next_pose.block<3,1>(0,3) += Vector3d(0, 0, .005);
+		next_position = start_position + (t+1)*Vector3d(.2,0,.05);
+		if (arm.ik_lookat(next_position, avg_obj_mean, next_joints)) {
+			U[t] = next_joints - J[t];
+		} else {
+			U[t] = VectorU::Zero();
+		}
+//		U[t].setZero(); // TODO :temp
+
+		J[t+1] = sys.dynfunc(J[t], U[t], VectorQ::Zero());
+	}
+
+//	Matrix4d start_pose = arm.fk(J[0]);
+//	Matrix4d next_pose = start_pose;
+//	VectorJ next_joints;
+//	for(int t=0; t < T-1; ++t) {
+////		U[t].setZero();
+//		next_pose.block<3,1>(0,3) += Vector3d(0, 0, .007);
 //		if (arm.ik(next_pose, next_joints)) {
 //			U[t] = next_joints - J[t];
 //		} else {
 //			U[t] = VectorU::Zero();
 //		}
-	}
-
-	for(int t=0; t < T-1; ++t) {
-		J[t+1] = sys.dynfunc(J[t], U[t], VectorQ::Zero());
-	}
+//
+//		J[t+1] = sys.dynfunc(J[t], U[t], VectorQ::Zero());
+//	}
 }
 
 int main(int argc, char* argv[]) {
@@ -557,13 +554,13 @@ int main(int argc, char* argv[]) {
 	util::Timer forces_timer;
 
 	while(true) {
-		init_trajectory(J, U, arm, sys);
-
-		LOG_INFO("Current state");
-		sys.plot(J, obj_gaussians_t, obstacles);
+		init_trajectory(J, U, obj_gaussians_t, arm, sys);
 
 		double initial_cost = sys.cost(J, j_sigma0_t, U, obj_gaussians_t, INFINITY, obstacles);
 		LOG_INFO("Initial cost: %4.5f", initial_cost);
+
+		LOG_INFO("Current state");
+		sys.plot(J, obj_gaussians_t, obstacles);
 
 		// optimize
 		util::Timer_tic(&forces_timer);

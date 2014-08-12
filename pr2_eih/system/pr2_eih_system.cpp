@@ -20,8 +20,8 @@ PR2EihSystem::PR2EihSystem(pr2_sim::Simulator *s, pr2_sim::Arm *a, pr2_sim::Came
 	}
 
 	arm->get_joint_limits(j_min, j_max);
-	u_min = j_min;
-	u_max = j_max;
+	u_min = -10*VectorJ::Ones(); //j_min;
+	u_max = 10*VectorJ::Ones(); //j_max;
 
 //	Q = (M_PI/4)*MatrixQ::Identity();
 	Q = 1e-2*MatrixQ::Identity();
@@ -29,6 +29,10 @@ PR2EihSystem::PR2EihSystem(pr2_sim::Simulator *s, pr2_sim::Arm *a, pr2_sim::Came
 //	R_diag << (M_PI/4)*VectorJ::Ones(), 5*Vector3d::Ones();
 	R_diag << 1e-2*VectorJ::Ones(), 1e-4*Vector3d::Ones();
 	R = R_diag.asDiagonal();
+
+	N = alpha_control*MatrixU::Identity();
+//	N(U_DIM-2,U_DIM-2) = 0; // gripper pitch
+//	N(U_DIM-1,U_DIM-1) = 0; // gripper rotation
 
 	arm->set_posture(pr2_sim::Arm::Posture::mantis);
 }
@@ -70,7 +74,7 @@ VectorZ PR2EihSystem::obsfunc(const VectorJ& j, const Vector3d& object, const Ve
 
 	VectorZ z;
 	z.segment<J_DIM>(0) = j;
-	z.segment<3>(J_DIM) = object - cam->get_pose().block<3,1>(0,3);
+	z.segment<3>(J_DIM) = object; // - cam->get_pose().block<3,1>(0,3);
 
 	arm->set_joints(j_orig);
 
@@ -95,7 +99,9 @@ MatrixZ PR2EihSystem::delta_matrix(const VectorJ& j, const Vector3d& object, con
 	std::vector<geometry3d::Pyramid> truncated_frustum = cam->truncated_view_frustum(obstacles, false);
 	double sd = cam->signed_distance(object, truncated_frustum);
 
-	double sd_sigmoid = 1.0 - 1.0/(1.0 + exp(-alpha*sd));
+	double error = cam->radial_distance_error(object);
+
+	double sd_sigmoid = 1.0 - 1.0/(1.0 + exp(-alpha*(sd+error)));
 	for(int i=J_DIM; i < Z_DIM; ++i) {
 		delta(i,i) = sd_sigmoid;
 	}
@@ -123,7 +129,6 @@ void PR2EihSystem::belief_dynamics(const VectorX& x_t, const MatrixX& sigma_t, c
 	linearize_obsfunc(x_tp1, VectorR::Zero(), H);
 
 	MatrixZ delta = delta_matrix(x_tp1.segment<J_DIM>(0), x_tp1.segment<3>(J_DIM), alpha, obstacles);
-//	std::cout << "delta: " << delta.diagonal().transpose() << "\n";
 	Matrix<double,X_DIM,Z_DIM> K = sigma_tp1_bar*H.transpose()*delta*(delta*H*sigma_tp1_bar*H.transpose()*delta + R).inverse()*delta;
 	sigma_tp1 = (MatrixX::Identity() - K*H)*sigma_tp1_bar;
 }
@@ -166,7 +171,8 @@ double PR2EihSystem::cost(const StdVectorJ& J, const MatrixJ& j_sigma0, const St
 			x_t << J[t], obj_gaussian.mean;
 			belief_dynamics(x_t, sigma_t, U[t], alpha, obstacles, x_tp1, sigma_tp1);
 
-			cost += alpha_control*U[t].squaredNorm();
+			cost += (U[t].transpose()*N).dot(U[t]);
+
 			// TODO: only penalize object?
 			if (t < TIMESTEPS-2) {
 				cost += alpha_belief*sigma_tp1.block<3,3>(J_DIM,J_DIM).trace();
@@ -216,7 +222,8 @@ VectorTOTAL PR2EihSystem::cost_grad(StdVectorJ& J, const MatrixJ& j_sigma0, StdV
 	return grad;
 }
 
-VectorP PR2EihSystem::update_particle_weights(const VectorJ& j_tp1, const MatrixP& P_t, const VectorP& W_t, const std::vector<geometry3d::Triangle>& obstacles) {
+VectorP PR2EihSystem::update_particle_weights(const VectorJ& j_tp1, const MatrixP& P_t, const VectorP& W_t,
+		const std::vector<geometry3d::Triangle>& obstacles, bool add_radial_error) {
 	arm->set_joints(j_tp1);
 	std::vector<geometry3d::Pyramid> truncated_frustum = cam->truncated_view_frustum(obstacles, true);
 
@@ -224,6 +231,11 @@ VectorP PR2EihSystem::update_particle_weights(const VectorJ& j_tp1, const Matrix
 	// for each particle, weight by sigmoid of signed distance
 	for(int m=0; m < M_DIM; ++m) {
 		double sd = cam->signed_distance(P_t.col(m), truncated_frustum);
+
+		if (add_radial_error) {
+			sd += cam->radial_distance_error(P_t.col(m));
+		}
+
 		double sigmoid_sd = 1.0/(1.0 + exp(-alpha_particle_sd*sd));
 		W_tp1(m) = W_t(m)*sigmoid_sd;
 	}
@@ -257,7 +269,7 @@ double PR2EihSystem::entropy(const StdVectorJ& J, const StdVectorU& U, const Mat
 	for(int t=0; t < TIMESTEPS-1; ++t) {
 		VectorJ j_tp1 = dynfunc(J[t], U[t], VectorQ::Zero());
 
-		W_tp1 = update_particle_weights(j_tp1, P_t, W_t, obstacles);
+		W_tp1 = update_particle_weights(j_tp1, P_t, W_t, obstacles, true);
 
 //		entropy += (-W_tp1.array() * W_tp1.array().log()).sum();
 		for(int m=0; m < M_DIM; ++m) { // safe log

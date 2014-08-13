@@ -620,7 +620,7 @@ int main(int argc, char* argv[]) {
 		LOG_INFO("Initial cost: %4.5f", initial_cost);
 
 		LOG_INFO("Current state");
-		sys.plot(J, obj_gaussians_t, obstacles);
+		sys.plot(StdVectorJ(1, J[0]), obj_gaussians_t, obstacles);
 
 		// optimize
 		util::Timer_tic(&forces_timer);

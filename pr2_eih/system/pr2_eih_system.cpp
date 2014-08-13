@@ -27,7 +27,7 @@ PR2EihSystem::PR2EihSystem(pr2_sim::Simulator *s, pr2_sim::Arm *a, pr2_sim::Came
 	Q = 1e-2*MatrixQ::Identity();
 	VectorR R_diag;
 //	R_diag << (M_PI/4)*VectorJ::Ones(), 5*Vector3d::Ones();
-	R_diag << 1e-2*VectorJ::Ones(), 1e-2, 1e-2, 1e-2; // 1e-2
+	R_diag << 1e-2*VectorJ::Ones(), 1e-2, 1e-2, 1; // 1e-2
 	R = R_diag.asDiagonal();
 
 	arm->set_posture(pr2_sim::Arm::Posture::mantis);
@@ -46,8 +46,8 @@ VectorJ PR2EihSystem::dynfunc(const VectorJ& j, const VectorU& u, const VectorQ&
 		VectorJ j_new = j + DT*(u+q);
 
 		for(int i=0; i < J_DIM; ++i) {
-			j_new(i) = std::max(j_new(i), j_min(i) + step);
-			j_new(i) = std::min(j_new(i), j_max(i) - step);
+			j_new(i) = std::max(j_new(i), j_min(i) + 1e-4);
+			j_new(i) = std::min(j_new(i), j_max(i) - 1e-4);
 		}
 
 		return j_new;
@@ -79,7 +79,7 @@ VectorZ PR2EihSystem::obsfunc(const VectorJ& j, const Vector3d& object, const Ve
 	Vector3d sigmas = cam->measurement_standard_deviation(cam_pose, object);
 	z(J_DIM) += r(J_DIM);
 	z(J_DIM+1) += r(J_DIM+1);
-	z(J_DIM+2) += object_cam(2)*object_cam(2)*r(J_DIM+2);
+	z(J_DIM+2) += object_cam(2)*object_cam(2)*r(J_DIM+2); // TODO: VERY important optimization parameter
 
 	return z;
 }
@@ -89,15 +89,20 @@ VectorZ PR2EihSystem::obsfunc(const VectorJ& j, const Vector3d& object, const Ve
  *        truncated view frustum of camera for arm joint values j
  */
 MatrixZ PR2EihSystem::delta_matrix(const VectorJ& j, const Vector3d& object, const double alpha,
-		const std::vector<geometry3d::Triangle>& obstacles) {
+		const std::vector<geometry3d::Triangle>& obstacles, int cached_frustum_timestep) {
 	MatrixZ delta = MatrixZ::Identity();
 
 	for(int i=0; i < J_DIM; ++i) {
 		delta(i,i) = 1; // always observe joints
 	}
 
+	std::vector<geometry3d::TruncatedPyramid> truncated_frustum;
 	Matrix4d cam_pose = cam->get_pose(j);
-	std::vector<geometry3d::TruncatedPyramid> truncated_frustum = cam->truncated_view_frustum(cam_pose, obstacles, false);
+	if ((0 <= cached_frustum_timestep) && (cached_frustum_timestep < cached_frustum.size())) {
+		truncated_frustum = cached_frustum[cached_frustum_timestep];
+	} else {
+		truncated_frustum = cam->truncated_view_frustum(cam_pose, obstacles, false);
+	}
 	double sd = cam->signed_distance(object, truncated_frustum);
 
 	double error = cam->radial_distance_error(cam_pose, object);
@@ -112,7 +117,7 @@ MatrixZ PR2EihSystem::delta_matrix(const VectorJ& j, const Vector3d& object, con
 }
 
 void PR2EihSystem::belief_dynamics(const VectorX& x_t, const MatrixX& sigma_t, const VectorU& u_t, const double alpha,
-		const std::vector<geometry3d::Triangle>& obstacles, VectorX& x_tp1, MatrixX& sigma_tp1) {
+		const std::vector<geometry3d::Triangle>& obstacles, VectorX& x_tp1, MatrixX& sigma_tp1, int cached_frustum_timestep) {
 	// propagate dynamics
 	x_tp1 = x_t;
 	x_tp1.segment<J_DIM>(0) = dynfunc(x_t.segment<J_DIM>(0), u_t, VectorQ::Zero(), true);
@@ -129,7 +134,7 @@ void PR2EihSystem::belief_dynamics(const VectorX& x_t, const MatrixX& sigma_t, c
 	Matrix<double,Z_DIM,R_DIM> N;
 	linearize_obsfunc(x_tp1, VectorR::Zero(), H, N);
 
-	MatrixZ delta = delta_matrix(x_tp1.segment<J_DIM>(0), x_tp1.segment<3>(J_DIM), alpha, obstacles);
+	MatrixZ delta = delta_matrix(x_tp1.segment<J_DIM>(0), x_tp1.segment<3>(J_DIM), alpha, obstacles, cached_frustum_timestep);
 	Matrix<double,X_DIM,Z_DIM> K = sigma_tp1_bar*H.transpose()*delta*(delta*H*sigma_tp1_bar*H.transpose()*delta + N*R*N.transpose()).inverse()*delta;
 	sigma_tp1 = (MatrixX::Identity() - K*H)*sigma_tp1_bar;
 }
@@ -162,6 +167,12 @@ double PR2EihSystem::cost(const StdVectorJ& J, const MatrixJ& j_sigma0, const St
 		const double alpha, const std::vector<geometry3d::Triangle>& obstacles) {
 	double cost = 0;
 
+	cached_frustum = std::vector<std::vector<geometry3d::TruncatedPyramid> > (TIMESTEPS);
+	for(int t=0; t < TIMESTEPS-1; ++t) {
+		VectorJ j_tp1 = dynfunc(J[t], U[t], VectorQ::Zero(), true);
+		cached_frustum[t+1] = cam->truncated_view_frustum(cam->get_pose(j_tp1), obstacles, true);
+	}
+
 	for(const Gaussian3d& obj_gaussian : obj_gaussians) {
 		VectorX x_t, x_tp1 = VectorX::Zero();
 		MatrixX sigma_t = MatrixX::Zero(), sigma_tp1 = MatrixX::Zero();
@@ -169,7 +180,7 @@ double PR2EihSystem::cost(const StdVectorJ& J, const MatrixJ& j_sigma0, const St
 		sigma_t.block<3,3>(J_DIM,J_DIM) = obj_gaussian.cov;
 		for(int t=0; t < TIMESTEPS-1; ++t) {
 			x_t << J[t], obj_gaussian.mean;
-			belief_dynamics(x_t, sigma_t, U[t], alpha, obstacles, x_tp1, sigma_tp1);
+			belief_dynamics(x_t, sigma_t, U[t], alpha, obstacles, x_tp1, sigma_tp1, t+1);
 
 			cost += alpha_control*U[t].squaredNorm();
 
@@ -354,7 +365,8 @@ void PR2EihSystem::plot(const StdVectorJ& J, const std::vector<Gaussian3d>& obj_
 	}
 
 //	cam->plot({1,0,0});
-	std::vector<geometry3d::TruncatedPyramid> truncated_frustum = cam->truncated_view_frustum(cam->get_pose(J.back()), obstacles, false);
+	std::vector<geometry3d::TruncatedPyramid> truncated_frustum = cam->truncated_view_frustum(cam->get_pose(J.back()), obstacles);
+	std::cout << "truncated frustum size: " << truncated_frustum.size() << "\n";
 	for(const geometry3d::TruncatedPyramid& pyramid : truncated_frustum) {
 		pyramid.plot(*sim, "base_link", {1,0,0}, true, true, 0.05);
 	}

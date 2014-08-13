@@ -5,6 +5,8 @@
 #include "pr2_utils/pr2_sim/arm.h"
 #include "pr2_utils/pr2_sim/camera.h"
 
+#include <random>
+
 #include <Eigen/Eigen>
 #include <Eigen/StdVector>
 using namespace Eigen;
@@ -57,8 +59,19 @@ public:
 	Matrix3d cov;
 	MatrixP particles;
 
-	Gaussian3d(const Vector3d& mean, const Matrix3d& cov) : mean(mean), cov(cov) { }
 	Gaussian3d(const Vector3d& mean, const Matrix3d& cov, const MatrixP& particles) : mean(mean), cov(cov), particles(particles) { }
+	Gaussian3d(const Vector3d& mean, const Matrix3d& cov) : mean(mean), cov(cov) {
+		std::default_random_engine generator;
+		std::normal_distribution<double> distribution(0.0,1.0);
+
+		Matrix3d cov_chol = cov.llt().matrixL();
+		for(int m=0; m < M_DIM; ++m) {
+			Vector3d z = {distribution(generator), distribution(generator), distribution(generator)};
+//			z.normalize();
+			particles.col(m) = cov_chol*z + mean;
+		}
+
+	}
 	Gaussian3d(const MatrixP& particles) : particles(particles) {
 		mean = particles.rowwise().mean();
 
@@ -70,7 +83,7 @@ public:
 class PR2EihSystem {
 	const double step = 0.0078125*0.0078125;
 
-	const double alpha_control = 1e-4; // .5
+	const double alpha_control = 1e-4; // 1e-4
 	const double alpha_belief = 100; // 100
 	const double alpha_final_belief = 100; // 100
 
@@ -85,10 +98,10 @@ public:
 	VectorZ obsfunc(const VectorJ& j, const Vector3d& object, const VectorR& r);
 
 	MatrixZ delta_matrix(const VectorJ& j, const Vector3d& object, const double alpha,
-			const std::vector<geometry3d::Triangle>& obstacles);
+			const std::vector<geometry3d::Triangle>& obstacles, int cached_frustum_timestep=-1);
 
 	void belief_dynamics(const VectorX& x_t, const MatrixX& sigma_t, const VectorU& u_t, const double alpha,
-			const std::vector<geometry3d::Triangle>& obstacles, VectorX& x_tp1, MatrixX& sigma_tp1);
+			const std::vector<geometry3d::Triangle>& obstacles, VectorX& x_tp1, MatrixX& sigma_tp1, int cached_frustum_timestep=-1);
 	void execute_control_step(const VectorJ& j_t_real, const VectorJ& j_t, const VectorU& u_t,
 			const std::vector<Gaussian3d>& obj_gaussians_t,
 			const std::vector<geometry3d::Triangle>& obstacles,
@@ -119,6 +132,8 @@ private:
 	VectorJ j_min, j_max, u_min, u_max;
 	MatrixQ Q;
 	MatrixR R;
+
+	std::vector<std::vector<geometry3d::TruncatedPyramid>> cached_frustum;
 
 	void linearize_dynfunc(const VectorX& x, const VectorU& u, const VectorQ& q,
 			Matrix<double,X_DIM,X_DIM>& A, Matrix<double,X_DIM,Q_DIM>& M);

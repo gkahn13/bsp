@@ -440,7 +440,7 @@ void init_obstacles_and_particles(pr2_sim::Camera& cam,
 //	obstacles.push_back(geometry3d::Triangle({0,-1,.55}, {1,-1,.55}, {1,1,.55}));
 
 	P.setZero();
-	std::vector<geometry3d::Pyramid> truncated_frustum = cam.truncated_view_frustum(obstacles, true);
+	std::vector<geometry3d::TruncatedPyramid> truncated_frustum = cam.truncated_view_frustum(obstacles, true);
 	int num_particles = 0;
 	int particles_per_obstacle = double(M_DIM)/(obstacles.size());
 	for(int i=0; i < obstacles.size(); i+=2) {

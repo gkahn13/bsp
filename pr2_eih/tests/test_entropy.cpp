@@ -25,7 +25,7 @@ VectorXd update_particle_weights(const VectorJ& j, const MatrixXd& P_t, const Ve
 		pr2_sim::Arm& arm, pr2_sim::Camera& cam) {
 	int M = P_t.cols();
 	arm.set_joints(j);
-	std::vector<geometry3d::Pyramid> truncated_frustum = cam.truncated_view_frustum(obstacles, false);
+	std::vector<geometry3d::TruncatedPyramid> truncated_frustum = cam.truncated_view_frustum(obstacles, false);
 
 	VectorXd W_tp1(M);
 	// for each particle, weight by sigmoid of signed distance
@@ -97,7 +97,7 @@ void init_obstacles_and_objects(pr2_sim::Camera& cam,
 				cam_rot*obstacle_cam.c+cam_pos));
 	}
 
-	std::vector<geometry3d::Pyramid> truncated_frustum = cam.truncated_view_frustum(obstacles, true);
+	std::vector<geometry3d::TruncatedPyramid> truncated_frustum = cam.truncated_view_frustum(obstacles, true);
 	obj_gaussians.clear();
 	for(int i=0; i < obstacles_cam.size(); i+=2) {
 		geometry3d::Triangle& obstacle_cam = obstacles_cam[i];

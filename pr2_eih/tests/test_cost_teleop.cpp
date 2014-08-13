@@ -27,7 +27,7 @@ void init_obstacles_and_objects(pr2_sim::Camera& cam,
 				cam_rot*obstacle_cam.c+cam_pos));
 	}
 
-	std::vector<geometry3d::Pyramid> truncated_frustum = cam.truncated_view_frustum(obstacles, true);
+	std::vector<geometry3d::TruncatedPyramid> truncated_frustum = cam.truncated_view_frustum(obstacles, true);
 	obj_gaussians.clear();
 	for(int i=0; i < obstacles_cam.size(); i+=2) {
 		geometry3d::Triangle& obstacle_cam = obstacles_cam[i];

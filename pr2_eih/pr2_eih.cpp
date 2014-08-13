@@ -14,18 +14,18 @@ pr2eihMPC_FLOAT **H, **f, **lb, **ub, **z, *c;
 const int T = TIMESTEPS;
 
 namespace cfg {
-const double alpha_init = .01; // .01
+const double alpha_init = 1; // .01
 const double alpha_gain = 3; // 1.5
 const double alpha_epsilon = .1; // .1
 const double alpha_max_increases = 5; // 5
 
-const double Xeps_initial = .5; // .1
-const double Ueps_initial = .5; // .1
-const double improve_ratio_threshold = .5; // .1
-const double min_approx_improve = 1e-1; // .1
-const double min_trust_box_size = .1; // .1
-const double trust_shrink_ratio = .75; // .75
-const double trust_expand_ratio = 1.25; // 1.25
+const double Xeps_initial = .1; // .1
+const double Ueps_initial = .1; // .1
+const double improve_ratio_threshold = .5; // .5
+const double min_approx_improve = 1e-1; // 1e-1
+const double min_trust_box_size = 1e-2; // 1e-2
+const double trust_shrink_ratio = .5; // .75
+const double trust_expand_ratio = 2; // 1.25
 }
 
 void setup_mpc_vars(pr2eihMPC_params& problem, pr2eihMPC_output& output) {
@@ -78,59 +78,59 @@ void cleanup_mpc_vars() {
 
 bool is_valid_inputs()
 {
-	for(int t = 0; t < T-1; ++t) {
-		std::cout << "\n\nt: " << t;
-
-		if (t == 0) {
-			std::cout << "\nc[0]: ";
-			for(int i=0; i < (J_DIM); ++i) {
-				std::cout << c[i] << " ";
-			}
-		}
-
-		std::cout << "\nH[" << t << "]: ";
-		for(int i=0; i < (J_DIM+U_DIM); ++i) {
-			std::cout << H[t][i] << " ";
-		}
-
-		std::cout << "\nf[" << t << "]: ";
-		for(int i=0; i < (J_DIM+U_DIM); ++i) {
-			std::cout << f[t][i] << " ";
-		}
-
-		std::cout << "\nlb[" << t << "]: ";
-		for(int i=0; i < (J_DIM+U_DIM); ++i) {
-			std::cout << lb[t][i] << " ";
-		}
-
-		std::cout << "\nub[" << t << "]: ";
-		for(int i=0; i < (J_DIM+U_DIM); ++i) {
-			std::cout << ub[t][i] << " ";
-		}
-	}
-	std::cout << "\n\nt: " << T-1;
-
-	std::cout << "\nH[" << T-1 << "]: ";
-	for(int i=0; i < (J_DIM); ++i) {
-		std::cout << H[T-1][i] << " ";
-	}
-
-	std::cout << "\nf[" << T-1 << "]: ";
-	for(int i=0; i < (J_DIM); ++i) {
-		std::cout << f[T-1][i] << " ";
-	}
-
-	std::cout << "\nlb[" << T-1 << "]: ";
-	for(int i=0; i < (J_DIM); ++i) {
-		std::cout << lb[T-1][i] << " ";
-	}
-
-	std::cout << "\nub[" << T-1 << "]: ";
-	for(int i=0; i < (J_DIM); ++i) {
-		std::cout << ub[T-1][i] << " ";
-	}
-
-	std::cout << "\n\n";
+//	for(int t = 0; t < T-1; ++t) {
+//		std::cout << "\n\nt: " << t;
+//
+//		if (t == 0) {
+//			std::cout << "\nc[0]: ";
+//			for(int i=0; i < (J_DIM); ++i) {
+//				std::cout << c[i] << " ";
+//			}
+//		}
+//
+//		std::cout << "\nH[" << t << "]: ";
+//		for(int i=0; i < (J_DIM+U_DIM); ++i) {
+//			std::cout << H[t][i] << " ";
+//		}
+//
+//		std::cout << "\nf[" << t << "]: ";
+//		for(int i=0; i < (J_DIM+U_DIM); ++i) {
+//			std::cout << f[t][i] << " ";
+//		}
+//
+//		std::cout << "\nlb[" << t << "]: ";
+//		for(int i=0; i < (J_DIM+U_DIM); ++i) {
+//			std::cout << lb[t][i] << " ";
+//		}
+//
+//		std::cout << "\nub[" << t << "]: ";
+//		for(int i=0; i < (J_DIM+U_DIM); ++i) {
+//			std::cout << ub[t][i] << " ";
+//		}
+//	}
+//	std::cout << "\n\nt: " << T-1;
+//
+//	std::cout << "\nH[" << T-1 << "]: ";
+//	for(int i=0; i < (J_DIM); ++i) {
+//		std::cout << H[T-1][i] << " ";
+//	}
+//
+//	std::cout << "\nf[" << T-1 << "]: ";
+//	for(int i=0; i < (J_DIM); ++i) {
+//		std::cout << f[T-1][i] << " ";
+//	}
+//
+//	std::cout << "\nlb[" << T-1 << "]: ";
+//	for(int i=0; i < (J_DIM); ++i) {
+//		std::cout << lb[T-1][i] << " ";
+//	}
+//
+//	std::cout << "\nub[" << T-1 << "]: ";
+//	for(int i=0; i < (J_DIM); ++i) {
+//		std::cout << ub[T-1][i] << " ";
+//	}
+//
+//	std::cout << "\n\n";
 
 	for(int i=0; i < (J_DIM); ++i) { if (c[i] > INFINITY/2) { LOG_ERROR("isValid0"); return false; } }
 	for(int i=0; i < (J_DIM); ++i) { if (c[i] < lb[0][i]) { LOG_ERROR("isValid1"); return false; } }
@@ -280,7 +280,6 @@ double pr2_eih_approximate_collocation(StdVectorJ& J, StdVectorU& U, const Matri
 		VectorU u_min, u_max;
 		sys.get_limits(j_min, j_max, u_min, u_max);
 
-		const double epsilon = 1e-5;
 		// set trust region bounds based on current trust region size
 		for(int t=0; t < T; ++t) {
 			index = 0;
@@ -382,6 +381,11 @@ double pr2_eih_approximate_collocation(StdVectorJ& J, StdVectorU& U, const Matri
 			solution_accepted = true;
 		}
 
+		if (Xeps < cfg::min_trust_box_size && Ueps < cfg::min_trust_box_size) {
+			LOG_DEBUG("Converged: x tolerance");
+			return sys.cost(J, j_sigma0, U, obj_gaussians, alpha, obstacles);
+		}
+
 	}
 
 	return sys.cost(J, j_sigma0, U, obj_gaussians, alpha, obstacles);
@@ -456,7 +460,7 @@ void init_obstacles_and_objects(pr2_sim::Camera& cam,
 				cam_rot*obstacle_cam.c+cam_pos));
 	}
 
-	std::vector<geometry3d::Pyramid> truncated_frustum = cam.truncated_view_frustum(obstacles, true);
+	std::vector<geometry3d::TruncatedPyramid> truncated_frustum = cam.truncated_view_frustum(cam_pose, obstacles, true);
 	obj_gaussians.clear();
 	for(int i=0; i < obstacles_cam.size(); i+=2) {
 		geometry3d::Triangle& obstacle_cam = obstacles_cam[i];
@@ -492,7 +496,7 @@ void init_trajectory(StdVectorJ& J, StdVectorU& U, const std::vector<Gaussian3d>
 	Vector3d next_position;
 	VectorJ next_joints;
 	for(int t=0; t < T-1; ++t) {
-		next_position = start_position + (t+1)*Vector3d(.2,0,.05);
+		next_position = start_position + (t+1)*Vector3d(.05,0,.05);
 		if (arm.ik_lookat(next_position, avg_obj_mean, next_joints)) {
 			U[t] = next_joints - J[t];
 		} else {
@@ -500,23 +504,9 @@ void init_trajectory(StdVectorJ& J, StdVectorU& U, const std::vector<Gaussian3d>
 		}
 //		U[t].setZero(); // TODO :temp
 
-		J[t+1] = sys.dynfunc(J[t], U[t], VectorQ::Zero());
+		J[t+1] = sys.dynfunc(J[t], U[t], VectorQ::Zero(), true);
+		U[t] = (J[t+1] - J[t])/double(DT);
 	}
-
-//	Matrix4d start_pose = arm.fk(J[0]);
-//	Matrix4d next_pose = start_pose;
-//	VectorJ next_joints;
-//	for(int t=0; t < T-1; ++t) {
-////		U[t].setZero();
-//		next_pose.block<3,1>(0,3) += Vector3d(0, 0, .007);
-//		if (arm.ik(next_pose, next_joints)) {
-//			U[t] = next_joints - J[t];
-//		} else {
-//			U[t] = VectorU::Zero();
-//		}
-//
-//		J[t+1] = sys.dynfunc(J[t], U[t], VectorQ::Zero());
-//	}
 }
 
 int main(int argc, char* argv[]) {
@@ -560,7 +550,7 @@ int main(int argc, char* argv[]) {
 		LOG_INFO("Initial cost: %4.5f", initial_cost);
 
 		LOG_INFO("Current state");
-		sys.plot(J, obj_gaussians_t, obstacles);
+		sys.plot(StdVectorJ(1, J[0]), obj_gaussians_t, obstacles);
 
 		// optimize
 		util::Timer_tic(&forces_timer);

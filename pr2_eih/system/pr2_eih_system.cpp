@@ -27,12 +27,8 @@ PR2EihSystem::PR2EihSystem(pr2_sim::Simulator *s, pr2_sim::Arm *a, pr2_sim::Came
 	Q = 1e-2*MatrixQ::Identity();
 	VectorR R_diag;
 //	R_diag << (M_PI/4)*VectorJ::Ones(), 5*Vector3d::Ones();
-	R_diag << 1e-2*VectorJ::Ones(), 1e-4*Vector3d::Ones();
+	R_diag << 1e-2*VectorJ::Ones(), 1e-2, 1e-2, 1e-2; // 1e-2
 	R = R_diag.asDiagonal();
-
-	N = alpha_control*MatrixU::Identity();
-//	N(U_DIM-2,U_DIM-2) = 0; // gripper pitch
-//	N(U_DIM-1,U_DIM-1) = 0; // gripper rotation
 
 	arm->set_posture(pr2_sim::Arm::Posture::mantis);
 }
@@ -50,8 +46,8 @@ VectorJ PR2EihSystem::dynfunc(const VectorJ& j, const VectorU& u, const VectorQ&
 		VectorJ j_new = j + DT*(u+q);
 
 		for(int i=0; i < J_DIM; ++i) {
-			j_new(i) = std::max(j_new(i), j_min(i));
-			j_new(i) = std::min(j_new(i), j_max(i));
+			j_new(i) = std::max(j_new(i), j_min(i) + step);
+			j_new(i) = std::min(j_new(i), j_max(i) - step);
 		}
 
 		return j_new;
@@ -69,14 +65,21 @@ void PR2EihSystem::get_limits(VectorJ& j_min, VectorJ& j_max, VectorU& u_min, Ve
  * \brief Observation function is the joint positions and (object - camera)
  */
 VectorZ PR2EihSystem::obsfunc(const VectorJ& j, const Vector3d& object, const VectorR& r) {
-	VectorJ j_orig = arm->get_joints();
-	arm->set_joints(j);
-
 	VectorZ z;
-	z.segment<J_DIM>(0) = j;
-	z.segment<3>(J_DIM) = object; // - cam->get_pose().block<3,1>(0,3);
+	z.segment<J_DIM>(0) = j + r.segment<J_DIM>(0);
 
-	arm->set_joints(j_orig);
+	Matrix4d cam_pose = cam->get_pose(j);
+	Matrix3d cam_rot = cam_pose.block<3,3>(0,0);
+	Vector3d cam_trans = cam_pose.block<3,1>(0,3);
+
+	Vector3d object_cam = cam_rot*object + cam_trans;
+	Vector3d delta_pos = object_cam;
+	z.segment<3>(J_DIM) = object_cam;
+
+	Vector3d sigmas = cam->measurement_standard_deviation(cam_pose, object);
+	z(J_DIM) += r(J_DIM);
+	z(J_DIM+1) += r(J_DIM+1);
+	z(J_DIM+2) += object_cam(2)*object_cam(2)*r(J_DIM+2);
 
 	return z;
 }
@@ -87,26 +90,23 @@ VectorZ PR2EihSystem::obsfunc(const VectorJ& j, const Vector3d& object, const Ve
  */
 MatrixZ PR2EihSystem::delta_matrix(const VectorJ& j, const Vector3d& object, const double alpha,
 		const std::vector<geometry3d::Triangle>& obstacles) {
-	VectorJ j_orig = arm->get_joints();
-	arm->set_joints(j);
-
 	MatrixZ delta = MatrixZ::Identity();
 
 	for(int i=0; i < J_DIM; ++i) {
 		delta(i,i) = 1; // always observe joints
 	}
 
-	std::vector<geometry3d::Pyramid> truncated_frustum = cam->truncated_view_frustum(obstacles, false);
+	Matrix4d cam_pose = cam->get_pose(j);
+	std::vector<geometry3d::TruncatedPyramid> truncated_frustum = cam->truncated_view_frustum(cam_pose, obstacles, false);
 	double sd = cam->signed_distance(object, truncated_frustum);
 
-	double error = cam->radial_distance_error(object);
+	double error = cam->radial_distance_error(cam_pose, object);
+//	double error = 0;
 
 	double sd_sigmoid = 1.0 - 1.0/(1.0 + exp(-alpha*(sd+error)));
 	for(int i=J_DIM; i < Z_DIM; ++i) {
 		delta(i,i) = sd_sigmoid;
 	}
-
-	arm->set_joints(j_orig);
 
 	return delta;
 }
@@ -126,10 +126,11 @@ void PR2EihSystem::belief_dynamics(const VectorX& x_t, const MatrixX& sigma_t, c
 
 	// propagate belief through observation
 	Matrix<double,Z_DIM,X_DIM> H;
-	linearize_obsfunc(x_tp1, VectorR::Zero(), H);
+	Matrix<double,Z_DIM,R_DIM> N;
+	linearize_obsfunc(x_tp1, VectorR::Zero(), H, N);
 
 	MatrixZ delta = delta_matrix(x_tp1.segment<J_DIM>(0), x_tp1.segment<3>(J_DIM), alpha, obstacles);
-	Matrix<double,X_DIM,Z_DIM> K = sigma_tp1_bar*H.transpose()*delta*(delta*H*sigma_tp1_bar*H.transpose()*delta + R).inverse()*delta;
+	Matrix<double,X_DIM,Z_DIM> K = sigma_tp1_bar*H.transpose()*delta*(delta*H*sigma_tp1_bar*H.transpose()*delta + N*R*N.transpose()).inverse()*delta;
 	sigma_tp1 = (MatrixX::Identity() - K*H)*sigma_tp1_bar;
 }
 
@@ -145,8 +146,7 @@ void PR2EihSystem::execute_control_step(const VectorJ& j_t_real, const VectorJ& 
 	// max-likelihood dynfunc estimate
 	j_tp1 = dynfunc(j_t, u_t, VectorQ::Zero(), true);
 
-	arm->set_joints(j_tp1_real);
-	std::vector<geometry3d::Pyramid> truncated_frustum = cam->truncated_view_frustum(obstacles, true);
+	std::vector<geometry3d::TruncatedPyramid> truncated_frustum = cam->truncated_view_frustum(cam->get_pose(j_tp1_real), obstacles, true);
 
 	obj_gaussians_tp1.clear();
 	for(const Gaussian3d& obj_gaussian_t : obj_gaussians_t) {
@@ -171,7 +171,7 @@ double PR2EihSystem::cost(const StdVectorJ& J, const MatrixJ& j_sigma0, const St
 			x_t << J[t], obj_gaussian.mean;
 			belief_dynamics(x_t, sigma_t, U[t], alpha, obstacles, x_tp1, sigma_tp1);
 
-			cost += (U[t].transpose()*N).dot(U[t]);
+			cost += alpha_control*U[t].squaredNorm();
 
 			// TODO: only penalize object?
 			if (t < TIMESTEPS-2) {
@@ -224,8 +224,8 @@ VectorTOTAL PR2EihSystem::cost_grad(StdVectorJ& J, const MatrixJ& j_sigma0, StdV
 
 VectorP PR2EihSystem::update_particle_weights(const VectorJ& j_tp1, const MatrixP& P_t, const VectorP& W_t,
 		const std::vector<geometry3d::Triangle>& obstacles, bool add_radial_error) {
-	arm->set_joints(j_tp1);
-	std::vector<geometry3d::Pyramid> truncated_frustum = cam->truncated_view_frustum(obstacles, true);
+	Matrix4d cam_pose = cam->get_pose(j_tp1);
+	std::vector<geometry3d::TruncatedPyramid> truncated_frustum = cam->truncated_view_frustum(cam_pose, obstacles, true);
 
 	VectorP W_tp1;
 	// for each particle, weight by sigmoid of signed distance
@@ -233,7 +233,7 @@ VectorP PR2EihSystem::update_particle_weights(const VectorJ& j_tp1, const Matrix
 		double sd = cam->signed_distance(P_t.col(m), truncated_frustum);
 
 		if (add_radial_error) {
-			sd += cam->radial_distance_error(P_t.col(m));
+			sd += cam->radial_distance_error(cam_pose, P_t.col(m));
 		}
 
 		double sigmoid_sd = 1.0/(1.0 + exp(-alpha_particle_sd*sd));
@@ -288,7 +288,6 @@ double PR2EihSystem::entropy(const StdVectorJ& J, const StdVectorU& U, const Mat
 //		W_t = (1/double(M_DIM))*VectorP::Ones();
 //		P_t = P_tp1;
 	}
-	arm->set_joints(J[0]);
 
 	return entropy;
 }
@@ -354,11 +353,10 @@ void PR2EihSystem::plot(const StdVectorJ& J, const std::vector<Gaussian3d>& obj_
 		}
 	}
 
-	arm->set_joints(J.back());
 //	cam->plot({1,0,0});
-	std::vector<geometry3d::Pyramid> truncated_frustum = cam->truncated_view_frustum(obstacles, false);
-	for(const geometry3d::Pyramid& pyramid : truncated_frustum) {
-		pyramid.plot(*sim, "base_link", {1,0,0}, true, true, 0.15);
+	std::vector<geometry3d::TruncatedPyramid> truncated_frustum = cam->truncated_view_frustum(cam->get_pose(J.back()), obstacles, false);
+	for(const geometry3d::TruncatedPyramid& pyramid : truncated_frustum) {
+		pyramid.plot(*sim, "base_link", {1,0,0}, true, true, 0.05);
 	}
 
 	arm->set_joints(J[0]);
@@ -387,10 +385,9 @@ void PR2EihSystem::plot(const StdVectorJ& J, const MatrixP& P,
 		sim->plot_point(sim->transform_from_to(particle, "base_link", "world"), {0,1,0}, .005);
 	}
 
-	arm->set_joints(J.back());
 //	cam->plot({1,0,0});
-	std::vector<geometry3d::Pyramid> truncated_frustum = cam->truncated_view_frustum(obstacles, true);
-	for(const geometry3d::Pyramid& pyramid : truncated_frustum) {
+	std::vector<geometry3d::TruncatedPyramid> truncated_frustum = cam->truncated_view_frustum(cam->get_pose(J.back()), obstacles, true);
+	for(const geometry3d::TruncatedPyramid& pyramid : truncated_frustum) {
 		pyramid.plot(*sim, "base_link", {1,0,0}, true, true, 0.15);
 	}
 
@@ -437,17 +434,26 @@ void PR2EihSystem::linearize_dynfunc(const VectorX& x, const VectorU& u, const V
 }
 
 void PR2EihSystem::linearize_obsfunc(const VectorX& x, const VectorR& r,
-		Matrix<double,Z_DIM,X_DIM>& H) {
-	H = Matrix<double,Z_DIM,X_DIM>::Identity();
+		Matrix<double,Z_DIM,X_DIM>& H, Matrix<double,Z_DIM,R_DIM>& N) {
+//	H = Matrix<double,Z_DIM,X_DIM>::Identity();
 
-//	H.setZero();
-//	VectorX x_p = x, x_m = x;
-//	for(int i=0; i < X_DIM; ++i) {
-//		x_p(i) += step; x_m(i) -= step;
-//		H.block<Z_DIM,1>(0, i) = (obsfunc(x_p.segment<J_DIM>(0), x_p.segment<3>(J_DIM), r) -
-//				obsfunc(x_m.segment<J_DIM>(0), x_m.segment<3>(J_DIM), r)) / (2*step);
-//		x_p(i) = x(i); x_m(i) = x(i);
-//	}
+	H.setZero();
+	VectorX x_p = x, x_m = x;
+	for(int i=0; i < X_DIM; ++i) {
+		x_p(i) += step; x_m(i) -= step;
+		H.block<Z_DIM,1>(0, i) = (obsfunc(x_p.segment<J_DIM>(0), x_p.segment<3>(J_DIM), r) -
+				obsfunc(x_m.segment<J_DIM>(0), x_m.segment<3>(J_DIM), r)) / (2*step);
+		x_p(i) = x(i); x_m(i) = x(i);
+	}
+
+	N.setZero();
+	VectorR r_p = r, r_m = r;
+	for(int i=0; i < R_DIM; ++i) {
+		r_p(i) += step; r_m(i) -= step;
+		N.block<Z_DIM,1>(0, i) = (obsfunc(x.segment<J_DIM>(0), x.segment<3>(J_DIM), r_p) -
+				obsfunc(x.segment<J_DIM>(0), x.segment<3>(J_DIM), r_m)) / (2*step);
+		r_p(i) = r(i); r_m(i) = r(i);
+	}
 }
 
 double PR2EihSystem::gauss_likelihood(const Vector3d& v, const Matrix3d& S) {

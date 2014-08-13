@@ -70,9 +70,9 @@ public:
 class PR2EihSystem {
 	const double step = 0.0078125*0.0078125;
 
-	const double alpha_control = .5; // 10
-	const double alpha_belief = 1e5; // 1e5
-	const double alpha_final_belief = 1e5; // 1e5
+	const double alpha_control = 1e-4; // .5
+	const double alpha_belief = 100; // 100
+	const double alpha_final_belief = 100; // 100
 
 	const double alpha_particle_sd = 1e3; // 100
 
@@ -119,12 +119,11 @@ private:
 	VectorJ j_min, j_max, u_min, u_max;
 	MatrixQ Q;
 	MatrixR R;
-	MatrixU N; // weight quadratic U in cost function
 
 	void linearize_dynfunc(const VectorX& x, const VectorU& u, const VectorQ& q,
 			Matrix<double,X_DIM,X_DIM>& A, Matrix<double,X_DIM,Q_DIM>& M);
 	void linearize_obsfunc(const VectorX& x, const VectorR& r,
-			Matrix<double,Z_DIM,X_DIM>& H);
+			Matrix<double,Z_DIM,X_DIM>& H, Matrix<double,Z_DIM,R_DIM>& N);
 
 	double gauss_likelihood(const Vector3d& v, const Matrix3d& S);
 };

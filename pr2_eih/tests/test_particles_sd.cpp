@@ -7,7 +7,7 @@ double cost(const VectorJ& j, const VectorU& u, const std::vector<Gaussian3d>& o
 	VectorJ j_tp1 = sys.dynfunc(j, u, VectorQ::Zero());
 	arm.set_joints(j_tp1);
 
-	std::vector<geometry3d::Pyramid> truncated_frustum = cam.truncated_view_frustum(obstacles, false);
+	std::vector<geometry3d::TruncatedPyramid> truncated_frustum = cam.truncated_view_frustum(obstacles, false);
 	for(const Gaussian3d& obj_gaussian : obj_gaussians) {
 		const MatrixP& particles = obj_gaussian.particles;
 		for(int m=0; m < M_DIM; ++m) {
@@ -64,7 +64,7 @@ void init_obstacles_and_objects(pr2_sim::Camera& cam,
 				cam_rot*obstacle_cam.c+cam_pos));
 	}
 
-	std::vector<geometry3d::Pyramid> truncated_frustum = cam.truncated_view_frustum(obstacles, true);
+	std::vector<geometry3d::TruncatedPyramid> truncated_frustum = cam.truncated_view_frustum(obstacles, true);
 	obj_gaussians.clear();
 	for(int i=0; i < obstacles_cam.size(); i+=2) {
 		geometry3d::Triangle& obstacle_cam = obstacles_cam[i];

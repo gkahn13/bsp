@@ -8,7 +8,7 @@ if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
   add_definitions("-fno-strict-aliasing -Wall -Wno-sign-compare -Wno-enum-compare -Wno-reorder -std=c++11")
 endif( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
 
-find_package(catkin REQUIRED COMPONENTS pr2_utils roscpp)
+find_package(catkin REQUIRED COMPONENTS pr2_utils roscpp pcl_utils actionlib)
 find_package(OpenRAVE REQUIRED)
 find_package(Boost ${OpenRAVE_Boost_VERSION} EXACT COMPONENTS system program_options)
 find_package(Eigen)
@@ -22,12 +22,17 @@ include_directories(${catkin_INCLUDE_DIRS} ${CMAKE_CURRENT_SOURCE_DIR}
 
 link_directories(${catkin_LIBRARY_DIRS} ${OpenRAVE_LIBRARY_DIRS} ${Boost_LIBRARY_DIRS})
 
-add_executable(pr2-eih  pr2_eih.cpp system/pr2_eih_system.cpp pr2eihMPC.c ../util/logging.cpp)
-set_target_properties(pr2-eih PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
-set_target_properties(pr2-eih PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
-target_link_libraries(pr2-eih ${catkin_LIBRARIES} ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES} ${Boost_LIBRARIES})
+add_executable(pr2-eih-sim  pr2_eih_sim.cpp system/pr2_eih_system.cpp mpc/pr2eihMPC.c ../util/logging.cpp)
+set_target_properties(pr2-eih-sim PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
+set_target_properties(pr2-eih-sim PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
+target_link_libraries(pr2-eih-sim ${catkin_LIBRARIES} ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES} ${Boost_LIBRARIES})
 
-add_executable(pr2-eih-entropy  pr2_eih_entropy.cpp system/pr2_eih_system.cpp pr2eihMPC.c ../util/logging.cpp)
+add_executable(pr2-eih-brett  pr2_eih_brett.cpp system/pr2_eih_system.cpp mpc/pr2eihMPC.c ../util/logging.cpp)
+set_target_properties(pr2-eih-brett PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
+set_target_properties(pr2-eih-brett PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
+target_link_libraries(pr2-eih-brett ${catkin_LIBRARIES} ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES} ${Boost_LIBRARIES})
+
+add_executable(pr2-eih-entropy  pr2_eih_entropy.cpp system/pr2_eih_system.cpp mpc/pr2eihMPC.c ../util/logging.cpp)
 set_target_properties(pr2-eih-entropy PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
 set_target_properties(pr2-eih-entropy PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 target_link_libraries(pr2-eih-entropy ${catkin_LIBRARIES} ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES} ${Boost_LIBRARIES})

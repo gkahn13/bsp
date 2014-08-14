@@ -4,6 +4,8 @@
 #include "pr2_utils/pr2/arm.h"
 #include "pcl_utils/OccludedRegionArray.h"
 
+#include <geometry_msgs/PoseArray.h>
+
 const int T = TIMESTEPS;
 
 class PR2EihBrett {
@@ -15,12 +17,14 @@ public:
 	void initialize_trajectory(StdVectorJ& J, StdVectorU& U, const std::vector<Gaussian3d>& obj_gaussians);
 	void bsp(StdVectorJ& J, StdVectorU& U, const MatrixJ& j_sigma0,
 			const std::vector<Gaussian3d>& obj_gaussians, const std::vector<geometry3d::Triangle>& obstacles);
+	void display_trajectory(const StdVectorJ& J);
 	void execute_controls(const StdVectorU& U);
 
 private:
 	// ros
 	ros::NodeHandle *nh_ptr;
 	ros::Subscriber occluded_region_array_sub;
+	ros::Publisher display_trajectory_pub;
 
 	bool received_occluded_region_array;
 	pcl_utils::OccludedRegionArray current_occluded_region_array;
@@ -53,6 +57,7 @@ PR2EihBrett::PR2EihBrett() {
 	occluded_region_array_sub =
 			nh_ptr->subscribe("/kinfu/occluded_region_array", 1, &PR2EihBrett::_occluded_region_array_callback, this);
 	received_occluded_region_array = false;
+	display_trajectory_pub = nh_ptr->advertise<geometry_msgs::PoseArray>("bsp_trajectory", 1);
 }
 
 void PR2EihBrett::get_occluded_regions(std::vector<Gaussian3d>& obj_gaussians,
@@ -127,6 +132,28 @@ void PR2EihBrett::bsp(StdVectorJ& J, StdVectorU& U, const MatrixJ& j_sigma0,
 	}
 }
 
+void PR2EihBrett::display_trajectory(const StdVectorJ& J) {
+	geometry_msgs::PoseArray pose_array;
+	pose_array.poses.resize(T);
+	for(int t=0; t < T; ++t) {
+		Matrix4d pose = arm_sim->fk(J[t]);
+		pose_array.poses[t].position.x = pose(0,3);
+		pose_array.poses[t].position.y = pose(1,3);
+		pose_array.poses[t].position.z = pose(1,3);
+
+		Quaterniond quat(pose.block<3,3>(0,0));
+		pose_array.poses[t].orientation.w = quat.w();
+		pose_array.poses[t].orientation.x = quat.x();
+		pose_array.poses[t].orientation.y = quat.y();
+		pose_array.poses[t].orientation.z = quat.z();
+	}
+
+	pose_array.header.frame_id = "base_link";
+	pose_array.header.stamp = ros::Time::now();
+
+	display_trajectory_pub.publish(pose_array);
+}
+
 void PR2EihBrett::execute_controls(const StdVectorU& U) {
 	VectorJ current_joints = arm->get_joints();
 
@@ -139,6 +166,7 @@ void PR2EihBrett::execute_controls(const StdVectorU& U) {
 	arm->execute_joint_trajectory(joint_traj);
 }
 
+
 void PR2EihBrett::_occluded_region_array_callback(const pcl_utils::OccludedRegionArrayConstPtr& msg) {
 	current_occluded_region_array = *msg;
 	received_occluded_region_array = true;
@@ -146,7 +174,7 @@ void PR2EihBrett::_occluded_region_array_callback(const pcl_utils::OccludedRegio
 
 int main(int argc, char* argv[]) {
 	// initialize ros node
-	ros::init(argc, argv, "robot_driver");
+	ros::init(argc, argv, "pr2_eih_brett");
 	log4cxx::LoggerPtr my_logger = log4cxx::Logger::getLogger(ROSCONSOLE_DEFAULT_NAME);
 	my_logger->setLevel(ros::console::g_level_lookup[ros::console::levels::Info]);
 
@@ -168,6 +196,9 @@ int main(int argc, char* argv[]) {
 
 		ROS_INFO("Optimizing trajectory with bsp");
 		brett_bsp.bsp(J, U, j_sigma0, obj_gaussians, obstacles);
+
+		ROS_INFO("Displaying bsp trajectory");
+		brett_bsp.display_trajectory(J);
 
 		ROS_INFO("Executing first control");
 		brett_bsp.execute_controls(StdVectorU(1, U[0]));

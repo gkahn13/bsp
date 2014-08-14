@@ -27,7 +27,8 @@ PR2EihSystem::PR2EihSystem(pr2_sim::Simulator *s, pr2_sim::Arm *a, pr2_sim::Came
 	Q = 1e-2*MatrixQ::Identity();
 	VectorR R_diag;
 //	R_diag << (M_PI/4)*VectorJ::Ones(), 5*Vector3d::Ones();
-	R_diag << 1e-2*VectorJ::Ones(), 1e-2, 1e-2, 1; // 1e-2
+//	R_diag << 1e-2*VectorJ::Ones(), 1e-2, 1e-2, 1;
+	R_diag << 1e-2*VectorJ::Ones(), 1, 1, 1;
 	R = R_diag.asDiagonal();
 
 	arm->set_posture(pr2_sim::Arm::Posture::mantis);
@@ -69,17 +70,22 @@ VectorZ PR2EihSystem::obsfunc(const VectorJ& j, const Vector3d& object, const Ve
 	z.segment<J_DIM>(0) = j + r.segment<J_DIM>(0);
 
 	Matrix4d cam_pose = cam->get_pose(j);
-	Matrix3d cam_rot = cam_pose.block<3,3>(0,0);
-	Vector3d cam_trans = cam_pose.block<3,1>(0,3);
 
-	Vector3d object_cam = cam_rot*object + cam_trans;
-	Vector3d delta_pos = object_cam;
-	z.segment<3>(J_DIM) = object_cam;
+//	Matrix4d cam_pose_inv = cam_pose.inverse();
+//	Matrix3d cam_rot_inv = cam_pose_inv.block<3,3>(0,0);
+//	Vector3d cam_trans_inv = cam_pose_inv.block<3,1>(0,3);
+//
+//	Vector3d object_cam = cam_rot_inv*object + cam_trans_inv;
+//	z.segment<3>(J_DIM) = object_cam;
+//
+//	z(J_DIM) += r(J_DIM);
+//	z(J_DIM+1) += r(J_DIM+1);
+//	z(J_DIM+2) += object_cam(2)*object_cam(2)*r(J_DIM+2); // TODO: VERY important optimization parameter
 
 	Vector3d sigmas = cam->measurement_standard_deviation(cam_pose, object);
-	z(J_DIM) += r(J_DIM);
-	z(J_DIM+1) += r(J_DIM+1);
-	z(J_DIM+2) += object_cam(2)*object_cam(2)*r(J_DIM+2); // TODO: VERY important optimization parameter
+	z(J_DIM) += sigmas(0)*r(J_DIM);
+	z(J_DIM+1) += sigmas(1)*r(J_DIM+1);
+	z(J_DIM+2) += sigmas(2)*r(J_DIM+2);
 
 	return z;
 }

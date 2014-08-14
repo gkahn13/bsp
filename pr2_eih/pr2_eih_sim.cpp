@@ -1,4 +1,3 @@
-//#include "pr2_eih_sqp.h"
 #include "sqp/pr2_eih_sqp.h"
 #include "../util/logging.h"
 
@@ -183,11 +182,11 @@ int main(int argc, char* argv[]) {
 		LOG_INFO("Initial cost: %4.5f", initial_cost);
 
 		LOG_INFO("Current state");
-		sys.plot(StdVectorJ(1, J[0]), obj_gaussians_t, obstacles);
+		sys.plot(J, obj_gaussians_t, obstacles);
 
 		// optimize
 		util::Timer_tic(&forces_timer);
-		double cost = pr2_eih_bsp.collocation(J, U, j_sigma0_t, obj_gaussians_t, obstacles, sys);
+		double cost = pr2_eih_bsp.collocation(J, U, j_sigma0_t, obj_gaussians_t, obstacles, sys, true);
 		double forces_time = util::Timer_toc(&forces_timer);
 
 		LOG_INFO("Optimized cost: %4.5f", cost);

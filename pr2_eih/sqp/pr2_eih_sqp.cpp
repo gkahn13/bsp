@@ -29,7 +29,7 @@ double PR2EihSqp::collocation(StdVectorJ& J, StdVectorU& U, const MatrixJ& j_sig
 
 	for(int num_alpha_increases=0; num_alpha_increases < cfg::alpha_max_increases; ++num_alpha_increases) {
 		LOG_DEBUG("Calling approximate collocation with alpha = %4.2f", alpha);
-		cost = approximate_collocation(J, U, j_sigma0, obj_gaussians, alpha, obstacles, sys);
+		cost = approximate_collocation(J, U, j_sigma0, obj_gaussians, alpha, obstacles, sys, plot);
 
 		LOG_DEBUG("Reintegrating trajectory");
 		for(int t=0; t < T-1; ++t) {
@@ -339,6 +339,11 @@ double PR2EihSqp::approximate_collocation(StdVectorJ& J, StdVectorU& U, const Ma
 					index++;
 				}
 			}
+		}
+
+		for(int i=0; i < J_DIM; ++i) {
+			c[i] = std::max(c[i], lb[0][i]+epsilon);
+			c[i] = std::min(c[i], ub[0][i]-epsilon);
 		}
 
 //		print_inputs();

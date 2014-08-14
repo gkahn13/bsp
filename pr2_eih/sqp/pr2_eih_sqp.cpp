@@ -1,35 +1,69 @@
-#include "system/pr2_eih_system.h"
-#include "../util/logging.h"
-#include "../util/Timer.h"
+#include "pr2_eih_sqp.h"
 
-#include <stdio.h>
+namespace pr2_eih_sqp {
 
-#include <boost/preprocessor/iteration/local.hpp>
-
-extern "C" {
-#include "mpc/pr2eihMPC.h"
+/**
+ *
+ * Constructors/destructors
+ *
+ */
+PR2EihSqp::PR2EihSqp() {
+	setup_mpc_vars();
 }
 
-pr2eihMPC_FLOAT **H, **f, **lb, **ub, **z, *c;
-
-const int T = TIMESTEPS;
-
-namespace cfg {
-const double alpha_init = 1; // 1
-const double alpha_gain = 3; // 3
-const double alpha_epsilon = .1; // .1
-const double alpha_max_increases = 5; // 5
-
-const double Xeps_initial = .5; // .1
-const double Ueps_initial = .5; // .1
-const double improve_ratio_threshold = .5; // .5
-const double min_approx_improve = 1e-1; // 1e-1
-const double min_trust_box_size = 1e-2; // 1e-2
-const double trust_shrink_ratio = .5; // .5
-const double trust_expand_ratio = 2; // 2
+PR2EihSqp::~PR2EihSqp() {
+	cleanup_mpc_vars();
 }
 
-void setup_mpc_vars(pr2eihMPC_params& problem, pr2eihMPC_output& output) {
+/**
+ *
+ * Public methods
+ *
+ */
+
+double PR2EihSqp::collocation(StdVectorJ& J, StdVectorU& U, const MatrixJ& j_sigma0,
+		const std::vector<Gaussian3d>& obj_gaussians,
+		const std::vector<geometry3d::Triangle>& obstacles, PR2EihSystem& sys, bool plot) {
+	double alpha = cfg::alpha_init;
+	double cost = INFINITY;
+
+	for(int num_alpha_increases=0; num_alpha_increases < cfg::alpha_max_increases; ++num_alpha_increases) {
+		LOG_DEBUG("Calling approximate collocation with alpha = %4.2f", alpha);
+		cost = approximate_collocation(J, U, j_sigma0, obj_gaussians, alpha, obstacles, sys);
+
+		LOG_DEBUG("Reintegrating trajectory");
+		for(int t=0; t < T-1; ++t) {
+			J[t+1] = sys.dynfunc(J[t], U[t], VectorQ::Zero());
+		}
+
+		double max_delta_diff = -INFINITY;
+		for(int t=0; t < T; ++t) {
+			double delta_alpha = sys.delta_matrix(J[t], obj_gaussians[0].mean, alpha, obstacles)(J_DIM,J_DIM);
+			double delta_inf = sys.delta_matrix(J[t], obj_gaussians[0].mean, INFINITY, obstacles)(J_DIM,J_DIM);
+			max_delta_diff = std::max(max_delta_diff, fabs(delta_alpha - delta_inf));
+		}
+
+		LOG_DEBUG(" ");
+		LOG_DEBUG("Max delta difference: %4.2f", max_delta_diff);
+		if (max_delta_diff < cfg::alpha_epsilon) {
+			LOG_DEBUG("Max delta difference < %4.10f, exiting minimize merit", cfg::alpha_epsilon);
+			break;
+		}
+
+		LOG_DEBUG("Increasing alpha by gain %4.5f", cfg::alpha_gain);
+		alpha *= cfg::alpha_gain;
+	}
+
+	return cost;
+}
+
+/**
+ *
+ * Private methods
+ *
+ */
+
+void PR2EihSqp::setup_mpc_vars() {
 	// inputs
 	H = new pr2eihMPC_FLOAT*[T];
 	f = new pr2eihMPC_FLOAT*[T];
@@ -65,10 +99,9 @@ void setup_mpc_vars(pr2eihMPC_params& problem, pr2eihMPC_output& output) {
 	for(int i=0; i < J_DIM; ++i) { lb[T-1][i] = INFINITY; }
 	for(int i=0; i < J_DIM; ++i) { ub[T-1][i] = INFINITY; }
 	for(int i=0; i < J_DIM; ++i) { z[T-1][i] = INFINITY; }
-
 }
 
-void cleanup_mpc_vars() {
+void PR2EihSqp::cleanup_mpc_vars() {
 	delete[] H;
 	delete[] f;
 	delete[] lb;
@@ -77,62 +110,64 @@ void cleanup_mpc_vars() {
 	delete c;
 }
 
-bool is_valid_inputs()
-{
-//	for(int t = 0; t < T-1; ++t) {
-//		std::cout << "\n\nt: " << t;
-//
-//		if (t == 0) {
-//			std::cout << "\nc[0]: ";
-//			for(int i=0; i < (J_DIM); ++i) {
-//				std::cout << c[i] << " ";
-//			}
-//		}
-//
-//		std::cout << "\nH[" << t << "]: ";
-//		for(int i=0; i < (J_DIM+U_DIM); ++i) {
-//			std::cout << H[t][i] << " ";
-//		}
-//
-//		std::cout << "\nf[" << t << "]: ";
-//		for(int i=0; i < (J_DIM+U_DIM); ++i) {
-//			std::cout << f[t][i] << " ";
-//		}
-//
-//		std::cout << "\nlb[" << t << "]: ";
-//		for(int i=0; i < (J_DIM+U_DIM); ++i) {
-//			std::cout << lb[t][i] << " ";
-//		}
-//
-//		std::cout << "\nub[" << t << "]: ";
-//		for(int i=0; i < (J_DIM+U_DIM); ++i) {
-//			std::cout << ub[t][i] << " ";
-//		}
-//	}
-//	std::cout << "\n\nt: " << T-1;
-//
-//	std::cout << "\nH[" << T-1 << "]: ";
-//	for(int i=0; i < (J_DIM); ++i) {
-//		std::cout << H[T-1][i] << " ";
-//	}
-//
-//	std::cout << "\nf[" << T-1 << "]: ";
-//	for(int i=0; i < (J_DIM); ++i) {
-//		std::cout << f[T-1][i] << " ";
-//	}
-//
-//	std::cout << "\nlb[" << T-1 << "]: ";
-//	for(int i=0; i < (J_DIM); ++i) {
-//		std::cout << lb[T-1][i] << " ";
-//	}
-//
-//	std::cout << "\nub[" << T-1 << "]: ";
-//	for(int i=0; i < (J_DIM); ++i) {
-//		std::cout << ub[T-1][i] << " ";
-//	}
-//
-//	std::cout << "\n\n";
+void PR2EihSqp::print_inputs() const {
+	for(int t = 0; t < T-1; ++t) {
+		std::cout << "\n\nt: " << t;
 
+		if (t == 0) {
+			std::cout << "\nc[0]: ";
+			for(int i=0; i < (J_DIM); ++i) {
+				std::cout << c[i] << " ";
+			}
+		}
+
+		std::cout << "\nH[" << t << "]: ";
+		for(int i=0; i < (J_DIM+U_DIM); ++i) {
+			std::cout << H[t][i] << " ";
+		}
+
+		std::cout << "\nf[" << t << "]: ";
+		for(int i=0; i < (J_DIM+U_DIM); ++i) {
+			std::cout << f[t][i] << " ";
+		}
+
+		std::cout << "\nlb[" << t << "]: ";
+		for(int i=0; i < (J_DIM+U_DIM); ++i) {
+			std::cout << lb[t][i] << " ";
+		}
+
+		std::cout << "\nub[" << t << "]: ";
+		for(int i=0; i < (J_DIM+U_DIM); ++i) {
+			std::cout << ub[t][i] << " ";
+		}
+	}
+	std::cout << "\n\nt: " << T-1;
+
+	std::cout << "\nH[" << T-1 << "]: ";
+	for(int i=0; i < (J_DIM); ++i) {
+		std::cout << H[T-1][i] << " ";
+	}
+
+	std::cout << "\nf[" << T-1 << "]: ";
+	for(int i=0; i < (J_DIM); ++i) {
+		std::cout << f[T-1][i] << " ";
+	}
+
+	std::cout << "\nlb[" << T-1 << "]: ";
+	for(int i=0; i < (J_DIM); ++i) {
+		std::cout << lb[T-1][i] << " ";
+	}
+
+	std::cout << "\nub[" << T-1 << "]: ";
+	for(int i=0; i < (J_DIM); ++i) {
+		std::cout << ub[T-1][i] << " ";
+	}
+
+	std::cout << "\n\n";
+
+}
+
+bool PR2EihSqp::is_valid_inputs() const {
 	for(int i=0; i < (J_DIM); ++i) { if (c[i] > INFINITY/2) { LOG_ERROR("isValid0"); return false; } }
 	for(int i=0; i < (J_DIM); ++i) { if (c[i] < lb[0][i]) { LOG_ERROR("isValid1"); return false; } }
 	for(int i=0; i < (J_DIM); ++i) { if (c[i] > ub[0][i]) { LOG_ERROR("isValid2"); return false; } }
@@ -153,9 +188,9 @@ bool is_valid_inputs()
 	return true;
 }
 
-void L_BFGS(const StdVectorJ& J, const StdVectorU& U, const VectorTOTAL &grad,
+void PR2EihSqp::L_BFGS(const StdVectorJ& J, const StdVectorU& U, const VectorTOTAL &grad,
 		const StdVectorJ &Jopt, const StdVectorU &Uopt, const VectorTOTAL &gradopt,
-		MatrixTOTAL &hess) {
+		MatrixTOTAL &hess) const {
 	VectorTOTAL s = VectorTOTAL::Zero();
 
 	int index = 0;
@@ -184,11 +219,9 @@ void L_BFGS(const StdVectorJ& J, const StdVectorU& U, const VectorTOTAL &grad,
 	hess = hess - (hess_s*hess_s.transpose())/(s.dot(hess_s)) + (r*r.transpose())/s.dot(r);
 }
 
-double pr2_eih_approximate_collocation(StdVectorJ& J, StdVectorU& U, const MatrixJ& j_sigma0,
+double PR2EihSqp::approximate_collocation(StdVectorJ& J, StdVectorU& U, const MatrixJ& j_sigma0,
 		const std::vector<Gaussian3d>& obj_gaussians, const double alpha,
-		const std::vector<geometry3d::Triangle>& obstacles, PR2EihSystem& sys,
-		pr2eihMPC_params &problem, pr2eihMPC_output &output, pr2eihMPC_info &info) {
-	int max_iter = 100;
+		const std::vector<geometry3d::Triangle>& obstacles, PR2EihSystem& sys, bool plot) {
 	double Xeps = cfg::Xeps_initial;
 	double Ueps = cfg::Ueps_initial;
 
@@ -207,7 +240,7 @@ double pr2_eih_approximate_collocation(StdVectorJ& J, StdVectorU& U, const Matri
 
 	int index = 0;
 	bool solution_accepted = true;
-	for(int it=0; it < max_iter; ++it) {
+	for(int it=0; it < cfg::max_iters; ++it) {
 
 		LOG_DEBUG(" ");
 		LOG_DEBUG(" ");
@@ -223,8 +256,6 @@ double pr2_eih_approximate_collocation(StdVectorJ& J, StdVectorU& U, const Matri
 				merit = meritopt; // since L-BFGS calculation required it
 				grad = gradopt;
 			}
-
-//			std::cout << "gradient:\n" << grad << "\n";
 
 			VectorTOTAL diaghess = hess.diagonal();
 
@@ -310,6 +341,7 @@ double pr2_eih_approximate_collocation(StdVectorJ& J, StdVectorU& U, const Matri
 			}
 		}
 
+//		print_inputs();
 		// Verify problem inputs
 		if (!is_valid_inputs()) {
 			LOG_ERROR("Inputs are not valid!");
@@ -355,8 +387,10 @@ double pr2_eih_approximate_collocation(StdVectorJ& J, StdVectorU& U, const Matri
 		LOG_DEBUG("exact_merit_improve: %f", exact_merit_improve);
 		LOG_DEBUG("merit_improve_ratio: %f", merit_improve_ratio);
 
-		LOG_INFO("Plotting Jopt");
-		sys.plot(Jopt, obj_gaussians, obstacles, false);
+		if (plot) {
+			LOG_INFO("Plotting Jopt");
+			sys.plot(Jopt, obj_gaussians, obstacles, false);
+		}
 
 		if (approx_merit_improve < -1) {
 			LOG_ERROR("Approximate merit function got worse: %f", approx_merit_improve);
@@ -401,39 +435,5 @@ double pr2_eih_approximate_collocation(StdVectorJ& J, StdVectorU& U, const Matri
 	return sys.cost(J, j_sigma0, U, obj_gaussians, alpha, obstacles);
 }
 
-double pr2_eih_collocation(StdVectorJ& J, StdVectorU& U, const MatrixJ& j_sigma0,
-			const std::vector<Gaussian3d>& obj_gaussians,
-			const std::vector<geometry3d::Triangle>& obstacles, PR2EihSystem& sys,
-			pr2eihMPC_params &problem, pr2eihMPC_output &output, pr2eihMPC_info &info) {
-	double alpha = cfg::alpha_init;
-	double cost = INFINITY;
 
-	for(int num_alpha_increases=0; num_alpha_increases < cfg::alpha_max_increases; ++num_alpha_increases) {
-		LOG_DEBUG("Calling approximate collocation with alpha = %4.2f", alpha);
-		cost = pr2_eih_approximate_collocation(J, U, j_sigma0, obj_gaussians, alpha, obstacles, sys, problem, output, info);
-
-		LOG_DEBUG("Reintegrating trajectory");
-		for(int t=0; t < T-1; ++t) {
-			J[t+1] = sys.dynfunc(J[t], U[t], VectorQ::Zero());
-		}
-
-		double max_delta_diff = -INFINITY;
-		for(int t=0; t < T; ++t) {
-			double delta_alpha = sys.delta_matrix(J[t], obj_gaussians[0].mean, alpha, obstacles)(J_DIM,J_DIM);
-			double delta_inf = sys.delta_matrix(J[t], obj_gaussians[0].mean, INFINITY, obstacles)(J_DIM,J_DIM);
-			max_delta_diff = std::max(max_delta_diff, fabs(delta_alpha - delta_inf));
-		}
-
-		LOG_DEBUG(" ");
-		LOG_DEBUG("Max delta difference: %4.2f", max_delta_diff);
-		if (max_delta_diff < cfg::alpha_epsilon) {
-			LOG_DEBUG("Max delta difference < %4.10f, exiting minimize merit", cfg::alpha_epsilon);
-			break;
-		}
-
-		LOG_DEBUG("Increasing alpha by gain %4.5f", cfg::alpha_gain);
-		alpha *= cfg::alpha_gain;
-	}
-
-	return cost;
 }

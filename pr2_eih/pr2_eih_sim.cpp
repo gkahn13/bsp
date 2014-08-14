@@ -1,5 +1,8 @@
-#include "pr2_eih_sqp.h"
+//#include "pr2_eih_sqp.h"
+#include "sqp/pr2_eih_sqp.h"
 #include "../util/logging.h"
+
+const int T = TIMESTEPS;
 
 inline double uniform(double low, double high) {
 	return (high - low)*(rand() / double(RAND_MAX)) + low;
@@ -169,12 +172,8 @@ int main(int argc, char* argv[]) {
 	StdVectorU U(T-1, VectorU::Zero());
 	StdVectorJ J(T, j_t);
 
-	// initialize FORCES
-	pr2eihMPC_params problem;
-	pr2eihMPC_output output;
-	pr2eihMPC_info info;
+	pr2_eih_sqp::PR2EihSqp pr2_eih_bsp;
 
-	setup_mpc_vars(problem, output);
 	util::Timer forces_timer;
 
 	while(true) {
@@ -188,7 +187,7 @@ int main(int argc, char* argv[]) {
 
 		// optimize
 		util::Timer_tic(&forces_timer);
-		double cost = pr2_eih_collocation(J, U, j_sigma0_t, obj_gaussians_t, obstacles, sys, problem, output, info);
+		double cost = pr2_eih_bsp.collocation(J, U, j_sigma0_t, obj_gaussians_t, obstacles, sys);
 		double forces_time = util::Timer_toc(&forces_timer);
 
 		LOG_INFO("Optimized cost: %4.5f", cost);

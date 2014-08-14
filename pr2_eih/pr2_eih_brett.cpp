@@ -1,8 +1,10 @@
-#include "pr2_eih_sqp.h"
+#include "sqp/pr2_eih_sqp.h"
 #include "../util/logging.h"
 
 #include "pr2_utils/pr2/arm.h"
 #include "pcl_utils/OccludedRegionArray.h"
+
+const int T = TIMESTEPS;
 
 class PR2EihBrett {
 public:
@@ -30,10 +32,8 @@ private:
 	PR2EihSystem *sys;
 	pr2::Arm *arm;
 
-	// FORCES
-	pr2eihMPC_params problem;
-	pr2eihMPC_output output;
-	pr2eihMPC_info info;
+	// sqp solver
+	pr2_eih_sqp::PR2EihSqp *pr2_eih_bsp;
 
 	void _occluded_region_array_callback(const pcl_utils::OccludedRegionArrayConstPtr& msg);
 };
@@ -53,9 +53,6 @@ PR2EihBrett::PR2EihBrett() {
 	occluded_region_array_sub =
 			nh_ptr->subscribe("/kinfu/occluded_region_array", 1, &PR2EihBrett::_occluded_region_array_callback, this);
 	received_occluded_region_array = false;
-
-	// setup FORCES
-	setup_mpc_vars(problem, output);
 }
 
 void PR2EihBrett::get_occluded_regions(std::vector<Gaussian3d>& obj_gaussians,
@@ -122,10 +119,10 @@ void PR2EihBrett::initialize_trajectory(StdVectorJ& J, StdVectorU& U, const std:
 void PR2EihBrett::bsp(StdVectorJ& J, StdVectorU& U, const MatrixJ& j_sigma0,
 		const std::vector<Gaussian3d>& obj_gaussians, const std::vector<geometry3d::Triangle>& obstacles) {
 	// plan
-	pr2_eih_collocation(J, U, j_sigma0, obj_gaussians, obstacles, *sys, problem, output, info);
+	pr2_eih_bsp->collocation(J, U, j_sigma0, obj_gaussians, obstacles, *sys);
 
 	// reintegrate, just in case
-	for(int t=0; t < T; ++t) {
+	for(int t=0; t < T-1; ++t) {
 		J[t+1] = sys->dynfunc(J[t], U[t], VectorQ::Zero(), true);
 	}
 }

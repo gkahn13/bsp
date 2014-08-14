@@ -4,16 +4,49 @@
 #include "pr2_utils/pr2/arm.h"
 #include "pcl_utils/OccludedRegionArray.h"
 
+#include <boost/program_options.hpp>
+namespace po = boost::program_options;
+
 #include <geometry_msgs/PoseArray.h>
+#include <std_msgs/Empty.h>
+#include <visualization_msgs/MarkerArray.h>
 
 const int T = TIMESTEPS;
 
+class OccludedRegionCompare {
+public:
+	OccludedRegionCompare() { }
+
+	// assumes a and b are in the camera frame
+	bool operator()(const pcl_utils::OccludedRegion& a, const pcl_utils::OccludedRegion& b) const {
+//		Vector3d a_avg_polygon = Vector3d::Zero();
+//		for(const geometry_msgs::Point32& pt : a.front_face.points) {
+//			a_avg_polygon += Vector3d(pt.x, pt.y, pt.z);
+//		}
+//		a_avg_polygon /= double(a.front_face.points.size());
+//
+//		Vector3d b_avg_polygon = Vector3d::Zero();
+//		for(const geometry_msgs::Point32& pt : b.front_face.points) {
+//			b_avg_polygon += Vector3d(pt.x, pt.y, pt.z);
+//		}
+//		b_avg_polygon /= double(b.front_face.points.size());
+//
+//		return (a_avg_polygon.norm() < b_avg_polygon.norm());
+
+		Vector3d a_gaussian_mean(a.gaussian.mean.x, a.gaussian.mean.y, a.gaussian.mean.z);
+		Vector3d b_gaussian_mean(b.gaussian.mean.x, b.gaussian.mean.y, b.gaussian.mean.z);
+		return (a_gaussian_mean.norm() < b_gaussian_mean.norm());
+	}
+};
+
 class PR2EihBrett {
 public:
-	PR2EihBrett();
+	PR2EihBrett(int max_occluded_regions);
+	PR2EihBrett() : PR2EihBrett(1) { }
 
 	void get_occluded_regions(std::vector<Gaussian3d>& obj_gaussians,
 			std::vector<geometry3d::Triangle>& obstacles);
+	void display_gaussian_means(const std::vector<Gaussian3d>& obj_gaussians);
 	void initialize_trajectory(StdVectorJ& J, StdVectorU& U, const std::vector<Gaussian3d>& obj_gaussians);
 	void bsp(StdVectorJ& J, StdVectorU& U, const MatrixJ& j_sigma0,
 			const std::vector<Gaussian3d>& obj_gaussians, const std::vector<geometry3d::Triangle>& obstacles);
@@ -24,10 +57,12 @@ private:
 	// ros
 	ros::NodeHandle *nh_ptr;
 	ros::Subscriber occluded_region_array_sub;
-	ros::Publisher display_trajectory_pub;
+	ros::Publisher display_trajectory_pub, get_occluded_pub, display_gaussian_pub;
 
 	bool received_occluded_region_array;
 	pcl_utils::OccludedRegionArray current_occluded_region_array;
+	int max_occluded_regions;
+	// get_occluded
 
 	// pr2_utils
 	pr2_sim::Simulator *sim;
@@ -37,27 +72,34 @@ private:
 	pr2::Arm *arm;
 
 	// sqp solver
-	pr2_eih_sqp::PR2EihSqp *pr2_eih_bsp;
+	pr2_eih_sqp::PR2EihSqp pr2_eih_bsp;
 
 	void _occluded_region_array_callback(const pcl_utils::OccludedRegionArrayConstPtr& msg);
 };
 
-PR2EihBrett::PR2EihBrett() {
+PR2EihBrett::PR2EihBrett(int max_occluded_regions) : max_occluded_regions(max_occluded_regions) {
 	// setup system
-	sim = new pr2_sim::Simulator(true, false);
+	ROS_INFO("Setting up simulated system");
+	sim = new pr2_sim::Simulator(true, true);
 	arm_sim = new pr2_sim::Arm(pr2_sim::Arm::right, sim);
 	cam_sim = new pr2_sim::Camera(arm_sim, sim);
 	sys = new PR2EihSystem(sim, arm_sim, cam_sim);
 
 	// setup actual arm
+	ROS_INFO("Setting up actual arm");
 	arm = new pr2::Arm(pr2::Arm::ArmType::right);
 
 	// subscribe to OccludedRegionArray topic
+	ROS_INFO("Creating publishers/subscribers");
 	nh_ptr = new ros::NodeHandle();
 	occluded_region_array_sub =
-			nh_ptr->subscribe("/kinfu/occluded_region_array", 1, &PR2EihBrett::_occluded_region_array_callback, this);
+			nh_ptr->subscribe("/kinfu/occluded_regions", 1, &PR2EihBrett::_occluded_region_array_callback, this);
 	received_occluded_region_array = false;
-	display_trajectory_pub = nh_ptr->advertise<geometry_msgs::PoseArray>("bsp_trajectory", 1);
+	display_gaussian_pub = nh_ptr->advertise<visualization_msgs::MarkerArray>("/bsp_object_means", 1);
+	display_trajectory_pub = nh_ptr->advertise<geometry_msgs::PoseArray>("/bsp_trajectory", 1);
+	get_occluded_pub = nh_ptr->advertise<std_msgs::Empty>("/get_occluded", 1);
+
+	sim->update();
 }
 
 void PR2EihBrett::get_occluded_regions(std::vector<Gaussian3d>& obj_gaussians,
@@ -66,6 +108,7 @@ void PR2EihBrett::get_occluded_regions(std::vector<Gaussian3d>& obj_gaussians,
 	obstacles.clear();
 
 	received_occluded_region_array = false;
+	get_occluded_pub.publish(std_msgs::Empty());
 	ROS_INFO("Waiting for new occluded region...");
 	while (!received_occluded_region_array && !ros::isShuttingDown()) {
 		ros::spinOnce();
@@ -76,8 +119,13 @@ void PR2EihBrett::get_occluded_regions(std::vector<Gaussian3d>& obj_gaussians,
 	Matrix3d cam_rot = cam_pose.block<3,3>(0,0);
 	Vector3d cam_trans = cam_pose.block<3,1>(0,3);
 
-	pcl_utils::OccludedRegionArray occluded_region_array = current_occluded_region_array;
-	for(const pcl_utils::OccludedRegion& occluded_region : occluded_region_array.regions) {
+	std::vector<pcl_utils::OccludedRegion> occluded_regions = current_occluded_region_array.regions;
+	std::sort(occluded_regions.begin(), occluded_regions.end(), OccludedRegionCompare());
+
+	int num_occluded_regions = std::min(max_occluded_regions, int(occluded_regions.size()));
+	ROS_INFO_STREAM("Getting the closest " << num_occluded_regions << " occluded regions");
+	for(int i=0; i < num_occluded_regions; ++i) {
+		const pcl_utils::OccludedRegion& occluded_region = occluded_regions[i];
 		// add occlusions by forming triangles from front face polygon
 		const std::vector<geometry_msgs::Point32>& points = occluded_region.front_face.points;
 		Vector3d first_obstacle_point(points[0].x, points[0].y, points[0].z);
@@ -92,8 +140,40 @@ void PR2EihBrett::get_occluded_regions(std::vector<Gaussian3d>& obj_gaussians,
 		const pcl_utils::Gaussian& gaussian = occluded_region.gaussian;
 		Vector3d mean(gaussian.mean.x, gaussian.mean.y, gaussian.mean.z);
 		Matrix3d cov(gaussian.covariance.data());
-		obj_gaussians.push_back(Gaussian3d(mean, cov));
+		obj_gaussians.push_back(Gaussian3d(cam_rot*mean+cam_trans, cam_rot*cov*cam_rot.transpose()));
+
+		ROS_INFO_STREAM("Gaussian " << i << "\nMean: " << obj_gaussians.back().mean.transpose()
+				<< "\nCovariance:\n" << obj_gaussians.back().cov << "\n");
 	}
+}
+
+void PR2EihBrett::display_gaussian_means(const std::vector<Gaussian3d>& obj_gaussians) {
+	visualization_msgs::MarkerArray marker_array;
+
+	marker_array.markers.resize(obj_gaussians.size());
+	for(int i=0; i < obj_gaussians.size(); ++i) {
+		marker_array.markers[i].header.frame_id = "/base_link";
+		marker_array.markers[i].header.stamp = ros::Time::now();
+		marker_array.markers[i].id = i + 1000;
+		marker_array.markers[i].type = visualization_msgs::Marker::CUBE;
+		marker_array.markers[i].action = visualization_msgs::Marker::ADD;
+		marker_array.markers[i].pose.position.x = obj_gaussians[i].mean(0);
+		marker_array.markers[i].pose.position.y = obj_gaussians[i].mean(1);
+		marker_array.markers[i].pose.position.z = obj_gaussians[i].mean(2);
+		marker_array.markers[i].pose.orientation.x = 0;
+		marker_array.markers[i].pose.orientation.y = 0;
+		marker_array.markers[i].pose.orientation.z = 0;
+		marker_array.markers[i].pose.orientation.w = 1;
+		marker_array.markers[i].scale.x = .02;
+		marker_array.markers[i].scale.y = .02;
+		marker_array.markers[i].scale.z = .02;
+		marker_array.markers[i].color.a = 1;
+		marker_array.markers[i].color.r = 1.0;
+		marker_array.markers[i].color.g = 0.0;
+		marker_array.markers[i].color.b = 1.0;
+	}
+
+	display_gaussian_pub.publish(marker_array);
 }
 
 void PR2EihBrett::initialize_trajectory(StdVectorJ& J, StdVectorU& U, const std::vector<Gaussian3d>& obj_gaussians) {
@@ -123,8 +203,21 @@ void PR2EihBrett::initialize_trajectory(StdVectorJ& J, StdVectorU& U, const std:
 
 void PR2EihBrett::bsp(StdVectorJ& J, StdVectorU& U, const MatrixJ& j_sigma0,
 		const std::vector<Gaussian3d>& obj_gaussians, const std::vector<geometry3d::Triangle>& obstacles) {
+	ROS_INFO("Initial joints:\n");
+	for(int t=0; t < T; ++t) {
+		ROS_INFO_STREAM(J[t].transpose());
+	}
+
+	ROS_INFO("\nInitial inputs:\n");
+	for(int t=0; t < T-1; ++t) {
+		ROS_INFO_STREAM(U[t].transpose());
+	}
+
+	ROS_INFO_STREAM("Number of gaussians: " << obj_gaussians.size());
+	ROS_INFO_STREAM("Number of obstacles: " << obstacles.size());
+
 	// plan
-	pr2_eih_bsp->collocation(J, U, j_sigma0, obj_gaussians, obstacles, *sys);
+	pr2_eih_bsp.collocation(J, U, j_sigma0, obj_gaussians, obstacles, *sys, true);
 
 	// reintegrate, just in case
 	for(int t=0; t < T-1; ++t) {
@@ -137,9 +230,10 @@ void PR2EihBrett::display_trajectory(const StdVectorJ& J) {
 	pose_array.poses.resize(T);
 	for(int t=0; t < T; ++t) {
 		Matrix4d pose = arm_sim->fk(J[t]);
+		Vector3d position = pose.block<3,1>(0,3);
 		pose_array.poses[t].position.x = pose(0,3);
 		pose_array.poses[t].position.y = pose(1,3);
-		pose_array.poses[t].position.z = pose(1,3);
+		pose_array.poses[t].position.z = pose(2,3);
 
 		Quaterniond quat(pose.block<3,3>(0,0));
 		pose_array.poses[t].orientation.w = quat.w();
@@ -148,7 +242,7 @@ void PR2EihBrett::display_trajectory(const StdVectorJ& J) {
 		pose_array.poses[t].orientation.z = quat.z();
 	}
 
-	pose_array.header.frame_id = "base_link";
+	pose_array.header.frame_id = "/base_link";
 	pose_array.header.stamp = ros::Time::now();
 
 	display_trajectory_pub.publish(pose_array);
@@ -172,11 +266,36 @@ void PR2EihBrett::_occluded_region_array_callback(const pcl_utils::OccludedRegio
 	received_occluded_region_array = true;
 }
 
+void parse_args(int argc, char* argv[], int& max_occluded_regions) {
+	// Declare the supported options.
+	po::options_description desc("Allowed options");
+	desc.add_options()
+		("help", "produce help message")
+		("m", po::value<int>(&max_occluded_regions)->default_value(1), "Maximum number of occluded regions during BSP")
+		;
+	try {
+		po::variables_map vm;
+		po::store(po::parse_command_line(argc, argv, desc, po::command_line_style::unix_style ^ po::command_line_style::allow_short), vm);
+		po::notify(vm);
+		if (vm.count("help")) {
+			std::cout << desc << "\n";
+			exit(0);
+		}
+	} catch (std::exception &e) {
+		std::cerr << "error: " << e.what() << "\n";
+		exit(0);
+	}
+}
+
 int main(int argc, char* argv[]) {
 	// initialize ros node
 	ros::init(argc, argv, "pr2_eih_brett");
 	log4cxx::LoggerPtr my_logger = log4cxx::Logger::getLogger(ROSCONSOLE_DEFAULT_NAME);
 	my_logger->setLevel(ros::console::g_level_lookup[ros::console::levels::Info]);
+	ROS_INFO("Starting ROS node");
+
+	int max_occluded_regions;
+	parse_args(argc, argv, max_occluded_regions);
 
 	PR2EihBrett brett_bsp;
 
@@ -188,19 +307,26 @@ int main(int argc, char* argv[]) {
 	StdVectorU U(T-1);
 
 	while(!ros::isShuttingDown()) {
-		ROS_INFO("Getting occluded regions");
+		ROS_INFO("Getting occluded regions, press enter");
+		std::cin.ignore();
 		brett_bsp.get_occluded_regions(obj_gaussians, obstacles);
+		brett_bsp.display_gaussian_means(obj_gaussians);
 
-		ROS_INFO("Initializing trajectory");
+		ROS_INFO("Initializing trajectory, press enter");
+		std::cin.ignore();
 		brett_bsp.initialize_trajectory(J, U, obj_gaussians);
-
-		ROS_INFO("Optimizing trajectory with bsp");
-		brett_bsp.bsp(J, U, j_sigma0, obj_gaussians, obstacles);
-
-		ROS_INFO("Displaying bsp trajectory");
 		brett_bsp.display_trajectory(J);
 
-		ROS_INFO("Executing first control");
+		ROS_INFO("Optimizing trajectory with bsp, press enter");
+		std::cin.ignore();
+		brett_bsp.bsp(J, U, j_sigma0, obj_gaussians, obstacles);
+
+		ROS_INFO("Displaying bsp trajectory, press enter");
+		std::cin.ignore();
+		brett_bsp.display_trajectory(J);
+
+		ROS_INFO("Executing first control, press enter");
+		std::cin.ignore();
 		brett_bsp.execute_controls(StdVectorU(1, U[0]));
 	}
 

@@ -252,6 +252,7 @@ double PR2EihSqp::approximate_collocation(StdVectorJ& J, StdVectorU& U, const Ma
 			if (it == 0) {
 				merit = sys.cost(J, j_sigma0, U, obj_gaussians, alpha, obstacles);
 				grad = sys.cost_grad(J, j_sigma0, U, obj_gaussians, alpha, obstacles);
+				LOG_DEBUG("Finished calculating merit and grad");
 			} else {
 				merit = meritopt; // since L-BFGS calculation required it
 				grad = gradopt;
@@ -263,6 +264,7 @@ double PR2EihSqp::approximate_collocation(StdVectorJ& J, StdVectorU& U, const Ma
 			hessian_constant = 0;
 			jac_constant = 0;
 
+			LOG_DEBUG("Fill in hessian");
 			// fill in Hessian first so we can force it to be PSD
 			index = 0;
 			for(int t=0; t < T-1; ++t) {
@@ -276,6 +278,7 @@ double PR2EihSqp::approximate_collocation(StdVectorJ& J, StdVectorU& U, const Ma
 				H[T-1][i] = (val < 0) ? 0 : val;
 			}
 
+			LOG_DEBUG("Fill in gradient");
 			// fill in gradient
 			index = 0;
 			for(int t=0; t < T-1; ++t) {
@@ -308,6 +311,7 @@ double PR2EihSqp::approximate_collocation(StdVectorJ& J, StdVectorU& U, const Ma
 		}
 
 
+		LOG_DEBUG("Fill in bounds");
 		VectorJ j_min, j_max;
 		VectorU u_min, u_max;
 		sys.get_limits(j_min, j_max, u_min, u_max);

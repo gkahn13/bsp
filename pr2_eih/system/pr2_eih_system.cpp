@@ -281,12 +281,11 @@ MatrixP PR2EihSystem::low_variance_sampler(const MatrixP& P, const VectorP& W) {
 double PR2EihSystem::entropy(const StdVectorJ& J, const StdVectorU& U, const MatrixP& P, const std::vector<geometry3d::Triangle>& obstacles) {
 	double entropy = 0;
 
-	MatrixP P_t = P, P_tp1 = P;
 	VectorP W_t = (1/double(M_DIM))*VectorP::Ones(), W_tp1;
 	for(int t=0; t < TIMESTEPS-1; ++t) {
 		VectorJ j_tp1 = dynfunc(J[t], U[t], VectorQ::Zero());
 
-		W_tp1 = update_particle_weights(j_tp1, P_t, W_t, obstacles, true);
+		W_tp1 = update_particle_weights(j_tp1, P, W_t, obstacles, true);
 
 //		entropy += (-W_tp1.array() * W_tp1.array().log()).sum();
 		for(int m=0; m < M_DIM; ++m) { // safe log
@@ -298,12 +297,6 @@ double PR2EihSystem::entropy(const StdVectorJ& J, const StdVectorU& U, const Mat
 		W_t = W_tp1;
 
 		entropy += alpha_control*U[t].squaredNorm();
-
-//		// TEMP: try resampling
-//		P_tp1 = low_variance_sampler(P_t, W_tp1);
-//
-//		W_t = (1/double(M_DIM))*VectorP::Ones();
-//		P_t = P_tp1;
 	}
 
 	return entropy;

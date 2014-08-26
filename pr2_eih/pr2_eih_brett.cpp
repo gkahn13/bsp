@@ -19,20 +19,6 @@ public:
 
 	// assumes a and b are in the camera frame
 	bool operator()(const pcl_utils::OccludedRegion& a, const pcl_utils::OccludedRegion& b) const {
-//		Vector3d a_avg_polygon = Vector3d::Zero();
-//		for(const geometry_msgs::Point32& pt : a.front_face.points) {
-//			a_avg_polygon += Vector3d(pt.x, pt.y, pt.z);
-//		}
-//		a_avg_polygon /= double(a.front_face.points.size());
-//
-//		Vector3d b_avg_polygon = Vector3d::Zero();
-//		for(const geometry_msgs::Point32& pt : b.front_face.points) {
-//			b_avg_polygon += Vector3d(pt.x, pt.y, pt.z);
-//		}
-//		b_avg_polygon /= double(b.front_face.points.size());
-//
-//		return (a_avg_polygon.norm() < b_avg_polygon.norm());
-
 		Vector3d a_gaussian_mean(a.gaussian.mean.x, a.gaussian.mean.y, a.gaussian.mean.z);
 		Vector3d b_gaussian_mean(b.gaussian.mean.x, b.gaussian.mean.y, b.gaussian.mean.z);
 		return (a_gaussian_mean.norm() < b_gaussian_mean.norm());
@@ -41,8 +27,8 @@ public:
 
 class PR2EihBrett {
 public:
-	PR2EihBrett(int max_occluded_regions);
-	PR2EihBrett() : PR2EihBrett(1) { }
+	PR2EihBrett(int max_occluded_regions, const Vector3d& init_traj_control, double max_travel_distance);
+	PR2EihBrett() : PR2EihBrett(1, Vector3d(0,0,0), 0.1) { }
 
 	void get_occluded_regions(std::vector<Gaussian3d>& obj_gaussians,
 			std::vector<geometry3d::Triangle>& obstacles);
@@ -61,8 +47,10 @@ private:
 
 	bool received_occluded_region_array;
 	pcl_utils::OccludedRegionArray current_occluded_region_array;
+
 	int max_occluded_regions;
-	// get_occluded
+	Vector3d init_traj_control;
+	double max_travel_distance;
 
 	// pr2_utils
 	pr2_sim::Simulator *sim;
@@ -77,7 +65,8 @@ private:
 	void _occluded_region_array_callback(const pcl_utils::OccludedRegionArrayConstPtr& msg);
 };
 
-PR2EihBrett::PR2EihBrett(int max_occluded_regions) : max_occluded_regions(max_occluded_regions) {
+PR2EihBrett::PR2EihBrett(int max_occluded_regions, const Vector3d& init_traj_control, double max_travel_distance) :
+		max_occluded_regions(max_occluded_regions), init_traj_control(init_traj_control), max_travel_distance(max_travel_distance) {
 	// setup system
 	ROS_INFO("Setting up simulated system");
 	sim = new pr2_sim::Simulator(true, true);
@@ -177,6 +166,8 @@ void PR2EihBrett::display_gaussian_means(const std::vector<Gaussian3d>& obj_gaus
 }
 
 void PR2EihBrett::initialize_trajectory(StdVectorJ& J, StdVectorU& U, const std::vector<Gaussian3d>& obj_gaussians) {
+	ROS_INFO_STREAM("Delta position for each timestep is: " << init_traj_control.transpose());
+
 	Vector3d avg_obj_mean = Vector3d::Zero();
 	double num_objs = obj_gaussians.size();
 	for(const Gaussian3d& obj_gaussian : obj_gaussians) {
@@ -188,13 +179,12 @@ void PR2EihBrett::initialize_trajectory(StdVectorJ& J, StdVectorU& U, const std:
 	Vector3d next_position;
 	VectorJ next_joints;
 	for(int t=0; t < T-1; ++t) {
-		next_position = start_position + (t+1)*Vector3d(.05,0,.05);
+		next_position = start_position + (t+1)*init_traj_control;
 		if (arm_sim->ik_lookat(next_position, avg_obj_mean, next_joints)) {
 			U[t] = next_joints - J[t];
 		} else {
 			U[t] = VectorU::Zero();
 		}
-//		U[t].setZero();
 
 		J[t+1] = sys->dynfunc(J[t], U[t], VectorQ::Zero(), true);
 		U[t] = (J[t+1] - J[t])/double(DT);
@@ -203,16 +193,6 @@ void PR2EihBrett::initialize_trajectory(StdVectorJ& J, StdVectorU& U, const std:
 
 void PR2EihBrett::bsp(StdVectorJ& J, StdVectorU& U, const MatrixJ& j_sigma0,
 		const std::vector<Gaussian3d>& obj_gaussians, const std::vector<geometry3d::Triangle>& obstacles) {
-	ROS_INFO("Initial joints:\n");
-	for(int t=0; t < T; ++t) {
-		ROS_INFO_STREAM(J[t].transpose());
-	}
-
-	ROS_INFO("\nInitial inputs:\n");
-	for(int t=0; t < T-1; ++t) {
-		ROS_INFO_STREAM(U[t].transpose());
-	}
-
 	ROS_INFO_STREAM("Number of gaussians: " << obj_gaussians.size());
 	ROS_INFO_STREAM("Number of obstacles: " << obstacles.size());
 
@@ -230,7 +210,6 @@ void PR2EihBrett::display_trajectory(const StdVectorJ& J) {
 	pose_array.poses.resize(T);
 	for(int t=0; t < T; ++t) {
 		Matrix4d pose = arm_sim->fk(J[t]);
-		Vector3d position = pose.block<3,1>(0,3);
 		pose_array.poses[t].position.x = pose(0,3);
 		pose_array.poses[t].position.y = pose(1,3);
 		pose_array.poses[t].position.z = pose(2,3);
@@ -250,14 +229,35 @@ void PR2EihBrett::display_trajectory(const StdVectorJ& J) {
 
 void PR2EihBrett::execute_controls(const StdVectorU& U) {
 	VectorJ current_joints = arm->get_joints();
+	VectorJ next_joints;
 
-	std::vector<VectorJ> joint_traj(U.size());
+	double travel_distance = 0;
+	std::vector<VectorJ> joint_traj;
 	for(int t=0; t < U.size(); ++t) {
-		current_joints = sys->dynfunc(current_joints, U[t], VectorQ::Zero(), true);
-		joint_traj[t] = current_joints;
+		next_joints = sys->dynfunc(current_joints, U[t], VectorQ::Zero(), true);
+		double dist = (arm_sim->fk(next_joints) - arm_sim->fk(current_joints)).block<3,1>(0,3).norm();
+		ROS_INFO_STREAM("dist: " << dist);
+		if ((travel_distance + dist < max_travel_distance) || (t == 0)) {
+			travel_distance += dist;
+			joint_traj.push_back(next_joints);
+			current_joints = next_joints;
+		} else {
+			break;
+		}
+		ROS_INFO_STREAM("travel_distance: " << travel_distance);
 	}
 
 	arm->execute_joint_trajectory(joint_traj);
+
+//	VectorJ current_joints = arm->get_joints();
+//
+//	std::vector<VectorJ> joint_traj(U.size());
+//	for(int t=0; t < U.size(); ++t) {
+//		current_joints = sys->dynfunc(current_joints, U[t], VectorQ::Zero(), true);
+//		joint_traj[t] = current_joints;
+//	}
+//
+//	arm->execute_joint_trajectory(joint_traj);
 }
 
 
@@ -266,17 +266,27 @@ void PR2EihBrett::_occluded_region_array_callback(const pcl_utils::OccludedRegio
 	received_occluded_region_array = true;
 }
 
-void parse_args(int argc, char* argv[], int& max_occluded_regions) {
+void parse_args(int argc, char* argv[], int& max_occluded_regions, Vector3d& init_traj_control, double& max_travel_distance) {
+	std::vector<double> init_traj_control_vec;
 	// Declare the supported options.
 	po::options_description desc("Allowed options");
 	desc.add_options()
 		("help", "produce help message")
 		("m", po::value<int>(&max_occluded_regions)->default_value(1), "Maximum number of occluded regions during BSP")
+		("init", po::value<std::vector<double> >(&init_traj_control_vec)->multitoken(), "Delta position (x,y,z) by which to initialize BSP trajectory")
+		("d", po::value<double>(&max_travel_distance)->default_value(1.0), "Maximum distance traveled when executing BSP controls")
 		;
 	try {
 		po::variables_map vm;
 		po::store(po::parse_command_line(argc, argv, desc, po::command_line_style::unix_style ^ po::command_line_style::allow_short), vm);
 		po::notify(vm);
+
+		if (vm.count("init")) {
+			init_traj_control = Vector3d(init_traj_control_vec.data());
+		} else {
+			init_traj_control << .05, 0, .05;
+		}
+
 		if (vm.count("help")) {
 			std::cout << desc << "\n";
 			exit(0);
@@ -285,6 +295,10 @@ void parse_args(int argc, char* argv[], int& max_occluded_regions) {
 		std::cerr << "error: " << e.what() << "\n";
 		exit(0);
 	}
+
+	ROS_INFO_STREAM("Max occluded regions: " << max_occluded_regions);
+	ROS_INFO_STREAM("Init traj control: " << init_traj_control.transpose());
+	ROS_INFO_STREAM("Max travel distance: " << max_travel_distance);
 }
 
 int main(int argc, char* argv[]) {
@@ -295,9 +309,11 @@ int main(int argc, char* argv[]) {
 	ROS_INFO("Starting ROS node");
 
 	int max_occluded_regions;
-	parse_args(argc, argv, max_occluded_regions);
+	Vector3d init_traj_control;
+	double max_travel_distance;
+	parse_args(argc, argv, max_occluded_regions, init_traj_control, max_travel_distance);
 
-	PR2EihBrett brett_bsp;
+	PR2EihBrett brett_bsp(max_occluded_regions, init_traj_control, max_travel_distance);
 
 	std::vector<Gaussian3d> obj_gaussians;
 	std::vector<geometry3d::Triangle> obstacles;
@@ -325,9 +341,9 @@ int main(int argc, char* argv[]) {
 		std::cin.ignore();
 		brett_bsp.display_trajectory(J);
 
-		ROS_INFO("Executing first control, press enter");
+		ROS_INFO("Executing control, press enter");
 		std::cin.ignore();
-		brett_bsp.execute_controls(StdVectorU(1, U[0]));
+		brett_bsp.execute_controls(U);
 	}
 
 }

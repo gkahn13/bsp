@@ -48,7 +48,7 @@ public:
 private:
 	// ros
 	ros::NodeHandle *nh_ptr;
-	ros::Subscriber occluded_region_array_sub;
+	ros::Subscriber occluded_region_array_sub, grasp_traj_sub;
 	ros::Publisher display_trajectory_pub, get_occluded_pub, display_gaussian_pub;
 
 	bool received_occluded_region_array;
@@ -93,6 +93,8 @@ PR2EihBrett::PR2EihBrett(int max_occluded_regions, const Vector3d& init_traj_con
 	nh_ptr = new ros::NodeHandle();
 	occluded_region_array_sub =
 			nh_ptr->subscribe("/kinfu/occluded_regions", 1, &PR2EihBrett::_occluded_region_array_callback, this);
+	grasp_traj_sub =
+			nh_ptr->subscribe("/check_handle_grasps/trajectory", 1, &PR2EihBrett::_grasp_traj_callback, this);
 	received_occluded_region_array = false;
 	display_gaussian_pub = nh_ptr->advertise<visualization_msgs::MarkerArray>("/bsp_object_means", 1);
 	display_trajectory_pub = nh_ptr->advertise<geometry_msgs::PoseArray>("/bsp_trajectory", 1);
@@ -331,7 +333,7 @@ void parse_args(int argc, char* argv[],
 	po::options_description desc("Allowed options");
 	desc.add_options()
 		("help", "produce help message")
-		("p", po::value<bool>(&pause)->default_value(false), "Pause between stages")
+		("p", "Pause between stages")
 		("m", po::value<int>(&max_occluded_regions)->default_value(1), "Maximum number of occluded regions during BSP")
 		("init", po::value<std::vector<double> >(&init_traj_control_vec)->multitoken(), "Delta position (x,y,z) by which to initialize BSP trajectory")
 		("d", po::value<double>(&max_travel_distance)->default_value(1.0), "Maximum distance traveled when executing BSP controls")
@@ -340,6 +342,8 @@ void parse_args(int argc, char* argv[],
 		po::variables_map vm;
 		po::store(po::parse_command_line(argc, argv, desc, po::command_line_style::unix_style ^ po::command_line_style::allow_short), vm);
 		po::notify(vm);
+
+		pause = vm.count("p");
 
 		if (vm.count("init")) {
 			init_traj_control = Vector3d(init_traj_control_vec.data());
@@ -386,27 +390,27 @@ int main(int argc, char* argv[]) {
 	std::vector<Matrix4d> grasp_traj;
 
 	while(!ros::isShuttingDown()) {
-		ROS_INFO("Getting occluded regions");
-		if (pause) { ROS_INFO("Press enter"); std::cin.ignore(); }
-		brett_bsp.get_occluded_regions(obj_gaussians, obstacles);
-		brett_bsp.display_gaussian_means(obj_gaussians);
-
-		ROS_INFO("Initializing trajectory");
-		if (pause) { ROS_INFO("Press enter"); std::cin.ignore(); }
-		brett_bsp.initialize_trajectory(J, U, obj_gaussians);
-		brett_bsp.display_trajectory(J);
-
-		ROS_INFO("Optimizing trajectory with bsp");
-		if (pause) { ROS_INFO("Press enter"); std::cin.ignore(); }
-		brett_bsp.bsp(J, U, j_sigma0, obj_gaussians, obstacles);
-
-		ROS_INFO("Displaying bsp trajectory");
-		if (pause) { ROS_INFO("Press enter"); std::cin.ignore(); }
-		brett_bsp.display_trajectory(J);
-
-		ROS_INFO("Executing control");
-		if (pause) { ROS_INFO("Press enter"); std::cin.ignore(); }
-		brett_bsp.execute_controls(U);
+//		ROS_INFO("Getting occluded regions");
+//		if (pause) { ROS_INFO("Press enter"); std::cin.ignore(); }
+//		brett_bsp.get_occluded_regions(obj_gaussians, obstacles);
+//		brett_bsp.display_gaussian_means(obj_gaussians);
+//
+//		ROS_INFO("Initializing trajectory");
+//		if (pause) { ROS_INFO("Press enter"); std::cin.ignore(); }
+//		brett_bsp.initialize_trajectory(J, U, obj_gaussians);
+//		brett_bsp.display_trajectory(J);
+//
+//		ROS_INFO("Optimizing trajectory with bsp");
+//		if (pause) { ROS_INFO("Press enter"); std::cin.ignore(); }
+//		brett_bsp.bsp(J, U, j_sigma0, obj_gaussians, obstacles);
+//
+//		ROS_INFO("Displaying bsp trajectory");
+//		if (pause) { ROS_INFO("Press enter"); std::cin.ignore(); }
+//		brett_bsp.display_trajectory(J);
+//
+//		ROS_INFO("Executing control");
+//		if (pause) { ROS_INFO("Press enter"); std::cin.ignore(); }
+//		brett_bsp.execute_controls(U);
 
 		ROS_INFO("Checking if there exists a valid grasp trajectory");
 		if (brett_bsp.is_valid_grasp_trajectory(grasp_traj)) {
@@ -415,6 +419,9 @@ int main(int argc, char* argv[]) {
 
 			brett_bsp.execute_grasp_trajectory(grasp_traj);
 		}
+
+		ros::spinOnce();
+		ros::Duration(0.1).sleep();
 	}
 
 }

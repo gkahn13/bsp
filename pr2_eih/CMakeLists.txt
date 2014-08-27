@@ -8,7 +8,7 @@ if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
   add_definitions("-fno-strict-aliasing -Wall -Wno-sign-compare -Wno-enum-compare -Wno-reorder -std=c++11")
 endif( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
 
-find_package(catkin REQUIRED COMPONENTS pr2_utils roscpp pcl_utils actionlib)
+find_package(catkin REQUIRED COMPONENTS pr2_utils roscpp pcl_utils actionlib tf tf_conversions)
 find_package(OpenRAVE REQUIRED)
 find_package(Boost ${OpenRAVE_Boost_VERSION} EXACT COMPONENTS system program_options)
 find_package(Eigen)
@@ -31,11 +31,6 @@ add_executable(pr2-eih-brett  pr2_eih_brett.cpp system/pr2_eih_system.cpp sqp/pr
 set_target_properties(pr2-eih-brett PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
 set_target_properties(pr2-eih-brett PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 target_link_libraries(pr2-eih-brett ${catkin_LIBRARIES} ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES} ${Boost_LIBRARIES})
-
-add_executable(pr2-eih-entropy  pr2_eih_entropy.cpp system/pr2_eih_system.cpp mpc/pr2eihMPC.c ../util/logging.cpp)
-set_target_properties(pr2-eih-entropy PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
-set_target_properties(pr2-eih-entropy PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
-target_link_libraries(pr2-eih-entropy ${catkin_LIBRARIES} ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES} ${Boost_LIBRARIES})
 
 add_executable(test-pr2-eih-system  tests/test_pr2_eih_system.cpp system/pr2_eih_system.cpp ../util/logging.cpp)
 set_target_properties(test-pr2-eih-system PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")

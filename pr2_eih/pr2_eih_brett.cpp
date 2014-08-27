@@ -7,6 +7,9 @@
 #include <boost/program_options.hpp>
 namespace po = boost::program_options;
 
+#include <tf/transform_datatypes.h>
+#include <tf_conversions/tf_eigen.h>
+
 #include <geometry_msgs/PoseArray.h>
 #include <std_msgs/Empty.h>
 #include <visualization_msgs/MarkerArray.h>
@@ -39,6 +42,9 @@ public:
 	void display_trajectory(const StdVectorJ& J);
 	void execute_controls(const StdVectorU& U);
 
+	bool is_valid_grasp_trajectory(std::vector<Matrix4d>& grasp_traj);
+	void execute_grasp_trajectory(const std::vector<Matrix4d>& grasp_traj);
+
 private:
 	// ros
 	ros::NodeHandle *nh_ptr;
@@ -59,10 +65,14 @@ private:
 	PR2EihSystem *sys;
 	pr2::Arm *arm;
 
+	Matrix4d home_pose;
+	std::vector<Matrix4d> last_grasp_traj;
+
 	// sqp solver
 	pr2_eih_sqp::PR2EihSqp pr2_eih_bsp;
 
 	void _occluded_region_array_callback(const pcl_utils::OccludedRegionArrayConstPtr& msg);
+	void _grasp_traj_callback(const geometry_msgs::PoseArrayConstPtr& msg);
 };
 
 PR2EihBrett::PR2EihBrett(int max_occluded_regions, const Vector3d& init_traj_control, double max_travel_distance) :
@@ -89,6 +99,7 @@ PR2EihBrett::PR2EihBrett(int max_occluded_regions, const Vector3d& init_traj_con
 	get_occluded_pub = nh_ptr->advertise<std_msgs::Empty>("/get_occluded", 1);
 
 	sim->update();
+	home_pose = arm->get_pose();
 }
 
 void PR2EihBrett::get_occluded_regions(std::vector<Gaussian3d>& obj_gaussians,
@@ -104,9 +115,9 @@ void PR2EihBrett::get_occluded_regions(std::vector<Gaussian3d>& obj_gaussians,
 	}
 
 	sim->update();
-	Matrix4d cam_pose = cam_sim->get_pose(arm->get_joints());
-	Matrix3d cam_rot = cam_pose.block<3,3>(0,0);
-	Vector3d cam_trans = cam_pose.block<3,1>(0,3);
+//	Matrix4d cam_pose = cam_sim->get_pose(arm->get_joints());
+//	Matrix3d cam_rot = cam_pose.block<3,3>(0,0);
+//	Vector3d cam_trans = cam_pose.block<3,1>(0,3);
 
 	std::vector<pcl_utils::OccludedRegion> occluded_regions = current_occluded_region_array.regions;
 	std::sort(occluded_regions.begin(), occluded_regions.end(), OccludedRegionCompare());
@@ -121,15 +132,15 @@ void PR2EihBrett::get_occluded_regions(std::vector<Gaussian3d>& obj_gaussians,
 		for(int i=1; i < points.size()-1; ++i) {
 			Vector3d second_obstacle_point(points[i].x, points[i].y, points[i].z);
 			Vector3d third_obstacle_point(points[i+1].x, points[i+1].y, points[i+1].z);
-			obstacles.push_back(geometry3d::Triangle(cam_rot*first_obstacle_point + cam_trans,
-					cam_rot*second_obstacle_point + cam_trans, cam_rot*third_obstacle_point + cam_trans));
+			obstacles.push_back(geometry3d::Triangle(first_obstacle_point,
+					second_obstacle_point, third_obstacle_point));
 		}
 
 		// add gaussian
 		const pcl_utils::Gaussian& gaussian = occluded_region.gaussian;
 		Vector3d mean(gaussian.mean.x, gaussian.mean.y, gaussian.mean.z);
 		Matrix3d cov(gaussian.covariance.data());
-		obj_gaussians.push_back(Gaussian3d(cam_rot*mean+cam_trans, cam_rot*cov*cam_rot.transpose()));
+		obj_gaussians.push_back(Gaussian3d(mean, cov));
 
 		ROS_INFO_STREAM("Gaussian " << i << "\nMean: " << obj_gaussians.back().mean.transpose()
 				<< "\nCovariance:\n" << obj_gaussians.back().cov << "\n");
@@ -260,18 +271,67 @@ void PR2EihBrett::execute_controls(const StdVectorU& U) {
 //	arm->execute_joint_trajectory(joint_traj);
 }
 
+bool PR2EihBrett::is_valid_grasp_trajectory(std::vector<Matrix4d>& grasp_traj) {
+	bool received_grasp_traj = (last_grasp_traj.size() > 0);
+	grasp_traj = last_grasp_traj;
+	return received_grasp_traj;
+}
+
+void PR2EihBrett::execute_grasp_trajectory(const std::vector<Matrix4d>& grasp_traj) {
+	ROS_INFO("Opening gripper and executing grasp trajectory");
+	arm->open_gripper();
+	arm->execute_pose_trajectory(grasp_traj);
+
+	ROS_INFO("Closing the gripper");
+	arm->close_gripper();
+
+	ROS_INFO("Moving up");
+	Matrix4d up_pose = arm->get_pose();
+	up_pose.block<3,1>(0,3) += Vector3d(0,0,.05);
+	arm->go_to_pose(up_pose);
+
+	ROS_INFO("Moving to home pose and dropping off");
+	arm->go_to_pose(home_pose);
+	arm->open_gripper();
+}
+
+/**
+ *
+ * Callbacks
+ *
+ */
 
 void PR2EihBrett::_occluded_region_array_callback(const pcl_utils::OccludedRegionArrayConstPtr& msg) {
+	assert(msg->header.frame_id == "base_link" || msg->header.frame_id == "/base_link");
 	current_occluded_region_array = *msg;
 	received_occluded_region_array = true;
 }
 
-void parse_args(int argc, char* argv[], int& max_occluded_regions, Vector3d& init_traj_control, double& max_travel_distance) {
+void PR2EihBrett::_grasp_traj_callback(const geometry_msgs::PoseArrayConstPtr& msg) {
+	assert(msg->header.frame_id == "base_link" || msg->header.frame_id == "/base_link");
+	last_grasp_traj.clear();
+	for(const geometry_msgs::Pose& pose_msg : msg->poses) {
+		tf::Pose pose;
+		tf::poseMsgToTF(pose_msg, pose);
+		Affine3d affine_pose;
+		tf::poseTFToEigen(pose, affine_pose);
+		Matrix4d matrix_pose = affine_pose.matrix();
+
+		last_grasp_traj.push_back(matrix_pose);
+	}
+}
+
+
+
+
+void parse_args(int argc, char* argv[],
+		bool& pause, int& max_occluded_regions, Vector3d& init_traj_control, double& max_travel_distance) {
 	std::vector<double> init_traj_control_vec;
 	// Declare the supported options.
 	po::options_description desc("Allowed options");
 	desc.add_options()
 		("help", "produce help message")
+		("p", po::value<bool>(&pause)->default_value(false), "Pause between stages")
 		("m", po::value<int>(&max_occluded_regions)->default_value(1), "Maximum number of occluded regions during BSP")
 		("init", po::value<std::vector<double> >(&init_traj_control_vec)->multitoken(), "Delta position (x,y,z) by which to initialize BSP trajectory")
 		("d", po::value<double>(&max_travel_distance)->default_value(1.0), "Maximum distance traveled when executing BSP controls")
@@ -308,10 +368,11 @@ int main(int argc, char* argv[]) {
 	my_logger->setLevel(ros::console::g_level_lookup[ros::console::levels::Info]);
 	ROS_INFO("Starting ROS node");
 
+	bool pause;
 	int max_occluded_regions;
 	Vector3d init_traj_control;
 	double max_travel_distance;
-	parse_args(argc, argv, max_occluded_regions, init_traj_control, max_travel_distance);
+	parse_args(argc, argv, pause, max_occluded_regions, init_traj_control, max_travel_distance);
 
 	PR2EihBrett brett_bsp(max_occluded_regions, init_traj_control, max_travel_distance);
 
@@ -322,28 +383,38 @@ int main(int argc, char* argv[]) {
 	StdVectorJ J(T);
 	StdVectorU U(T-1);
 
+	std::vector<Matrix4d> grasp_traj;
+
 	while(!ros::isShuttingDown()) {
-		ROS_INFO("Getting occluded regions, press enter");
-		std::cin.ignore();
+		ROS_INFO("Getting occluded regions");
+		if (pause) { ROS_INFO("Press enter"); std::cin.ignore(); }
 		brett_bsp.get_occluded_regions(obj_gaussians, obstacles);
 		brett_bsp.display_gaussian_means(obj_gaussians);
 
-		ROS_INFO("Initializing trajectory, press enter");
-		std::cin.ignore();
+		ROS_INFO("Initializing trajectory");
+		if (pause) { ROS_INFO("Press enter"); std::cin.ignore(); }
 		brett_bsp.initialize_trajectory(J, U, obj_gaussians);
 		brett_bsp.display_trajectory(J);
 
-		ROS_INFO("Optimizing trajectory with bsp, press enter");
-		std::cin.ignore();
+		ROS_INFO("Optimizing trajectory with bsp");
+		if (pause) { ROS_INFO("Press enter"); std::cin.ignore(); }
 		brett_bsp.bsp(J, U, j_sigma0, obj_gaussians, obstacles);
 
-		ROS_INFO("Displaying bsp trajectory, press enter");
-		std::cin.ignore();
+		ROS_INFO("Displaying bsp trajectory");
+		if (pause) { ROS_INFO("Press enter"); std::cin.ignore(); }
 		brett_bsp.display_trajectory(J);
 
-		ROS_INFO("Executing control, press enter");
-		std::cin.ignore();
+		ROS_INFO("Executing control");
+		if (pause) { ROS_INFO("Press enter"); std::cin.ignore(); }
 		brett_bsp.execute_controls(U);
+
+		ROS_INFO("Checking if there exists a valid grasp trajectory");
+		if (brett_bsp.is_valid_grasp_trajectory(grasp_traj)) {
+			ROS_INFO("Valid grasp trajectory exists! Execute grasp");
+			if (pause) { ROS_INFO("Press enter"); std::cin.ignore(); }
+
+			brett_bsp.execute_grasp_trajectory(grasp_traj);
+		}
 	}
 
 }

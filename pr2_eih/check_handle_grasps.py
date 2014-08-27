@@ -1,7 +1,7 @@
 """
 subscribe to
 -- /kinfu/graspable_points (base_link)
--- /kinfu/table_pose (base_link)
+-- /kinfu/plane_bounding_box (base_link)
 -- /handle_detector/avg_handle_poses
 
 convex decomposition of graspable points
@@ -16,6 +16,8 @@ import rospy, roslib
 roslib.load_manifest('pr2_utils')
 from pr2 import convexify_pointcloud, planner
 from pr2_sim import simulator, arm, camera
+roslib.load_manifest('pcl_utils')
+import pcl_utils.msg
 roslib.load_manifest('tfx')
 import tfx
 
@@ -29,11 +31,11 @@ import IPython
 class CheckHandleGrasps:
     def __init__(self):
         self.graspable_points = None
-        self.table_pose = None
+        self.table_kinbody = None
         self.avg_handle_poses = None
         
         self.graspable_points_sub = rospy.Subscriber('/handle_detector/point_cloud', sm.PointCloud2, self._graspable_points_callback)
-        self.table_pose_sub = rospy.Subscriber('/kinfu/table_pose', gm.PoseStamped, self._table_pose_callback) # TODO: change to /kinfu/plane_bounding_box
+        self.table_sub = rospy.Subscriber('/kinfu/plane_bounding_box', pcl_utils.msg.BoundingBox, self._table_callback)
         self.avg_handle_poses_sub = rospy.Subscriber('/handle_detector/avg_handle_poses',
                                                 gm.PoseArray, self._avg_handle_poses_callback)
         
@@ -53,8 +55,19 @@ class CheckHandleGrasps:
     def _graspable_points_callback(self, msg):
         self.graspable_points = msg
         
-    def _table_pose_callback(self, msg):
-        self.table_pose = tfx.pose(msg)
+    def _table_callback(self, msg):
+        assert(msg.frame_id.count('base_link') > 0)
+        assert(len(msg.vectors) == 3)
+        
+        # calculate rotation matrix and extent lengths
+        extents = [tfx.point(e) for e in msg.vectors]
+        extent_lengths = [e.norm for e in extents]
+        R = np.zeros((3,3))
+        for i, e in enumerate(extents):
+            R[:,i] = e.array/e.norm
+            
+        self.table_pose = tfx.pose(msg.center, R).matrix
+        self.table_extents = extent_lengths
         
     def _avg_handle_poses_callback(self, msg):
         self.avg_handle_poses = [tfx.pose(p, header=msg.header) for p in msg.poses]
@@ -65,7 +78,8 @@ class CheckHandleGrasps:
         until they are all updated
         """
         self.graspable_points = None
-        self.table_pose = tfx.pose([0,0,0]) # TODO: temp
+        self.table_pose = tfx.pose([1.1, 0, 0.5]) # TODO: temp
+        self.table_extents = [0.85, 0.55, 0.06] # TODO: temp
         self.avg_handle_poses = None
         
         while not rospy.is_shutdown() and \
@@ -93,6 +107,7 @@ class CheckHandleGrasps:
             
             graspable_points = self.graspable_points
             table_pose = self.table_pose
+            table_extents = self.table_extents
             avg_handle_poses = self.avg_handle_poses
             
             #assert graspable_points.header.frame_id.replace('/','').count(table_pose.frame.replace('/','')) > 0
@@ -103,9 +118,7 @@ class CheckHandleGrasps:
             convexify_pointcloud.add_convexified_pointcloud_to_env(self.sim, graspable_points)
             
             print('Adding table mesh')
-            ########
-            # TODO #
-            ########
+            self.sim.add_box(table_pose, table_extents, check_collision=False)
             
             self.sim.update()
             arm_pose = self.arm.get_pose()

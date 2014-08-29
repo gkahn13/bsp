@@ -7,6 +7,59 @@ inline double uniform(double low, double high) {
 	return (high - low)*(rand() / double(RAND_MAX)) + low;
 }
 
+class Box {
+public:
+	Box(const Matrix4d& pose, const Vector3d& extents) {
+		double rx, ry, rz;
+		rx = extents(0);
+		ry = extents(1);
+		rz = extents(2);
+
+		std::vector<Vector3d> vertices = {
+				Vector3d(-rx, -ry, -rz),
+				Vector3d(-rx, -ry, rz),
+				Vector3d(-rx, ry, -rz),
+				Vector3d(-rx, ry, rz),
+				Vector3d(rx, -ry, -rz),
+				Vector3d(rx, -ry, rz),
+				Vector3d(rx, ry, -rz),
+				Vector3d(rx, ry, rz)
+		};
+
+		Matrix3d rot = pose.block<3,3>(0,0);
+		Vector3d trans = pose.block<3,1>(0,3);
+		for(int i=0; i < vertices.size(); ++i) {
+			vertices[i] = rot*vertices[i] + trans;
+		}
+
+		for(const std::vector<int>& tri_ind : triangle_indices) {
+			triangles.push_back(geometry3d::Triangle(vertices[tri_ind[0]],
+					vertices[tri_ind[1]],
+					vertices[tri_ind[2]]));
+		}
+	}
+
+	std::vector<geometry3d::Triangle> get_triangles() { return triangles; }
+
+private:
+	std::vector<geometry3d::Triangle> triangles;
+
+	const std::vector<std::vector<int> > triangle_indices = {
+			{0,2,4},
+			{6,2,4},
+			{0,1,2},
+			{3,1,2},
+			{0,1,4},
+			{5,1,4},
+			{7,6,5},
+			{4,6,5},
+			{7,6,3},
+			{2,6,3},
+			{7,5,3},
+			{1,5,3}
+	};
+};
+
 void init_obstacles_and_objects(pr2_sim::Camera& cam,
 		std::vector<geometry3d::Triangle>& obstacles, std::vector<Gaussian3d>& obj_gaussians) {
 	Matrix4d cam_pose = cam.get_pose();
@@ -15,11 +68,11 @@ void init_obstacles_and_objects(pr2_sim::Camera& cam,
 
 	std::vector<geometry3d::Triangle> obstacles_cam;
 
-	obstacles_cam.push_back(geometry3d::Triangle({0,.1,.75}, {0,.2,.75}, {.05,.2,.75}));
-	obstacles_cam.push_back(geometry3d::Triangle({0,.1,.75}, {.05,.1,.75}, {.05,.2,.75}));
+	obstacles_cam.push_back(geometry3d::Triangle({0,0,.9}, {0,.2,.9}, {.4,.2,.9}));
+	obstacles_cam.push_back(geometry3d::Triangle({0,0,.9}, {.4,0,.9}, {.4,.2,.9}));
 
-	obstacles_cam.push_back(geometry3d::Triangle({-.2,.1,.75}, {-.2,.2,.75}, {-.25,.2,.75}));
-	obstacles_cam.push_back(geometry3d::Triangle({-.2,.1,.75}, {-.25,.1,.75}, {-.25,.2,.75}));
+//	obstacles_cam.push_back(geometry3d::Triangle({-.2,.1,.75}, {-.2,.2,.75}, {-.25,.2,.75}));
+//	obstacles_cam.push_back(geometry3d::Triangle({-.2,.1,.75}, {-.25,.1,.75}, {-.25,.2,.75}));
 
 	obstacles.clear();
 	for(const geometry3d::Triangle& obstacle_cam : obstacles_cam) {
@@ -53,6 +106,37 @@ void init_obstacles_and_objects(pr2_sim::Camera& cam,
 		obj_gaussians.push_back(Gaussian3d(particles));
 	}
 }
+
+void init_obstacles_and_objects_from_box(pr2_sim::Camera& cam,
+		std::vector<geometry3d::Triangle>& obstacles, std::vector<Gaussian3d>& obj_gaussians) {
+	Matrix4d cam_pose = cam.get_pose();
+	Matrix3d cam_rot = cam_pose.block<3,3>(0,0);
+	Vector3d cam_pos = cam_pose.block<3,1>(0,3);
+
+	std::vector<geometry3d::Triangle> obstacles_cam;
+	Matrix4d box_pose = Matrix4d::Identity();
+	box_pose.block<3,1>(0,3) = Vector3d(0,0,0.9);
+//	Vector3d extents(0.1,0.2,0.05);
+	Vector3d extents(0.1,0.2,0.1);
+
+	obstacles_cam = Box(box_pose, extents).get_triangles();
+	obstacles_cam = std::vector<geometry3d::Triangle>(obstacles_cam.begin(), obstacles_cam.begin()+10);
+
+	obstacles.clear();
+	for(const geometry3d::Triangle& obstacle_cam : obstacles_cam) {
+		obstacles.push_back(geometry3d::Triangle(cam_rot*obstacle_cam.a+cam_pos,
+				cam_rot*obstacle_cam.b+cam_pos,
+				cam_rot*obstacle_cam.c+cam_pos));
+	}
+
+	obj_gaussians.clear();
+	Vector3d mean = box_pose.block<3,1>(0,3) + Vector3d(0,0,0.2);
+	mean = cam_rot*mean + cam_pos;
+	Matrix3d cov = cam_rot*extents.asDiagonal()*cam_rot.transpose();
+	obj_gaussians.push_back(Gaussian3d(mean, cov));
+
+}
+
 
 void init_obstacles_and_objects_from_data(pr2_sim::Camera& cam,
 		std::vector<geometry3d::Triangle>& obstacles, std::vector<Gaussian3d>& obj_gaussians) {
@@ -131,7 +215,7 @@ void init_trajectory(StdVectorJ& J, StdVectorU& U, const std::vector<Gaussian3d>
 	Vector3d next_position;
 	VectorJ next_joints;
 	for(int t=0; t < T-1; ++t) {
-		next_position = start_position + (t+1)*Vector3d(.05,0,.05);
+		next_position = start_position + (t+1)*Vector3d(0,0,0);//Vector3d(0.05,-0.05,-0.02);
 		if (arm.ik_lookat(next_position, avg_obj_mean, next_joints)) {
 			U[t] = next_joints - J[t];
 		} else {
@@ -159,7 +243,8 @@ int main(int argc, char* argv[]) {
 	std::vector<geometry3d::Triangle> obstacles;
 	std::vector<Gaussian3d> obj_gaussians_t, obj_gaussians_tp1;
 //	init_obstacles_and_objects(cam, obstacles, obj_gaussians_t);
-	init_obstacles_and_objects_from_data(cam, obstacles, obj_gaussians_t);
+	init_obstacles_and_objects_from_box(cam, obstacles, obj_gaussians_t);
+//	init_obstacles_and_objects_from_data(cam, obstacles, obj_gaussians_t);
 
 	// setup initial state
 	VectorJ j_t, j_t_real, j_tp1, j_tp1_real;

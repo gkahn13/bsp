@@ -31,7 +31,8 @@ import IPython
 class CheckHandleGrasps:
     def __init__(self):
         self.graspable_points = None
-        self.table_kinbody = None
+        self.table_pose = None
+        self.table_extents = None
         self.avg_handle_poses = None
         
         self.graspable_points_sub = rospy.Subscriber('/handle_detector/point_cloud', sm.PointCloud2, self._graspable_points_callback)
@@ -66,7 +67,6 @@ class CheckHandleGrasps:
             R[:,i] = e.array/e.norm
             
         extent_lengths = np.array([e.norm for e in extents])
-#         extent_lengths[extent_lengths.argmin()] /= 2.0
             
         self.table_pose = tfx.pose(msg.center, R).matrix
         self.table_extents = extent_lengths
@@ -79,30 +79,29 @@ class CheckHandleGrasps:
         Clears all callback variables and blocks
         until they are all updated
         """
-        self.graspable_points = None
         self.table_pose = None #tfx.pose([1.1, 0, 0.5]) # TODO: temp
         self.table_extents = None #[0.85, 0.55, 0.06] # TODO: temp
-        self.avg_handle_poses = None
+        print('Waiting for table pose and extents')
+        while not rospy.is_shutdown() and (self.table_pose is None or self.table_extents is None):
+            rospy.sleep(.01)
         
-        while not rospy.is_shutdown() and \
-            (self.graspable_points is None or
-             self.table_pose is None or
-             self.avg_handle_poses is None):
-            self.avg_handle_poses = None # in case publishing handles from old cloud
-            if self.graspable_points is None:
-                print('Waiting for graspable points')
-            if self.table_pose is None:
-                print('Waiting for table pose')
-            if self.avg_handle_poses is None:
-                print('Waiting for avg handle poses')
-            print('')
-            rospy.sleep(1)
+        self.graspable_points = None            
+        print('Waiting for graspable points')
+        while not rospy.is_shutdown() and self.graspable_points is None:
+            rospy.sleep(.01)
+        
+        self.avg_handle_poses = None
+        print('Waiting for avg handle poses')
+        while not rospy.is_shutdown() and self.avg_handle_poses is None:
+            rospy.sleep(.01)
     
     #####################
     # interface methods #
     #####################
     
     def run(self):
+        grasp_frame = 'r_gripper_center_frame'
+        
         while not rospy.is_shutdown():
             print('Getting most recent callbacks')
             self.get_most_recent_callbacks()
@@ -112,12 +111,16 @@ class CheckHandleGrasps:
             table_extents = self.table_extents
             avg_handle_poses = self.avg_handle_poses
             
+            if graspable_points.width < 10 or len(self.avg_handle_poses) == 0: # fails if too few points
+                continue
+            
             #assert graspable_points.header.frame_id.replace('/','').count(table_pose.frame.replace('/','')) > 0
             
             print('Convexifying point cloud')
             self.sim.update()
             self.sim.clear_kinbodies()
             convexify_pointcloud.add_convexified_pointcloud_to_env(self.sim, graspable_points)
+            
             
             print('Adding table mesh')
             self.sim.add_box(table_pose, table_extents, check_collision=False)
@@ -131,17 +134,21 @@ class CheckHandleGrasps:
                 self.sim.update()
                 self.sim.plot_transform(self.sim.transform_from_to(handle_pose, handle_pose.frame, 'world'))
                 print('Checking if handle pose {0} is collision free and reachable'.format(i))
-#                 print('Press enter to continue')
-#                 raw_input()
                 
-                joint_traj = self.planner.get_joint_trajectory(self.arm.get_joints(), handle_pose, ignore_orientation=False)
+                joint_traj = self.planner.get_joint_trajectory(self.arm.get_joints(), handle_pose,
+                                                               ignore_orientation=True, link_name=grasp_frame)
                 
                 is_collision_free = joint_traj is not None
                 if is_collision_free:
                     print('Trajectory is collision free')
                     
                     poses = [tfx.pose(self.arm.fk(joints)) for joints in joint_traj]
-                    dist = np.linalg.norm(poses[-1].position.array - handle_pose.position.array)
+                    
+                    self.arm.set_joints(joint_traj[-1])
+                    T = self.sim.transform_from_to(np.eye(4), grasp_frame, 'base_link')
+                    final_grasp_pose = tfx.pose(T, frame='base_link')
+                    
+                    dist = np.linalg.norm(final_grasp_pose.position.array - handle_pose.position.array)
                     print('Distance of final pose to handle: {0}'.format(dist))
                     is_within_reach = dist < .001
                 
@@ -159,6 +166,7 @@ class CheckHandleGrasps:
                         self.trajectory_pub.publish(trajectory)
 #                         print('Press enter to continue')
 #                         raw_input()
+                        break # only publish closest successful grasp
                     else:
                         print('Handle pose is not within reach at final timestep')
                 else:

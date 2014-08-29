@@ -176,7 +176,7 @@ double PR2EihSystem::cost(const StdVectorJ& J, const MatrixJ& j_sigma0, const St
 	cached_frustum = std::vector<std::vector<geometry3d::TruncatedPyramid> > (TIMESTEPS);
 	for(int t=0; t < TIMESTEPS-1; ++t) {
 		VectorJ j_tp1 = dynfunc(J[t], U[t], VectorQ::Zero(), true);
-		cached_frustum[t+1] = cam->truncated_view_frustum(cam->get_pose(j_tp1), obstacles, true);
+		cached_frustum[t+1] = cam->truncated_view_frustum(cam->get_pose(j_tp1), obstacles, false);
 	}
 
 	for(const Gaussian3d& obj_gaussian : obj_gaussians) {

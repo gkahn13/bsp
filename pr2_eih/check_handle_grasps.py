@@ -35,7 +35,7 @@ class CheckHandleGrasps:
         self.table_extents = None
         self.avg_handle_poses = None
         
-        self.graspable_points_sub = rospy.Subscriber('/handle_detector/point_cloud', sm.PointCloud2, self._graspable_points_callback)
+        self.graspable_points_sub = rospy.Subscriber('/kinfu/graspable_points', sm.PointCloud2, self._graspable_points_callback)
         self.table_sub = rospy.Subscriber('/kinfu/plane_bounding_box', pcl_utils.msg.BoundingBox, self._table_callback)
         self.avg_handle_poses_sub = rospy.Subscriber('/handle_detector/avg_handle_poses',
                                                 gm.PoseArray, self._avg_handle_poses_callback)
@@ -79,21 +79,41 @@ class CheckHandleGrasps:
         Clears all callback variables and blocks
         until they are all updated
         """
-        self.table_pose = None #tfx.pose([1.1, 0, 0.5]) # TODO: temp
-        self.table_extents = None #[0.85, 0.55, 0.06] # TODO: temp
-        print('Waiting for table pose and extents')
-        while not rospy.is_shutdown() and (self.table_pose is None or self.table_extents is None):
-            rospy.sleep(.01)
-        
-        self.graspable_points = None            
-        print('Waiting for graspable points')
-        while not rospy.is_shutdown() and self.graspable_points is None:
-            rospy.sleep(.01)
-        
+#         self.table_pose = None 
+#         self.table_extents = None 
+#         print('Waiting for table pose and extents')
+#         while not rospy.is_shutdown() and (self.table_pose is None or self.table_extents is None):
+#             rospy.sleep(.01)
+#         
+#         self.graspable_points = None            
+#         print('Waiting for graspable points')
+#         while not rospy.is_shutdown() and self.graspable_points is None:
+#             rospy.sleep(.01)
+#         
+#         self.avg_handle_poses = None
+#         print('Waiting for avg handle poses')
+#         while not rospy.is_shutdown() and self.avg_handle_poses is None:
+#             rospy.sleep(.01)
+
+        self.table_pose = None
+        self.table_extents = None
+        printed_table = False
+        self.graspable_points = None
+        printed_graspable_points = False
         self.avg_handle_poses = None
-        print('Waiting for avg handle poses')
-        while not rospy.is_shutdown() and self.avg_handle_poses is None:
-            rospy.sleep(.01)
+        printed_avg_handle_poses = False
+        while not rospy.is_shutdown() and \
+            (self.table_pose is None or self.graspable_points is None or self.avg_handle_poses is None):
+            if self.table_pose is not None and not printed_table:
+                print('Found table pose')
+                printed_table = True
+            if self.graspable_points is not None and not printed_graspable_points:
+                print('Found graspable points')
+                printed_graspable_points = True
+            if self.avg_handle_poses is not None and not printed_avg_handle_poses:
+                print('Found avg handle poses')
+                printed_avg_handle_poses = True
+            rospy.sleep(0.5)
     
     #####################
     # interface methods #
@@ -119,7 +139,10 @@ class CheckHandleGrasps:
             print('Convexifying point cloud')
             self.sim.update()
             self.sim.clear_kinbodies()
-            convexify_pointcloud.add_convexified_pointcloud_to_env(self.sim, graspable_points)
+            try:
+                convexify_pointcloud.add_convexified_pointcloud_to_env(self.sim, graspable_points)
+            except:
+                continue
             
             
             print('Adding table mesh')

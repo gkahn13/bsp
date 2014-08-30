@@ -71,6 +71,7 @@ private:
 	// sqp solver
 	pr2_eih_sqp::PR2EihSqp pr2_eih_bsp;
 
+	Matrix4d highest_pose_above(const Matrix4d& pose);
 	void _occluded_region_array_callback(const pcl_utils::OccludedRegionArrayConstPtr& msg);
 	void _grasp_traj_callback(const geometry_msgs::PoseArrayConstPtr& msg);
 };
@@ -289,19 +290,19 @@ void PR2EihBrett::execute_grasp_trajectory(const std::vector<Matrix4d>& grasp_tr
 	arm->close_gripper();
 
 	ROS_INFO("Moving up");
-	Vector3d up(0,0,0.05);
-	Matrix4d up_pose = arm->get_pose();
-	up_pose.block<3,1>(0,3) += up;
-	arm->go_to_pose(up_pose);
+	arm->go_to_pose(highest_pose_above(arm->get_pose()));
 
-	ROS_INFO("Moving back along similar trajectory");
-	int traj_length = grasp_traj.size();
-	std::vector<Matrix4d> up_grasp_traj(traj_length);
-	for(int i=0; i < traj_length; ++i) {
-		up_grasp_traj[i] = grasp_traj[(traj_length-1)-i];
-		up_grasp_traj[i].block<3,1>(0,3) += up;
-	}
-	arm->execute_pose_trajectory(up_grasp_traj);
+//	ROS_INFO("Moving back along similar trajectory");
+//	int traj_length = grasp_traj.size();
+//	std::vector<Matrix4d> up_grasp_traj(traj_length);
+//	for(int i=0; i < traj_length; ++i) {
+//		up_grasp_traj[i] = grasp_traj[(traj_length-1)-i];
+//		up_grasp_traj[i].block<3,1>(0,3) += up;
+//	}
+//	arm->execute_pose_trajectory(up_grasp_traj);
+
+	ROS_INFO("Moving to above home pose");
+	arm->go_to_pose(highest_pose_above(home_pose));
 
 	ROS_INFO("Moving to home pose and dropping off");
 	arm->go_to_pose(home_pose);
@@ -310,6 +311,23 @@ void PR2EihBrett::execute_grasp_trajectory(const std::vector<Matrix4d>& grasp_tr
 	get_occluded_pub.publish(std_msgs::Empty());
 	ros::Duration(1.0).sleep(); // give kinfu some time
 	last_grasp_traj.clear();
+}
+
+/**
+ *
+ * Private methods
+ *
+ */
+
+Matrix4d PR2EihBrett::highest_pose_above(const Matrix4d& pose) {
+	Vector3d step(0,0,0.01);
+	Matrix4d highest_above = pose;
+	VectorJ joints;
+	while (arm_sim->ik(highest_above, joints)) {
+		highest_above.block<3,1>(0,3) += step;
+	}
+	highest_above.block<3,1>(0,3) -= step;
+	return highest_above;
 }
 
 /**

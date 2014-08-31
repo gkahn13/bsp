@@ -308,7 +308,7 @@ void PR2EihBrett::execute_grasp_trajectory(const std::vector<Matrix4d>& grasp_tr
 	arm->go_to_pose(home_pose);
 	arm->open_gripper();
 
-	get_occluded_pub.publish(std_msgs::Empty());
+	reset_kinfu_pub.publish(std_msgs::Empty());
 	ros::Duration(1.0).sleep(); // give kinfu some time
 	last_grasp_traj.clear();
 }
@@ -431,25 +431,25 @@ int main(int argc, char* argv[]) {
 		brett_bsp.display_gaussian_means(obj_gaussians);
 		ros::spinOnce();
 
-//		ROS_INFO("Initializing trajectory");
-//		if (pause) { ROS_INFO("Press enter"); std::cin.ignore(); }
-//		ros::spinOnce();
-//		brett_bsp.initialize_trajectory(J, U, obj_gaussians);
-//		brett_bsp.display_trajectory(J);
-//
-//		ROS_INFO("Optimizing trajectory with bsp");
-//		if (pause) { ROS_INFO("Press enter"); std::cin.ignore(); }
-//		ros::spinOnce();
-//		brett_bsp.bsp(J, U, j_sigma0, obj_gaussians, obstacles);
-//
-//		ROS_INFO("Displaying bsp trajectory");
-//		if (pause) { ROS_INFO("Press enter"); std::cin.ignore(); }
-//		brett_bsp.display_trajectory(J);
-//
-//		ROS_INFO("Executing control");
-//		if (pause) { ROS_INFO("Press enter"); std::cin.ignore(); }
-//		ros::spinOnce();
-//		brett_bsp.execute_controls(U);
+		ROS_INFO("Initializing trajectory");
+		if (pause) { ROS_INFO("Press enter"); std::cin.ignore(); }
+		ros::spinOnce();
+		brett_bsp.initialize_trajectory(J, U, obj_gaussians);
+		brett_bsp.display_trajectory(J);
+
+		ROS_INFO("Optimizing trajectory with bsp");
+		if (pause) { ROS_INFO("Press enter"); std::cin.ignore(); }
+		ros::spinOnce();
+		brett_bsp.bsp(J, U, j_sigma0, obj_gaussians, obstacles);
+
+		ROS_INFO("Displaying bsp trajectory");
+		if (pause) { ROS_INFO("Press enter"); std::cin.ignore(); }
+		brett_bsp.display_trajectory(J);
+
+		ROS_INFO("Executing control");
+		if (pause) { ROS_INFO("Press enter"); std::cin.ignore(); }
+		ros::spinOnce();
+		brett_bsp.execute_controls(U);
 
 		ROS_INFO("Checking if there exists a valid grasp trajectory");
 		if (brett_bsp.is_valid_grasp_trajectory(grasp_traj)) {

@@ -124,6 +124,8 @@ class CheckHandleGrasps:
         
         while not rospy.is_shutdown():
             print('Getting most recent callbacks')
+            rospy.sleep(0.05)
+            self.sim.update()
             self.get_most_recent_callbacks()
             
             graspable_points = self.graspable_points
@@ -131,7 +133,7 @@ class CheckHandleGrasps:
             table_extents = self.table_extents
             avg_handle_poses = self.avg_handle_poses
             
-            if graspable_points.width < 10 or len(self.avg_handle_poses) == 0: # fails if too few points
+            if graspable_points.width < 100 or len(avg_handle_poses) == 0: # fails if too few points
                 continue
             
             #assert graspable_points.header.frame_id.replace('/','').count(table_pose.frame.replace('/','')) > 0
@@ -148,7 +150,6 @@ class CheckHandleGrasps:
             print('Adding table mesh')
             self.sim.add_box(table_pose, table_extents, check_collision=False)
             
-            self.sim.update()
             arm_pose = self.arm.get_pose()
             avg_handle_poses = sorted(avg_handle_poses, key=lambda p: np.linalg.norm(p.position.array - arm_pose.position.array))
             

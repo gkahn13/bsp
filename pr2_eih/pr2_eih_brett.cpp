@@ -283,11 +283,11 @@ bool PR2EihBrett::is_valid_grasp_trajectory(std::vector<Matrix4d>& grasp_traj) {
 
 void PR2EihBrett::execute_grasp_trajectory(const std::vector<Matrix4d>& grasp_traj) {
 	ROS_INFO("Opening gripper and executing grasp trajectory");
-	arm->open_gripper();
+	arm->open_gripper(0, false);
 	arm->execute_pose_trajectory(grasp_traj);
 
 	ROS_INFO("Closing the gripper");
-	arm->close_gripper();
+	arm->close_gripper(0, true, 1.0);
 
 	ROS_INFO("Moving up");
 	arm->go_to_pose(highest_pose_above(arm->get_pose()));
@@ -306,7 +306,7 @@ void PR2EihBrett::execute_grasp_trajectory(const std::vector<Matrix4d>& grasp_tr
 
 	ROS_INFO("Moving to home pose and dropping off");
 	arm->go_to_pose(home_pose);
-	arm->open_gripper();
+	arm->open_gripper(0, false);
 
 	reset_kinfu_pub.publish(std_msgs::Empty());
 	ros::Duration(1.0).sleep(); // give kinfu some time

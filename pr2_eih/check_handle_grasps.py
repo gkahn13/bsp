@@ -35,7 +35,7 @@ class CheckHandleGrasps:
         self.table_extents = None
         self.avg_handle_poses = None
         
-        self.graspable_points_sub = rospy.Subscriber('/kinfu/graspable_points', sm.PointCloud2, self._graspable_points_callback)
+        self.graspable_points_sub = rospy.Subscriber('/handle_detector/point_cloud', sm.PointCloud2, self._graspable_points_callback)
         self.table_sub = rospy.Subscriber('/kinfu/plane_bounding_box', pcl_utils.msg.BoundingBox, self._table_callback)
         self.avg_handle_poses_sub = rospy.Subscriber('/handle_detector/avg_handle_poses',
                                                 gm.PoseArray, self._avg_handle_poses_callback)
@@ -133,7 +133,12 @@ class CheckHandleGrasps:
             table_extents = self.table_extents
             avg_handle_poses = self.avg_handle_poses
             
-            if graspable_points.width < 100 or len(avg_handle_poses) == 0: # fails if too few points
+             # fails if too few points
+            if graspable_points.width < 50: 
+                print('Not enough points: {0}'.format(graspable_points.width))
+                continue
+            if len(avg_handle_poses) == 0:
+                print('No handles found')
                 continue
             
             #assert graspable_points.header.frame_id.replace('/','').count(table_pose.frame.replace('/','')) > 0
@@ -143,7 +148,8 @@ class CheckHandleGrasps:
             self.sim.clear_kinbodies()
             try:
                 convexify_pointcloud.add_convexified_pointcloud_to_env(self.sim, graspable_points)
-            except:
+            except Exception as e:
+                print('Error convexifying point cloud: {0}'.format(e))
                 continue
             
             
@@ -151,7 +157,8 @@ class CheckHandleGrasps:
             self.sim.add_box(table_pose, table_extents, check_collision=False)
             
             arm_pose = self.arm.get_pose()
-            avg_handle_poses = sorted(avg_handle_poses, key=lambda p: np.linalg.norm(p.position.array - arm_pose.position.array))
+            #avg_handle_poses = sorted(avg_handle_poses, key=lambda p: np.linalg.norm(p.position.array - arm_pose.position.array))
+            avg_handle_poses = sorted(avg_handle_poses, key=lambda p: -p.position.z)
             
             for i, handle_pose in enumerate(avg_handle_poses):
                 self.sim.clear_plots()

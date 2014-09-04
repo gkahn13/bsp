@@ -12,9 +12,16 @@ namespace po = boost::program_options;
 
 #include <geometry_msgs/PoseArray.h>
 #include <std_msgs/Empty.h>
+#include <std_msgs/String.h>
 #include <visualization_msgs/MarkerArray.h>
 
 const int T = TIMESTEPS;
+
+inline std_msgs::String create_string_msg(std::string str) {
+	std_msgs::String msg;
+	msg.data = str.c_str();
+	return msg;
+}
 
 class OccludedRegionCompare {
 public:
@@ -49,7 +56,7 @@ private:
 	// ros
 	ros::NodeHandle *nh_ptr;
 	ros::Subscriber occluded_region_array_sub, grasp_traj_sub;
-	ros::Publisher display_trajectory_pub, get_occluded_pub, display_gaussian_pub, reset_kinfu_pub;
+	ros::Publisher display_trajectory_pub, get_occluded_pub, display_gaussian_pub, reset_kinfu_pub, logger_pub;
 
 	bool received_occluded_region_array;
 	pcl_utils::OccludedRegionArray current_occluded_region_array;
@@ -72,6 +79,7 @@ private:
 	pr2_eih_sqp::PR2EihSqp pr2_eih_bsp;
 
 	Matrix4d highest_pose_above(const Matrix4d& pose);
+	void publish_to_logger(std::string str);
 	void _occluded_region_array_callback(const pcl_utils::OccludedRegionArrayConstPtr& msg);
 	void _grasp_traj_callback(const geometry_msgs::PoseArrayConstPtr& msg);
 };
@@ -101,13 +109,21 @@ PR2EihBrett::PR2EihBrett(int max_occluded_regions, const Vector3d& init_traj_con
 	display_trajectory_pub = nh_ptr->advertise<geometry_msgs::PoseArray>("/bsp_trajectory", 1);
 	get_occluded_pub = nh_ptr->advertise<std_msgs::Empty>("/get_occluded", 1);
 	reset_kinfu_pub = nh_ptr->advertise<std_msgs::Empty>("/reset_kinfu", 1);
+	logger_pub = nh_ptr->advertise<std_msgs::String>("/experiment_log", 1);
 
 	sim->update();
 	home_pose = arm->get_pose();
+
+	reset_kinfu_pub.publish(std_msgs::Empty());
+	ros::spinOnce();
+	ros::Duration(2.0).sleep();
+	ros::spinOnce();
 }
 
 void PR2EihBrett::get_occluded_regions(std::vector<Gaussian3d>& obj_gaussians,
 		std::vector<geometry3d::Triangle>& obstacles) {
+	publish_to_logger("start get_occluded_regions");
+
 	obj_gaussians.clear();
 	obstacles.clear();
 
@@ -149,6 +165,8 @@ void PR2EihBrett::get_occluded_regions(std::vector<Gaussian3d>& obj_gaussians,
 		ROS_INFO_STREAM("Gaussian " << i << "\nMean: " << obj_gaussians.back().mean.transpose()
 				<< "\nCovariance:\n" << obj_gaussians.back().cov << "\n");
 	}
+
+	publish_to_logger("end get_occluded_regions");
 }
 
 void PR2EihBrett::display_gaussian_means(const std::vector<Gaussian3d>& obj_gaussians) {
@@ -208,6 +226,8 @@ void PR2EihBrett::initialize_trajectory(StdVectorJ& J, StdVectorU& U, const std:
 
 void PR2EihBrett::bsp(StdVectorJ& J, StdVectorU& U, const MatrixJ& j_sigma0,
 		const std::vector<Gaussian3d>& obj_gaussians, const std::vector<geometry3d::Triangle>& obstacles) {
+	publish_to_logger("start bsp");
+
 	ROS_INFO_STREAM("Number of gaussians: " << obj_gaussians.size());
 	ROS_INFO_STREAM("Number of obstacles: " << obstacles.size());
 
@@ -218,6 +238,8 @@ void PR2EihBrett::bsp(StdVectorJ& J, StdVectorU& U, const MatrixJ& j_sigma0,
 	for(int t=0; t < T-1; ++t) {
 		J[t+1] = sys->dynfunc(J[t], U[t], VectorQ::Zero(), true);
 	}
+
+	publish_to_logger("end bsp");
 }
 
 void PR2EihBrett::display_trajectory(const StdVectorJ& J) {
@@ -243,6 +265,8 @@ void PR2EihBrett::display_trajectory(const StdVectorJ& J) {
 }
 
 void PR2EihBrett::execute_controls(const StdVectorU& U) {
+	publish_to_logger("start execute_bsp");
+
 	VectorJ current_joints = arm->get_joints();
 	VectorJ next_joints;
 
@@ -264,15 +288,7 @@ void PR2EihBrett::execute_controls(const StdVectorU& U) {
 
 	arm->execute_joint_trajectory(joint_traj);
 
-//	VectorJ current_joints = arm->get_joints();
-//
-//	std::vector<VectorJ> joint_traj(U.size());
-//	for(int t=0; t < U.size(); ++t) {
-//		current_joints = sys->dynfunc(current_joints, U[t], VectorQ::Zero(), true);
-//		joint_traj[t] = current_joints;
-//	}
-//
-//	arm->execute_joint_trajectory(joint_traj);
+	publish_to_logger("end execute_bsp");
 }
 
 bool PR2EihBrett::is_valid_grasp_trajectory(std::vector<Matrix4d>& grasp_traj) {
@@ -282,15 +298,18 @@ bool PR2EihBrett::is_valid_grasp_trajectory(std::vector<Matrix4d>& grasp_traj) {
 }
 
 void PR2EihBrett::execute_grasp_trajectory(const std::vector<Matrix4d>& grasp_traj) {
+	publish_to_logger("start execute_grasp_trajectory");
+	double speed = 0.06;
+
 	ROS_INFO("Opening gripper and executing grasp trajectory");
 	arm->open_gripper(0, false);
-	arm->execute_pose_trajectory(grasp_traj);
+	arm->execute_pose_trajectory(grasp_traj, speed);
 
 	ROS_INFO("Closing the gripper");
-	arm->close_gripper(0, true, 1.0);
+	arm->close_gripper(0, true, 2.0);
 
 	ROS_INFO("Moving up");
-	arm->go_to_pose(highest_pose_above(arm->get_pose()));
+	arm->go_to_pose(highest_pose_above(arm->get_pose()), speed);
 
 //	ROS_INFO("Moving back along similar trajectory");
 //	int traj_length = grasp_traj.size();
@@ -302,15 +321,17 @@ void PR2EihBrett::execute_grasp_trajectory(const std::vector<Matrix4d>& grasp_tr
 //	arm->execute_pose_trajectory(up_grasp_traj);
 
 	ROS_INFO("Moving to above home pose");
-	arm->go_to_pose(highest_pose_above(home_pose));
+	arm->go_to_pose(highest_pose_above(home_pose), speed);
 
 	ROS_INFO("Moving to home pose and dropping off");
-	arm->go_to_pose(home_pose);
+	arm->go_to_pose(home_pose, speed);
 	arm->open_gripper(0, false);
 
 	reset_kinfu_pub.publish(std_msgs::Empty());
 	ros::Duration(1.0).sleep(); // give kinfu some time
 	last_grasp_traj.clear();
+
+	publish_to_logger("end execute_grasp_trajectory");
 }
 
 /**
@@ -328,6 +349,12 @@ Matrix4d PR2EihBrett::highest_pose_above(const Matrix4d& pose) {
 	}
 	highest_above.block<3,1>(0,3) -= step;
 	return highest_above;
+}
+
+void PR2EihBrett::publish_to_logger(std::string str) {
+	std_msgs::String msg;
+	msg.data = str.c_str();
+	logger_pub.publish(msg);
 }
 
 /**
@@ -404,6 +431,7 @@ int main(int argc, char* argv[]) {
 	log4cxx::LoggerPtr my_logger = log4cxx::Logger::getLogger(ROSCONSOLE_DEFAULT_NAME);
 	my_logger->setLevel(ros::console::g_level_lookup[ros::console::levels::Info]);
 	ROS_INFO("Starting ROS node");
+	ros::spinOnce();
 
 	bool pause;
 	int max_occluded_regions;

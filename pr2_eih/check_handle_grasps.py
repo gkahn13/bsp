@@ -23,8 +23,12 @@ import tfx
 
 import geometry_msgs.msg as gm
 import sensor_msgs.msg as sm
+import std_msgs.msg
 
 import numpy as np
+
+import warnings
+warnings.filterwarnings('error')
 
 import IPython
 
@@ -35,7 +39,7 @@ class CheckHandleGrasps:
         self.table_extents = None
         self.avg_handle_poses = None
         
-        self.graspable_points_sub = rospy.Subscriber('/handle_detector/point_cloud', sm.PointCloud2, self._graspable_points_callback)
+        self.graspable_points_sub = rospy.Subscriber('/kinfu/graspable_points', sm.PointCloud2, self._graspable_points_callback)
         self.table_sub = rospy.Subscriber('/kinfu/plane_bounding_box', pcl_utils.msg.BoundingBox, self._table_callback)
         self.avg_handle_poses_sub = rospy.Subscriber('/handle_detector/avg_handle_poses',
                                                 gm.PoseArray, self._avg_handle_poses_callback)
@@ -67,13 +71,14 @@ class CheckHandleGrasps:
             R[:,i] = e.array/e.norm
             
         extent_lengths = np.array([e.norm for e in extents])
+        extent_lengths[-1] *= 1.5
             
         self.table_pose = tfx.pose(msg.center, R).matrix
         self.table_extents = extent_lengths
         
     def _avg_handle_poses_callback(self, msg):
         self.avg_handle_poses = [tfx.pose(p, header=msg.header) for p in msg.poses]
-        
+    
     def get_most_recent_callbacks(self):
         """
         Clears all callback variables and blocks
@@ -134,6 +139,7 @@ class CheckHandleGrasps:
             avg_handle_poses = self.avg_handle_poses
             
              # fails if too few points
+            print('Point cloud size: {0}'.format(graspable_points.width))
             if graspable_points.width < 50: 
                 print('Not enough points: {0}'.format(graspable_points.width))
                 continue
@@ -148,6 +154,9 @@ class CheckHandleGrasps:
             self.sim.clear_kinbodies()
             try:
                 convexify_pointcloud.add_convexified_pointcloud_to_env(self.sim, graspable_points)
+            except Warning as e:
+                print('Error convexifying point cloud: {0}'.format(e))
+                continue
             except Exception as e:
                 print('Error convexifying point cloud: {0}'.format(e))
                 continue

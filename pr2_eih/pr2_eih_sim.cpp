@@ -243,8 +243,8 @@ int main(int argc, char* argv[]) {
 	std::vector<geometry3d::Triangle> obstacles;
 	std::vector<Gaussian3d> obj_gaussians_t, obj_gaussians_tp1;
 //	init_obstacles_and_objects(cam, obstacles, obj_gaussians_t);
-	init_obstacles_and_objects_from_box(cam, obstacles, obj_gaussians_t);
-//	init_obstacles_and_objects_from_data(cam, obstacles, obj_gaussians_t);
+//	init_obstacles_and_objects_from_box(cam, obstacles, obj_gaussians_t);
+	init_obstacles_and_objects_from_data(cam, obstacles, obj_gaussians_t);
 
 	// setup initial state
 	VectorJ j_t, j_t_real, j_tp1, j_tp1_real;
@@ -272,6 +272,7 @@ int main(int argc, char* argv[]) {
 		// optimize
 		util::Timer_tic(&forces_timer);
 		double cost = pr2_eih_bsp.collocation(J, U, j_sigma0_t, obj_gaussians_t, obstacles, sys, true);
+		cost = sys.cost(J, j_sigma0_t, U, obj_gaussians_t, INFINITY, obstacles);
 		double forces_time = util::Timer_toc(&forces_timer);
 
 		LOG_INFO("Optimized cost: %4.5f", cost);

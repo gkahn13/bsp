@@ -23,12 +23,10 @@ PR2EihSystem::PR2EihSystem(pr2_sim::Simulator *s, pr2_sim::Arm *a, pr2_sim::Came
 	u_min = -10*VectorJ::Ones(); //j_min;
 	u_max = 10*VectorJ::Ones(); //j_max;
 
-//	Q = (M_PI/4)*MatrixQ::Identity();
 	Q = 1e-2*MatrixQ::Identity();
 	VectorR R_diag;
-//	R_diag << (M_PI/4)*VectorJ::Ones(), 5*Vector3d::Ones();
-//	R_diag << 1e-2*VectorJ::Ones(), 1e-2, 1e-2, 1;
-	R_diag << 1e-2*VectorJ::Ones(), 1, 1, 1;
+//	R_diag << 1e-2*VectorJ::Ones(), 1, 1, 1;
+	R_diag << 1e-2*VectorJ::Ones(), .1, .1, .2; // TODO:
 	R = R_diag.asDiagonal();
 
 	arm->set_posture(pr2_sim::Arm::Posture::mantis);
@@ -66,26 +64,42 @@ void PR2EihSystem::get_limits(VectorJ& j_min, VectorJ& j_max, VectorU& u_min, Ve
  * \brief Observation function is the joint positions and (object - camera)
  */
 VectorZ PR2EihSystem::obsfunc(const VectorJ& j, const Vector3d& object, const VectorR& r) {
-	VectorZ z;
+	// ORIGINAL BUGGY METHOD THAT WORKED
+
+//	VectorZ z;
+//	z.segment<J_DIM>(0) = j + r.segment<J_DIM>(0);
+//
+//	Matrix4d cam_pose = cam->get_pose(j);
+//	Vector3d sigmas = cam->measurement_standard_deviation(cam_pose, object);
+//	z(J_DIM) += sigmas(0)*r(J_DIM);
+//	z(J_DIM+1) += sigmas(1)*r(J_DIM+1);
+//	z(J_DIM+2) += sigmas(2)*r(J_DIM+2);
+//
+//	return z;
+
+
+	// WORKING ON NEW, CORRECT METHOD
+
+	VectorZ z = VectorZ::Zero();
 	z.segment<J_DIM>(0) = j + r.segment<J_DIM>(0);
 
 	Matrix4d cam_pose = cam->get_pose(j);
 
-//	Matrix4d cam_pose_inv = cam_pose.inverse();
-//	Matrix3d cam_rot_inv = cam_pose_inv.block<3,3>(0,0);
-//	Vector3d cam_trans_inv = cam_pose_inv.block<3,1>(0,3);
-//
-//	Vector3d object_cam = cam_rot_inv*object + cam_trans_inv;
-//	z.segment<3>(J_DIM) = object_cam;
-//
-//	z(J_DIM) += r(J_DIM);
-//	z(J_DIM+1) += r(J_DIM+1);
-//	z(J_DIM+2) += object_cam(2)*object_cam(2)*r(J_DIM+2); // TODO: VERY important optimization parameter
+	Matrix4d cam_pose_inv = cam_pose.inverse();
+	Matrix3d cam_rot_inv = cam_pose_inv.block<3,3>(0,0);
+	Vector3d cam_trans_inv = cam_pose_inv.block<3,1>(0,3);
 
-	Vector3d sigmas = cam->measurement_standard_deviation(cam_pose, object);
-	z(J_DIM) += sigmas(0)*r(J_DIM);
-	z(J_DIM+1) += sigmas(1)*r(J_DIM+1);
-	z(J_DIM+2) += sigmas(2)*r(J_DIM+2);
+	Vector3d object_cam = cam_rot_inv*object + cam_trans_inv;
+	z.segment<3>(J_DIM) = object_cam;
+
+//	Vector3d sigmas = cam->measurement_standard_deviation(cam_pose, object);
+////	std::cout << "sigmas: " << sigmas.transpose() << "\n";
+////	sigmas = 1e-1*Vector3d::Ones();
+//	z(J_DIM) += sigmas(0)*r(J_DIM);
+//	z(J_DIM+1) += sigmas(1)*r(J_DIM+1);
+//	z(J_DIM+2) += sigmas(2)*r(J_DIM+2);
+
+	z.segment<3>(J_DIM) += r.segment<3>(J_DIM);
 
 	return z;
 }
@@ -139,6 +153,9 @@ void PR2EihSystem::belief_dynamics(const VectorX& x_t, const MatrixX& sigma_t, c
 	Matrix<double,Z_DIM,X_DIM> H;
 	Matrix<double,Z_DIM,R_DIM> N;
 	linearize_obsfunc(x_tp1, VectorR::Zero(), H, N);
+
+//	std::cout << "H:\n" << H << "\n";
+//	std::cout << "N:\n" << N << "\n";
 
 	MatrixZ delta = delta_matrix(x_tp1.segment<J_DIM>(0), x_tp1.segment<3>(J_DIM), alpha, obstacles, cached_frustum_timestep);
 	Matrix<double,X_DIM,Z_DIM> K = sigma_tp1_bar*H.transpose()*delta*(delta*H*sigma_tp1_bar*H.transpose()*delta + N*R*N.transpose()).inverse()*delta;
@@ -446,8 +463,6 @@ void PR2EihSystem::linearize_dynfunc(const VectorX& x, const VectorU& u, const V
 
 void PR2EihSystem::linearize_obsfunc(const VectorX& x, const VectorR& r,
 		Matrix<double,Z_DIM,X_DIM>& H, Matrix<double,Z_DIM,R_DIM>& N) {
-//	H = Matrix<double,Z_DIM,X_DIM>::Identity();
-
 	H.setZero();
 	VectorX x_p = x, x_m = x;
 	for(int i=0; i < X_DIM; ++i) {

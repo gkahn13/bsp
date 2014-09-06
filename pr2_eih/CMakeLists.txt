@@ -8,7 +8,7 @@ if( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
   add_definitions("-fno-strict-aliasing -Wall -Wno-sign-compare -Wno-enum-compare -Wno-reorder -std=c++11")
 endif( CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX )
 
-find_package(catkin REQUIRED COMPONENTS pr2_utils roscpp pcl_utils actionlib tf tf_conversions)
+find_package(catkin REQUIRED COMPONENTS pr2_utils roscpp roslib pcl_utils actionlib tf tf_conversions)
 find_package(OpenRAVE REQUIRED)
 find_package(Boost ${OpenRAVE_Boost_VERSION} EXACT COMPONENTS system program_options)
 find_package(Eigen)

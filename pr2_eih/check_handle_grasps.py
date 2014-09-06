@@ -38,11 +38,13 @@ class CheckHandleGrasps:
         self.table_pose = None
         self.table_extents = None
         self.avg_handle_poses = None
+        self.is_reset_kinfu = True
         
         self.graspable_points_sub = rospy.Subscriber('/kinfu/graspable_points', sm.PointCloud2, self._graspable_points_callback)
         self.table_sub = rospy.Subscriber('/kinfu/plane_bounding_box', pcl_utils.msg.BoundingBox, self._table_callback)
         self.avg_handle_poses_sub = rospy.Subscriber('/handle_detector/avg_handle_poses',
                                                 gm.PoseArray, self._avg_handle_poses_callback)
+        self.reset_kinfu_sub = rospy.Subscriber('/reset_kinfu', std_msgs.msg.Empty, self._reset_kinfu_callback)
         
         self.trajectory_pub = rospy.Publisher('/check_handle_grasps/trajectory', gm.PoseArray)
         
@@ -78,6 +80,9 @@ class CheckHandleGrasps:
         
     def _avg_handle_poses_callback(self, msg):
         self.avg_handle_poses = [tfx.pose(p, header=msg.header) for p in msg.poses]
+    
+    def _reset_kinfu_callback(self, msg):
+        self.is_reset_kinfu = True
     
     def get_most_recent_callbacks(self):
         """
@@ -137,6 +142,11 @@ class CheckHandleGrasps:
             table_pose = self.table_pose
             table_extents = self.table_extents
             avg_handle_poses = self.avg_handle_poses
+            
+            if self.is_reset_kinfu:
+                print('Kinfu was reset\n')
+                self.is_reset_kinfu = False
+                continue
             
              # fails if too few points
             print('Point cloud size: {0}'.format(graspable_points.width))
@@ -212,6 +222,9 @@ class CheckHandleGrasps:
                 else:
                     print('Trajectory is not collision free')
                 print('')
+                
+                if self.is_reset_kinfu:
+                    break
                     
             rospy.sleep(0.1)
     

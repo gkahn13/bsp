@@ -72,7 +72,7 @@ private:
 	PR2EihSystem *sys;
 	pr2::Arm *arm;
 
-	Matrix4d home_pose;
+	VectorJ home_joints;
 	std::vector<Matrix4d> last_grasp_traj;
 
 	// sqp solver
@@ -100,6 +100,9 @@ PR2EihBrett::PR2EihBrett(int max_occluded_regions, const Vector3d& init_traj_con
 	// subscribe to OccludedRegionArray topic
 	ROS_INFO("Creating publishers/subscribers");
 	nh_ptr = new ros::NodeHandle();
+	ros::Duration(2.0).sleep();
+	ros::spinOnce();
+
 	occluded_region_array_sub =
 			nh_ptr->subscribe("/kinfu/occluded_regions", 1, &PR2EihBrett::_occluded_region_array_callback, this);
 	grasp_traj_sub =
@@ -112,11 +115,9 @@ PR2EihBrett::PR2EihBrett(int max_occluded_regions, const Vector3d& init_traj_con
 	logger_pub = nh_ptr->advertise<std_msgs::String>("/experiment_log", 1);
 
 	sim->update();
-	home_pose = arm->get_pose();
+	home_joints = arm->get_joints();
 
 	reset_kinfu_pub.publish(std_msgs::Empty());
-	ros::spinOnce();
-	ros::Duration(2.0).sleep();
 	ros::spinOnce();
 }
 
@@ -321,10 +322,10 @@ void PR2EihBrett::execute_grasp_trajectory(const std::vector<Matrix4d>& grasp_tr
 //	arm->execute_pose_trajectory(up_grasp_traj);
 
 	ROS_INFO("Moving to above home pose");
-	arm->go_to_pose(highest_pose_above(home_pose), speed);
+	arm->go_to_pose(highest_pose_above(arm->fk(home_joints)), speed);
 
 	ROS_INFO("Moving to home pose and dropping off");
-	arm->go_to_pose(home_pose, speed);
+	arm->go_to_joints(home_joints, speed);
 	arm->open_gripper(0, false);
 
 	reset_kinfu_pub.publish(std_msgs::Empty());

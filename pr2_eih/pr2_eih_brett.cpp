@@ -29,9 +29,12 @@ public:
 
 	// assumes a and b are in the camera frame
 	bool operator()(const pcl_utils::OccludedRegion& a, const pcl_utils::OccludedRegion& b) const {
-		Vector3d a_gaussian_mean(a.gaussian.mean.x, a.gaussian.mean.y, a.gaussian.mean.z);
-		Vector3d b_gaussian_mean(b.gaussian.mean.x, b.gaussian.mean.y, b.gaussian.mean.z);
-		return (a_gaussian_mean.norm() < b_gaussian_mean.norm());
+//		Vector3d a_gaussian_mean(a.gaussian.mean.x, a.gaussian.mean.y, a.gaussian.mean.z);
+//		Vector3d b_gaussian_mean(b.gaussian.mean.x, b.gaussian.mean.y, b.gaussian.mean.z);
+//		return (a_gaussian_mean.norm() < b_gaussian_mean.norm());
+		Matrix3d a_cov(a.gaussian.covariance.data());
+		Matrix3d b_cov(b.gaussian.covariance.data());
+		return (a_cov.trace() > b_cov.trace());
 	}
 };
 
@@ -49,14 +52,14 @@ public:
 	void display_trajectory(const StdVectorJ& J);
 	void execute_controls(const StdVectorU& U);
 
-	bool is_valid_grasp_trajectory(std::vector<Matrix4d>& grasp_traj);
-	void execute_grasp_trajectory(const std::vector<Matrix4d>& grasp_traj);
+	bool is_valid_grasp_trajectory(std::vector<Matrix4d>& grasp_traj, std::vector<Matrix4d>& return_grasp_traj);
+	void execute_grasp_trajectory(const std::vector<Matrix4d>& grasp_traj, std::vector<Matrix4d>& return_grasp_traj);
 
 private:
 	// ros
 	ros::NodeHandle *nh_ptr;
-	ros::Subscriber occluded_region_array_sub, grasp_traj_sub;
-	ros::Publisher display_trajectory_pub, get_occluded_pub, display_gaussian_pub, reset_kinfu_pub, logger_pub;
+	ros::Subscriber occluded_region_array_sub, grasp_traj_sub, return_grasp_traj_sub;
+	ros::Publisher display_trajectory_pub, get_occluded_pub, display_gaussian_pub, reset_kinfu_pub, logger_pub, home_pose_pub;
 
 	bool received_occluded_region_array;
 	pcl_utils::OccludedRegionArray current_occluded_region_array;
@@ -73,15 +76,17 @@ private:
 	pr2::Arm *arm;
 
 	VectorJ home_joints;
-	std::vector<Matrix4d> last_grasp_traj;
+	std::vector<Matrix4d> last_grasp_traj, return_grasp_traj;
 
 	// sqp solver
 	pr2_eih_sqp::PR2EihSqp pr2_eih_bsp;
 
 	Matrix4d highest_pose_above(const Matrix4d& pose);
 	void publish_to_logger(std::string str);
+	void publish_home_pose();
 	void _occluded_region_array_callback(const pcl_utils::OccludedRegionArrayConstPtr& msg);
 	void _grasp_traj_callback(const geometry_msgs::PoseArrayConstPtr& msg);
+	void _return_grasp_traj_callback(const geometry_msgs::PoseArrayConstPtr& msg);
 };
 
 PR2EihBrett::PR2EihBrett(int max_occluded_regions, const Vector3d& init_traj_control, double max_travel_distance) :
@@ -106,24 +111,29 @@ PR2EihBrett::PR2EihBrett(int max_occluded_regions, const Vector3d& init_traj_con
 	occluded_region_array_sub =
 			nh_ptr->subscribe("/kinfu/occluded_regions", 1, &PR2EihBrett::_occluded_region_array_callback, this);
 	grasp_traj_sub =
-			nh_ptr->subscribe("/check_handle_grasps/trajectory", 1, &PR2EihBrett::_grasp_traj_callback, this);
+			nh_ptr->subscribe("/check_handle_grasps/grasp_trajectory", 1, &PR2EihBrett::_grasp_traj_callback, this);
+	return_grasp_traj_sub =
+				nh_ptr->subscribe("/check_handle_grasps/return_grasp_trajectory", 1, &PR2EihBrett::_return_grasp_traj_callback, this);
 	received_occluded_region_array = false;
 	display_gaussian_pub = nh_ptr->advertise<visualization_msgs::MarkerArray>("/bsp_object_means", 1);
 	display_trajectory_pub = nh_ptr->advertise<geometry_msgs::PoseArray>("/bsp_trajectory", 1);
 	get_occluded_pub = nh_ptr->advertise<std_msgs::Empty>("/get_occluded", 1);
 	reset_kinfu_pub = nh_ptr->advertise<std_msgs::Empty>("/reset_kinfu", 1);
 	logger_pub = nh_ptr->advertise<std_msgs::String>("/experiment_log", 1);
+	home_pose_pub = nh_ptr->advertise<geometry_msgs::PoseStamped>("/bsp/home_pose", 1);
 
 	sim->update();
 	home_joints = arm->get_joints();
 
 	reset_kinfu_pub.publish(std_msgs::Empty());
 	ros::spinOnce();
+	ros::Duration(1.0).sleep();
 }
 
 void PR2EihBrett::get_occluded_regions(std::vector<Gaussian3d>& obj_gaussians,
 		std::vector<geometry3d::Triangle>& obstacles) {
 	publish_to_logger("start get_occluded_regions");
+	publish_home_pose();
 
 	obj_gaussians.clear();
 	obstacles.clear();
@@ -292,13 +302,14 @@ void PR2EihBrett::execute_controls(const StdVectorU& U) {
 	publish_to_logger("end execute_bsp");
 }
 
-bool PR2EihBrett::is_valid_grasp_trajectory(std::vector<Matrix4d>& grasp_traj) {
+bool PR2EihBrett::is_valid_grasp_trajectory(std::vector<Matrix4d>& grasp_traj, std::vector<Matrix4d>& return_grasp_traj) {
 	bool received_grasp_traj = (last_grasp_traj.size() > 0);
 	grasp_traj = last_grasp_traj;
+	return_grasp_traj = this->return_grasp_traj;
 	return received_grasp_traj;
 }
 
-void PR2EihBrett::execute_grasp_trajectory(const std::vector<Matrix4d>& grasp_traj) {
+void PR2EihBrett::execute_grasp_trajectory(const std::vector<Matrix4d>& grasp_traj, std::vector<Matrix4d>& return_grasp_traj) {
 	publish_to_logger("start execute_grasp_trajectory");
 	double speed = 0.06;
 
@@ -309,28 +320,36 @@ void PR2EihBrett::execute_grasp_trajectory(const std::vector<Matrix4d>& grasp_tr
 	ROS_INFO("Closing the gripper");
 	arm->close_gripper(0, true, 2.0);
 
-	ROS_INFO("Moving up");
-	arm->go_to_pose(highest_pose_above(arm->get_pose()), speed);
+	if (return_grasp_traj.size() > 0) {
+		arm->execute_pose_trajectory(return_grasp_traj, speed);
+	} else {
+		ROS_INFO("Return grasp traj length is 0, returning via hard-coded behavior");
 
-//	ROS_INFO("Moving back along similar trajectory");
-//	int traj_length = grasp_traj.size();
-//	std::vector<Matrix4d> up_grasp_traj(traj_length);
-//	for(int i=0; i < traj_length; ++i) {
-//		up_grasp_traj[i] = grasp_traj[(traj_length-1)-i];
-//		up_grasp_traj[i].block<3,1>(0,3) += up;
-//	}
-//	arm->execute_pose_trajectory(up_grasp_traj);
+		ROS_INFO("Moving up");
+		arm->go_to_pose(highest_pose_above(arm->get_pose()), speed);
 
-	ROS_INFO("Moving to above home pose");
-	arm->go_to_pose(highest_pose_above(arm->fk(home_joints)), speed);
+//		ROS_INFO("Moving back along higher trajectory");
+//		int traj_length = grasp_traj.size();
+//		std::vector<Matrix4d> up_grasp_traj(traj_length);
+//		for(int i=0; i < traj_length; ++i) {
+//			up_grasp_traj[i] = highest_pose_above(grasp_traj[(traj_length-1)-i]);
+//		}
+//		arm->execute_pose_trajectory(up_grasp_traj);
 
-	ROS_INFO("Moving to home pose and dropping off");
-	arm->go_to_joints(home_joints, speed);
+		ROS_INFO("Moving to above home pose");
+		arm->go_to_pose(highest_pose_above(arm->fk(home_joints)), speed);
+
+		ROS_INFO("Moving to home pose and dropping off");
+		arm->go_to_joints(home_joints, speed);
+	}
+
 	arm->open_gripper(0, false);
 
 	reset_kinfu_pub.publish(std_msgs::Empty());
+	ros::spinOnce();
 	ros::Duration(1.0).sleep(); // give kinfu some time
 	last_grasp_traj.clear();
+
 
 	publish_to_logger("end execute_grasp_trajectory");
 }
@@ -356,6 +375,19 @@ void PR2EihBrett::publish_to_logger(std::string str) {
 	std_msgs::String msg;
 	msg.data = str.c_str();
 	logger_pub.publish(msg);
+}
+
+void PR2EihBrett::publish_home_pose() {
+	// publish home pose for check_handle_grasps
+	Matrix4d home_pose = arm->fk(home_joints);
+	Affine3d home_pose_affine = Translation3d(home_pose.block<3,1>(0,3)) * AngleAxisd(home_pose.block<3,3>(0,0));
+	geometry_msgs::PoseStamped home_pose_msg;
+	tf::Pose tf_pose;
+	tf::poseEigenToTF(home_pose_affine, tf_pose);
+	tf::poseTFToMsg(tf_pose, home_pose_msg.pose);
+	home_pose_msg.header.frame_id = "base_link";
+	home_pose_msg.header.stamp = ros::Time::now();
+	home_pose_pub.publish(home_pose_msg);
 }
 
 /**
@@ -384,7 +416,19 @@ void PR2EihBrett::_grasp_traj_callback(const geometry_msgs::PoseArrayConstPtr& m
 	}
 }
 
+void PR2EihBrett::_return_grasp_traj_callback(const geometry_msgs::PoseArrayConstPtr& msg) {
+	assert(msg->header.frame_id == "base_link" || msg->header.frame_id == "/base_link");
+	return_grasp_traj.clear();
+	for(const geometry_msgs::Pose& pose_msg : msg->poses) {
+		tf::Pose pose;
+		tf::poseMsgToTF(pose_msg, pose);
+		Affine3d affine_pose;
+		tf::poseTFToEigen(pose, affine_pose);
+		Matrix4d matrix_pose = affine_pose.matrix();
 
+		return_grasp_traj.push_back(matrix_pose);
+	}
+}
 
 
 void parse_args(int argc, char* argv[],
@@ -449,7 +493,7 @@ int main(int argc, char* argv[]) {
 	StdVectorJ J(T);
 	StdVectorU U(T-1);
 
-	std::vector<Matrix4d> grasp_traj;
+	std::vector<Matrix4d> grasp_traj, return_grasp_traj;
 
 	ros::Duration(0.5).sleep();
 
@@ -481,11 +525,11 @@ int main(int argc, char* argv[]) {
 		brett_bsp.execute_controls(U);
 
 		ROS_INFO("Checking if there exists a valid grasp trajectory");
-		if (brett_bsp.is_valid_grasp_trajectory(grasp_traj)) {
+		if (brett_bsp.is_valid_grasp_trajectory(grasp_traj, return_grasp_traj)) {
 			ROS_INFO("Valid grasp trajectory exists! Execute grasp");
 			if (pause) { ROS_INFO("Press enter"); std::cin.ignore(); }
 
-			brett_bsp.execute_grasp_trajectory(grasp_traj);
+			brett_bsp.execute_grasp_trajectory(grasp_traj, return_grasp_traj);
 
 
 		}

@@ -17,12 +17,6 @@ namespace po = boost::program_options;
 
 const int T = TIMESTEPS;
 
-inline std_msgs::String create_string_msg(std::string str) {
-	std_msgs::String msg;
-	msg.data = str.c_str();
-	return msg;
-}
-
 class OccludedRegionCompare {
 public:
 	OccludedRegionCompare() { }

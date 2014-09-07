@@ -173,6 +173,10 @@ class CheckHandleGrasps:
             avg_handle_poses = sorted(avg_handle_poses, key=lambda p: -p.position.z)
             
             for i, handle_pose in enumerate(avg_handle_poses):
+                if self.is_reset_kinfu:
+                    break
+                
+                print('Checking if handle pose {0} is collision free and reachable'.format(i))
                 grasp_joint_traj = self.get_grasp_trajectory(handle_pose)
                 
                 if grasp_joint_traj is not None:
@@ -210,13 +214,9 @@ class CheckHandleGrasps:
         self.sim.clear_plots()
         self.sim.update()
         self.sim.plot_transform(self.sim.transform_from_to(handle_pose, handle_pose.frame, 'world'))
-        print('Checking if handle pose {0} is collision free and reachable'.format(i))
         
         joint_traj = self.planner.get_grasp_joint_trajectory(self.arm.get_joints(), handle_pose,
                                                              ignore_orientation=True, link_name=grasp_frame)
-        
-        if self.is_reset_kinfu:
-            break
         
         is_collision_free = joint_traj is not None
         if is_collision_free:
@@ -258,7 +258,8 @@ class CheckHandleGrasps:
         self.arm.set_joints(grasp_joints)
         grasp_pose = self.arm.get_pose()
         
-        above_grasp_pose = grasp_pose + (grasp_pose.position.array - table_pose.position.array)
+        above_grasp_pose = grasp_pose
+        above_grasp_pose.position.z += grasp_pose.position.z - table_pose.position.z
         above_grasp_joints = self.arm.ik(above_grasp_pose)
         
         if above_grasp_joints is None:
@@ -278,6 +279,8 @@ class CheckHandleGrasps:
         
     def publish_pose_array(self, pub, joint_traj):
         poses = [tfx.pose(self.arm.fk(joints)) for joints in joint_traj]
+        for pose in poses:
+            self.sim.plot_transform(self.sim.transform_from_to(pose.matrix, 'base_link', 'world'))
         
         trajectory = gm.PoseArray()
         trajectory.header.stamp = rospy.Time.now()

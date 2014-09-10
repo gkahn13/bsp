@@ -81,6 +81,7 @@ public:
 };
 
 class PR2EihSystem {
+public:
 	const double step = 0.0078125*0.0078125;
 
 	const double alpha_control = 1e-4; // 1e-4
@@ -89,7 +90,6 @@ class PR2EihSystem {
 
 	const double alpha_particle_sd = 1e3; // 100
 
-public:
 	PR2EihSystem(pr2_sim::Simulator *s, pr2_sim::Arm *a, pr2_sim::Camera *c);
 	PR2EihSystem() : PR2EihSystem(NULL, NULL, NULL) { }
 

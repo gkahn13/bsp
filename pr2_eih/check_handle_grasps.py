@@ -24,11 +24,12 @@ import tfx
 import geometry_msgs.msg as gm
 import sensor_msgs.msg as sm
 import std_msgs.msg
+import trajectory_msgs.msg as tm
 
 import numpy as np
 
-import warnings
-warnings.filterwarnings('error')
+# import warnings
+# warnings.filterwarnings('error')
 
 import IPython
 
@@ -44,6 +45,7 @@ class CheckHandleGrasps:
         min_positions = np.array([0.25,-1,0.3])
         max_positions = np.array([1,1,1.5])
         self.point_cloud_filter = lambda point: min(min_positions < point) and min(point < max_positions)
+#         self.point_cloud_filter = lambda point: True
         
         self.graspable_points_sub = rospy.Subscriber('/kinfu/graspable_points', sm.PointCloud2, self._graspable_points_callback)
         self.table_sub = rospy.Subscriber('/kinfu/plane_bounding_box', pcl_utils.msg.BoundingBox, self._table_callback)
@@ -52,8 +54,8 @@ class CheckHandleGrasps:
         self.reset_kinfu_sub = rospy.Subscriber('/reset_kinfu', std_msgs.msg.Empty, self._reset_kinfu_callback)
         self.home_pose_sub = rospy.Subscriber('/bsp/home_pose', gm.PoseStamped, self._home_pose_callback)
         
-        self.grasp_traj_pub = rospy.Publisher('/check_handle_grasps/grasp_trajectory', gm.PoseArray)
-        self.return_grasp_traj_pub = rospy.Publisher('/check_handle_grasps/return_grasp_trajectory', gm.PoseArray)
+        self.grasp_joint_traj_pub = rospy.Publisher('/check_handle_grasp/grasp_joint_trajectory', tm.JointTrajectory)
+        self.return_grasp_joint_traj_pub = rospy.Publisher('/check_handle_grasp/return_grasp_joint_trajectory', tm.JointTrajectory)
         
         self.sim = simulator.Simulator(view=True)
         self.arm = arm.Arm('right', sim=self.sim)
@@ -83,7 +85,7 @@ class CheckHandleGrasps:
             R[:,i] = e.array/e.norm
             
         extent_lengths = np.array([e.norm for e in extents])
-        extent_lengths[-1] *= 1.5
+        extent_lengths[-1] *= 1
             
         self.table_pose = tfx.pose(msg.center, R).matrix
         self.table_extents = extent_lengths
@@ -186,8 +188,11 @@ class CheckHandleGrasps:
                     if return_grasp_joint_traj is None:
                         return_grasp_joint_traj = list()
                     
-                    self.publish_pose_array(self.grasp_traj_pub, grasp_joint_traj)
-                    self.publish_pose_array(self.return_grasp_traj_pub, return_grasp_joint_traj)
+                    self.plot_joint_traj(grasp_joint_traj)
+                    self.plot_joint_traj(return_grasp_joint_traj)
+                    
+                    self.publish_joint_traj(self.grasp_joint_traj_pub, grasp_joint_traj)
+                    self.publish_joint_traj(self.return_grasp_joint_traj_pub, return_grasp_joint_traj)
                     break
                                     
             rospy.sleep(0.1)
@@ -203,7 +208,7 @@ class CheckHandleGrasps:
         :param table_extents np.ndarray 3d in base_link
         """
         while not self.sim.add_box(table_pose, table_extents, check_collision=True):
-            table_pose[0,3] += 0.01 # move forward until not in collision
+            table_pose[0,3] += 0.05 # move forward until not in collision
             
     def get_grasp_trajectory(self, handle_pose, grasp_frame='r_gripper_center_frame'):
         """
@@ -272,22 +277,21 @@ class CheckHandleGrasps:
             return None
         
         joint_traj = self.planner.get_return_from_grasp_joint_trajectory(above_grasp_joints, self.home_pose)
-        if len(joint_traj) == 0:
+        if joint_traj is None or len(joint_traj) == 0:
             return None
         return joint_traj
+            
+    def publish_joint_traj(self, pub, joint_traj):
+        joint_traj_msg = tm.JointTrajectory()
+        joint_traj_msg.header.stamp = rospy.Time.now()
+        joint_traj_msg.points = [tm.JointTrajectoryPoint(positions=joints) for joints in joint_traj]
         
+        pub.publish(joint_traj_msg)
         
-    def publish_pose_array(self, pub, joint_traj):
+    def plot_joint_traj(self, joint_traj):
         poses = [tfx.pose(self.arm.fk(joints)) for joints in joint_traj]
         for pose in poses:
             self.sim.plot_transform(self.sim.transform_from_to(pose.matrix, 'base_link', 'world'))
-        
-        trajectory = gm.PoseArray()
-        trajectory.header.stamp = rospy.Time.now()
-        trajectory.header.frame_id = 'base_link'
-        trajectory.poses = [pose.msg.Pose() for pose in poses]        
-        
-        pub.publish(trajectory)
         
 if __name__ == '__main__':
     rospy.init_node('check_handle_grasps', anonymous=True)

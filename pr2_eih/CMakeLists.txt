@@ -27,10 +27,18 @@ set_target_properties(pr2-eih-sim PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}
 set_target_properties(pr2-eih-sim PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 target_link_libraries(pr2-eih-sim ${catkin_LIBRARIES} ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES} ${Boost_LIBRARIES})
 
-add_executable(pr2-eih-brett  pr2_eih_brett.cpp system/pr2_eih_system.cpp sqp/pr2_eih_sqp.cpp mpc/pr2eihMPC.c ../util/logging.cpp)
-set_target_properties(pr2-eih-brett PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
-set_target_properties(pr2-eih-brett PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
-target_link_libraries(pr2-eih-brett ${catkin_LIBRARIES} ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES} ${Boost_LIBRARIES})
+add_executable(bsp  bsp.cpp system/pr2_eih_system.cpp system/pr2_eih_mapping.cpp
+                                    sqp/pr2_eih_sqp.cpp mpc/pr2eihMPC.c ../util/logging.cpp)
+set_target_properties(bsp PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
+set_target_properties(bsp PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
+target_link_libraries(bsp ${catkin_LIBRARIES} ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES} ${Boost_LIBRARIES})
+
+add_executable(nbv  nbv.cpp system/pr2_eih_system.cpp system/pr2_eih_mapping.cpp
+                                    sqp/pr2_eih_sqp.cpp mpc/pr2eihMPC.c ../util/logging.cpp)
+set_target_properties(nbv PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
+set_target_properties(nbv PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
+target_link_libraries(nbv ${catkin_LIBRARIES} ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES} ${Boost_LIBRARIES})
+
 
 add_executable(test-pr2-eih-system  tests/test_pr2_eih_system.cpp system/pr2_eih_system.cpp ../util/logging.cpp)
 set_target_properties(test-pr2-eih-system PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")

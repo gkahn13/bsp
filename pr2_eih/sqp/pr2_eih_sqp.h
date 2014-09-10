@@ -1,3 +1,6 @@
+#ifndef _PR2_EIH_SQP_H__
+#define _PR2_EIH_SQP_H__
+
 #include "../system/pr2_eih_system.h"
 #include "../../util/logging.h"
 #include "../../util/Timer.h"
@@ -60,3 +63,5 @@ private:
 };
 
 }
+
+#endif

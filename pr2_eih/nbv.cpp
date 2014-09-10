@@ -95,7 +95,7 @@ void parse_args(int argc, char* argv[],
 
 int main(int argc, char* argv[]) {
 	// initialize ros node
-	ros::init(argc, argv, "pr2_eih_brett");
+	ros::init(argc, argv, "pr2_eih_nbv");
 	log4cxx::LoggerPtr my_logger = log4cxx::Logger::getLogger(ROSCONSOLE_DEFAULT_NAME);
 	my_logger->setLevel(ros::console::g_level_lookup[ros::console::levels::Info]);
 	ROS_INFO("Starting ROS node");

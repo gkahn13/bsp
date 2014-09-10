@@ -39,6 +39,11 @@ set_target_properties(nbv PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
 set_target_properties(nbv PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
 target_link_libraries(nbv ${catkin_LIBRARIES} ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES} ${Boost_LIBRARIES})
 
+add_executable(random random.cpp system/pr2_eih_system.cpp system/pr2_eih_mapping.cpp
+                                    sqp/pr2_eih_sqp.cpp mpc/pr2eihMPC.c ../util/logging.cpp)
+set_target_properties(random PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")
+set_target_properties(random PROPERTIES LINK_FLAGS "${OPENRAVE_LINK_FLAGS}")
+target_link_libraries(random ${catkin_LIBRARIES} ${OpenRAVE_LIBRARIES} ${OpenRAVE_CORE_LIBRARIES} ${Boost_LIBRARIES})
 
 add_executable(test-pr2-eih-system  tests/test_pr2_eih_system.cpp system/pr2_eih_system.cpp ../util/logging.cpp)
 set_target_properties(test-pr2-eih-system PROPERTIES COMPILE_FLAGS "${OPENRAVE_CXXFLAGS}")

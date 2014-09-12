@@ -83,6 +83,9 @@ int main(int argc, char* argv[]) {
 
 	ros::Duration(0.5).sleep();
 
+	ROS_INFO("Resetting kinfu and turning on head");
+	brett_bsp.reset_kinfu();
+
 	while(!ros::isShuttingDown()) {
 		ROS_INFO("Sampling random trajectory");
 		if (pause) { ROS_INFO("Press enter"); std::cin.ignore(); }
@@ -104,6 +107,9 @@ int main(int argc, char* argv[]) {
 			if (pause) { ROS_INFO("Press enter"); std::cin.ignore(); }
 
 			brett_random.execute_grasp_trajectory(grasp_joint_traj, return_grasp_joint_traj);
+
+			ROS_INFO("Resetting kinfu and turning on head");
+			brett_bsp.reset_kinfu();
 		}
 
 		ros::spinOnce();

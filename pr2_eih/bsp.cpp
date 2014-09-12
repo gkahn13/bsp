@@ -135,6 +135,9 @@ int main(int argc, char* argv[]) {
 
 	ros::Duration(0.5).sleep();
 
+	ROS_INFO("Resetting kinfu and turning on head");
+	brett_bsp.reset_kinfu();
+
 	while(!ros::isShuttingDown()) {
 		ROS_INFO("Getting occluded regions");
 		if (pause) { ROS_INFO("Press enter"); std::cin.ignore(); }
@@ -164,14 +167,16 @@ int main(int argc, char* argv[]) {
 
 		ROS_INFO("Checking if there exists a valid grasp trajectory");
 		ros::spinOnce();
-		ros::Duration(0.1).sleep();
+		ros::Duration(0.5).sleep();
+		ros::spinOnce();
 		if (brett_bsp.is_valid_grasp_trajectory(grasp_joint_traj, return_grasp_joint_traj)) {
 			ROS_INFO("Valid grasp trajectory exists! Execute grasp");
 			if (pause) { ROS_INFO("Press enter"); std::cin.ignore(); }
 
 			brett_bsp.execute_grasp_trajectory(grasp_joint_traj, return_grasp_joint_traj);
 
-
+			ROS_INFO("Resetting kinfu and turning on head");
+			brett_bsp.reset_kinfu();
 		}
 
 		ros::spinOnce();

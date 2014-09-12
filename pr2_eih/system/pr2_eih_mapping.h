@@ -7,18 +7,12 @@
 #include "pr2_utils/pr2/arm.h"
 #include "pcl_utils/OccludedRegionArray.h"
 
-#include <tf/transform_datatypes.h>
-#include <tf_conversions/tf_eigen.h>
-
-#include <trajectory_msgs/JointTrajectory.h>
-#include <std_msgs/Empty.h>
-#include <std_msgs/String.h>
-#include <visualization_msgs/MarkerArray.h>
-
 class PR2EihMapping {
 public:
 	PR2EihMapping(int max_occluded_regions, double max_travel_distance);
 	PR2EihMapping() : PR2EihMapping(1, 0.1) { }
+
+	void reset_kinfu();
 
 	void get_occluded_regions(std::vector<Gaussian3d>& obj_gaussians,
 			std::vector<geometry3d::Triangle>& obstacles);
@@ -36,7 +30,8 @@ protected:
 	// ros
 	ros::NodeHandle *nh_ptr;
 	ros::Subscriber occluded_region_array_sub, grasp_joint_traj_sub, return_grasp_joint_traj_sub;
-	ros::Publisher display_trajectory_pub, get_occluded_pub, display_gaussian_pub, reset_kinfu_pub, logger_pub, home_pose_pub;
+	ros::Publisher display_trajectory_pub, get_occluded_pub, display_gaussian_pub, reset_kinfu_pub, head_camera_time_pub,
+		logger_pub, home_pose_pub;
 
 	bool received_occluded_region_array;
 	pcl_utils::OccludedRegionArray current_occluded_region_array;

@@ -1,5 +1,15 @@
 #include "pr2_eih_mapping.h"
 
+#include <tf/transform_datatypes.h>
+#include <tf_conversions/tf_eigen.h>
+
+#include <trajectory_msgs/JointTrajectory.h>
+#include <std_msgs/Empty.h>
+#include <std_msgs/String.h>
+#include <std_msgs/Float64.h>
+#include <visualization_msgs/MarkerArray.h>
+
+
 /**
  *
  * Helper classes
@@ -49,25 +59,22 @@ PR2EihMapping::PR2EihMapping(int max_occluded_regions, double max_travel_distanc
 	occluded_region_array_sub =
 			nh_ptr->subscribe("/kinfu/occluded_regions", 1, &PR2EihMapping::_occluded_region_array_callback, this);
 	grasp_joint_traj_sub =
-			nh_ptr->subscribe("/check_handle_grasps/grasp_joint_trajectory", 1,
+			nh_ptr->subscribe("/check_handle_grasp/grasp_joint_trajectory", 1,
 					&PR2EihMapping::_grasp_joint_traj_callback, this);
 	return_grasp_joint_traj_sub =
-				nh_ptr->subscribe("/check_handle_grasps/return_grasp_trajectory", 1,
+				nh_ptr->subscribe("/check_handle_grasp/return_grasp_joint_trajectory", 1,
 						&PR2EihMapping::_return_grasp_joint_traj_callback, this);
 	received_occluded_region_array = false;
 	display_gaussian_pub = nh_ptr->advertise<visualization_msgs::MarkerArray>("/bsp_object_means", 1);
 	display_trajectory_pub = nh_ptr->advertise<geometry_msgs::PoseArray>("/bsp_trajectory", 1);
-	get_occluded_pub = nh_ptr->advertise<std_msgs::Empty>("/get_occluded", 1);
-	reset_kinfu_pub = nh_ptr->advertise<std_msgs::Empty>("/reset_kinfu", 1);
+	get_occluded_pub = nh_ptr->advertise<std_msgs::Empty>("/kinfu/get_occluded", 1);
+	reset_kinfu_pub = nh_ptr->advertise<std_msgs::Empty>("/kinfu/reset", 1);
+	head_camera_time_pub = nh_ptr->advertise<std_msgs::Float64>("/kinfu/head_camera_duration", 1);
 	logger_pub = nh_ptr->advertise<std_msgs::String>("/experiment_log", 1);
 	home_pose_pub = nh_ptr->advertise<geometry_msgs::PoseStamped>("/bsp/home_pose", 1);
 
 	sim->update();
 	home_joints = arm->get_joints();
-
-	reset_kinfu_pub.publish(std_msgs::Empty());
-	ros::spinOnce();
-	ros::Duration(1.0).sleep();
 }
 
 /**
@@ -75,6 +82,20 @@ PR2EihMapping::PR2EihMapping(int max_occluded_regions, double max_travel_distanc
  * Public methods
  *
  */
+
+void PR2EihMapping::reset_kinfu() {
+	reset_kinfu_pub.publish(std_msgs::Empty());
+	ros::spinOnce();
+	ros::Duration(0.5).sleep(); // give kinfu some time
+	ros::spinOnce();
+
+	std_msgs::Float64 head_camera_time;
+	head_camera_time.data = 1.0;
+	head_camera_time_pub.publish(head_camera_time);
+	ros::spinOnce();
+	ros::Duration(head_camera_time.data).sleep();
+	ros::spinOnce();
+}
 
 void PR2EihMapping::get_occluded_regions(std::vector<Gaussian3d>& obj_gaussians,
 		std::vector<geometry3d::Triangle>& obstacles) {
@@ -105,22 +126,40 @@ void PR2EihMapping::get_occluded_regions(std::vector<Gaussian3d>& obj_gaussians,
 		const pcl_utils::OccludedRegion& occluded_region = occluded_regions[i];
 		// add occlusions by forming triangles from front face polygon
 		const std::vector<geometry_msgs::Point32>& points = occluded_region.front_face.points;
+
+		std::vector<geometry3d::Triangle> new_obstacles;
 		Vector3d first_obstacle_point(points[0].x, points[0].y, points[0].z);
 		for(int i=1; i < points.size()-1; ++i) {
 			Vector3d second_obstacle_point(points[i].x, points[i].y, points[i].z);
 			Vector3d third_obstacle_point(points[i+1].x, points[i+1].y, points[i+1].z);
-			obstacles.push_back(geometry3d::Triangle(cam_rot*first_obstacle_point+cam_trans,
+			new_obstacles.push_back(geometry3d::Triangle(cam_rot*first_obstacle_point+cam_trans,
 					cam_rot*second_obstacle_point+cam_trans, cam_rot*third_obstacle_point+cam_trans));
 		}
 
-		// add gaussian
-		const pcl_utils::Gaussian& gaussian = occluded_region.gaussian;
-		Vector3d mean(gaussian.mean.x, gaussian.mean.y, gaussian.mean.z);
-		Matrix3d cov(gaussian.covariance.data());
-		obj_gaussians.push_back(Gaussian3d(cam_rot*mean+cam_trans, cam_rot*cov*cam_rot.transpose()));
+		bool is_obstacles_cross = false;
+		Vector3d intersection;
+		for(const geometry3d::Triangle &obstacle : obstacles) {
+			for(const geometry3d::Triangle &new_obstacle : new_obstacles) {
+				for(const geometry3d::Segment &new_seg : new_obstacle.get_segments()) {
+					if (obstacle.intersection(new_seg, intersection)) {
+						is_obstacles_cross = true;
+					}
+				}
+			}
+		}
 
-		ROS_INFO_STREAM("Gaussian " << i << "\nMean: " << obj_gaussians.back().mean.transpose()
-				<< "\nCovariance:\n" << obj_gaussians.back().cov << "\n");
+		if (!is_obstacles_cross) {
+			obstacles.insert(obstacles.end(), new_obstacles.begin(), new_obstacles.end());
+
+			// add gaussian
+			const pcl_utils::Gaussian& gaussian = occluded_region.gaussian;
+			Vector3d mean(gaussian.mean.x, gaussian.mean.y, gaussian.mean.z);
+			Matrix3d cov(gaussian.covariance.data());
+			obj_gaussians.push_back(Gaussian3d(cam_rot*mean+cam_trans, cam_rot*cov*cam_rot.transpose()));
+
+			ROS_INFO_STREAM("Gaussian " << i << "\nMean: " << obj_gaussians.back().mean.transpose()
+					<< "\nCovariance:\n" << obj_gaussians.back().cov << "\n");
+		}
 	}
 
 	publish_to_logger("end get_occluded_regions");
@@ -205,7 +244,7 @@ void PR2EihMapping::execute_controls(const StdVectorU& U) {
 }
 
 bool PR2EihMapping::is_valid_grasp_trajectory(StdVectorJ& grasp_joint_traj, StdVectorJ& return_grasp_joint_traj) {
-	bool received_grasp_traj = (grasp_joint_traj.size() > 0);
+	bool received_grasp_traj = (this->grasp_joint_traj.size() > 0);
 	grasp_joint_traj = this->grasp_joint_traj;
 	return_grasp_joint_traj = this->return_grasp_joint_traj;
 	return received_grasp_traj;
@@ -246,15 +285,12 @@ void PR2EihMapping::execute_grasp_trajectory(const StdVectorJ& grasp_joint_traj,
 		arm->go_to_joints(home_joints, speed);
 	}
 
-	arm->open_gripper(0, false);
-	arm->go_to_joints(home_joints);
+	arm->go_to_joints(home_joints, 0.02);
+//	arm->go_to_pose(arm_sim->fk(home_joints));
+	arm->open_gripper(0, true);
 
-	reset_kinfu_pub.publish(std_msgs::Empty());
-	ros::spinOnce();
-	ros::Duration(1.0).sleep(); // give kinfu some time
 	this->grasp_joint_traj.clear();
 	this->return_grasp_joint_traj.clear();
-
 
 	publish_to_logger("end execute_grasp_trajectory");
 }

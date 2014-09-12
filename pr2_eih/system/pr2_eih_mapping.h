@@ -6,6 +6,7 @@
 
 #include "pr2_utils/pr2/arm.h"
 #include "pcl_utils/OccludedRegionArray.h"
+#include "pcl_utils/BoundingBox.h"
 
 class PR2EihMapping {
 public:
@@ -29,7 +30,7 @@ public:
 protected:
 	// ros
 	ros::NodeHandle *nh_ptr;
-	ros::Subscriber occluded_region_array_sub, grasp_joint_traj_sub, return_grasp_joint_traj_sub;
+	ros::Subscriber occluded_region_array_sub, grasp_joint_traj_sub, return_grasp_joint_traj_sub, table_pose_sub;
 	ros::Publisher display_trajectory_pub, get_occluded_pub, display_gaussian_pub, reset_kinfu_pub, head_camera_time_pub,
 		logger_pub, home_pose_pub;
 
@@ -48,6 +49,7 @@ protected:
 
 	VectorJ home_joints;
 	StdVectorJ grasp_joint_traj, return_grasp_joint_traj;
+	geometry3d::Halfspace table_halfspace;
 
 	Matrix4d highest_pose_above(const Matrix4d& pose);
 	void publish_to_logger(std::string str);
@@ -55,6 +57,7 @@ protected:
 	void _occluded_region_array_callback(const pcl_utils::OccludedRegionArrayConstPtr& msg);
 	void _grasp_joint_traj_callback(const trajectory_msgs::JointTrajectoryConstPtr& msg);
 	void _return_grasp_joint_traj_callback(const trajectory_msgs::JointTrajectoryConstPtr& msg);
+	void _table_pose_callback(const pcl_utils::BoundingBoxConstPtr& msg);
 };
 
 #endif

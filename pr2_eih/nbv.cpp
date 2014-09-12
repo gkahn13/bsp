@@ -51,7 +51,7 @@ void PR2EihMappingNBV::sample_joint_trajectory(const VectorJ& j0, StdVectorJ& J,
 
 	J[0] = j0;
 	for(int t=0; t < T-1; ) {
-		U[t] = (1/float(T))*(M_PI/8.0)*VectorU::Random();
+		U[t] = (1/float(T))*(M_PI/4.0)*VectorU::Random();
 		J[t+1] = sys->dynfunc(J[t], U[t], VectorQ::Zero());
 
 		Matrix4d pose = arm_sim->fk(J[t+1]);
@@ -121,7 +121,7 @@ int main(int argc, char* argv[]) {
 	ros::Duration(0.5).sleep();
 
 	ROS_INFO("Resetting kinfu and turning on head");
-	brett_bsp.reset_kinfu();
+	brett_nbv.reset_kinfu();
 
 	while(!ros::isShuttingDown()) {
 		ROS_INFO("Getting occluded regions");
@@ -152,7 +152,7 @@ int main(int argc, char* argv[]) {
 			brett_nbv.execute_grasp_trajectory(grasp_joint_traj, return_grasp_joint_traj);
 
 			ROS_INFO("Resetting kinfu and turning on head");
-			brett_bsp.reset_kinfu();
+			brett_nbv.reset_kinfu();
 		}
 
 		ros::spinOnce();

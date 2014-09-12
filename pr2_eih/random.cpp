@@ -84,7 +84,7 @@ int main(int argc, char* argv[]) {
 	ros::Duration(0.5).sleep();
 
 	ROS_INFO("Resetting kinfu and turning on head");
-	brett_bsp.reset_kinfu();
+	brett_nbv.reset_kinfu();
 
 	while(!ros::isShuttingDown()) {
 		ROS_INFO("Sampling random trajectory");
@@ -109,7 +109,7 @@ int main(int argc, char* argv[]) {
 			brett_random.execute_grasp_trajectory(grasp_joint_traj, return_grasp_joint_traj);
 
 			ROS_INFO("Resetting kinfu and turning on head");
-			brett_bsp.reset_kinfu();
+			brett_nbv.reset_kinfu();
 		}
 
 		ros::spinOnce();

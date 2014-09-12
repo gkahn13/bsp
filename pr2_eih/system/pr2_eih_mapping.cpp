@@ -64,6 +64,8 @@ PR2EihMapping::PR2EihMapping(int max_occluded_regions, double max_travel_distanc
 	return_grasp_joint_traj_sub =
 				nh_ptr->subscribe("/check_handle_grasp/return_grasp_joint_trajectory", 1,
 						&PR2EihMapping::_return_grasp_joint_traj_callback, this);
+	table_pose_sub = nh_ptr->subscribe("/kinfu/plane_bounding_box", 1, & PR2EihMapping::_table_pose_callback, this);
+
 	received_occluded_region_array = false;
 	display_gaussian_pub = nh_ptr->advertise<visualization_msgs::MarkerArray>("/bsp_object_means", 1);
 	display_trajectory_pub = nh_ptr->advertise<geometry_msgs::PoseArray>("/bsp_trajectory", 1);
@@ -89,12 +91,12 @@ void PR2EihMapping::reset_kinfu() {
 	ros::Duration(0.5).sleep(); // give kinfu some time
 	ros::spinOnce();
 
-	std_msgs::Float64 head_camera_time;
-	head_camera_time.data = 1.0;
-	head_camera_time_pub.publish(head_camera_time);
-	ros::spinOnce();
-	ros::Duration(head_camera_time.data).sleep();
-	ros::spinOnce();
+//	std_msgs::Float64 head_camera_time;
+//	head_camera_time.data = 1.0;
+//	head_camera_time_pub.publish(head_camera_time);
+//	ros::spinOnce();
+//	ros::Duration(head_camera_time.data).sleep();
+//	ros::spinOnce();
 }
 
 void PR2EihMapping::get_occluded_regions(std::vector<Gaussian3d>& obj_gaussians,
@@ -162,6 +164,11 @@ void PR2EihMapping::get_occluded_regions(std::vector<Gaussian3d>& obj_gaussians,
 		}
 	}
 
+	sim->clear_plots();
+	for(const geometry3d::Triangle& obstacle : obstacles) {
+		obstacle.plot(*sim, "base_link", Vector3d(0,0,1), true, 0.25);
+	}
+
 	publish_to_logger("end get_occluded_regions");
 }
 
@@ -226,7 +233,13 @@ void PR2EihMapping::execute_controls(const StdVectorU& U) {
 	StdVectorJ joint_traj;
 	for(int t=0; t < U.size(); ++t) {
 		next_joints = sys->dynfunc(current_joints, U[t], VectorQ::Zero(), true);
-		double dist = (arm_sim->fk(next_joints) - arm_sim->fk(current_joints)).block<3,1>(0,3).norm();
+		Matrix4d next_pose = arm_sim->fk(next_joints);
+
+		if (!table_halfspace.contains(next_pose.block<3,1>(0,3))) {
+			break;
+		}
+
+		double dist = (next_pose - arm_sim->fk(current_joints)).block<3,1>(0,3).norm();
 		ROS_INFO_STREAM("dist: " << dist);
 		if ((travel_distance + dist < max_travel_distance) || (t == 0)) {
 			travel_distance += dist;
@@ -357,4 +370,11 @@ void PR2EihMapping::_return_grasp_joint_traj_callback(const trajectory_msgs::Joi
 		VectorJ joints(jt_pt.positions.data());
 		return_grasp_joint_traj.push_back(joints);
 	}
+}
+
+void PR2EihMapping::_table_pose_callback(const pcl_utils::BoundingBoxConstPtr& msg) {
+	Vector3d origin(msg->center.x, msg->center.y, msg->center.z);
+//	Vector3d normal(msg->vectors[2].x, msg->vectors[2].y, msg->vectors[2].z);
+	Vector3d normal(0,0,1); // TODO
+	table_halfspace = geometry3d::Halfspace(origin, normal);
 }

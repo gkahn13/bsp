@@ -51,7 +51,7 @@ class CheckHandleGrasps:
         self.table_sub = rospy.Subscriber('/kinfu/plane_bounding_box', pcl_utils.msg.BoundingBox, self._table_callback)
         self.avg_handle_poses_sub = rospy.Subscriber('/handle_detector/avg_handle_poses',
                                                 gm.PoseArray, self._avg_handle_poses_callback)
-        self.reset_kinfu_sub = rospy.Subscriber('/reset_kinfu', std_msgs.msg.Empty, self._reset_kinfu_callback)
+        self.reset_kinfu_sub = rospy.Subscriber('/kinfu/reset', std_msgs.msg.Empty, self._reset_kinfu_callback)
         self.home_pose_sub = rospy.Subscriber('/bsp/home_pose', gm.PoseStamped, self._home_pose_callback)
         
         self.grasp_joint_traj_pub = rospy.Publisher('/check_handle_grasp/grasp_joint_trajectory', tm.JointTrajectory)
@@ -142,6 +142,8 @@ class CheckHandleGrasps:
             table_extents = self.table_extents
             avg_handle_poses = self.avg_handle_poses
             
+            if self.is_reset_kinfu:
+                continue
              # fails if too few points
             print('Point cloud size: {0}'.format(graspable_points.width))
             if graspable_points.width < 50: 

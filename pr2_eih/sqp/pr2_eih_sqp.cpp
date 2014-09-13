@@ -1,5 +1,7 @@
 #include "pr2_eih_sqp.h"
 
+#define USE_COST_AND_GRAD
+
 namespace pr2_eih_sqp {
 
 /**
@@ -236,8 +238,6 @@ double PR2EihSqp::approximate_collocation(StdVectorJ& J, StdVectorU& U, const Ma
 	double optcost, model_merit, new_merit;
 	double approx_merit_improve, exact_merit_improve, merit_improve_ratio;
 
-	LOG_DEBUG("Initial trajectory cost: %4.10f", sys.cost(J, j_sigma0, U, obj_gaussians, alpha, obstacles));
-
 	int index = 0;
 	bool solution_accepted = true;
 	for(int it=0; it < cfg::max_iters; ++it) {
@@ -250,8 +250,13 @@ double PR2EihSqp::approximate_collocation(StdVectorJ& J, StdVectorU& U, const Ma
 		if (solution_accepted) {
 
 			if (it == 0) {
+#ifdef USE_COST_AND_GRAD
+				sys.cost_and_grad(J, j_sigma0, U, obj_gaussians, alpha, obstacles, merit, grad);
+#else
 				merit = sys.cost(J, j_sigma0, U, obj_gaussians, alpha, obstacles);
 				grad = sys.cost_grad(J, j_sigma0, U, obj_gaussians, alpha, obstacles);
+#endif
+				LOG_DEBUG("Initial trajectory cost: %4.10f", merit);
 			} else {
 				merit = meritopt; // since L-BFGS calculation required it
 				grad = gradopt;
@@ -422,8 +427,13 @@ double PR2EihSqp::approximate_collocation(StdVectorJ& J, StdVectorU& U, const Ma
 			Ueps *= cfg::trust_expand_ratio;
 			LOG_DEBUG("Accepted, Increasing trust region size to:  %2.6f %2.6f", Xeps, Ueps);
 
+
+#ifdef USE_COST_AND_GRAD
+			sys.cost_and_grad(Jopt, j_sigma0, Uopt, obj_gaussians, alpha, obstacles, meritopt, gradopt);
+#else
 			meritopt = sys.cost(Jopt, j_sigma0, Uopt, obj_gaussians, alpha, obstacles);
 			gradopt = sys.cost_grad(Jopt, j_sigma0, Uopt, obj_gaussians, alpha, obstacles);
+#endif
 
 			L_BFGS(J, U, grad, Jopt, Uopt, gradopt, hess);
 

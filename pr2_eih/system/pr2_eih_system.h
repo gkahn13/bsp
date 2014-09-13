@@ -98,10 +98,12 @@ public:
 	VectorZ obsfunc(const VectorJ& j, const Vector3d& object, const VectorR& r);
 
 	MatrixZ delta_matrix(const VectorJ& j, const Vector3d& object, const double alpha,
-			const std::vector<geometry3d::Triangle>& obstacles, int cached_frustum_timestep=-1);
+			const std::vector<geometry3d::Triangle>& obstacles,
+			int timestep=-1, int gaussian=-1);
 
 	void belief_dynamics(const VectorX& x_t, const MatrixX& sigma_t, const VectorU& u_t, const double alpha,
-			const std::vector<geometry3d::Triangle>& obstacles, VectorX& x_tp1, MatrixX& sigma_tp1, int cached_frustum_timestep=-1);
+			const std::vector<geometry3d::Triangle>& obstacles, VectorX& x_tp1, MatrixX& sigma_tp1,
+			int timestep=-1, int gaussian=-1);
 	void execute_control_step(const VectorJ& j_t_real, const VectorJ& j_t, const VectorU& u_t,
 			const std::vector<Gaussian3d>& obj_gaussians_t,
 			const std::vector<geometry3d::Triangle>& obstacles,
@@ -111,6 +113,9 @@ public:
 			const double alpha, const std::vector<geometry3d::Triangle>& obstacles);
 	VectorTOTAL cost_grad(StdVectorJ& J, const MatrixJ& j_sigma0, StdVectorU& U, const std::vector<Gaussian3d>& obj_gaussians,
 			const double alpha, const std::vector<geometry3d::Triangle>& obstacles);
+	void cost_and_grad(StdVectorJ& J, const MatrixJ& j_sigma0, StdVectorU& U, const std::vector<Gaussian3d>& obj_gaussians,
+				const double alpha, const std::vector<geometry3d::Triangle>& obstacles,
+				double& cost, VectorTOTAL& grad);
 
 	VectorP update_particle_weights(const VectorJ& j_tp1, const MatrixP& P_t, const VectorP& W_t,
 			const std::vector<geometry3d::Triangle>& obstacles, bool add_radial_error=false);
@@ -133,7 +138,7 @@ private:
 	MatrixQ Q;
 	MatrixR R;
 
-	std::vector<std::vector<geometry3d::TruncatedPyramid>> cached_frustum;
+	std::vector<std::vector<pr2_sim::RelativePyramid> > cached_relative_pyramids; // [timestep][gaussian]
 
 	void linearize_dynfunc(const VectorX& x, const VectorU& u, const VectorQ& q,
 			Matrix<double,X_DIM,X_DIM>& A, Matrix<double,X_DIM,Q_DIM>& M);

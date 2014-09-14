@@ -7,6 +7,8 @@ namespace po = boost::program_options;
 
 const int T = TIMESTEPS;
 
+// kitchen home joints: -2.0988625572166835, 0.6885463648249877, -0.8662521072216153, -1.579820549988762, -1.607510934397614, -1.7319136161453723, -32.53408436247872
+
 class PR2EihMappingBSP : public PR2EihMapping {
 public:
 	PR2EihMappingBSP(int max_occluded_regions, double max_travel_distance) :
@@ -59,12 +61,14 @@ void PR2EihMappingBSP::bsp(StdVectorJ& J, StdVectorU& U, const MatrixJ& j_sigma0
 	ROS_INFO_STREAM("Number of obstacles: " << obstacles.size());
 
 	// plan
-	pr2_eih_bsp.collocation(J, U, j_sigma0, obj_gaussians, obstacles, *sys, true);
+	pr2_eih_bsp.collocation(J, U, j_sigma0, obj_gaussians, obstacles, *sys, false);
 
 	// reintegrate, just in case
 	for(int t=0; t < T-1; ++t) {
 		J[t+1] = sys->dynfunc(J[t], U[t], VectorQ::Zero(), true);
 	}
+
+	sys->plot(J, obj_gaussians, obstacles, false);
 
 	publish_to_logger("end bsp");
 }

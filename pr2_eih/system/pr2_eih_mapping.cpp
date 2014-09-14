@@ -86,6 +86,8 @@ PR2EihMapping::PR2EihMapping(int max_occluded_regions, double max_travel_distanc
  */
 
 void PR2EihMapping::reset_kinfu() {
+	publish_to_logger("start kinfu_reset");
+
 	reset_kinfu_pub.publish(std_msgs::Empty());
 	ros::spinOnce();
 	ros::Duration(0.5).sleep(); // give kinfu some time
@@ -97,6 +99,8 @@ void PR2EihMapping::reset_kinfu() {
 //	ros::spinOnce();
 //	ros::Duration(head_camera_time.data).sleep();
 //	ros::spinOnce();
+
+	publish_to_logger("end kinfu_reset");
 }
 
 void PR2EihMapping::get_occluded_regions(std::vector<Gaussian3d>& obj_gaussians,
@@ -251,6 +255,7 @@ void PR2EihMapping::execute_controls(const StdVectorU& U) {
 		ROS_INFO_STREAM("travel_distance: " << travel_distance);
 	}
 
+	publish_positions_to_logger(joint_traj);
 	arm->execute_joint_trajectory(joint_traj);
 
 	publish_to_logger("end execute_bsp");
@@ -267,18 +272,25 @@ void PR2EihMapping::execute_grasp_trajectory(const StdVectorJ& grasp_joint_traj,
 		const StdVectorJ& return_grasp_joint_traj) {
 	publish_to_logger("start execute_grasp_trajectory");
 	double speed = 0.06;
+	double grasp_speed = 0.06;
+	double return_speed = 0.10;
+	double grasp_time = 1.2;
 
 	ROS_INFO("Opening gripper and executing grasp trajectory");
 	arm->open_gripper(0, false);
-	arm->execute_joint_trajectory(grasp_joint_traj, speed);
+	publish_positions_to_logger(grasp_joint_traj);
+	arm->execute_joint_trajectory(grasp_joint_traj, grasp_speed);
 
 	ROS_INFO("Closing the gripper");
-	arm->close_gripper(0, true, 2.0);
+	arm->close_gripper(0, true, grasp_time);
 
 	if (return_grasp_joint_traj.size() > 0) {
-		arm->execute_joint_trajectory(return_grasp_joint_traj, speed);
+		publish_positions_to_logger(return_grasp_joint_traj);
+		arm->execute_joint_trajectory(return_grasp_joint_traj, return_speed);
 	} else {
 		ROS_INFO("Return grasp traj length is 0, returning via hard-coded behavior");
+
+		publish_to_logger("return grasp traj hard-coded");
 
 		ROS_INFO("Moving up");
 		arm->go_to_pose(highest_pose_above(arm->get_pose()), speed);
@@ -299,7 +311,6 @@ void PR2EihMapping::execute_grasp_trajectory(const StdVectorJ& grasp_joint_traj,
 	}
 
 	arm->go_to_joints(home_joints, 0.02);
-//	arm->go_to_pose(arm_sim->fk(home_joints));
 	arm->open_gripper(0, true);
 
 	this->grasp_joint_traj.clear();
@@ -329,6 +340,15 @@ void PR2EihMapping::publish_to_logger(std::string str) {
 	std_msgs::String msg;
 	msg.data = str.c_str();
 	logger_pub.publish(msg);
+}
+
+void PR2EihMapping::publish_positions_to_logger(const StdVectorJ& J) {
+	for(const VectorJ& j : J) {
+		Vector3d position = arm_sim->fk(j).block<3,1>(0,3);
+		std::stringstream ss;
+		ss << "gripper position " << position.transpose();
+		publish_to_logger(ss.str());
+	}
 }
 
 void PR2EihMapping::publish_home_pose() {

@@ -43,6 +43,10 @@ void PR2EihMappingNBV::next_best_view(int max_iters, const MatrixJ& j_sigma0,
 			U = U_i;
 		}
 	}
+
+	for(const VectorJ& j : J) {
+		sim->plot_transform(sim->transform_from_to(arm_sim->fk(j), "base_link", "world"));
+	}
 }
 
 void PR2EihMappingNBV::sample_joint_trajectory(const VectorJ& j0, StdVectorJ& J, StdVectorU& U) {

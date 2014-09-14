@@ -251,7 +251,18 @@ double PR2EihSqp::approximate_collocation(StdVectorJ& J, StdVectorU& U, const Ma
 
 			if (it == 0) {
 #ifdef USE_COST_AND_GRAD
+//				merit = sys.cost(J, j_sigma0, U, obj_gaussians, alpha, obstacles);
+//				grad = sys.cost_grad(J, j_sigma0, U, obj_gaussians, alpha, obstacles);
+//				double old_merit = merit; VectorTOTAL old_grad = grad;
+
 				sys.cost_and_grad(J, j_sigma0, U, obj_gaussians, alpha, obstacles, merit, grad);
+
+//				old_grad.normalize(); grad.normalize();
+//				std::cout << "fabs(merit - old_merit): " << fabs(old_merit - merit) << "\n";
+//				std::cout << "norm(grad - old_grad): " << (grad - old_grad).norm() << "\n";
+//				std::cout << "(old_merit, merit): (" << old_merit << ", " << merit << ")\n";
+//				std::cout << "old_grad: " << old_grad.transpose() << "\n";
+//				std::cout << "grad: " << grad.transpose() << "\n";
 #else
 				merit = sys.cost(J, j_sigma0, U, obj_gaussians, alpha, obstacles);
 				grad = sys.cost_grad(J, j_sigma0, U, obj_gaussians, alpha, obstacles);
@@ -429,7 +440,18 @@ double PR2EihSqp::approximate_collocation(StdVectorJ& J, StdVectorU& U, const Ma
 
 
 #ifdef USE_COST_AND_GRAD
+//			meritopt = sys.cost(Jopt, j_sigma0, Uopt, obj_gaussians, alpha, obstacles);
+//			gradopt = sys.cost_grad(Jopt, j_sigma0, Uopt, obj_gaussians, alpha, obstacles);
+//			double old_meritopt = meritopt; VectorTOTAL old_gradopt = gradopt;
+
 			sys.cost_and_grad(Jopt, j_sigma0, Uopt, obj_gaussians, alpha, obstacles, meritopt, gradopt);
+
+//			old_gradopt.normalize(); gradopt.normalize();
+//			std::cout << "fabs(meritopt - old_meritopt): " << fabs(old_meritopt - meritopt) << "\n";
+//			std::cout << "norm(gradopt - old_gradopt): " << (gradopt - old_gradopt).norm() << "\n";
+//			std::cout << "(old_meritopt, meritopt): (" << old_meritopt << ", " << meritopt << ")\n";
+//			std::cout << "old_gradopt: " << old_gradopt.transpose() << "\n";
+//			std::cout << "gradopt: " << gradopt.transpose() << "\n";
 #else
 			meritopt = sys.cost(Jopt, j_sigma0, Uopt, obj_gaussians, alpha, obstacles);
 			gradopt = sys.cost_grad(Jopt, j_sigma0, Uopt, obj_gaussians, alpha, obstacles);

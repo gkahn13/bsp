@@ -117,7 +117,6 @@ MatrixZ PR2EihSystem::delta_matrix(const VectorJ& j, const Vector3d& object, con
 		delta(i,i) = 1; // always observe joints
 	}
 
-	std::vector<geometry3d::TruncatedPyramid> truncated_frustum;
 	Matrix4d cam_pose = cam->get_pose(j);
 //	if ((0 <= cached_frustum_timestep) && (cached_frustum_timestep < cached_frustum.size())) {
 //		truncated_frustum = cached_frustum[cached_frustum_timestep];
@@ -128,12 +127,11 @@ MatrixZ PR2EihSystem::delta_matrix(const VectorJ& j, const Vector3d& object, con
 		// use relative pyramid
 		sd = cached_relative_pyramids[timestep][gaussian].signed_distance(cam_pose, object);
 	} else {
-		truncated_frustum = cam->truncated_view_frustum(cam_pose, obstacles, false);
+		std::vector<geometry3d::TruncatedPyramid> truncated_frustum = cam->truncated_view_frustum(cam_pose, obstacles, false);
 		sd = cam->signed_distance(object, truncated_frustum);
 	}
 
 	double error = cam->radial_distance_error(cam_pose, object);
-//	double error = 0;
 
 	double sd_sigmoid = 1.0 - 1.0/(1.0 + exp(-alpha*(sd+error)));
 	for(int i=J_DIM; i < Z_DIM; ++i) {

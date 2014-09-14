@@ -53,6 +53,7 @@ protected:
 
 	Matrix4d highest_pose_above(const Matrix4d& pose);
 	void publish_to_logger(std::string str);
+	void publish_positions_to_logger(const StdVectorJ& J);
 	void publish_home_pose();
 	void _occluded_region_array_callback(const pcl_utils::OccludedRegionArrayConstPtr& msg);
 	void _grasp_joint_traj_callback(const trajectory_msgs::JointTrajectoryConstPtr& msg);
